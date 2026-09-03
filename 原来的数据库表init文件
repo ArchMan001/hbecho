@@ -1,0 +1,334 @@
+CREATE DATABASE IF NOT EXISTS douyin_scraper CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE douyin_scraper;
+
+-- 当前线上主模型（2026-05）
+-- 说明：
+-- 1. 初始化新环境时，直接建当前实际运行的 dealer_staff / staff_id 模型。
+-- 2. 旧的 social_accounts / account_id 结构不再作为初始建库主路径。
+-- 3. 已在线上运行的旧环境仍需继续执行 scripts/ 下迁移脚本完成升级。
+
+-- ─── 门店主档 ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS dealers (
+  id                INT           NOT NULL AUTO_INCREMENT,
+  brand             VARCHAR(20)   NOT NULL DEFAULT '',
+  region            VARCHAR(20)   NOT NULL,
+  branch            VARCHAR(50)   NOT NULL,
+  sector            VARCHAR(20)   NOT NULL,
+  dealer_name       VARCHAR(150)  NOT NULL,
+  store_code        VARCHAR(60)   NOT NULL,
+  store_name        VARCHAR(150)  NOT NULL,
+  store_tier        VARCHAR(60)   DEFAULT NULL,
+  store_tier_adj    VARCHAR(60)   DEFAULT NULL,
+  created_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_store_code (store_code),
+  KEY idx_dealers_brand (brand),
+  KEY idx_dealers_region (region),
+  KEY idx_dealers_branch (branch)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── 专员 / 平台账号主表 ─────────────────────────────────────────────────────
+-- 一行 = 一名专员在一个平台上的一个账号
+CREATE TABLE IF NOT EXISTS dealer_staff (
+  id                         INT           NOT NULL AUTO_INCREMENT,
+  dealer_id                  INT           NOT NULL,
+  contact_name               VARCHAR(50)   NOT NULL DEFAULT '',
+  contact_phone              VARCHAR(100)  NOT NULL DEFAULT '',
+  is_certified               TINYINT(1)   NOT NULL DEFAULT 1 COMMENT '是否认证通过（1=通过，0=未通过）',
+  platform                   VARCHAR(20)   NOT NULL DEFAULT 'douyin',
+  account_identifier         VARCHAR(200)  DEFAULT NULL,
+  home_url                   VARCHAR(300)  DEFAULT NULL,
+  raw_home_url               VARCHAR(1200) DEFAULT NULL,
+  nickname                   VARCHAR(200)  DEFAULT NULL,
+  signature                  TEXT,
+  avatar_url                 VARCHAR(500)  DEFAULT NULL,
+  avatar_local               VARCHAR(300)  DEFAULT NULL,
+  bg_url                     VARCHAR(500)  DEFAULT NULL,
+  bg_local                   VARCHAR(300)  DEFAULT NULL,
+  bg_match_standard          TINYINT(1)    DEFAULT NULL COMMENT '主页背景是否与标准图一致（1=一致，0=不一致，NULL=未比对）',
+  bg_match_score             INT           DEFAULT NULL COMMENT 'SIFT 特征匹配点数量',
+  follower_count             BIGINT        DEFAULT 0,
+  total_favorited            BIGINT        DEFAULT 0,
+  video_count                INT           DEFAULT 0,
+  video_total_count          INT           DEFAULT 0,
+  keyword_video_count        INT           DEFAULT 0,
+  resolve_status             VARCHAR(10)   NOT NULL DEFAULT 'pending',
+  resolve_error              VARCHAR(80)   DEFAULT NULL,
+  status                     ENUM('active','error','pending') NOT NULL DEFAULT 'pending',
+  last_scraped_at            DATETIME      DEFAULT NULL,
+  last_attempt_at            DATETIME      DEFAULT NULL,
+  last_attempt_status        ENUM('success','error') DEFAULT NULL,
+  last_success_at            DATETIME      DEFAULT NULL,
+  has_success                TINYINT(1)    NOT NULL DEFAULT 0,
+  earliest_captured_video_at DATETIME      DEFAULT NULL,
+  last_scrape_error          TEXT,
+  created_at                 TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  updated_at                 TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_ds_platform_home_url (platform, home_url(200)),
+  KEY idx_ds_dealer_id (dealer_id),
+  KEY idx_ds_platform (platform),
+  KEY idx_ds_status (status),
+  KEY idx_ds_identifier (account_identifier),
+  KEY idx_ds_has_success (has_success),
+  CONSTRAINT fk_ds_dealer FOREIGN KEY (dealer_id) REFERENCES dealers (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── 视频 / 笔记内容表 ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS videos (
+  id                INT          NOT NULL AUTO_INCREMENT,
+  staff_id          INT          NOT NULL,
+  aweme_id          VARCHAR(100) NOT NULL,
+  video_url         VARCHAR(500) DEFAULT NULL,
+  title             TEXT,
+  like_count        BIGINT       DEFAULT 0,
+  comment_count     BIGINT       DEFAULT 0,
+  share_count       BIGINT       DEFAULT 0,
+  forward_count     BIGINT       DEFAULT 0,
+  collected_count   BIGINT       DEFAULT 0,
+  cover_url         VARCHAR(500) DEFAULT NULL,
+  cover_local       VARCHAR(300) DEFAULT NULL,
+  note_content      TEXT         DEFAULT NULL,
+  matched_keywords  VARCHAR(500) DEFAULT NULL,
+  is_starred        TINYINT(1)   DEFAULT 0,
+  douyin_created_at DATETIME     DEFAULT NULL,
+  scraped_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  -- ─── 优秀视频赋能（2026-06 新增）────────────────────────────────────────────
+  video_local       VARCHAR(300) DEFAULT NULL  COMMENT '本地视频/音频文件路径（相对 IMAGES_DIR）',
+  video_dl_status   ENUM('none','downloading','done','error') NOT NULL DEFAULT 'none' COMMENT '视频下载状态',
+  video_dl_error    TEXT         DEFAULT NULL  COMMENT '下载失败原因',
+  ai_transcript     TEXT         DEFAULT NULL  COMMENT 'ASR 语音转文字结果（qwen3-asr-flash）',
+  ai_analysis       MEDIUMTEXT   DEFAULT NULL  COMMENT 'AI 内容分析结果（Markdown）',
+  ai_script         MEDIUMTEXT   DEFAULT NULL  COMMENT 'AI 仿写脚本（Markdown）',
+  ai_analyzed_at    DATETIME     DEFAULT NULL  COMMENT '最近一次 AI 分析时间',
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_aweme_id (aweme_id),
+  KEY idx_videos_staff_id (staff_id),
+  KEY idx_videos_scraped_at (scraped_at),
+  KEY idx_videos_created_at (douyin_created_at),
+  CONSTRAINT fk_videos_staff FOREIGN KEY (staff_id) REFERENCES dealer_staff (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── 每日快照 ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS account_snapshots (
+  id               INT    NOT NULL AUTO_INCREMENT,
+  staff_id         INT    NOT NULL,
+  snapshot_date    DATE   NOT NULL,
+  follower_count   BIGINT DEFAULT 0,
+  total_favorited  BIGINT DEFAULT 0,
+  video_count      INT    DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_snapshot_staff_date (staff_id, snapshot_date),
+  KEY idx_snapshot_date (snapshot_date),
+  CONSTRAINT fk_snapshots_staff FOREIGN KEY (staff_id) REFERENCES dealer_staff (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── 全局关键词配置 ───────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS keywords (
+  id         INT          NOT NULL AUTO_INCREMENT,
+  keyword    VARCHAR(200) NOT NULL,
+  is_active  TINYINT(1)   NOT NULL DEFAULT 1,
+  created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_keyword (keyword)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── 爬取日志 ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS scrape_logs (
+  id           INT          NOT NULL AUTO_INCREMENT,
+  batch_id     VARCHAR(50)  NOT NULL,
+  staff_id     INT          NOT NULL,
+  status       ENUM('success','error','skipped') NOT NULL,
+  videos_found INT          DEFAULT 0,
+  error_msg    TEXT,
+  duration_ms  INT          DEFAULT 0,
+  scraped_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_logs_batch_id (batch_id),
+  KEY idx_logs_staff_id (staff_id),
+  KEY idx_logs_scraped_at (scraped_at),
+  CONSTRAINT fk_logs_staff FOREIGN KEY (staff_id) REFERENCES dealer_staff (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── 系统配置 ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS settings (
+  `key`        VARCHAR(100) NOT NULL,
+  `value`      MEDIUMTEXT,
+  description  VARCHAR(300) DEFAULT NULL,
+  updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO settings (`key`, `value`, description) VALUES
+  ('max_videos_per_account', '20', '每账号最多保存视频数'),
+  ('batch_size', '100', '每批账号数量'),
+  ('batch_interval_minutes', '8', '批次间隔（分钟）'),
+  ('schedule_cron', '0 18 * * *', '每日启动时间（UTC，对应北京/HKT 02:00）')
+ON DUPLICATE KEY UPDATE
+  `value` = VALUES(`value`),
+  description = VALUES(description);
+
+-- 背景图参考图 base64 字段（INSERT IGNORE：已有上传内容时不覆盖）
+INSERT IGNORE INTO settings (`key`, `value`, description) VALUES
+  ('standard_bg_image', NULL, '标准背景图 base64，用于识别主页装修完成（图1）'),
+  ('failure_bg_image',  NULL, '失败占位图 base64，用于识别背景图下载失败需补爬（图2）');
+
+-- ─── 活动主表 ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS campaign_events (
+  id              INT           NOT NULL AUTO_INCREMENT,
+  campaign_code   VARCHAR(80)   NOT NULL,
+  campaign_name   VARCHAR(200)  NOT NULL,
+  start_date      DATE          NOT NULL,
+  end_date        DATE          NOT NULL,
+  status          ENUM('draft','active','closed') NOT NULL DEFAULT 'draft',
+  description     TEXT,
+  match_keywords  TEXT          DEFAULT NULL,
+  created_at      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_campaign_code (campaign_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── 活动视频类型（三层关键词体系：活动→视频类型→关键词）────────────────────────
+CREATE TABLE IF NOT EXISTS campaign_video_types (
+  id             INT          NOT NULL AUTO_INCREMENT,
+  campaign_id    INT          NOT NULL,
+  type_name      VARCHAR(100) NOT NULL,
+  sort_order     INT          NOT NULL DEFAULT 0,
+  required_count INT          NOT NULL DEFAULT 1 COMMENT '该类型达标所需发布条数',
+  created_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_cvt_campaign (campaign_id),
+  CONSTRAINT fk_cvt_campaign FOREIGN KEY (campaign_id) REFERENCES campaign_events (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── 视频类型关键词（OR-of-AND 匹配：同 rule_group AND，不同 rule_group OR）────
+-- rule_group: 同组内关键词全部命中才算该组成立（AND）；多组之间取 OR；
+--             关键词中的空格会拆成多个子词，每个子词都必须出现（子词 AND）
+CREATE TABLE IF NOT EXISTS campaign_type_keywords (
+  id            INT          NOT NULL AUTO_INCREMENT,
+  video_type_id INT          NOT NULL,
+  keyword       VARCHAR(200) NOT NULL,
+  rule_group    TINYINT      NOT NULL DEFAULT 0 COMMENT '同组关键词 AND，组间 OR',
+  sort_order    INT          NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_type_keyword (video_type_id, keyword),
+  KEY idx_ctk_type (video_type_id),
+  CONSTRAINT fk_ctk_type FOREIGN KEY (video_type_id) REFERENCES campaign_video_types (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── 视频命中记录（权威匹配记录，实时写入）──────────────────────────────────
+CREATE TABLE IF NOT EXISTS video_type_matches (
+  id            INT      NOT NULL AUTO_INCREMENT,
+  video_id      INT      NOT NULL,
+  campaign_id   INT      NOT NULL,
+  video_type_id INT      NOT NULL,
+  matched_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_video_type (video_id, video_type_id),
+  KEY idx_vtm_video (video_id),
+  KEY idx_vtm_campaign (campaign_id),
+  KEY idx_vtm_type (video_type_id),
+  CONSTRAINT fk_vtm_video    FOREIGN KEY (video_id)      REFERENCES videos (id)               ON DELETE CASCADE,
+  CONSTRAINT fk_vtm_campaign FOREIGN KEY (campaign_id)   REFERENCES campaign_events (id)      ON DELETE CASCADE,
+  CONSTRAINT fk_vtm_type     FOREIGN KEY (video_type_id) REFERENCES campaign_video_types (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── 门店级活动参与关系 ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS dealer_campaign_membership (
+  id               INT          NOT NULL AUTO_INCREMENT,
+  campaign_id      INT          NOT NULL,
+  dealer_id        INT          NOT NULL,
+  is_participating TINYINT(1)   NOT NULL DEFAULT 1,
+  tagged_by        VARCHAR(100) DEFAULT NULL,
+  tagged_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  source           ENUM('manual','rule','import') NOT NULL DEFAULT 'manual',
+  note             VARCHAR(500) DEFAULT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_campaign_dealer (campaign_id, dealer_id),
+  KEY idx_membership_campaign (campaign_id),
+  KEY idx_membership_dealer (dealer_id),
+  CONSTRAINT fk_membership_campaign FOREIGN KEY (campaign_id) REFERENCES campaign_events (id) ON DELETE CASCADE,
+  CONSTRAINT fk_membership_dealer FOREIGN KEY (dealer_id) REFERENCES dealers (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── 账号级活动参与关系 ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS staff_campaign_membership (
+  id                    INT          NOT NULL AUTO_INCREMENT,
+  campaign_id           INT          NOT NULL,
+  staff_id              INT          NOT NULL,
+  is_participating      TINYINT(1)   NOT NULL DEFAULT 1,
+  qualified_video_count INT          DEFAULT 0,
+  tagged_by             VARCHAR(100) DEFAULT NULL,
+  tagged_at             DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  source                ENUM('manual','rule','import') NOT NULL DEFAULT 'manual',
+  note                  VARCHAR(500) DEFAULT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_campaign_staff (campaign_id, staff_id),
+  KEY idx_scm_campaign (campaign_id),
+  KEY idx_scm_staff (staff_id),
+  CONSTRAINT fk_scm_campaign FOREIGN KEY (campaign_id) REFERENCES campaign_events (id) ON DELETE CASCADE,
+  CONSTRAINT fk_scm_staff FOREIGN KEY (staff_id) REFERENCES dealer_staff (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── 门店级活动聚合统计 ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS dealer_campaign_stats (
+  id                       INT      NOT NULL AUTO_INCREMENT,
+  campaign_id              INT      NOT NULL,
+  dealer_id                INT      NOT NULL,
+  total_videos_in_window   INT      DEFAULT 0,
+  keyword_videos_in_window INT      DEFAULT 0,
+  total_like_in_window     BIGINT   DEFAULT 0,
+  total_comment_in_window  BIGINT   DEFAULT 0,
+  total_share_in_window    BIGINT   DEFAULT 0,
+  first_post_at            DATETIME DEFAULT NULL,
+  last_post_at             DATETIME DEFAULT NULL,
+  updated_at               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_stats_campaign_dealer (campaign_id, dealer_id),
+  KEY idx_stats_campaign (campaign_id),
+  KEY idx_stats_dealer (dealer_id),
+  CONSTRAINT fk_stats_campaign FOREIGN KEY (campaign_id) REFERENCES campaign_events (id) ON DELETE CASCADE,
+  CONSTRAINT fk_stats_dealer FOREIGN KEY (dealer_id) REFERENCES dealers (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── 后台管理员 ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS admin_users (
+  id                INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  username          VARCHAR(80)   NOT NULL,
+  password_hash     VARCHAR(255)  NOT NULL,
+  role              ENUM('admin','viewer') NOT NULL DEFAULT 'viewer',
+  brand_permissions JSON          NOT NULL,
+  is_active         TINYINT(1)    NOT NULL DEFAULT 1,
+  created_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ─── 爬取任务队列（前端触发，daemon 消费）────────────────────────────────────
+CREATE TABLE IF NOT EXISTS scrape_jobs (
+  id            INT          NOT NULL AUTO_INCREMENT,
+  mode          ENUM('full','campaign','bg-rescrape','bg-rematch') NOT NULL DEFAULT 'full',
+  campaign_id   INT          DEFAULT NULL,
+  full_refresh  TINYINT(1)   NOT NULL DEFAULT 0,
+  account_limit INT          DEFAULT NULL,
+  status        ENUM('pending','running','done','error') NOT NULL DEFAULT 'pending',
+  created_by    VARCHAR(80)  DEFAULT NULL,
+  created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  started_at    DATETIME     DEFAULT NULL,
+  finished_at   DATETIME     DEFAULT NULL,
+  result_msg    TEXT         DEFAULT NULL,
+  -- 实时进度（爬虫运行时写入，前端轮询展示）
+  progress_total         INT      DEFAULT NULL,  -- 目标账号总数
+  progress_done          INT      DEFAULT NULL,  -- 已处理数（成功+失败）
+  progress_success       INT      DEFAULT NULL,  -- 成功数
+  progress_error         INT      DEFAULT NULL,  -- 失败数
+  progress_batch         INT      DEFAULT NULL,  -- 当前批次序号
+  progress_total_batches INT      DEFAULT NULL,  -- 总批次数
+  progress_updated_at    DATETIME DEFAULT NULL,  -- 进度最后更新时间
+  PRIMARY KEY (id),
+  KEY idx_sj_status  (status),
+  KEY idx_sj_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

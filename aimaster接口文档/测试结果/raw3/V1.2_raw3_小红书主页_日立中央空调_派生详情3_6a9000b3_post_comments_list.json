@@ -1,0 +1,197 @@
+{
+  "label": "小红书主页_日立中央空调_派生详情3_6a9000b3",
+  "action": "post_comments_list",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "https://www.xiaohongshu.com/explore/6a9000b300000000200314db",
+      "max_cursor": 0,
+      "reply_pages": -1
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954c1025f71e0001648601",
+      "action": "post_comments_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "id": "6a90ed2000000000140333e4",
+            "post_id": "6a9000b300000000200314db",
+            "content": "可以远程操作了",
+            "author": {
+              "id": "aaa98dbe4b3353c0d8ca864154f05",
+              "name": "阳光里的黑太阳",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/644b2e8bb2b360267e42ed03.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787882784000,
+            "download_urls_str": "",
+            "updated": 1788169233608
+          },
+          {
+            "id": "6a90ed05000000001303c919",
+            "post_id": "6a9000b300000000200314db",
+            "content": "需要一个智慧屏",
+            "author": {
+              "id": "aaa98dbe4b3353c0d8ca864154f05",
+              "name": "阳光里的黑太阳",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/644b2e8bb2b360267e42ed03.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787882757000,
+            "download_urls_str": "",
+            "updated": 1788169233608
+          },
+          {
+            "id": "6a90ece80000000001009248",
+            "post_id": "6a9000b300000000200314db",
+            "content": "所有设备都能接人",
+            "author": {
+              "id": "aaa98dbe4b3353c0d8ca864154f05",
+              "name": "阳光里的黑太阳",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/644b2e8bb2b360267e42ed03.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787882729000,
+            "download_urls_str": "",
+            "updated": 1788169233608
+          },
+          {
+            "id": "6a90ecd800000000150224ae",
+            "post_id": "6a9000b300000000200314db",
+            "content": "一键搞定",
+            "author": {
+              "id": "aaa98dbe4b3353c0d8ca864154f05",
+              "name": "阳光里的黑太阳",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/644b2e8bb2b360267e42ed03.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787882713000,
+            "download_urls_str": "",
+            "updated": 1788169233608
+          },
+          {
+            "id": "6a905d8d000000001500222f",
+            "post_id": "6a9000b300000000200314db",
+            "content": "每一个设置都变成彼此配合",
+            "author": {
+              "id": "a3cd3a233db033297f10f591bff92",
+              "name": "棠秋",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31u0s2di6nq6g5q26mie7njqhqbv34lo?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787846029000,
+            "download_urls_str": "",
+            "updated": 1788169233608
+          },
+          {
+            "id": "6a905d74000000000f02c946",
+            "post_id": "6a9000b300000000200314db",
+            "content": "让家变得更加舒适",
+            "author": {
+              "id": "a3cd3a233db033297f10f591bff92",
+              "name": "棠秋",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31u0s2di6nq6g5q26mie7njqhqbv34lo?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787846004000,
+            "download_urls_str": "",
+            "updated": 1788169233608
+          },
+          {
+            "id": "6a90241a000000001403b671",
+            "post_id": "6a9000b300000000200314db",
+            "content": "智能化的生活",
+            "author": {
+              "id": "ad38094b53d67038d10b04d02411b",
+              "name": "叙旧。",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31ft2t8iv0i005ndl7hj09e19jfu91g0?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787831322000,
+            "download_urls_str": "",
+            "updated": 1788169233608
+          },
+          {
+            "id": "6a902412000000000f0319d6",
+            "post_id": "6a9000b300000000200314db",
+            "content": "#智慧家居[搜索高亮]# 呀",
+            "author": {
+              "id": "ad38094b53d67038d10b04d02411b",
+              "name": "叙旧。",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31ft2t8iv0i005ndl7hj09e19jfu91g0?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787831315000,
+            "download_urls_str": "",
+            "updated": 1788169233608
+          }
+        ],
+        "cursor": "",
+        "reply_page_count": 0,
+        "max_cursor": "",
+        "has_more": 0,
+        "total": 8,
+        "post_id": "6a9000b300000000200314db"
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954c1025f71e0001648601"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:40:26.499595+00:00",
+  "finished_at": "2026-08-31T09:40:35.497538+00:00",
+  "elapsed_seconds": 9.0
+}

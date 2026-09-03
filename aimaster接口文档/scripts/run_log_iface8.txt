@@ -1,0 +1,59 @@
+
+=== [1/19] 视频号 - 清河约克中央空调 (视频链接: https://weixin.qq.com/sph/Axi5xPOgV) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.45s
+
+=== [2/19] 视频号 - 湘宁中央空调地暖新风 (视频链接: https://weixin.qq.com/sph/Ab0Fw1c1k) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=9.09s
+
+=== [3/19] 视频号 - 岑晓娇 (视频链接: https://weixin.qq.com/sph/ATul24eNN) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.44s
+
+=== [4/19] 视频号 - 约克亚丽 (视频链接: https://weixin.qq.com/sph/A8EW2iFv1L) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.48s
+
+=== [5/19] 视频号 - 北京中央空调葛大爷 (视频链接: https://weixin.qq.com/sph/ARABfM2b1) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.5s
+
+=== [6/19] 小红书 - 安康中央空调蕾姐 (视频链接: http://xhslink.com/o/8nTcxigdGvM) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.74s
+
+=== [7/19] 小红书 - 南阳卓翼中央空调 (视频链接: http://xhslink.com/o/AwjV4sNnCnj) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.37s
+
+=== [8/19] 小红书 - 小沈说暖通 (主页链接: https://xhslink.com/m/614Ho00X4lw) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.38s
+
+=== [9/19] 小红书 - 菲菲说暖通 (主页链接: https://xhslink.com/m/9v956VkIS1b) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.42s
+
+=== [10/19] 小红书 - 淄博海信中央空调城市会客厅直营店 (主页链接: https://xhslink.com/m/29yzeTg6XBw) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.42s
+
+=== [11/19] 快手 - 杨飞 (主页链接: https://v.kuaishou.com/J2VEn2Nb) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.45s
+
+=== [12/19] 快手 - 张娜 (主页链接: https://v.kuaishou.com/JP2JHeMI) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.64s
+
+=== [13/19] 快手 - 柳沛森 (主页链接: https://estplca.m.kuai-fei.com/fw/user/3x4c7g7z67kc84a?fid=835373185&cc=share_wxms&followRefer=151&shareMethod=CARD&kpn=KUAISHOU&subBiz=PROFILE&shareId=19021437293853&shareToken=X14DYVDQAKXjxF0&shareMode=APP&originShareId=19021437293853&appType=1&shareObjectId=835373185&shareUrlOpened=0&timestamp=1783075297725) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.43s
+
+=== [14/19] 快手 - 张勇 (视频链接: https://v.kuaishou.com/JFJJ4mxN) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.36s
+
+=== [15/19] 抖音 - 邯郸日立中央空调 (主页链接: https://www.douyin.com/user/MS4wLjABAAAAwP48pNOMNktcDino3V7A9SbVtICpiVjN08YCRILOtiY?from_tab_name=main&relation=2&vid=7614778059099154277) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.4s
+
+=== [16/19] 抖音 - 日立中央空调、沁园净水、能率燃气热水器 (主页链接: https://v.douyin.com/gjSmkcjK7pk/) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.53s
+
+=== [17/19] 抖音 - 鹿泉日立中央空调智慧空气馆 (主页链接: https://v.douyin.com/LgwN-vCBtFA/) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.48s
+
+=== [18/19] 抖音 - 河间日立中央空调空气能（鼎晟） (主页链接: https://v.douyin.com/-hRVBDRMcxM/) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.44s
+
+=== [19/19] 抖音 - 泊头日立中央空调 (主页链接: https://v.douyin.com/ai0EX5j9n3w/) ===
+  -> 调用接口8 media_comments ... 状态=failed 耗时=8.37s
+
+补跑完成，共 19 条商家记录。清单：/Users/liuxuekui/Documents/hbecho/aimaster接口文档/测试结果/接口8_补跑清单.json

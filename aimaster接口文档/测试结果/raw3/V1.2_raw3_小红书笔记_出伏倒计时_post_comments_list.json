@@ -1,0 +1,64 @@
+{
+  "label": "小红书笔记_出伏倒计时",
+  "action": "post_comments_list",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "出伏倒计时｜换季空调这样开，舒服又省电！ 好消息，8... https://xhslink.cn/o/3FgtGUlhO8s \n复制这段话，打开【小红书】就能找到对应笔记。",
+      "max_cursor": 0,
+      "reply_pages": -1
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954be725f71e00016485f5",
+      "action": "post_comments_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "id": "6a87c8e7000000000b017c80",
+            "post_id": "6a869a5c0000000014028682",
+            "content": "顶楼这个户型，Ai家II还是5G+ #荣耀家[搜索高亮]# 更适合[害羞R]",
+            "author": {
+              "id": "a9b4ef0bc371d32211bbf2f24e397",
+              "name": "我管你是谁",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo319gd0kinmq605n7i81e4b7vvp317fk8?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787283688000,
+            "download_urls_str": "",
+            "updated": 1788169194624
+          }
+        ],
+        "cursor": "",
+        "reply_page_count": 0,
+        "max_cursor": "",
+        "has_more": 0,
+        "total": 2,
+        "post_id": "6a869a5c0000000014028682"
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954be725f71e00016485f5"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:39:50.273842+00:00",
+  "finished_at": "2026-08-31T09:39:57.363433+00:00",
+  "elapsed_seconds": 7.09
+}

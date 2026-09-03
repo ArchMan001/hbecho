@@ -1,0 +1,57 @@
+{
+  "label": "小红书主页_日立中央空调_派生详情1_6a706a35",
+  "action": "media_stats_number",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/media_stats_number",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_stats_number?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "https://www.xiaohongshu.com/explore/6a706a35000000002403c5b2"
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954c0725f71e0001648600",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "6a706a35000000002403c5b2",
+        "platform": "xiaohongshu",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": null,
+        "like_number": 308,
+        "comment_number": 13,
+        "collect_number": 126,
+        "share_number": 3,
+        "duration_number": 0,
+        "user_id": "5decba2300000000010007e1",
+        "created": 1785752117000,
+        "author_name": "日立中央空调",
+        "title": "## 标题\n8月贴贴榜！你的夏季宅家搭子是什么？\n\n## 正文\n8月宅家搭子，开始组队啦🏠\n空调＋西瓜、追剧＋零食、游戏＋冰饮、沙发＋毛孩子……\n每个人都有一套自己的夏日舒适公式\n这个8月\n#日立中央空调 全屋全感3.0也来加入你的宅家搭子清单！\n空调、地暖、新风、除湿、加湿一体化协同，根据不同空间与生活需求定制舒适空气，一人一境，都有更舒爽的夏季空气体验！\n这个8月！和小立多多贴贴，冲榜赢好礼✨\n先公布7月贴贴榜中奖名单🎉\n上榜宝子记得及时私信小立领取福利哦！\n\t\n——  ————  —— ——  —— ——  ——\n\t\n✨ 8月贴贴榜·参与方式\n✅ 评论区聊聊你的「宅家舒适搭子」\n✅ 晒出家里最常待的舒适角落\n✅ 分享你的8月宅家日常\n✅ 和小立聊天贴贴，有效互动越多，冲榜机会越大\n\t\n⚠️ 互动规则\n❌ 禁止刷纯表情或发布无意义评论\n⚠️ 每日有效互动上限8条\n⚠️ 月内累计有效互动不超过240条\n⚠️ 获奖后需间隔3个月再次参与评选\n\t\n⏰ 活动时间：2026.8.1—2026.8.31\n⏰ 开奖时间：2026.9.1\n\t\n🎁 贴贴福利：盲盒",
+        "tag_text": "#日立中央空调 #八月贴贴榜 #宅家舒适搭子 #全屋全感 #日立品牌月 #一人一境舒爽一夏 #抽奖 #福利 #宠粉 #宠粉抽奖",
+        "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o323deo9ec742g5nfcn8hg81v1rrli878?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=2c9b055ab206e70371b8d1c72b8d4e6f&t=6a954c08",
+        "download_urls": "https://sns-i11.rednotecdn.com/spectrum/1040g34o323deo9ec742g5nfcn8hg81v1rrli878?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=2c9b055ab206e70371b8d1c72b8d4e6f&t=6a954c08\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g0k0323df52hj70005nfcn8hg81v1hq4gt8g?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=962aa4849da4df302331c9fbddedebc7&t=6a954c08",
+        "updated": 1788169224775
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954c0725f71e0001648600"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:40:17.496984+00:00",
+  "finished_at": "2026-08-31T09:40:26.843566+00:00",
+  "elapsed_seconds": 9.35
+}

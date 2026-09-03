@@ -1,0 +1,235 @@
+{
+  "label": "小红书主页_日立中央空调_派生详情2_69ca0adc",
+  "action": "post_comments_list",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "https://www.xiaohongshu.com/explore/69ca0adc000000002200fdf9",
+      "max_cursor": 0,
+      "reply_pages": -1
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954c076089b100011159be",
+      "action": "post_comments_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "id": "6a7b31390000000007038f68",
+            "post_id": "69ca0adc000000002200fdf9",
+            "content": "可以从容应对自如",
+            "author": {
+              "id": "a915a50219ebfb7141dddd61be56e",
+              "name": "🌔 ɢᴏᴏᴅɴɪɢʜᴛ",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31fvomo4ine605nnuju9089shjfb949o?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1786458426000,
+            "download_urls_str": "",
+            "updated": 1788169224546
+          },
+          {
+            "id": "6a7b312f000000001c010c9e",
+            "post_id": "69ca0adc000000002200fdf9",
+            "content": "好高级的样子",
+            "author": {
+              "id": "a915a50219ebfb7141dddd61be56e",
+              "name": "🌔 ɢᴏᴏᴅɴɪɢʜᴛ",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31fvomo4ine605nnuju9089shjfb949o?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1786458416000,
+            "download_urls_str": "",
+            "updated": 1788169224546
+          },
+          {
+            "id": "6a7809350000000014016263",
+            "post_id": "69ca0adc000000002200fdf9",
+            "content": "我家空调时不时有嗒嗒嗒的声音，并不总是有。师傅上门就以当时听不到声音为由，说没问题。那我就只能忍受着这个声音吗[笑哭R]",
+            "author": {
+              "id": "a3e7065a3d1de4fdf6cb03dcf26f7",
+              "name": "momo",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo3237h70kp7o0g5od2je2k0nhfvqm4t50?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1786251573000,
+            "download_urls_str": "",
+            "updated": 1788169224546
+          },
+          {
+            "id": "6a720711000000001400476d",
+            "post_id": "69ca0adc000000002200fdf9",
+            "content": "可以从容应对",
+            "author": {
+              "id": "a3cd3a233db033297f10f591bff92",
+              "name": "棠秋",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31u0s2di6nq6g5q26mie7njqhqbv34lo?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785857809000,
+            "download_urls_str": "",
+            "updated": 1788169224546
+          },
+          {
+            "id": "6a72070900000000140045b6",
+            "post_id": "69ca0adc000000002200fdf9",
+            "content": "高级感拉满了",
+            "author": {
+              "id": "a3cd3a233db033297f10f591bff92",
+              "name": "棠秋",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31u0s2di6nq6g5q26mie7njqhqbv34lo?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785857802000,
+            "download_urls_str": "",
+            "updated": 1788169224546
+          },
+          {
+            "id": "6a4e4457000000002b02467f",
+            "post_id": "69ca0adc000000002200fdf9",
+            "content": "全屋出风均匀屋子各处温差不会大",
+            "author": {
+              "id": "acf964f18691b4ccd37d14f66992f",
+              "name": "肃.",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo3249ehuljnv3g5osqh75pidph9ej9qo0?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1783514200000,
+            "download_urls_str": "",
+            "updated": 1788169224546
+          },
+          {
+            "id": "6a4e444c000000002902fcd3",
+            "post_id": "69ca0adc000000002200fdf9",
+            "content": "冷暖调控到位换季切换使用很顺手",
+            "author": {
+              "id": "acf964f18691b4ccd37d14f66992f",
+              "name": "肃.",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo3249ehuljnv3g5osqh75pidph9ej9qo0?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1783514189000,
+            "download_urls_str": "",
+            "updated": 1788169224546
+          },
+          {
+            "id": "6a47c397000000001500452f",
+            "post_id": "69ca0adc000000002200fdf9",
+            "content": "定制气候",
+            "author": {
+              "id": "affcbdec0e27d28d3d342ab314599",
+              "name": "半盏流年",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31s21571g4o6g5q38ukfngh0pnskaki0?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1783088023000,
+            "download_urls_str": "",
+            "updated": 1788169224546
+          },
+          {
+            "id": "6a47c38d0000000015002358",
+            "post_id": "69ca0adc000000002200fdf9",
+            "content": "好棒",
+            "author": {
+              "id": "affcbdec0e27d28d3d342ab314599",
+              "name": "半盏流年",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31s21571g4o6g5q38ukfngh0pnskaki0?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1783088013000,
+            "download_urls_str": "",
+            "updated": 1788169224546
+          },
+          {
+            "id": "6a12bf9d0000000028032e10",
+            "post_id": "69ca0adc000000002200fdf9",
+            "content": "从容应对",
+            "author": {
+              "id": "a5883dd7e334ec46735ccd9865f7b",
+              "name": "紫薯薄荷糖",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo318u8jfnak66g5n3ui58kc21m6iqj6gg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1779613598000,
+            "download_urls_str": "",
+            "updated": 1788169224546
+          }
+        ],
+        "cursor": "",
+        "reply_page_count": 0,
+        "max_cursor": "{\"cursor\": \"6a12bf9d0000000028032e10\", \"index\": 2, \"pageArea\": \"ALL\"}",
+        "has_more": 1,
+        "total": 13,
+        "post_id": "69ca0adc000000002200fdf9"
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954c076089b100011159be"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:40:17.498744+00:00",
+  "finished_at": "2026-08-31T09:40:26.498357+00:00",
+  "elapsed_seconds": 9.0
+}

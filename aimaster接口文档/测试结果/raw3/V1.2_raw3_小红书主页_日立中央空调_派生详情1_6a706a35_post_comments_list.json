@@ -1,0 +1,235 @@
+{
+  "label": "小红书主页_日立中央空调_派生详情1_6a706a35",
+  "action": "post_comments_list",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "https://www.xiaohongshu.com/explore/6a706a35000000002403c5b2",
+      "max_cursor": 0,
+      "reply_pages": -1
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954c072bcec60001e449c3",
+      "action": "post_comments_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "id": "6a89bd3500000000010088e2",
+            "post_id": "6a706a35000000002403c5b2",
+            "content": "#宠粉福利[搜索高亮]#  来了",
+            "author": {
+              "id": "a18fee46724c3740566fe9578caac",
+              "name": "无所谓",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31ughbph9ii005opg8nfostm1q9phvvo?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787411765000,
+            "download_urls_str": "",
+            "updated": 1788169224498
+          },
+          {
+            "id": "6a7f48cd00000000140269f3",
+            "post_id": "6a706a35000000002403c5b2",
+            "content": "[doge]真的是日立",
+            "author": {
+              "id": "ad8bddee8d3849f113737b3144005",
+              "name": "RZLNIE",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/63a8e893d9c6d8fb9f83f46f.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1786726605000,
+            "download_urls_str": "",
+            "updated": 1788169224498
+          },
+          {
+            "id": "6a799fe80000000007038eb8",
+            "post_id": "6a706a35000000002403c5b2",
+            "content": "恭喜恭喜🎉",
+            "author": {
+              "id": "a915a50219ebfb7141dddd61be56e",
+              "name": "🌔 ɢᴏᴏᴅɴɪɢʜᴛ",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31fvomo4ine605nnuju9089shjfb949o?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1786355688000,
+            "download_urls_str": "",
+            "updated": 1788169224498
+          },
+          {
+            "id": "6a799fe50000000007038dd6",
+            "post_id": "6a706a35000000002403c5b2",
+            "content": "羡慕了",
+            "author": {
+              "id": "a915a50219ebfb7141dddd61be56e",
+              "name": "🌔 ɢᴏᴏᴅɴɪɢʜᴛ",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31fvomo4ine605nnuju9089shjfb949o?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1786355686000,
+            "download_urls_str": "",
+            "updated": 1788169224498
+          },
+          {
+            "id": "6a7589bf000000002903656b",
+            "post_id": "6a706a35000000002403c5b2",
+            "content": "[暗中观察R]这个月是继续享受日立空调带来的烦恼和痛苦[暗中观察R]",
+            "author": {
+              "id": "a57ca39bda82f5e827b0a08cee067",
+              "name": "肉肉和卡布",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/54bf9a7fe779897696ab8e1e.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1786087872000,
+            "download_urls_str": "",
+            "updated": 1788169224498
+          },
+          {
+            "id": "6a718d0b000000002b0027a7",
+            "post_id": "6a706a35000000002403c5b2",
+            "content": "这个月是什么",
+            "author": {
+              "id": "aaa98dbe4b3353c0d8ca864154f05",
+              "name": "阳光里的黑太阳",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/644b2e8bb2b360267e42ed03.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785826572000,
+            "download_urls_str": "",
+            "updated": 1788169224498
+          },
+          {
+            "id": "6a718cfd000000002b00249f",
+            "post_id": "6a706a35000000002403c5b2",
+            "content": "恭喜了",
+            "author": {
+              "id": "aaa98dbe4b3353c0d8ca864154f05",
+              "name": "阳光里的黑太阳",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/644b2e8bb2b360267e42ed03.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785826558000,
+            "download_urls_str": "",
+            "updated": 1788169224498
+          },
+          {
+            "id": "6a718cf6000000002a03389d",
+            "post_id": "6a706a35000000002403c5b2",
+            "content": "积极参与",
+            "author": {
+              "id": "aaa98dbe4b3353c0d8ca864154f05",
+              "name": "阳光里的黑太阳",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/644b2e8bb2b360267e42ed03.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785826550000,
+            "download_urls_str": "",
+            "updated": 1788169224498
+          },
+          {
+            "id": "6a70a8ce0000000015007182",
+            "post_id": "6a706a35000000002403c5b2",
+            "content": "希望这个月是我吧[害羞R]",
+            "author": {
+              "id": "a3cd3a233db033297f10f591bff92",
+              "name": "棠秋",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31u0s2di6nq6g5q26mie7njqhqbv34lo?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785768143000,
+            "download_urls_str": "",
+            "updated": 1788169224498
+          },
+          {
+            "id": "6a70a8c80000000015012eca",
+            "post_id": "6a706a35000000002403c5b2",
+            "content": "太宠粉了吧",
+            "author": {
+              "id": "a3cd3a233db033297f10f591bff92",
+              "name": "棠秋",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31u0s2di6nq6g5q26mie7njqhqbv34lo?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785768136000,
+            "download_urls_str": "",
+            "updated": 1788169224498
+          }
+        ],
+        "cursor": "",
+        "reply_page_count": 0,
+        "max_cursor": "{\"cursor\": \"6a70a8c80000000015012eca\", \"index\": 2, \"pageArea\": \"ALL\"}",
+        "has_more": 1,
+        "total": 13,
+        "post_id": "6a706a35000000002403c5b2"
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954c072bcec60001e449c3"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:40:17.497268+00:00",
+  "finished_at": "2026-08-31T09:40:26.470595+00:00",
+  "elapsed_seconds": 8.97
+}

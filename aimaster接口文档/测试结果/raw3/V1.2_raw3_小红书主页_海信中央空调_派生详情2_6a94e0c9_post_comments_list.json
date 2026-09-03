@@ -1,0 +1,44 @@
+{
+  "label": "小红书主页_海信中央空调_派生详情2_6a94e0c9",
+  "action": "post_comments_list",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "https://www.xiaohongshu.com/explore/6a94e0c9000000002a03cc31",
+      "max_cursor": 0,
+      "reply_pages": -1
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954c152bcec60001e449ce",
+      "action": "post_comments_list",
+      "status": "succeeded",
+      "result": {
+        "result": [],
+        "cursor": "",
+        "reply_page_count": 0,
+        "max_cursor": "",
+        "has_more": 0,
+        "total": 0,
+        "post_id": "6a94e0c9000000002a03cc31"
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954c152bcec60001e449ce"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:40:35.411864+00:00",
+  "finished_at": "2026-08-31T09:40:40.466855+00:00",
+  "elapsed_seconds": 5.05
+}

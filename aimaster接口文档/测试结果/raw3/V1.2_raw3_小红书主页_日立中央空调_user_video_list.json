@@ -1,0 +1,772 @@
+{
+  "label": "小红书主页_日立中央空调",
+  "action": "user_video_list",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/user_video_list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/user_video_list?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "@日立中央空调 在小红书已经有7.8万个粉丝，点击链接或复制口令查看Ta的主页>> https://xhslink.cn/o/E2W9yK1ctR",
+      "max_cursor": 0
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954be3eb420f000133ea84",
+      "action": "user_video_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "post_id": "6a706a35000000002403c5b2",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1785752117000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n8月贴贴榜！你的夏季宅家搭子是什么？\n\n## 正文\n8月宅家搭子，开始组队啦🏠\n空调＋西瓜、追剧＋零食、游戏＋冰饮、沙发＋毛孩子……\n每个人都有一套自己的夏日舒适公式\n这个8月\n#日立中央空调 全屋全感3.0也来加入你的宅家搭子清单！\n空调、地暖、新",
+            "tag_text": "",
+            "stats": {
+              "like_count": 308,
+              "comment_count": 13,
+              "collect_count": 126,
+              "share_count": 3
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o323deo9ec742g5nfcn8hg81v1rrli878?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=c4906352859b5216f71f9e916175896d&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323deo9ec742g5nfcn8hg81v1rrli878?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=c4906352859b5216f71f9e916175896d&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323df52hj70005nfcn8hg81v1hq4gt8g?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=d42d7ed5f281c9bc27a9280373156539&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "8月宅家搭子，开始组队啦🏠\n空调＋西瓜、追剧＋零食、游戏＋冰饮、沙发＋毛孩子……\n每个人都有一套自己的夏日舒适公式\n这个8月\n#日立中央空调 全屋全感3.0也来加入你的宅家搭子清单！\n空调、地暖、新"
+            }
+          },
+          {
+            "post_id": "69ca0adc000000002200fdf9",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1774848732000,
+            "author_name": "日立中央空调",
+            "title": "集成智慧，定制气候。 尊睿全效II多功能中央空调\n以全新升级三联供系统，集热水、地暖、空调于一体，从容应对四季\n气候变化。冷暖风水一套集成，舒适与能效兼得，为居家空间带来更\n进",
+            "tag_text": "#日立中央空调[话题]#",
+            "stats": {
+              "like_count": 41,
+              "comment_count": 13,
+              "collect_count": 21,
+              "share_count": 30
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k031ub025a8hs005nfcn8hg81v17kointg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=95c8030ce1be794807d0f554b7dbde92&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v28.rednotecdn.com/stream/1/110/258/01e9c9de0e263d90010370019d3d3c6b91_258.mp4",
+              "name": "01e9c9de0e263d90010370019d3d3c6b91_258.mp4",
+              "duration": 175.04
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k031ub025a8hs005nfcn8hg81v17kointg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=95c8030ce1be794807d0f554b7dbde92&t=6a954be9"
+            ],
+            "download_urls": []
+          },
+          {
+            "post_id": "6a9000b300000000200314db",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1787822259000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n家里这么多智能设备，谁来当“群主”？\n\n## 正文\n现在的家，设备越来越多——\n空调一个面板，新风一个面板\n地暖、灯光、窗帘又各有各的控制方式……\n想舒服一下，先得挨个“点名”👇\n\t\n🌡️ 空调：客厅今天开多少度？\n🍃 新风：现在要不要打开？",
+            "tag_text": "",
+            "stats": {
+              "like_count": 6,
+              "comment_count": 8,
+              "collect_count": 2,
+              "share_count": 3
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o324c9u7qsn4105nfcn8hg81v1vr9kkt0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=5788e6736f03123113a4489061819de3&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o324c9u7qsn4105nfcn8hg81v1vr9kkt0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=5788e6736f03123113a4489061819de3&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0324c9ub1kmu005nfcn8hg81v1520hgt8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=6cfd1d720286c2633b9b2b75c4bb0341&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o324c9uh6pn2105nfcn8hg81v176d2otg?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=e9f587333c39299c7f01f80a1dfff119&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o324c9up6qn40g5nfcn8hg81v1si4us4o?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=f89431e3a6666e3ab70c09258e8a4c87&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0324c9urncgm005nfcn8hg81v1spr5l98?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=818df671731e85f6b8098ddc01184989&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "现在的家，设备越来越多——\n空调一个面板，新风一个面板\n地暖、灯光、窗帘又各有各的控制方式……\n想舒服一下，先得挨个“点名”👇\n\t\n🌡️ 空调：客厅今天开多少度？\n🍃 新风：现在要不要打开？\n"
+            }
+          },
+          {
+            "post_id": "6a8d0abc000000000f03e9e1",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1787628220000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n夏末开窗还是关窗？其实还有第三种答案❗️\n\n## 正文\n夏末待在家，窗户开不开也能纠结半天👇\n\t\n🪟 开窗派：空气当然要流通！\n不开窗总觉得屋里闷闷的\n但窗一开，室外的热气、噪音、灰尘，甚至小飞虫，也可能跟着一起进来\n\t\n❄️ 关窗派：空调开着，还是关",
+            "tag_text": "",
+            "stats": {
+              "like_count": 408,
+              "comment_count": 8,
+              "collect_count": 313,
+              "share_count": 21
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o3249db7686u105nfcn8hg81v1jenevro?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=024e4e12be4019a0ae7b16d1e00af40f&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o3249db7686u105nfcn8hg81v1jenevro?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=024e4e12be4019a0ae7b16d1e00af40f&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o3249dc1c2n2105nfcn8hg81v1bphc180?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=3ac322b00e6a192bac517f291506d2a4&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k03249dc68c0s005nfcn8hg81v10rh4qp0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=99c464fc2ef6dbfbd28177e8ad2a78f7&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o3249dca3ugs105nfcn8hg81v1anha1a0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=1886f3752cce809189d3aa86e7c7bd82&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "夏末待在家，窗户开不开也能纠结半天👇\n\t\n🪟 开窗派：空气当然要流通！\n不开窗总觉得屋里闷闷的\n但窗一开，室外的热气、噪音、灰尘，甚至小飞虫，也可能跟着一起进来\n\t\n❄️ 关窗派：空调开着，还是关"
+            }
+          },
+          {
+            "post_id": "6a87ebf00000000017009f68",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1787292656000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n末伏不是关机倒计时，空调该做“状态检查”\n\n## 正文\n从入夏一路高频运行到末伏\n空调看起来照常工作，状态却可能已经悄悄发生变化\n趁着暑气还没完全退场\n给家里的空调做一次轻量「状态自测」👇\n\t\n01 出风｜感觉没有之前有劲了？\n同样的风速设置，如果最近明",
+            "tag_text": "",
+            "stats": {
+              "like_count": 409,
+              "comment_count": 8,
+              "collect_count": 4,
+              "share_count": 2
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o3244dfdet6u105nfcn8hg81v15feasag?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=46c15a3f22ce7af655dae6a0d6e50d0e&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o3244dfdet6u105nfcn8hg81v15feasag?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=46c15a3f22ce7af655dae6a0d6e50d0e&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k03244dfie272005nfcn8hg81v1femrpn8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=a719a7af082bac7e7e56f50853533c18&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o3244dg3oqn4105nfcn8hg81v1881r7g0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=e3a40ccfcaf058c03e66c9745dc15c65&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "从入夏一路高频运行到末伏\n空调看起来照常工作，状态却可能已经悄悄发生变化\n趁着暑气还没完全退场\n给家里的空调做一次轻量「状态自测」👇\n\t\n01 出风｜感觉没有之前有劲了？\n同样的风速设置，如果最近明"
+            }
+          },
+          {
+            "post_id": "6a851c920000000006006b26",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1787108498000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n🎁七夕 | 爱是彼此靠近，舒适不必将就\n\n## 正文\n情侣同居的空调矛盾，大概是很多二人世界里的小插曲…\n明明感情很合拍，一到空调这件事上，体感却总能精准“唱反调”👇\n▫️睡眠温差派： 一个24℃才觉得刚好，另一个27℃已经默默拉上被子\n▫️风感不合拍",
+            "tag_text": "",
+            "stats": {
+              "like_count": 428,
+              "comment_count": 120,
+              "collect_count": 143,
+              "share_count": 18
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k03241l6ad20m005nfcn8hg81v1a3mh2ng?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=632331636d7b579c283dd0578e4be0dc&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k03241l6ad20m005nfcn8hg81v1a3mh2ng?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=632331636d7b579c283dd0578e4be0dc&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k03241lb2fc72005nfcn8hg81v1mf768c8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=4ed1df267ae08f8e7e4214e909bc33cd&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o3241lb5ej6u105nfcn8hg81v1brqthb0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=63167395ed4159dc22ba6dafe9a096d3&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k03241lb8o3n4005nfcn8hg81v1j7eptro?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=fe5dac239d64b1586fefcb2e17a71b3a&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "情侣同居的空调矛盾，大概是很多二人世界里的小插曲…\n明明感情很合拍，一到空调这件事上，体感却总能精准“唱反调”👇\n▫️睡眠温差派： 一个24℃才觉得刚好，另一个27℃已经默默拉上被子\n▫️风感不合拍"
+            }
+          },
+          {
+            "post_id": "6a816b5e000000000502af24",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1786928433000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n下班进门即舒适｜独居人的中央空调省心攻略\n\n## 正文\n独居的意义，是终于能把生活调成自己喜欢的频道\n不用迁就谁的作息，不用妥协谁的偏好，从房间的布置到三餐的口味，每一处细节都由自己掌控\n\t\n而家的空气，也该如此\n懂得你的习惯，顺应你的节奏\n\t\n日立中央空",
+            "tag_text": "",
+            "stats": {
+              "like_count": 408,
+              "comment_count": 10,
+              "collect_count": 127,
+              "share_count": 2
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o323v2v3ma702g5nfcn8hg81v1kali1co?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=805ed741af6ca5f19182eb3d590fc205&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323v2v3ma702g5nfcn8hg81v1kali1co?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=805ed741af6ca5f19182eb3d590fc205&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323u2ebsd74005nfcn8hg81v1ht8ubug?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=aa74cef51c17c65c330bde035acfc12c&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323u2eel8n0005nfcn8hg81v1flrnl9o?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=3c00db5fb008703d557a8723d7b45d31&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "独居的意义，是终于能把生活调成自己喜欢的频道\n不用迁就谁的作息，不用妥协谁的偏好，从房间的布置到三餐的口味，每一处细节都由自己掌控\n\t\n而家的空气，也该如此\n懂得你的习惯，顺应你的节奏\n\t\n日立中央空"
+            }
+          },
+          {
+            "post_id": "6a7be0c8000000002402fd5a",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1786503368000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n立秋后的家，一天要过几种体感？\n\n## 正文\n已经立秋，天气却没急着换季🍃\n早晨已经透出几分凉意\n到了中午，暑热重新占据主场\n傍晚热意未散，湿闷感又跟着上线\n一天之内，体感像在不同模式间反复切换！\n\t\n小立整理了一份秋日居家体感舒适指南\n搭配日",
+            "tag_text": "",
+            "stats": {
+              "like_count": 410,
+              "comment_count": 12,
+              "collect_count": 128,
+              "share_count": 2
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323okq6fq72005nfcn8hg81v1b1d6tdg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=754e1eefa574f3efc7146a2ca987c268&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323okq6fq72005nfcn8hg81v1b1d6tdg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=754e1eefa574f3efc7146a2ca987c268&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323okqd36n4005nfcn8hg81v1lt0dbrg?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=eb3da90b08112d787b19c1af8740ce1a&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323okqffa74105nfcn8hg81v1gbn1p38?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=65bee4ff7cc2084e43ada1115e0aea32&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323okqhn06u005nfcn8hg81v1afb1vp0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=796e342819d074e2bae0b865db348d09&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "已经立秋，天气却没急着换季🍃\n早晨已经透出几分凉意\n到了中午，暑热重新占据主场\n傍晚热意未散，湿闷感又跟着上线\n一天之内，体感像在不同模式间反复切换！\n\t\n小立整理了一份秋日居家体感舒适指南\n搭配日"
+            }
+          },
+          {
+            "post_id": "6a758c6d0000000006005801",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1786088557000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n🎁｜秋老虎上线，新房除醛别提前收工❕\n\n## 正文\n很多人觉得房子晾了一整个夏天，甲醛早散干净了\n可真别大意！这几个常见除醛误区，踩中就白忙活👇\n\t\n❌ 晾完一夏天就能放心住\n高温只会加速甲醛释放，并不会凭空消失，一关窗开空调，挥发的甲醛全闷在屋里越",
+            "tag_text": "",
+            "stats": {
+              "like_count": 412,
+              "comment_count": 18,
+              "collect_count": 165,
+              "share_count": 2
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o323idu5id6s1g5nfcn8hg81v14jqv3f0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=f258cc544a8b9366772fef445785b75c&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323idu5id6s1g5nfcn8hg81v14jqv3f0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=f258cc544a8b9366772fef445785b75c&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323ieubbcn40g5nfcn8hg81v1aa926r0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=dac913b04862288d11f23a15bc911354&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323ieueh1n2205nfcn8hg81v1a0lbtr0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=b45a16c53cc22106cdb39090dbeb524e&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323ieueh1n22g5nfcn8hg81v1skn9igg?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=4b9b6b8f573fefc0b0a7080fe57df323&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "很多人觉得房子晾了一整个夏天，甲醛早散干净了\n可真别大意！这几个常见除醛误区，踩中就白忙活👇\n\t\n❌ 晾完一夏天就能放心住\n高温只会加速甲醛释放，并不会凭空消失，一关窗开空调，挥发的甲醛全闷在屋里越"
+            }
+          },
+          {
+            "post_id": "6a7419a500000000060065ad",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1785993637000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n日立宠粉加码！品牌月多重好礼限时开启❗️\n\n## 正文\n舒适焕新，品牌月福利同步加码✨\n7月24日—8月24日，#日立中央空调 品牌月限时开启：\n\t\n🏠 尊睿·全效Ⅱ系列\n· 主卧0元升级新一代温湿双控内机1台\n· 厨/卫内机半价购\n· 清凉直补1000",
+            "tag_text": "",
+            "stats": {
+              "like_count": 10,
+              "comment_count": 11,
+              "collect_count": 4,
+              "share_count": 3
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o323guvaqv6u205nfcn8hg81v1n4dtfko?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=2e6818410b8fc63a2aaadc8180d348a1&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323guvaqv6u205nfcn8hg81v1n4dtfko?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=2e6818410b8fc63a2aaadc8180d348a1&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323h26b9i6s0g5nfcn8hg81v19b8088g?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=83e0780047323e9eab3975d81f97f953&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "舒适焕新，品牌月福利同步加码✨\n7月24日—8月24日，#日立中央空调 品牌月限时开启：\n\t\n🏠 尊睿·全效Ⅱ系列\n· 主卧0元升级新一代温湿双控内机1台\n· 厨/卫内机半价购\n· 清凉直补1000"
+            }
+          },
+          {
+            "post_id": "6a73105f000000000600584d",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1785978008000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n是什么，让客户从反复选择到推荐亲朋？\n\n## 正文\n设计高端，功能实用，产品稳定，使用更省心！\n全家的健康空气环境都交给我们来守护！\n本期彩蛋：最萌“监工员“登场监督日立中央空调清洗现场！\n  #日立会员",
+            "tag_text": "#日立中央空调[话题]# #挚友清洗计划[话题]#",
+            "stats": {
+              "like_count": 413,
+              "comment_count": 11,
+              "collect_count": 5,
+              "share_count": 2
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323g1s5qamu005nfcn8hg81v19ls18p0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=2d9cc62826a7146e0992507ba22a4d71&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v28.rednotecdn.com/stream/79/110/258/01ea730f96578c684f0370019fd178dc9e_258.mp4",
+              "name": "01ea730f96578c684f0370019fd178dc9e_258.mp4",
+              "duration": 206.635
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323g1s5qamu005nfcn8hg81v19ls18p0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=2d9cc62826a7146e0992507ba22a4d71&t=6a954be9"
+            ],
+            "download_urls": []
+          },
+          {
+            "post_id": "6a729faa0000000025007c57",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1785896874000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n🎁来交卷｜尊睿·全效Ⅱ“全”知识随堂测\n\n## 正文\n关于日立尊睿·全效Ⅱ你了解多少？👀\n3道产品知识小测已经上线\n选出答案来交卷✍️\n\t\n按照 “1A 2B 3C” 的格式留下答案\n看看谁能一次全部答对～\n\t\n全对的朋友，有机会抱走夏日清凉礼哦🎁",
+            "tag_text": "",
+            "stats": {
+              "like_count": 428,
+              "comment_count": 45,
+              "collect_count": 113,
+              "share_count": 8
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o323fjtu54704g5nfcn8hg81v1qh50pi8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=dffa31f299ef90df803a99716f07558b&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323fjtu54704g5nfcn8hg81v1qh50pi8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=dffa31f299ef90df803a99716f07558b&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323fjtu5470505nfcn8hg81v1e829b20?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=91ee3f71aa9a9ce28e5c81c59f46405a&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323fjtu54705g5nfcn8hg81v19cbne30?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=6f0a5df37bea52430f7d96c8e91e9b12&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323fjtu5470605nfcn8hg81v1bq7l73o?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=4e846588fcc42b1c99e4792e8722787c&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "关于日立尊睿·全效Ⅱ你了解多少？👀\n3道产品知识小测已经上线\n选出答案来交卷✍️\n\t\n按照 “1A 2B 3C” 的格式留下答案\n看看谁能一次全部答对～\n\t\n全对的朋友，有机会抱走夏日清凉礼哦🎁\n"
+            }
+          },
+          {
+            "post_id": "6a7199b7000000002402f037",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1785891659000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n成都日立「挚友清洗计划」持续进行中\n\n## 正文\n真正让用户感到暖心的服务是什么样？\n懂用户所需，想用户所想，响应有速度，陪伴有温度\n每一步都用心，每一步都专业……",
+            "tag_text": "#日立中央空调[话题]# #挚友清洗计划[话题]# #日立会员用户[话题]#",
+            "stats": {
+              "like_count": 412,
+              "comment_count": 8,
+              "collect_count": 3,
+              "share_count": 2
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o323ek3d156u105nfcn8hg81v1nevtb8g?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=49332516683436c535a57c8e2850d209&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v28.rednotecdn.com/stream/1/110/258/01ea7197b946d8d7010370019fcbc0fedc_258.mp4",
+              "name": "01ea7197b946d8d7010370019fcbc0fedc_258.mp4",
+              "duration": 146.936
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323ek3d156u105nfcn8hg81v1nevtb8g?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=49332516683436c535a57c8e2850d209&t=6a954be9"
+            ],
+            "download_urls": []
+          },
+          {
+            "post_id": "6a7197120000000008012c2a",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1785829138000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n成都日立「挚友清洗计划」温情进行中\n\n## 正文\n是什么让他们确信\"选日立，是选对了\"？\n真正的服务不止于交付那一刻，\n更在于漫长岁月里的每一次惦记￼",
+            "tag_text": "#日立中央空调[话题]# #挚友清洗计划[话题]# #日立会员用户[话题]#",
+            "stats": {
+              "like_count": 8,
+              "comment_count": 8,
+              "collect_count": 4,
+              "share_count": 4
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323ejpv1b740g5nfcn8hg81v1meeiqfg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=293f6118c7de7ff22c22d4bef6be9ab6&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v28.rednotecdn.com/stream/79/110/258/01ea71949b58c71b4f0370019fcbb6a785_258.mp4",
+              "name": "01ea71949b58c71b4f0370019fcbb6a785_258.mp4",
+              "duration": 206.472
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323ejpv1b740g5nfcn8hg81v1meeiqfg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=293f6118c7de7ff22c22d4bef6be9ab6&t=6a954be9"
+            ],
+            "download_urls": []
+          },
+          {
+            "post_id": "6a681d80000000000101fe51",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1785208192000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n夏天硬扛高温更伤身？正确吹空调指南来啦\n\n## 正文\n💡日立纳凉小站｜舒爽知识站营业中！\n夏天常听到 “吹空调不好，忍忍更养生” 的说法\n很多人明明热得浑身黏腻、睡不着觉，也硬扛着不肯开\n① 更容易觉得疲惫：长时间处于高温环境，身体需要持续调节，整个人",
+            "tag_text": "",
+            "stats": {
+              "like_count": 14,
+              "comment_count": 19,
+              "collect_count": 9,
+              "share_count": 4
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k03235bg0f174005nfcn8hg81v15qenpr8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=48a8055d573d2dcc628c831cea526aad&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k03235bg0f174005nfcn8hg81v15qenpr8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=48a8055d573d2dcc628c831cea526aad&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k03235bg4sqmu005nfcn8hg81v16362qv8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=4f5e9abee9f73ee574453af91be7ec40&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k03235bg9d2mu005nfcn8hg81v137iftvg?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=25736a2c96d90809874e93f6da302c18&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k03235bgd3t70005nfcn8hg81v1vmf4n88?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=706593a7705e8d2c3610406f846baaae&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "💡日立纳凉小站｜舒爽知识站营业中！\n夏天常听到 “吹空调不好，忍忍更养生” 的说法\n很多人明明热得浑身黏腻、睡不着觉，也硬扛着不肯开\n① 更容易觉得疲惫：长时间处于高温环境，身体需要持续调节，整个人"
+            }
+          },
+          {
+            "post_id": "6a62c68d0000000004028b24",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1784858253000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n🧊夏日限定「日立纳凉小站」正式营业！\n\n## 正文\n夏天，总想找到一个让自己放松下来的时刻\n可能是回家后的一阵清凉\n可能是午后安静的小憩\n也可能是和家人一起享受的一段惬意时光\n\t\n而这个夏天，日立中央空调开启「纳凉小站」\n邀请大家一起探索夏日舒爽生活！",
+            "tag_text": "",
+            "stats": {
+              "like_count": 378,
+              "comment_count": 16,
+              "collect_count": 11,
+              "share_count": 7
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k032304gjt770005nfcn8hg81v18uju0o8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=6f3e9b86e47783b012aacf06ae132100&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k032304gjt770005nfcn8hg81v18uju0o8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=6f3e9b86e47783b012aacf06ae132100&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k032304gjt7700g5nfcn8hg81v1pptp7ho?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=ae4fccb153c7c6203bd4e56c33502df4&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k032304gjt770105nfcn8hg81v1indlmgg?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=a5c1853e628ab01efdad9c08ee3c815a&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k032304gjt7701g5nfcn8hg81v162jvda0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=548d47aeb929abcdb276e66b4db6153d&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "夏天，总想找到一个让自己放松下来的时刻\n可能是回家后的一阵清凉\n可能是午后安静的小憩\n也可能是和家人一起享受的一段惬意时光\n\t\n而这个夏天，日立中央空调开启「纳凉小站」\n邀请大家一起探索夏日舒爽生活！"
+            }
+          },
+          {
+            "post_id": "6a5d8b05000000000402b6e3",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1784515333000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n🎁不只RGB灯带，电竞房舒适度也是加分项\n\n## 正文\n七八月遇上电竞赛事密集期🎮\n宅家追赛、组队开黑，一坐就是几小时\n灯带、主机、外设都安排到位\n空气发闷、设备散热、冷风吹肩颈、噪音叠加\n却可能让电竞体验率先“掉帧”……\n\t\n一间高配电竞房，不只是看起",
+            "tag_text": "",
+            "stats": {
+              "like_count": 163,
+              "comment_count": 14,
+              "collect_count": 14,
+              "share_count": 2
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322r0vhg06u005nfcn8hg81v1srfmbko?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=2015fb37f042b75d4b7873efedcfd41e&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322r0vhg06u005nfcn8hg81v1srfmbko?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=2015fb37f042b75d4b7873efedcfd41e&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322r0vhg06u0g5nfcn8hg81v19f4u4q0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=14437b57b10e4a606d58cce77e269ba4&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322r0vhg06u105nfcn8hg81v15ktkgto?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=5e30bc6c6903983c8479bc8f7b53652d&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322r0vhg06u1g5nfcn8hg81v1hj0e7v0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=480efe43fef114a89e9ddbf3a08c665a&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322r0vhg06u205nfcn8hg81v1m45qj4g?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=f4a402a906c8de1386d96846ef102e2d&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "七八月遇上电竞赛事密集期🎮\n宅家追赛、组队开黑，一坐就是几小时\n灯带、主机、外设都安排到位\n空气发闷、设备散热、冷风吹肩颈、噪音叠加\n却可能让电竞体验率先“掉帧”……\n\t\n一间高配电竞房，不只是看起"
+            }
+          },
+          {
+            "post_id": "6a5c969a0000000005039df0",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1784457036000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n世界杯决赛夜｜宅家看球的舒适被它稳稳拿捏\n\n## 正文\n2026美加墨世界杯终极对决已经进入倒计时🏆\n冰饮、宵夜、同频的好友都已就位，大宅客厅秒变专属观赛厅，就等开场哨响，一起为热爱屏息欢呼🎉\n想要全情沉浸赛事节奏，舒适体感不能掉链子！\n日立水墅适水系",
+            "tag_text": "",
+            "stats": {
+              "like_count": 175,
+              "comment_count": 12,
+              "collect_count": 17,
+              "share_count": 3
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o322q34l02n2405nfcn8hg81v1d8ka1ng?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=9684adbf5f106bb130dba8e0da924086&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o322q34l02n2405nfcn8hg81v1d8ka1ng?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=9684adbf5f106bb130dba8e0da924086&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o322q34l02n24g5nfcn8hg81v148qsoc0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=82271ead9570cb5200389dacb3537120&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o322q34l02n2505nfcn8hg81v1a99kf60?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=57bdb78c2fb1ed6f80cbc77f01416de6&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o322q34l02n25g5nfcn8hg81v10hhq26g?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=43bd74135db61d3c616677633080f556&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "2026美加墨世界杯终极对决已经进入倒计时🏆\n冰饮、宵夜、同频的好友都已就位，大宅客厅秒变专属观赛厅，就等开场哨响，一起为热爱屏息欢呼🎉\n想要全情沉浸赛事节奏，舒适体感不能掉链子！\n日立水墅适水系"
+            }
+          },
+          {
+            "post_id": "6a583f5e000000000100188c",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1784168286000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n🎁下午茶｜40天超长伏天的居家舒适攻略✨\n\n## 正文\n正式入伏，长达 40 天的 “超长待机” 三伏天已经开启！\n户外骄阳似火，室内闷热黏腻，连吹的风都带着温度，“桑拿感” 直接拉满。想要宅家也能解锁清爽自在的状态？这份伏天居家舒适攻略，帮你稳稳度过一整",
+            "tag_text": "",
+            "stats": {
+              "like_count": 205,
+              "comment_count": 18,
+              "collect_count": 13,
+              "share_count": 4
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322lrfqnb72005nfcn8hg81v1b6slre0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=7e5532806452408bebb723a2ee5e2b6e&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322lrfqnb72005nfcn8hg81v1b6slre0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=7e5532806452408bebb723a2ee5e2b6e&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322lrg1sv6u005nfcn8hg81v19v7sg28?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=a694369eaccdf3bc8fcf6f53fd6844f2&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o322lrg9st74105nfcn8hg81v1iond5bo?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=d7e5761e129136ac8a1ea5e0cc34a46d&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322lrgc64n0005nfcn8hg81v193v69fg?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=f8ea07344f234aeeec49a23f28bb450c&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322lrgf1p6s005nfcn8hg81v14td16m8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=65431966290acfedbc87096627482473&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "正式入伏，长达 40 天的 “超长待机” 三伏天已经开启！\n户外骄阳似火，室内闷热黏腻，连吹的风都带着温度，“桑拿感” 直接拉满。想要宅家也能解锁清爽自在的状态？这份伏天居家舒适攻略，帮你稳稳度过一整"
+            }
+          },
+          {
+            "post_id": "6a55a8ae000000001700808f",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1783998638000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n🎁夏季湿热感拉满，空调开制冷还是除湿？\n\n## 正文\n懂一到夏天又热又闷的窒息感🥵\n空气湿度一拉高，浑身黏糊糊、衣服捂不干，连睡觉都烦躁\n每次开空调都疯狂纠结：到底开制冷还是除湿？\n小立先给大家捋清楚两种模式区别，干货收好👇\n\t\n▫️制冷模式：主打快",
+            "tag_text": "",
+            "stats": {
+              "like_count": 225,
+              "comment_count": 14,
+              "collect_count": 5,
+              "share_count": 4
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322jaodik74205nfcn8hg81v168qm1to?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=cb62570068cf4e865ab404b77d07dcab&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322jaodik74205nfcn8hg81v168qm1to?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=cb62570068cf4e865ab404b77d07dcab&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322jaodik74005nfcn8hg81v1bu1n728?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=a34e99be663c2b36735c3c6089b9b70c&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322jaodik740g5nfcn8hg81v1frb7r3o?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=3a2e8d8c45c0ff8a0fe87d28def84164&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322jaodik74105nfcn8hg81v1a4are48?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=5ff6e2ca65e82e8642eab8f7285fd1bd&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322jaodik741g5nfcn8hg81v1igsl6d8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=330450fdb3155242ef8c153b72428c32&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "懂一到夏天又热又闷的窒息感🥵\n空气湿度一拉高，浑身黏糊糊、衣服捂不干，连睡觉都烦躁\n每次开空调都疯狂纠结：到底开制冷还是除湿？\n小立先给大家捋清楚两种模式区别，干货收好👇\n\t\n▫️制冷模式：主打快"
+            }
+          },
+          {
+            "post_id": "6a5098aa000000001603fb07",
+            "user_id": "5decba2300000000010007e1",
+            "red_id": "",
+            "created": 1783666858000,
+            "author_name": "日立中央空调",
+            "title": "## 标题\n征集进行时｜一人一境过夏天，续享夏日舒适\n\n## 正文\n宝子们！\n 有奖征集活动正在火热进行中✨\n这段时间，小立在话题页收获了太多鲜活的夏日片段，每一种不被定义的夏日模样，都在诠释独属于自己的独属于自己的「一人一境」。\n还没分",
+            "tag_text": "#日立一人一境过夏天[话题]#",
+            "stats": {
+              "like_count": 217,
+              "comment_count": 12,
+              "collect_count": 8,
+              "share_count": 4
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o322eb8nnp74805nfcn8hg81v1m6rp0u8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=22ee167cf8e85001494a1d4ed28f077c&t=6a954be9",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o322eb8nnp74805nfcn8hg81v1m6rp0u8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=22ee167cf8e85001494a1d4ed28f077c&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o322eb8q8g74105nfcn8hg81v180neqto?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=d66810cc5e32eae6650ca85cbe06179b&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0322eb926sn4005nfcn8hg81v16bgekag?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=1dd434ebda67f4730f03d64083900d91&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o322eb8s24n00g5nfcn8hg81v1dp2r27g?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=a55bdee8a152ccd6e3079d073c0c490e&t=6a954be9",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o322eb8tu8mu105nfcn8hg81v1semuaqg?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=ac699a0a4ce27db6f22c24427da07833&t=6a954be9"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "宝子们！\n#日立一人一境过夏天[话题]# 有奖征集活动正在火热进行中✨\n这段时间，小立在话题页收获了太多鲜活的夏日片段，每一种不被定义的夏日模样，都在诠释独属于自己的独属于自己的「一人一境」。\n还没分"
+            }
+          }
+        ],
+        "has_more": true,
+        "cursor": "",
+        "max_cursor": "6a5098aa000000001603fb07"
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954be3eb420f000133ea84"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:39:40.435026+00:00",
+  "finished_at": "2026-08-31T09:39:56.266942+00:00",
+  "elapsed_seconds": 15.83
+}

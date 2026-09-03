@@ -1,0 +1,57 @@
+{
+  "label": "小红书主页_海信中央空调_派生详情2_6a94e0c9",
+  "action": "media_stats_number",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/media_stats_number",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_stats_number?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "https://www.xiaohongshu.com/explore/6a94e0c9000000002a03cc31"
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954c15d57ee40001582c63",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "6a94e0c9000000002a03cc31",
+        "platform": "xiaohongshu",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": null,
+        "like_number": 0,
+        "comment_number": 0,
+        "collect_number": 0,
+        "share_number": 0,
+        "duration_number": 0,
+        "user_id": "5f8693e3000000000100748c",
+        "created": 1788141769000,
+        "author_name": "海信中央空调",
+        "title": "## 标题\n今年买海信红焰，主打一个“省”！\n\n## 正文\n今年购买海信红焰系列，可以说是“省”到家\n🔥 红焰采暖：-35℃照样稳定制热，省得抖\n1度电顶4度热，比壁挂炉、煤炉省太多💰\n手机远程操控省得等，人还在归途，温暖已经提前进家门📱\n10年质保兜底，省心省事\n购机享1000度电费补贴\n还能抽家电、长白山冰雪暖冬之旅大奖✈️\n稳稳当当扛过风雪，实实在在福利拉满\n今天冬天，图一个省心又省钱\n即日起-2026年10月31日\n趁冬天还没来，先把温暖锁定🌬️",
+        "tag_text": "#海信热泵节 #海信红焰3 #冬季取暖 #采暖省钱攻略 #暖冬游 #好空气海信造",
+        "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n4005ns6ifhg8t4cfktn5s0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=a553f27c1f84f465d76ba746fb3c40be&t=6a954c16",
+        "download_urls": "https://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n4005ns6ifhg8t4cfktn5s0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=a553f27c1f84f465d76ba746fb3c40be&t=6a954c16\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n40g5ns6ifhg8t4cudp3fl8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=6cbc5cc953c9bcc23eb4ed855543ad02&t=6a954c16\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n4105ns6ifhg8t4c77p1mag?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=ea694efeb3b23cda9ed82432bd6c8262&t=6a954c16\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n41g5ns6ifhg8t4c8jib2gg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=27daf261e3c89284c58e19ec2be5188b&t=6a954c16\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n4205ns6ifhg8t4co43ncg8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=ccbd22ca6725b01d91e3220939a29a30&t=6a954c16\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n42g5ns6ifhg8t4cj32quug?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=91f90366336f45aa5e1e591f07b70770&t=6a954c16",
+        "updated": 1788169238894
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954c15d57ee40001582c63"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:40:35.345115+00:00",
+  "finished_at": "2026-08-31T09:40:40.664616+00:00",
+  "elapsed_seconds": 5.32
+}

@@ -1,0 +1,57 @@
+{
+  "label": "小红书主页_海信中央空调_派生详情1_6a94e3c6",
+  "action": "media_stats_number",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/media_stats_number",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_stats_number?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "https://www.xiaohongshu.com/explore/6a94e3c6000000001803dcca"
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954c102bcec60001e449c8",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "6a94e3c6000000001803dcca",
+        "platform": "xiaohongshu",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": null,
+        "like_number": 0,
+        "comment_number": 0,
+        "collect_number": 0,
+        "share_number": 0,
+        "duration_number": 0,
+        "user_id": "5f8693e3000000000100748c",
+        "created": 1788159617000,
+        "author_name": "海信中央空调",
+        "title": "## 标题\n现在买海信红焰，顺带抽个“暖冬游”大奖！\n\n## 正文\n冬天最怕什么？\n断崖式降温、取暖费飙升、回家还要等半天才热🥶\n\t\n海信红焰Ⅲ空气源热泵了解一下——\n-35℃照样稳定制热，-15℃制热量不衰减，10重防冻铠甲全天候守护。\n补气增焓“耐寒芯”加持，越冷它越稳。\n📱人还在路上，温暖先到家——手机远程智控，回家就是暖意。\n一键静音、一键报修，还能室温水温双控。\n直流变频压缩机+全链路高效结构，4项一级能效，费用省一半以上。\n150V-264V宽电压运行，智能适应电网波动。\n\t\n🎁 海信热泵节正在进行中🔥\n✅ 购机享1000度电费补贴\n✅ 还能抽家电、长白山冰雪暖冬之旅大奖✈️\n\t\n即日起-2026年10月31日\n趁冬天还没来，先把温暖锁定",
+        "tag_text": "#海信热泵节 #海信红焰3 #冬季取暖 #采暖省钱攻略 #暖冬游 #好空气海信造",
+        "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku74105ns6ifhg8t4cs5ln6s8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=66094027e982ba6153dccf86f02dc174&t=6a954c10",
+        "download_urls": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku74105ns6ifhg8t4cs5ln6s8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=66094027e982ba6153dccf86f02dc174&t=6a954c10\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku740g5ns6ifhg8t4cj7lapd0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=135cf6006b6ae71ef327cd8c0645b73e&t=6a954c10\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku741g5ns6ifhg8t4cfkan408?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=93bb6bee54b6c2c7e3e59c73f5d19de8&t=6a954c10\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku74005ns6ifhg8t4c9jh9r6g?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=bae9ca713d6fc75a1aec1bcdabd292e8&t=6a954c10\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku74205ns6ifhg8t4ciu8th4o?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=efc238415a6894a29ea920585d8d89c4&t=6a954c10\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku742g5ns6ifhg8t4chlnuvh8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=4d7e8bf8bddef06231727daa7636b7ce&t=6a954c10",
+        "updated": 1788169233612
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954c102bcec60001e449c8"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:40:26.845011+00:00",
+  "finished_at": "2026-08-31T09:40:35.410339+00:00",
+  "elapsed_seconds": 8.57
+}

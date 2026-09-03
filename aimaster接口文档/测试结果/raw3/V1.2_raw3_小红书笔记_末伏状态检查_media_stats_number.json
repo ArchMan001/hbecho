@@ -1,0 +1,57 @@
+{
+  "label": "小红书笔记_末伏状态检查",
+  "action": "media_stats_number",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/media_stats_number",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_stats_number?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "末伏不是关机倒计时，空调该做“状态检查” 从入夏一... https://xhslink.cn/o/7qoWFwzhKvy \n先复制文字，然后进入【小红书】查看笔记。"
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954befeb420f000133ea88",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "6a87ebf00000000017009f68",
+        "platform": "xiaohongshu",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": null,
+        "like_number": 409,
+        "comment_number": 8,
+        "collect_number": 4,
+        "share_number": 2,
+        "duration_number": 0,
+        "user_id": "5decba2300000000010007e1",
+        "created": 1787292656000,
+        "author_name": "日立中央空调",
+        "title": "## 标题\n末伏不是关机倒计时，空调该做“状态检查”\n\n## 正文\n从入夏一路高频运行到末伏\n空调看起来照常工作，状态却可能已经悄悄发生变化\n趁着暑气还没完全退场\n给家里的空调做一次轻量「状态自测」👇\n\t\n01 出风｜感觉没有之前有劲了？\n同样的风速设置，如果最近明显觉得风量变小，可以先看看滤网是否积灰。\n✅ 关机断电后检查滤网，明显积灰就及时清洁。\n02 气味 | 开机有闷味 / 霉味？\n长时间使用后，灰尘、污垢积累，都可能影响出风体验。\n✅ 若异味持续存在，说明风道和换热器需要深度清洁。\n03运行 | 多出了陌生的异响？\n空调正常运行会有轻微风声、冷媒流动声，不用过度紧张。\n✅ 重点留意突然出现、和平日明显不同的持续异响或振动，及时联系专业人员排查。\n4 排水 | 出风口凝露、滴水正常吗？\n室内温度、湿度较高时，空气中的水蒸气遇到温度较低的出风口，可能凝结成露珠，金属风口会更明显。\n✅ 如果只是少量凝露，可以先观察；若出现持续大量滴水、室内机渗水等情况，再请专业人员进一步检查排水等情况。\n\t\n发现问题及时处理，日常养护也能事半功倍！\n\t\n日立中央空调智能自清洁，可实现换热器上污渍的自动清洗，搭配最高 60℃高温消菌； DC直流水泵 + 浮子开关，高效排水避免积水滋生霉菌。\n配合定期清洁与专业保养，让中央空调稳稳站好夏季最后一班岗～",
+        "tag_text": "#日立中央空调 #空调清洁 #空调使用指南 #末伏 #居家生活",
+        "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o3244dfdet6u105nfcn8hg81v15feasag?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=3d0ae0c24463b657ba98bb3e90342efb&t=6a954bf0",
+        "download_urls": "https://sns-i11.rednotecdn.com/spectrum/1040g34o3244dfdet6u105nfcn8hg81v15feasag?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=3d0ae0c24463b657ba98bb3e90342efb&t=6a954bf0\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g0k03244dfie272005nfcn8hg81v1femrpn8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=b03668c22f76cef862d150bcc4ecc56b&t=6a954bf0\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g34o3244dg3oqn4105nfcn8hg81v1881r7g0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=e13c889b584da2d3ecb857acf832a748&t=6a954bf0",
+        "updated": 1788169201674
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954befeb420f000133ea88"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:39:53.220451+00:00",
+  "finished_at": "2026-08-31T09:40:02.197651+00:00",
+  "elapsed_seconds": 8.98
+}

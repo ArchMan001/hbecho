@@ -1,0 +1,59 @@
+{
+  "label": "抖音视频_中国人能飞",
+  "action": "media_stats_number",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/media_stats_number",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_stats_number?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "8.79 复制打开抖音，看看【日立中央空调的作品】中国人能飞｜装日立，居家感受舒适到起飞！ # 中国... https://v.douyin.com/f2BYSAk82l8/ YZm:/ 12/28 W@m.Du :5pm"
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954bf825f71e00016485fc",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "7676403385372904742",
+        "platform": "douyin",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": 48825,
+        "like_number": 1535,
+        "comment_number": 57,
+        "collect_number": 679,
+        "share_number": 49,
+        "duration_number": 15,
+        "user_id": "HITACHI1",
+        "created": 1787301946000,
+        "author_name": "日立中央空调",
+        "title": "中国人能飞｜装日立，居家感受舒适到起飞！",
+        "tag_text": "#中国人能飞 #日立中央空调 #装修 #中央空调 #日立尊睿全效Ⅱ",
+        "publish_location": "山东省青岛市",
+        "related_search_str": "日立中央空调价格一览表\n日立尊睿全效Ⅱ中央空调\n日立中央空调售后电话\n日立中央空调官网\n日立中央空调在哪里生产的\n日立中央空调安装费用\n日立中央空调别墅专用\n日立中央空调智能控制\n日立中央空调家用型号\n日立中央空调安装流程",
+        "cover": "https://p3-sign.douyinpic.com/tos-cn-p-0015/oQAOAAIqNEoC39eQ9mQfBFIiUDOxKAQ02DOwxg~tplv-dy-360p.webp?lk3s=138a59ce&x-expires=1789376400&x-signature=CjIw5ZzWHO95XoB8%2BVLMhrXfqhw%3D&from=327834062&s=PackSourceEnum_AWEME_DETAIL&se=false&sc=origin_cover&biz_tag=aweme_video&l=2026083117401157F30691CA8FF9139A52\n\nhttps://p3-sign.douyinpic.com/tos-cn-i-dy/361d2ad9b78647b4bdf4c3bb83618562~tplv-dy-resize-walign-adapt-aq:540:q75.webp?lk3s=138a59ce&x-expires=1789376400&x-signature=Zw1oZWQRf1bAztK7T3NCq8fDvd4%3D&from=327834062&s=PackSourceEnum_AWEME_DETAIL&se=false&sc=cover&biz_tag=aweme_video&l=2026083117401157F30691CA8FF9139A52",
+        "download_urls": "https://v5-hl-zenl-ov.zjcdn.com/f6e2db26090ac7ad8b32e872bd32461b/6a955a19/video/tos/cn/tos-cn-ve-15/owTBIDaPATY42A6FQKiAYobPIHQODg4EPPiqa/?a=1128&ch=26&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=1788&bt=1788&cs=0&ds=6&ft=Sp7g346a9DfxmtussCBCplHYVcMR~rv2bLzS0X6iZmkaA3&mime_type=video_mp4&qs=0&rc=ZDk8N2Q2ODU0ZmlpNzk0M0BpanUzcHQ5cnQzZDMzNGkzM0BiYGExYS4wNWMxNTAzMGNeYSM2YjQvMmQ0cjFhLS1kLWFzcw%3D%3D&btag=c0010e00088008&cdn_type=7&cquery=103Y_100b_104i_103Q_103W&dy_q=1788169211&feature_id=f0150a16a324336cda5d6dd0b69ed299&l=2026083117401157F30691CA8FF9139A52&n80=1&n80_dm=bjk4LXYtbmNkbi5kb3V5aW52b2QuY29t&n80_tk=d4547c811a1638dad23a6e3c3729a1a1&pwid=1&req_cdn_type=r\n\nhttps://api.amemv.com/aweme/v1/play/?video_id=v0d00fg10000da40uq7og65q2m70er9g&line=1&file_id=a0f136643f8f4cf1823513da44d9c6ea&sign=ee77630620ae495bf86adeaa55295ee0&is_play_url=1&source=PackSourceEnum_AWEME_DETAIL",
+        "updated": 1788169215509
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954bf825f71e00016485fc"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:40:02.200118+00:00",
+  "finished_at": "2026-08-31T09:40:17.493125+00:00",
+  "elapsed_seconds": 15.29
+}

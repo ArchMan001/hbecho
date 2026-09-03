@@ -1,0 +1,487 @@
+
+
+##### ACTION: media_billboard_plugin (success_count=8, platforms=['小红书', '快手', '视频号(微信)']) #####
+- result | types=['array'] | platforms=['小红书', '快手', '视频号(微信)'] | n_files=8
+    e.g. [视频号(微信)] [{"sentence": "许家印被判处无期徒刑", "score": 12760548, "rank": 1, "tag": "时政"}, {"sentence": "中非视听之约北京启幕", "score": 11718376, "r...
+    e.g. [视频号(微信)] [{"sentence": "许家印被判处无期徒刑", "score": 12850856, "rank": 1, "tag": "时政"}, {"sentence": "中非视听之约北京启幕", "score": 11394144, "r...
+- total | types=['int'] | platforms=['小红书', '快手', '视频号(微信)'] | n_files=8
+    e.g. [视频号(微信)] 50
+    e.g. [视频号(微信)] 50
+- has_more | types=['bool'] | platforms=['小红书', '快手', '视频号(微信)'] | n_files=8
+    e.g. [视频号(微信)] False
+    e.g. [视频号(微信)] False
+- updated | types=['int'] | platforms=['小红书', '快手', '视频号(微信)'] | n_files=8
+    e.g. [视频号(微信)] 1787207111741
+    e.g. [视频号(微信)] 1787207282189
+- result[].sentence | types=['string'] | platforms=['小红书', '快手', '视频号(微信)'] | n_files=8
+    e.g. [视频号(微信)] 许家印被判处无期徒刑
+    e.g. [视频号(微信)] 中非视听之约北京启幕
+- result[].score | types=['int'] | platforms=['小红书', '快手', '视频号(微信)'] | n_files=8
+    e.g. [视频号(微信)] 12760548
+    e.g. [视频号(微信)] 11718376
+- result[].rank | types=['int'] | platforms=['小红书', '快手', '视频号(微信)'] | n_files=8
+    e.g. [视频号(微信)] 1
+    e.g. [视频号(微信)] 2
+- result[].tag | types=['string'] | platforms=['小红书', '快手', '视频号(微信)'] | n_files=8
+    e.g. [视频号(微信)] 时政
+    e.g. [视频号(微信)] 时政
+
+
+##### ACTION: media_comments (success_count=2, platforms=['抖音']) #####
+- comments_str | types=['string'] | platforms=['抖音'] | n_files=2
+    e.g. [抖音] 1. 吴桥日立中央空调♥沁园净水♥能率热水器：[赞][赞][赞] [2026-06-29 20:43]
+    e.g. [抖音] 1. 如果也有再见那天1：天气最热的时候想想天气最冷的时候，就不太热了，也是一种享受。 [2026-07-18 19:19]
+
+2. 霸总甜文铺：[赞][赞][...
+- post_id | types=['string'] | platforms=['抖音'] | n_files=2
+    e.g. [抖音] 7656096293701888490
+    e.g. [抖音] 7657070897798450442
+- cursor | types=['string'] | platforms=['抖音'] | n_files=2
+    e.g. [抖音] 
+    e.g. [抖音] 20
+- updated | types=['int'] | platforms=['抖音'] | n_files=2
+    e.g. [抖音] 1787285276056
+    e.g. [抖音] 1787285439481
+
+
+##### ACTION: media_stats (success_count=10, platforms=['小红书', '快手', '抖音', '视频号(微信)']) #####
+- post_id | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] 14898847112850311168
+    e.g. [视频号(微信)] 14892359091958388952
+- platform | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] wechat_channels
+    e.g. [视频号(微信)] wechat_channels
+- play_count | types=['null', 'string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] 0
+    e.g. [视频号(微信)] 0
+- like_count | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] 17
+    e.g. [视频号(微信)] 105
+- comment_count | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] 2
+    e.g. [视频号(微信)] 24
+- collect_count | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] 9
+    e.g. [视频号(微信)] 85
+- share_count | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] 0
+    e.g. [视频号(微信)] 199
+- duration | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] 48
+    e.g. [视频号(微信)] 19
+- play_number | types=['null'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] None
+    e.g. [视频号(微信)] None
+- like_number | types=['null'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] None
+    e.g. [视频号(微信)] None
+- comment_number | types=['null'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] None
+    e.g. [视频号(微信)] None
+- collect_number | types=['null'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] None
+    e.g. [视频号(微信)] None
+- share_number | types=['null'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] None
+    e.g. [视频号(微信)] None
+- duration_number | types=['null'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] None
+    e.g. [视频号(微信)] None
+- user_id | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] v2_060000231003b20faec8c5e0881acad1c706e532b077fd857dc5c528b533da1f81c48a6b9c0c@...
+    e.g. [视频号(微信)] v2_060000231003b20faec8c7e48c11c1d1c606ef36b0776ba2afe1da435e782971a1646e11662e@...
+- created | types=['int'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] 1776080979000
+    e.g. [视频号(微信)] 1775307547000
+- author_name | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] 清河约克中央空调
+    e.g. [视频号(微信)] 湘宁中央空调地暖新风
+- title | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] 约克除甲醛
+中央空调
+    e.g. [视频号(微信)] 天青府2栋9楼隐蔽工程完工✨
+管线工整，现场也收拾得干干净净。
+细节见用心，装好才安心。
+正在选空调的邻居，随时来找湘宁聊聊～
+#约克VRF #天氟地水 #天青...
+- tag_text | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] 
+    e.g. [视频号(微信)] #约克VRF #天氟地水 #天青府业主 #中央空调安装@约克VRF空调长沙分
+- cover | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] https://wxapp.tc.qq.com/251/20304/stodownload?encfilekey=oibeqyX228riaCwo9STVsGL...
+    e.g. [视频号(微信)] https://wxapp.tc.qq.com/251/20304/stodownload?encfilekey=oibeqyX228riaCwo9STVsGL...
+- download_urls | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] https://wxapp.tc.qq.com/251/20304/stodownload?encfilekey=oibeqyX228riaCwo9STVsGL...
+    e.g. [视频号(微信)] https://wxapp.tc.qq.com/251/20304/stodownload?encfilekey=oibeqyX228riaCwo9STVsGL...
+- updated | types=['int'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=10
+    e.g. [视频号(微信)] 1787206982483
+    e.g. [视频号(微信)] 1787207151446
+- related_search_str | types=['string'] | platforms=['快手', '抖音'] | n_files=3
+    e.g. [快手] 海尔8匹空气能价格表
+    e.g. [抖音] 日立空调官方旗舰店
+日立中央空调价格一览表
+日立中央空调安装费用
+日立中央空调售后电话
+日立变频空调挂机
+日立中央空调安装流程
+日立中央空调值得买吗
+日立中央空...
+- publish_location | types=['string'] | platforms=['抖音'] | n_files=2
+    e.g. [抖音] 山东省青岛市
+    e.g. [抖音] 山东省青岛市
+
+
+##### ACTION: media_stats_number (success_count=11, platforms=['小红书', '快手', '抖音', '视频号(微信)']) #####
+- post_id | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] 14898847112850311168
+    e.g. [视频号(微信)] 14892359091958388952
+- platform | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] wechat_channels
+    e.g. [视频号(微信)] wechat_channels
+- play_count | types=['null'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] None
+    e.g. [视频号(微信)] None
+- like_count | types=['null'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] None
+    e.g. [视频号(微信)] None
+- comment_count | types=['null'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] None
+    e.g. [视频号(微信)] None
+- collect_count | types=['null'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] None
+    e.g. [视频号(微信)] None
+- share_count | types=['null'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] None
+    e.g. [视频号(微信)] None
+- duration | types=['null'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] None
+    e.g. [视频号(微信)] None
+- play_number | types=['int', 'null'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] 0
+    e.g. [视频号(微信)] 0
+- like_number | types=['int'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] 17
+    e.g. [视频号(微信)] 105
+- comment_number | types=['int'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] 2
+    e.g. [视频号(微信)] 24
+- collect_number | types=['int'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] 9
+    e.g. [视频号(微信)] 85
+- share_number | types=['int'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] 0
+    e.g. [视频号(微信)] 199
+- duration_number | types=['int'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] 48
+    e.g. [视频号(微信)] 19
+- user_id | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] v2_060000231003b20faec8c5e0881acad1c706e532b077fd857dc5c528b533da1f81c48a6b9c0c@...
+    e.g. [视频号(微信)] v2_060000231003b20faec8c7e48c11c1d1c606ef36b0776ba2afe1da435e782971a1646e11662e@...
+- created | types=['int'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] 1776080979000
+    e.g. [视频号(微信)] 1775307547000
+- author_name | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] 清河约克中央空调
+    e.g. [视频号(微信)] 湘宁中央空调地暖新风
+- title | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] 约克除甲醛
+中央空调
+    e.g. [视频号(微信)] 天青府2栋9楼隐蔽工程完工✨
+管线工整，现场也收拾得干干净净。
+细节见用心，装好才安心。
+正在选空调的邻居，随时来找湘宁聊聊～
+#约克VRF #天氟地水 #天青...
+- tag_text | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] 
+    e.g. [视频号(微信)] #约克VRF #天氟地水 #天青府业主 #中央空调安装@约克VRF空调长沙分
+- cover | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] https://wxapp.tc.qq.com/251/20304/stodownload?encfilekey=oibeqyX228riaCwo9STVsGL...
+    e.g. [视频号(微信)] https://wxapp.tc.qq.com/251/20304/stodownload?encfilekey=oibeqyX228riaCwo9STVsGL...
+- download_urls | types=['string'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] https://wxapp.tc.qq.com/251/20304/stodownload?encfilekey=oibeqyX228riaCwo9STVsGL...
+    e.g. [视频号(微信)] https://wxapp.tc.qq.com/251/20304/stodownload?encfilekey=oibeqyX228riaCwo9STVsGL...
+- updated | types=['int'] | platforms=['小红书', '快手', '抖音', '视频号(微信)'] | n_files=11
+    e.g. [视频号(微信)] 1787207058757
+    e.g. [视频号(微信)] 1787207224682
+- related_search_str | types=['string'] | platforms=['快手', '抖音'] | n_files=3
+    e.g. [快手] 海信空气能静宁总店
+    e.g. [抖音] 日立中央空调价格表
+日立中央空调售后电话
+日立中央空调安装费用
+日立家用中央空调
+日立空调官方旗舰店
+日立中央空调产品简介
+日立中央空调怎么样
+日立中央空调安装...
+- publish_location | types=['string'] | platforms=['抖音'] | n_files=2
+    e.g. [抖音] 山东省青岛市
+    e.g. [抖音] 山东省青岛市
+
+
+##### ACTION: media_user_info (success_count=15, platforms=['小红书', '快手', '抖音']) #####
+- user_id | types=['string'] | platforms=['小红书', '快手', '抖音'] | n_files=15
+    e.g. [小红书] 49988038059
+    e.g. [小红书] 95848991915
+- nickname | types=['string'] | platforms=['小红书', '快手', '抖音'] | n_files=15
+    e.g. [小红书] 小沈说暖通
+    e.g. [小红书] 菲菲说暖通
+- signature | types=['string'] | platforms=['小红书', '快手', '抖音'] | n_files=15
+    e.g. [小红书] 欢迎来到上海海信中央空调
+全上海最大海信代理商
+专注海信（暖通）行业22年
+上海地区最大的中央空调店
+提供优质服务，已服务2万+家庭
+    e.g. [小红书] 从空调小白到成立暖通公司的实干家
+至今已有多年暖通行业经验
+深耕行业、稳扎稳打、免费设计
+平层🏠别墅🏡设计2000+实际案例
+- follower_count | types=['string'] | platforms=['小红书', '快手', '抖音'] | n_files=15
+    e.g. [小红书] 16
+    e.g. [小红书] 48
+- following_count | types=['string'] | platforms=['小红书', '快手', '抖音'] | n_files=15
+    e.g. [小红书] 1
+    e.g. [小红书] 13
+- like_count | types=['string'] | platforms=['小红书', '快手', '抖音'] | n_files=15
+    e.g. [小红书] 757
+    e.g. [小红书] 1207
+- post_count | types=['string'] | platforms=['小红书', '快手', '抖音'] | n_files=15
+    e.g. [小红书] 254
+    e.g. [小红书] 317
+- follower_number | types=['int'] | platforms=['小红书', '快手', '抖音'] | n_files=15
+    e.g. [小红书] 16
+    e.g. [小红书] 48
+- following_number | types=['int'] | platforms=['小红书', '快手', '抖音'] | n_files=15
+    e.g. [小红书] 1
+    e.g. [小红书] 13
+- like_number | types=['int'] | platforms=['小红书', '快手', '抖音'] | n_files=15
+    e.g. [小红书] 757
+    e.g. [小红书] 1207
+- post_number | types=['int'] | platforms=['小红书', '快手', '抖音'] | n_files=15
+    e.g. [小红书] 254
+    e.g. [小红书] 317
+- updated | types=['int'] | platforms=['小红书', '快手', '抖音'] | n_files=15
+    e.g. [小红书] 1787208186099
+    e.g. [小红书] 1787208279671
+- location | types=['string'] | platforms=['抖音'] | n_files=7
+    e.g. [抖音] 河北
+    e.g. [抖音] 
+- avatar | types=['string'] | platforms=['抖音'] | n_files=7
+    e.g. [抖音] https://p3-pc.douyinpic.com/aweme/1080x1080/aweme-avatar/tos-cn-i-0813c001_oMAb0...
+    e.g. [抖音] https://p3-pc.douyinpic.com/aweme/1080x1080/aweme-avatar/tos-cn-i-0813_oA2AEuETB...
+- cover | types=['string'] | platforms=['抖音'] | n_files=7
+    e.g. [抖音] https://p3-pc-sign.douyinpic.com/obj/c8510002be9a3a61aad2?lk3s=93de098e&x-expire...
+    e.g. [抖音] https://p3-pc-sign.douyinpic.com/obj/tos-cn-i-0813/okAJAbyfnAAmeABAoPDa2oEmDCDI8...
+
+
+##### ACTION: post_comments_list (success_count=4, platforms=['小红书', '抖音']) #####
+- result | types=['array'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] [{"id": "698e808c000000000c017194", "post_id": "698cf4c90000000015032660", "content": "好看", "author": {"id": "aa48bb62a6...
+    e.g. [抖音] [{"id": "7656797121550943030", "post_id": "7656096293701888490", "content": "[赞][赞][赞]", "author": {"id": "1268182045439...
+- cursor | types=['string'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] 
+    e.g. [抖音] 
+- reply_page_count | types=['int'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] 0
+    e.g. [抖音] 0
+- max_cursor | types=['int', 'string'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] 
+    e.g. [抖音] 20
+- has_more | types=['int'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] 0
+    e.g. [抖音] 0
+- total | types=['int'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] 9
+    e.g. [抖音] 1
+- post_id | types=['string'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] 698cf4c90000000015032660
+    e.g. [抖音] 7656096293701888490
+- result[].id | types=['string'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] 698e808c000000000c017194
+    e.g. [小红书] 698e7f5a000000000601f733
+- result[].post_id | types=['string'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] 698cf4c90000000015032660
+    e.g. [小红书] 698cf4c90000000015032660
+- result[].content | types=['string'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] 好看
+    e.g. [小红书] 感谢分享，避免踩坑[点赞R]
+- result[].author | types=['object'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] {"id": "aa48bb62a60c4ee3574ab31b601eb", "name": "猪猪侠在菏泽卖空调", "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040...
+    e.g. [小红书] {"id": "a528f639b1f152df85fc60e76867f", "name": "小红薯64C8A334", "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/64...
+- result[].stats | types=['object'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] {"like_count": 1, "reply_count": 1}
+    e.g. [小红书] {"like_count": 1, "reply_count": 1}
+- result[].is_liked | types=['bool'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] False
+    e.g. [小红书] False
+- result[].download_urls | types=['array'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] []
+    e.g. [小红书] []
+- result[].created | types=['int'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] 1770946701000
+    e.g. [小红书] 1770946394000
+- result[].download_urls_str | types=['string'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] 
+    e.g. [小红书] 
+- result[].updated | types=['int'] | platforms=['小红书', '抖音'] | n_files=4
+    e.g. [小红书] 1787317766608
+    e.g. [小红书] 1787317766608
+
+
+##### ACTION: user_latest_video (success_count=1, platforms=['快手']) #####
+- video_id | types=['string'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 
+- title | types=['string'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 
+- share_url | types=['string'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 
+- play_count | types=['int'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 4001
+- like_count | types=['int'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 9
+- comment_count | types=['int'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 4
+- collect_count | types=['int'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 0
+- share_count | types=['int'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 0
+- post_id | types=['string'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 3xvbqb9kwex8sje
+- user_id | types=['string'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 3xfgdjw9dfsc2uu
+- created | types=['int'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 1786713104026
+- author_name | types=['string'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 岫岩海信空气能-勇哥
+- tag_text | types=['string'] | platforms=['快手'] | n_files=1
+    e.g. [快手] #乌兰布统#东鹏瓷砖 #海信空气能 #格力空气能
+就是一个字，爽
+- related_search_str | types=['string'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 东鹏瓷砖
+- cover | types=['string'] | platforms=['快手'] | n_files=1
+    e.g. [快手] http://ws2.a.kwimgs.com/upic/2026/08/14/21/BMjAyNjA4MTQyMTExMTdfNzU3NjUyNzY0XzIw...
+- duration | types=['int'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 110
+- download_urls | types=['string'] | platforms=['快手'] | n_files=1
+    e.g. [快手] http://v1.kwaicdn.com/ksc2/SkR_TS6SIXs8OfOxOkrOrzvjEnk0zwUSMBYlf3ECTBqwfTu2EZiHt...
+- updated | types=['int'] | platforms=['快手'] | n_files=1
+    e.g. [快手] 1787209044720
+- platform | types=['string'] | platforms=['快手'] | n_files=1
+    e.g. [快手] kuaishou
+
+
+##### ACTION: user_video_list (success_count=3, platforms=['小红书', '抖音']) #####
+- result | types=['array'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] [{"post_id": "7661577715397252523", "user_id": "X17332797333", "sec_uid": "MS4wLjABAAAAkXHJ5mVT2MsY9TAl5tmW1GQv6G8PLRhdh...
+    e.g. [抖音] [{"post_id": "7675958315662331171", "user_id": "HITACHI1", "sec_uid": "MS4wLjABAAAAaQNZi_ulE1SgF5-WN-toezy3GtHsCmdlZjrc1...
+- has_more | types=['bool'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] True
+    e.g. [抖音] True
+- cursor | types=['string'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] 
+    e.g. [抖音] 
+- max_cursor | types=['int', 'string'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] 1778206321000
+    e.g. [抖音] 1781076701000
+- result[].post_id | types=['string'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] 7661577715397252523
+    e.g. [抖音] 7656096293701888490
+- result[].user_id | types=['string'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] X17332797333
+    e.g. [抖音] X17332797333
+- result[].sec_uid | types=['string'] | platforms=['抖音'] | n_files=2
+    e.g. [抖音] MS4wLjABAAAAkXHJ5mVT2MsY9TAl5tmW1GQv6G8PLRhdhkz140JjAD8
+    e.g. [抖音] MS4wLjABAAAAkXHJ5mVT2MsY9TAl5tmW1GQv6G8PLRhdhkz140JjAD8
+- result[].created | types=['int'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] 1783850073000
+    e.g. [抖音] 1782573829000
+- result[].publish_location | types=['string'] | platforms=['抖音'] | n_files=2
+    e.g. [抖音] 山东省德州市
+    e.g. [抖音] 河北省沧州市
+- result[].author_name | types=['string'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] 日立中央空调智慧空气馆(东光专业店)
+    e.g. [抖音] 日立中央空调智慧空气馆(东光专业店)
+- result[].title | types=['string'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] 我是汗子，耶死了耶死了，恒盛领秀门市开工大吉！
+    e.g. [抖音] 618接近尾声，还在犹豫的抓住最后这波福利！
+- result[].tag_text | types=['string'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] #东光 #家用中央空调 #中央空调安装 #东光日立中央空调
+    e.g. [抖音] #日立中央空调 #日立极速制冷 #初夏清凉攻略 #日立超级618 #好风好水舒适家
+- result[].related_search_terms | types=['array'] | platforms=['抖音'] | n_files=2
+    e.g. [抖音] []
+    e.g. [抖音] []
+- result[].related_search_str | types=['string'] | platforms=['抖音'] | n_files=2
+    e.g. [抖音] 
+    e.g. [抖音] 
+- result[].stats | types=['object'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] {"play_count": 0, "like_count": 22, "comment_count": 5, "collect_count": 0, "share_count": 0}
+    e.g. [抖音] {"play_count": 0, "like_count": 15, "comment_count": 1, "collect_count": 1, "share_count": 0}
+- result[].cover | types=['array', 'string'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] ["https://p3-sign.douyinpic.com/tos-cn-p-0015/oca6tMDJIFARIKBURBENuZA9Ar28f9fTqMFtgX~tplv-dy-360p.heic?lk3s=138a59ce&x-e...
+    e.g. [抖音] ["https://p3-sign.douyinpic.com/tos-cn-p-0015/oEUojzqQnAryC2W0AQFUf60D8fLqsweECDEpfQ~tplv-dy-360p.heic?lk3s=138a59ce&x-e...
+- result[].audio | types=['object'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] {}
+    e.g. [抖音] {}
+- result[].video | types=['object'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] {"urls": ["https://v5-hl-zenl-ov.zjcdn.com/517eb7e00c27349a27b9a3210b7223da/6a95857b/video/tos/cn/tos-cn-ve-15/oASpaQTIG...
+    e.g. [抖音] {"urls": ["https://v5-dy-ov-experiment.zjcdn.com/851eb56806cfcb7c2751233164069f48/6a95856d/video/tos/cn/tos-cn-ve-15/oMq...
+- result[].images | types=['array'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] []
+    e.g. [抖音] []
+- result[].share_url | types=['string'] | platforms=['抖音'] | n_files=2
+    e.g. [抖音] https://www.iesdouyin.com/share/video/7661577715397252523/?region=US&mid=7661577...
+    e.g. [抖音] https://www.iesdouyin.com/share/video/7656096293701888490/?region=US&mid=7656096...
+- result[].download_urls | types=['array'] | platforms=['小红书', '抖音'] | n_files=3
+    e.g. [抖音] ["https://v5-dy-ov-experiment.zjcdn.com/8a68fc9421da4e517ef03fc2899e32af/6a95857b/video/tos/cn/tos-cn-ve-15/o0UgMXZJAaRA...
+    e.g. [抖音] ["https://v5-dy-ov-experiment.zjcdn.com/6ee74477a8c0dcc205c6a4143d003b48/6a95856d/video/tos/cn/tos-cn-ve-15/oIJHfADfU6hC...
+- result[].red_id | types=['string'] | platforms=['小红书'] | n_files=1
+    e.g. [小红书] 
+    e.g. [小红书] 
+- result[].text | types=['object'] | platforms=['小红书'] | n_files=1
+    e.g. [小红书] {"content": "装修装中央空调，风口别瞎定！标准、等长、加长到底差在哪？颜值+实用一次讲透，抄作业不踩坑👇\n📌 三种风口核心区别\n✅ 标准风口\n• 尺寸=内机出风口，最省钱、不影响制冷制热\n• 优点：性价比高、风"}
+    e.g. [小红书] {"content": "亲们，😍 说到空调界的两大巨头——美的和格力，它们家的中央空调简直是各有各的魅力，让我这个选择困难症都犯了！🤔 今天就来一场“大PK吧”，看看哪款更适合你的温馨小窝吧！🎉\n🌟 颜值担当，谁更胜"}
+
+
+===== FAIL REASONS =====
+media_user_info: {'RESULT_VALIDATION_FAILED': 12}
+user_video_list: {'RESULT_VALIDATION_FAILED': 24}
+user_series_list: {'RESULT_VALIDATION_FAILED': 19}
+user_latest_video: {'RESULT_VALIDATION_FAILED': 7}
+post_comments_list: {'RESULT_VALIDATION_FAILED': 10}
+media_comments: {'RESULT_VALIDATION_FAILED': 19}
+media_hot_comments: {'RESULT_VALIDATION_FAILED': 19}
+media_stats: {'RESULT_VALIDATION_FAILED': 11}
+media_stats_number: {'RESULT_VALIDATION_FAILED': 1}
+
+
+===== ENVELOPE FIELDS =====
+- task_id | types=['string'] | samples=['6a953f00d57ee4000158284c', '6a953ef46089b100011155c2', '6a953ed8eb420f000133e69a']
+- action | types=['string'] | samples=['media_user_info', 'media_user_info', 'media_user_info']
+- status | types=['string'] | samples=['succeeded', 'succeeded', 'succeeded']
+- error | types=['null'] | samples=[None, None, None]
+- created_at | types=['null', 'string'] | samples=[None, None, None]
+- updated_at | types=['null', 'string'] | samples=[None, None, None]
+- code | types=['int'] | samples=[0, 0, 0]
+- request_id | types=['string'] | samples=['6a953f00d57ee4000158284c', '6a953ef46089b100011155c2', '6a953ed8eb420f000133e69a']
+
+
+===== STABILITY CONFLICTS =====
+media_user_info|小红书|https://xhslink.com/m/614Ho00X4lw:
+    08_小红书_小沈说暖通_01_media_user_info.json -> succeeded
+    V1.2_raw直传_复测_小红书_小沈说暖通_media_user_info.json -> succeeded
+    V1.2_raw异步_小红书主页_小沈说暖通_media_user_info.json -> failed
+media_user_info|小红书|https://xhslink.com/m/9v956VkIS1b:
+    09_小红书_菲菲说暖通_01_media_user_info.json -> succeeded
+    V1.2_raw直传_复测_小红书_菲菲说暖通_media_user_info.json -> succeeded
+    V1.2_sync_小红书_菲菲说暖通_media_user_info.json -> succeeded
+    V1.2_raw异步_小红书主页_菲菲说暖通_media_user_info.json -> failed
+user_video_list|小红书|https://xhslink.com/m/9v956VkIS1b:
+    09_小红书_菲菲说暖通_04_user_video_list.json -> failed
+    V1.2_sync_小红书_菲菲说暖通_user_video_list.json -> succeeded
+    V1.2_raw异步_小红书主页_菲菲说暖通_user_video_list.json -> failed
+media_user_info|小红书|https://xhslink.com/m/29yzeTg6XBw:
+    10_小红书_淄博海信中央空调城市会客厅直营店_01_media_user_info.json -> succeeded
+    V1.2_raw异步_小红书主页_淄博海信中央空调城市会客厅直营店_media_user_info.json -> failed
+user_video_list|抖音|https://v.douyin.com/gjSmkcjK7pk/:
+    16_抖音_日立中央空调、沁园净水、能率燃气热水器_04_user_video_list.json -> failed
+    V1.2_raw直传_复测_抖音主页_gjSmkcjK7pk_列表_user_video_list.json -> succeeded
+    V1.2_修复后测试_抖音主页_user_video_list_第1页.json -> failed

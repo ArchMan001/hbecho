@@ -1,0 +1,197 @@
+{
+  "label": "小红书笔记_末伏状态检查",
+  "action": "post_comments_list",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "末伏不是关机倒计时，空调该做“状态检查” 从入夏一... https://xhslink.cn/o/7qoWFwzhKvy \n先复制文字，然后进入【小红书】查看笔记。",
+      "max_cursor": 0,
+      "reply_pages": -1
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954bef2bcec60001e449b9",
+      "action": "post_comments_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "id": "6a89398c000000000100b5dc",
+            "post_id": "6a87ebf00000000017009f68",
+            "content": "非常详细",
+            "author": {
+              "id": "aaa98dbe4b3353c0d8ca864154f05",
+              "name": "阳光里的黑太阳",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/644b2e8bb2b360267e42ed03.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787378060000,
+            "download_urls_str": "",
+            "updated": 1788169203930
+          },
+          {
+            "id": "6a893985000000000200d308",
+            "post_id": "6a87ebf00000000017009f68",
+            "content": "每天都能学到很多东西",
+            "author": {
+              "id": "aaa98dbe4b3353c0d8ca864154f05",
+              "name": "阳光里的黑太阳",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/644b2e8bb2b360267e42ed03.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787378054000,
+            "download_urls_str": "",
+            "updated": 1788169203930
+          },
+          {
+            "id": "6a893977000000000f0337d0",
+            "post_id": "6a87ebf00000000017009f68",
+            "content": "这个的好好学习一下",
+            "author": {
+              "id": "aaa98dbe4b3353c0d8ca864154f05",
+              "name": "阳光里的黑太阳",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/644b2e8bb2b360267e42ed03.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787378039000,
+            "download_urls_str": "",
+            "updated": 1788169203930
+          },
+          {
+            "id": "6a89396f000000001303fab4",
+            "post_id": "6a87ebf00000000017009f68",
+            "content": "感谢分享",
+            "author": {
+              "id": "aaa98dbe4b3353c0d8ca864154f05",
+              "name": "阳光里的黑太阳",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/644b2e8bb2b360267e42ed03.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787378032000,
+            "download_urls_str": "",
+            "updated": 1788169203930
+          },
+          {
+            "id": "6a885c2d0000000015015f9d",
+            "post_id": "6a87ebf00000000017009f68",
+            "content": "可以事半功倍",
+            "author": {
+              "id": "a3cd3a233db033297f10f591bff92",
+              "name": "棠秋",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31u0s2di6nq6g5q26mie7njqhqbv34lo?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787321390000,
+            "download_urls_str": "",
+            "updated": 1788169203930
+          },
+          {
+            "id": "6a885c27000000000202a89d",
+            "post_id": "6a87ebf00000000017009f68",
+            "content": "发现事情要及时处理",
+            "author": {
+              "id": "a3cd3a233db033297f10f591bff92",
+              "name": "棠秋",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31u0s2di6nq6g5q26mie7njqhqbv34lo?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787321383000,
+            "download_urls_str": "",
+            "updated": 1788169203930
+          },
+          {
+            "id": "6a881d35000000000b010090",
+            "post_id": "6a87ebf00000000017009f68",
+            "content": "原来这么多检查",
+            "author": {
+              "id": "ad38094b53d67038d10b04d02411b",
+              "name": "叙旧。",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31ft2t8iv0i005ndl7hj09e19jfu91g0?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787305270000,
+            "download_urls_str": "",
+            "updated": 1788169203930
+          },
+          {
+            "id": "6a881d26000000000b013df7",
+            "post_id": "6a87ebf00000000017009f68",
+            "content": "来啦来啦认真学习",
+            "author": {
+              "id": "ad38094b53d67038d10b04d02411b",
+              "name": "叙旧。",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo31ft2t8iv0i005ndl7hj09e19jfu91g0?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787305255000,
+            "download_urls_str": "",
+            "updated": 1788169203930
+          }
+        ],
+        "cursor": "",
+        "reply_page_count": 0,
+        "max_cursor": "",
+        "has_more": 0,
+        "total": 8,
+        "post_id": "6a87ebf00000000017009f68"
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954bef2bcec60001e449b9"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:39:56.268807+00:00",
+  "finished_at": "2026-08-31T09:40:05.269508+00:00",
+  "elapsed_seconds": 9.0
+}

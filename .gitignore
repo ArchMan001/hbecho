@@ -1,0 +1,84 @@
+# ============================================================
+# hbecho .gitignore
+# 说明见 docs/runbooks/server-operations-runbook.md §9
+# 这个文件必须在 git init 之前就位：密钥一旦进入任何一次 commit，
+# 后续删除都无法撤回，唯一有效补救是轮换密钥。
+# ============================================================
+
+# ── 密钥与本地配置（最高优先）────────────────────────────
+.env
+.env.*
+!.env.example
+
+# 旧项目带过来的本地配置，含明文密码，绝不提交
+settings.local.json
+**/settings.local.json
+.claude/
+
+# 凭证文件
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+*_ed25519
+*_ed25519.pub
+*_rsa
+*_rsa.pub
+authorized_keys
+known_hosts
+*password*.txt
+
+# 云厂商凭证缓存
+.aliyun/
+.aws/
+
+# ── 依赖与构建产物 ──────────────────────────────────────
+node_modules/
+dist/
+build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# ── 运行时与临时文件 ────────────────────────────────────
+*.log
+logs/
+tmp/
+.tmp/
+*.pid
+coverage/
+.nyc_output/
+
+# ── 本地数据与导出（不属于代码）──────────────────────────
+*.sql.gz
+*.dump
+*.xlsx
+*.csv
+!aimaster接口文档/**/*.csv
+
+# ── 编辑器与系统 ────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# ── 注意：以下内容必须进仓库，不要加进忽略规则 ─────────────
+#   aimaster接口文档/测试结果/raw3/*.json  实测证据 / 离线 fixture
+#   docs/、CONTEXT.md、.kiro/specs/、.kiro/steering/  设计基线
+#   迁移脚本与 DDL                          结构的唯一真相源
+#   .env.example                            键名清单（不含真实值）

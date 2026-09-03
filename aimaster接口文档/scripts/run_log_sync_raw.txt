@@ -1,0 +1,23 @@
+共 18 个同步调用，并发 4
+
+[抖音主页01_user_video_list] 9.9s -> HTTP 500 code=RESULT_VALIDATION_FAILED data异常=None
+[抖音主页01_media_user_info] 10.13s -> HTTP 500 code=RESULT_VALIDATION_FAILED data异常=None
+[抖音主页02_user_video_list] 10.18s -> HTTP 500 code=RESULT_VALIDATION_FAILED data异常=None
+[抖音主页02_media_user_info] 13.05s -> HTTP 500 code=RESULT_VALIDATION_FAILED data异常=None
+[抖音主页04_user_video_list] 5.8s -> HTTP 500 code=RESULT_VALIDATION_FAILED data异常=None
+[抖音主页03_media_user_info] 9.05s -> HTTP 500 code=RESULT_VALIDATION_FAILED data异常=None
+[抖音主页04_media_user_info] 8.81s -> HTTP 500 code=RESULT_VALIDATION_FAILED data异常=None
+[抖音主页03_user_video_list] 9.14s -> HTTP 500 code=RESULT_VALIDATION_FAILED data异常=None
+[抖音主页05_user_video_list] 8.88s -> HTTP 500 code=RESULT_VALIDATION_FAILED data异常=None
+[抖音主页05_media_user_info] 9.02s -> HTTP 500 code=RESULT_VALIDATION_FAILED data异常=None
+[抖音视频01_media_stats_number] 14.89s -> HTTP 200 code=0 status=succeeded action=media_stats result=dict keys=24 error=None
+[抖音视频01_media_stats] 14.68s -> HTTP 200 code=0 status=succeeded action=media_stats result=dict keys=24 error=None
+[抖音视频01_post_comments_list] 9.1s -> HTTP 200 code=0 status=succeeded action=post_comments_list result=dict keys=7 items=20 has_more=1 error=None
+[抖音视频01_media_hot_comments] 11.14s -> HTTP 500 code=RESULT_VALIDATION_FAILED data异常=None
+[抖音视频02_post_comments_list] 4.93s -> HTTP 200 code=0 status=succeeded action=post_comments_list result=dict keys=7 items=20 has_more=1 error=None
+[抖音视频02_media_hot_comments] 10.98s -> HTTP 500 code=RESULT_VALIDATION_FAILED data异常=None
+[抖音视频02_media_stats_number] 26.69s -> HTTP 200 code=0 status=succeeded action=media_stats result=dict keys=24 error=None
+[抖音视频02_media_stats] 31.9s -> HTTP 200 code=0 status=succeeded action=media_stats result=dict keys=24 error=None
+
+=== 完成，原始记录目录 ===
+/Users/liuxuekui/Documents/hbecho/aimaster接口文档/测试结果/raw

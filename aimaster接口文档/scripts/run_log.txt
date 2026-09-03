@@ -1,0 +1,167 @@
+
+=== [1/19] 视频号 - 清河约克中央空调 (视频链接: https://weixin.qq.com/sph/Axi5xPOgV) ===
+  -> 调用接口1 media_user_info ... 状态=failed 耗时=18.45s
+  -> 调用接口3 media_stats ... 状态=succeeded 耗时=18.39s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=18.51s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=18.58s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=18.49s
+  -> 调用接口2 media_stats_number ... 状态=succeeded 耗时=18.41s
+  -> 调用接口6 user_latest_video ... 状态=failed 耗时=18.41s
+  -> 调用接口7 post_comments_list ... 状态=failed 耗时=19.41s
+  -> 调用接口11 media_billboard_plugin ... 状态=succeeded 耗时=18.54s
+
+=== [2/19] 视频号 - 湘宁中央空调地暖新风 (视频链接: https://weixin.qq.com/sph/Ab0Fw1c1k) ===
+  -> 调用接口1 media_user_info ... 状态=failed 耗时=19.8s
+  -> 调用接口3 media_stats ... 状态=succeeded 耗时=19.46s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=19.17s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=14.45s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=19.4s
+  -> 调用接口2 media_stats_number ... 状态=succeeded 耗时=21.19s
+  -> 调用接口6 user_latest_video ... 状态=failed 耗时=18.48s
+  -> 调用接口7 post_comments_list ... 状态=failed 耗时=19.73s
+  -> 调用接口11 media_billboard_plugin ... 状态=succeeded 耗时=19.6s
+
+=== [3/19] 视频号 - 岑晓娇 (视频链接: https://weixin.qq.com/sph/ATul24eNN) ===
+  -> 调用接口1 media_user_info ... 状态=failed 耗时=19.38s
+  -> 调用接口3 media_stats ... 状态=succeeded 耗时=19.5s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=18.92s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=18.34s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=18.5s
+  -> 调用接口2 media_stats_number ... 状态=succeeded 耗时=18.4s
+  -> 调用接口6 user_latest_video ... 状态=failed 耗时=18.48s
+  -> 调用接口7 post_comments_list ... 状态=failed 耗时=19.29s
+  -> 调用接口11 media_billboard_plugin ... 状态=succeeded 耗时=18.96s
+
+=== [4/19] 视频号 - 约克亚丽 (视频链接: https://weixin.qq.com/sph/A8EW2iFv1L) ===
+  -> 调用接口1 media_user_info ... 状态=failed 耗时=20.26s
+  -> 调用接口3 media_stats ... 状态=succeeded 耗时=20.16s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=18.88s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=18.97s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=19.74s
+  -> 调用接口2 media_stats_number ... 状态=succeeded 耗时=19.77s
+  -> 调用接口6 user_latest_video ... 状态=failed 耗时=26.96s
+  -> 调用接口7 post_comments_list ... 状态=failed 耗时=20.29s
+  -> 调用接口11 media_billboard_plugin ... 状态=succeeded 耗时=18.47s
+
+=== [5/19] 视频号 - 北京中央空调葛大爷 (视频链接: https://weixin.qq.com/sph/ARABfM2b1) ===
+  -> 调用接口1 media_user_info ... 状态=failed 耗时=20.19s
+  -> 调用接口3 media_stats ... 状态=succeeded 耗时=19.31s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=18.81s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=22.18s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=20.41s
+  -> 调用接口2 media_stats_number ... 状态=succeeded 耗时=19.94s
+  -> 调用接口6 user_latest_video ... 状态=failed 耗时=18.7s
+  -> 调用接口7 post_comments_list ... 状态=failed 耗时=20.48s
+  -> 调用接口11 media_billboard_plugin ... 状态=succeeded 耗时=20.49s
+
+=== [6/19] 小红书 - 安康中央空调蕾姐 (视频链接: http://xhslink.com/o/8nTcxigdGvM) ===
+  -> 调用接口1 media_user_info ... 状态=failed 耗时=18.51s
+  -> 调用接口3 media_stats ... 状态=succeeded 耗时=19.2s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=19.32s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=20.51s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=20.9s
+  -> 调用接口2 media_stats_number ... 状态=succeeded 耗时=18.55s
+  -> 调用接口6 user_latest_video ... 状态=failed 耗时=19.05s
+  -> 调用接口7 post_comments_list ... 状态=failed 耗时=19.24s
+  -> 调用接口11 media_billboard_plugin ... 状态=succeeded 耗时=18.62s
+
+=== [7/19] 小红书 - 南阳卓翼中央空调 (视频链接: http://xhslink.com/o/AwjV4sNnCnj) ===
+  -> 调用接口1 media_user_info ... 状态=failed 耗时=18.39s
+  -> 调用接口3 media_stats ... 状态=succeeded 耗时=18.89s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=18.57s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=18.98s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=19.42s
+  -> 调用接口2 media_stats_number ... 状态=succeeded 耗时=19.54s
+  -> 调用接口6 user_latest_video ... 状态=failed 耗时=23.99s
+  -> 调用接口7 post_comments_list ... 状态=failed 耗时=18.6s
+  -> 调用接口11 media_billboard_plugin ... 状态=succeeded 耗时=18.58s
+
+=== [8/19] 小红书 - 小沈说暖通 (主页链接: https://xhslink.com/m/614Ho00X4lw) ===
+  -> 调用接口1 media_user_info ... 状态=succeeded 耗时=18.61s
+  -> 调用接口3 media_stats ... 状态=failed 耗时=18.52s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=18.47s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=18.56s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=19.01s
+
+=== [9/19] 小红书 - 菲菲说暖通 (主页链接: https://xhslink.com/m/9v956VkIS1b) ===
+  -> 调用接口1 media_user_info ... 状态=succeeded 耗时=18.48s
+  -> 调用接口3 media_stats ... 状态=failed 耗时=18.46s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=18.49s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=18.46s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=18.39s
+
+=== [10/19] 小红书 - 淄博海信中央空调城市会客厅直营店 (主页链接: https://xhslink.com/m/29yzeTg6XBw) ===
+  -> 调用接口1 media_user_info ... 状态=succeeded 耗时=19.11s
+  -> 调用接口3 media_stats ... 状态=failed 耗时=18.45s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=18.4s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=18.44s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=22.34s
+
+=== [11/19] 快手 - 杨飞 (主页链接: https://v.kuaishou.com/J2VEn2Nb) ===
+  -> 调用接口1 media_user_info ... 状态=succeeded 耗时=19.54s
+  -> 调用接口3 media_stats ... 状态=failed 耗时=53.94s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=18.55s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=18.4s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=19.45s
+
+=== [12/19] 快手 - 张娜 (主页链接: https://v.kuaishou.com/JP2JHeMI) ===
+  -> 调用接口1 media_user_info ... 状态=succeeded 耗时=18.49s
+  -> 调用接口3 media_stats ... 状态=failed 耗时=41.94s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=78.59s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=18.49s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=19.71s
+
+=== [13/19] 快手 - 柳沛森 (主页链接: https://estplca.m.kuai-fei.com/fw/user/3x4c7g7z67kc84a?fid=835373185&cc=share_wxms&followRefer=151&shareMethod=CARD&kpn=KUAISHOU&subBiz=PROFILE&shareId=19021437293853&shareToken=X14DYVDQAKXjxF0&shareMode=APP&originShareId=19021437293853&appType=1&shareObjectId=835373185&shareUrlOpened=0&timestamp=1783075297725) ===
+  -> 调用接口1 media_user_info ... 状态=failed 耗时=18.45s
+  -> 调用接口3 media_stats ... 状态=failed 耗时=15.0s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=16.73s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=18.51s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=18.48s
+
+=== [14/19] 快手 - 张勇 (视频链接: https://v.kuaishou.com/JFJJ4mxN) ===
+  -> 调用接口1 media_user_info ... 状态=failed 耗时=19.02s
+  -> 调用接口3 media_stats ... 状态=succeeded 耗时=18.47s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=65.97s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=18.44s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=18.54s
+  -> 调用接口2 media_stats_number ... 状态=succeeded 耗时=18.45s
+  -> 调用接口6 user_latest_video ... 状态=succeeded 耗时=35.58s
+  -> 调用接口7 post_comments_list ... 状态=failed 耗时=8.58s
+  -> 调用接口11 media_billboard_plugin ... 状态=succeeded 耗时=9.34s
+
+=== [15/19] 抖音 - 邯郸日立中央空调 (主页链接: https://www.douyin.com/user/MS4wLjABAAAAwP48pNOMNktcDino3V7A9SbVtICpiVjN08YCRILOtiY?from_tab_name=main&relation=2&vid=7614778059099154277) ===
+  -> 调用接口1 media_user_info ... 状态=succeeded 耗时=8.45s
+  -> 调用接口3 media_stats ... 状态=failed 耗时=8.39s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=8.61s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=8.43s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=8.37s
+
+=== [16/19] 抖音 - 日立中央空调、沁园净水、能率燃气热水器 (主页链接: https://v.douyin.com/gjSmkcjK7pk/) ===
+  -> 调用接口1 media_user_info ... 状态=succeeded 耗时=8.48s
+  -> 调用接口3 media_stats ... 状态=failed 耗时=15.25s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=8.37s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=8.38s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=8.43s
+
+=== [17/19] 抖音 - 鹿泉日立中央空调智慧空气馆 (主页链接: https://v.douyin.com/LgwN-vCBtFA/) ===
+  -> 调用接口1 media_user_info ... 状态=succeeded 耗时=8.4s
+  -> 调用接口3 media_stats ... 状态=failed 耗时=15.19s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=8.41s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=9.19s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=8.41s
+
+=== [18/19] 抖音 - 河间日立中央空调空气能（鼎晟） (主页链接: https://v.douyin.com/-hRVBDRMcxM/) ===
+  -> 调用接口1 media_user_info ... 状态=succeeded 耗时=8.51s
+  -> 调用接口3 media_stats ... 状态=failed 耗时=15.15s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=8.46s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=8.46s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=8.43s
+
+=== [19/19] 抖音 - 泊头日立中央空调 (主页链接: https://v.douyin.com/ai0EX5j9n3w/) ===
+  -> 调用接口1 media_user_info ... 状态=succeeded 耗时=8.5s
+  -> 调用接口3 media_stats ... 状态=failed 耗时=15.42s
+  -> 调用接口4 user_video_list ... 状态=failed 耗时=8.53s
+  -> 调用接口5 user_series_list ... 状态=failed 耗时=8.41s
+  -> 调用接口8 media_hot_comments ... 状态=failed 耗时=8.44s
+
+全部完成，共 19 条商家记录。汇总文件：/Users/liuxuekui/Documents/hbecho/aimaster接口文档/测试结果/调用清单与状态.json

@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# hbecho 提交前密钥扫描
+# 说明见 docs/runbooks/server-operations-runbook.md §9.5
+#
+# 定位：这是降低失误率的手段，不是安全边界。
+# 真正的边界是「密钥不写进仓库目录」和「泄露后轮换」。
+#
+# 启用方式（clone 后执行一次）：
+#   git config core.hooksPath .githooks
+set -euo pipefail
+
+# core.quotepath=false：否则含中文的路径会被转义成八进制并加引号，
+# 导致以 $ 结尾的文件名正则匹配不上（本项目路径含中文，必须加这一项）
+staged=$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACM || true)
+[ -z "$staged" ] && exit 0
+
+fail=0
+
+# ── ① 凭证类文件名，无论内容一律拦 ──────────────────────
+CRED_RE='(^|/)\.env$|(^|/)\.env\.|settings\.local\.json$|\.pem$|\.p12$|\.pfx$|(^|/)id_(rsa|ed25519)$|_ed25519$|_rsa$|(^|/)服务器密码$|password.*\.txt$'
+# .env.example 是键名模板，必须进仓库，不算凭证
+ALLOW_RE='(^|/)\.env\.example$|(^|/)\.env\.sample$'
+cred=$(echo "$staged" | grep -E "$CRED_RE" | grep -vE "$ALLOW_RE" || true)
+if [ -n "$cred" ]; then
+  echo "✗ 暂存区包含凭证类文件：" >&2
+  echo "$cred" | sed 's/^/    /' >&2
+  fail=1
+fi
+
+# ── ② 内容特征扫描 ────────────────────────────────────
+# 排除全为 x/占位的示例值（.env.example 里的 sk-xxxx 不算）
+hits=$(git diff --cached -U0 -- . ':!*.example' ':!*.example.*' \
+  | grep -nE 'sk-[A-Za-z0-9_-]{16,}|LTAI[A-Za-z0-9]{12,}|BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY|AccessKeySecret["'"'"']?[[:space:]]*[:=]' \
+  | grep -vE 'sk-x{8,}|LTAIx{6,}|<[A-Za-z_]+>|LTAI\.\.\.|sk-\.\.\.' || true)
+if [ -n "$hits" ]; then
+  echo "✗ 暂存内容命中密钥特征：" >&2
+  echo "$hits" | head -10 | sed 's/^/    /' >&2
+  fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "" >&2
+  echo "确认是误报时可用：git commit --no-verify" >&2
+  echo "确认是真密钥时：从暂存区移除，并按 §8.6 轮换该密钥" >&2
+  exit 1
+fi
+
+exit 0

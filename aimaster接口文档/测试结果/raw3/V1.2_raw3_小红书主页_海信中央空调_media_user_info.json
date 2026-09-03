@@ -1,0 +1,47 @@
+{
+  "label": "小红书主页_海信中央空调",
+  "action": "media_user_info",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/media_user_info",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_user_info?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "@海信中央空调 在小红书已经有7.2万个粉丝，点击链接或复制口令查看Ta的主页>> https://xhslink.cn/o/3xU19S04cbk"
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954be3d57ee40001582c51",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "27247335426",
+        "nickname": "海信中央空调",
+        "signature": "好空气 海信造",
+        "follower_count": "72415",
+        "following_count": "6",
+        "like_count": "116098",
+        "post_count": "765",
+        "follower_number": 72415,
+        "following_number": 6,
+        "like_number": 116098,
+        "post_number": 765,
+        "updated": 1788169190778
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954be3d57ee40001582c51"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:39:40.435106+00:00",
+  "finished_at": "2026-08-31T09:39:53.217190+00:00",
+  "elapsed_seconds": 12.78
+}

@@ -1,0 +1,57 @@
+{
+  "label": "小红书主页_日立中央空调_派生详情3_6a9000b3",
+  "action": "media_stats_number",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/media_stats_number",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_stats_number?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "https://www.xiaohongshu.com/explore/6a9000b300000000200314db"
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954c102bcec60001e449c9",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "6a9000b300000000200314db",
+        "platform": "xiaohongshu",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": null,
+        "like_number": 6,
+        "comment_number": 8,
+        "collect_number": 2,
+        "share_number": 3,
+        "duration_number": 0,
+        "user_id": "5decba2300000000010007e1",
+        "created": 1787822259000,
+        "author_name": "日立中央空调",
+        "title": "## 标题\n家里这么多智能设备，谁来当“群主”？\n\n## 正文\n现在的家，设备越来越多——\n空调一个面板，新风一个面板\n地暖、灯光、窗帘又各有各的控制方式……\n想舒服一下，先得挨个“点名”👇\n\t\n🌡️ 空调：客厅今天开多少度？\n🍃 新风：现在要不要打开？\n🪟 窗帘：看电影要不要关上窗帘？\n💡 灯光：亮度调到多少？\n\t\n用户：怎么每件事都要问我……\n\t\n这时候，是该给这个“设备群”找个群主了！\n\t\n AI智慧屏，一键智启、3D户型可视化、语音响应、全屋设备集成、APP远控，把原本分散的操作集中起来，一屏就能轻松管理全屋～\n\t\n空调、新风、地暖、灯光、窗帘……\n设备可以越来越多，操作却不必越来越复杂\n把繁琐的逐项调节交给AI智慧屏\n让家的舒适，从一个个设置变成彼此配合～",
+        "tag_text": "#日立中央空调 #日立中央空调 #AI智慧屏 #智能家居 #全屋智能 #智慧生活 #居家生活",
+        "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o324c9u7qsn4105nfcn8hg81v1vr9kkt0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=992036373dce300e9f56fcbddaf33e9b&t=6a954c11",
+        "download_urls": "https://sns-i11.rednotecdn.com/spectrum/1040g34o324c9u7qsn4105nfcn8hg81v1vr9kkt0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=992036373dce300e9f56fcbddaf33e9b&t=6a954c11\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g0k0324c9ub1kmu005nfcn8hg81v1520hgt8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=1e7ffb9891f3b9614c4ab351fb60b1ed&t=6a954c11\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g34o324c9uh6pn2105nfcn8hg81v176d2otg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=0a21e0781ce30625bc676b45774bab40&t=6a954c11\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g34o324c9up6qn40g5nfcn8hg81v1si4us4o?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=b0d21b8da3826facb144f5cd2005b8f8&t=6a954c11\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g0k0324c9urncgm005nfcn8hg81v1spr5l98?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=826ae41966ffc69c818197634e80c721&t=6a954c11",
+        "updated": 1788169233964
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954c102bcec60001e449c9"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:40:26.472216+00:00",
+  "finished_at": "2026-08-31T09:40:35.539312+00:00",
+  "elapsed_seconds": 9.07
+}

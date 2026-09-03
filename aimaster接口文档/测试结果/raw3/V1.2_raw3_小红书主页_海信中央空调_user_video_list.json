@@ -1,0 +1,724 @@
+{
+  "label": "小红书主页_海信中央空调",
+  "action": "user_video_list",
+  "mode": "sync (async=false)",
+  "endpoint": "/openapi/v1/user_video_list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/user_video_list?async=false",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "@海信中央空调 在小红书已经有7.2万个粉丝，点击链接或复制口令查看Ta的主页>> https://xhslink.cn/o/3xU19S04cbk",
+      "max_cursor": 0
+    }
+  },
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6a954be325f71e00016485f3",
+      "action": "user_video_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "post_id": "6a94e3c6000000001803dcca",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1788159617000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n现在买海信红焰，顺带抽个“暖冬游”大奖！\n\n## 正文\n冬天最怕什么？\n断崖式降温、取暖费飙升、回家还要等半天才热🥶\n\t\n海信红焰Ⅲ空气源热泵了解一下——\n-35℃照样稳定制热，-15℃制热量不衰减，10重防冻铠甲全天候守护。\n补气增焓“耐寒芯”加持，越",
+            "tag_text": "",
+            "stats": {
+              "like_count": 0,
+              "comment_count": null,
+              "collect_count": 0,
+              "share_count": 0
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku74105ns6ifhg8t4cs5ln6s8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=4fa7979735e4a64d776bffaa270cbf5d&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku74105ns6ifhg8t4cs5ln6s8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=4fa7979735e4a64d776bffaa270cbf5d&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku740g5ns6ifhg8t4cj7lapd0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=495df3539ec5694d7b9def367332b56f&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku741g5ns6ifhg8t4cfkan408?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=e0cf36c11fd0b2512ccea76028841527&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku74005ns6ifhg8t4c9jh9r6g?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=34cd60168772826eb0cb32575874a7f9&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku74205ns6ifhg8t4ciu8th4o?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=2e40d8c129a14c7b3bcc9694e6c80ef3&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0324h2i8ku742g5ns6ifhg8t4chlnuvh8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=9b89ee5a22a1554f83a3585b208015e1&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "冬天最怕什么？\n断崖式降温、取暖费飙升、回家还要等半天才热🥶\n\t\n海信红焰Ⅲ空气源热泵了解一下——\n-35℃照样稳定制热，-15℃制热量不衰减，10重防冻铠甲全天候守护。\n补气增焓“耐寒芯”加持，越"
+            }
+          },
+          {
+            "post_id": "6a94e0c9000000002a03cc31",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1788141769000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n今年买海信红焰，主打一个“省”！\n\n## 正文\n今年购买海信红焰系列，可以说是“省”到家\n🔥 红焰采暖：-35℃照样稳定制热，省得抖\n1度电顶4度热，比壁挂炉、煤炉省太多💰\n手机远程操控省得等，人还在归途，温暖已经提前进家门📱\n10年质保兜底",
+            "tag_text": "",
+            "stats": {
+              "like_count": 0,
+              "comment_count": null,
+              "collect_count": 0,
+              "share_count": 0
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n4005ns6ifhg8t4cfktn5s0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=866916eb1cf9b313abdad64f6be7862f&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n4005ns6ifhg8t4cfktn5s0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=866916eb1cf9b313abdad64f6be7862f&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n40g5ns6ifhg8t4cudp3fl8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=7042172ff1fdc6167bd451e1898c37d6&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n4105ns6ifhg8t4c77p1mag?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=7512ad0c8a58f093f083874099d235f3&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n41g5ns6ifhg8t4c8jib2gg?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=9ce52b39eecc7a12d6993f98515e1be9&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n4205ns6ifhg8t4co43ncg8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=f85d46906a324d9c4b5429924f94e40d&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o324h2bbt3n42g5ns6ifhg8t4cj32quug?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=87554ff6b5b11a6e8b0761e50ac54a16&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "今年购买海信红焰系列，可以说是“省”到家\n🔥 红焰采暖：-35℃照样稳定制热，省得抖\n1度电顶4度热，比壁挂炉、煤炉省太多💰\n手机远程操控省得等，人还在归途，温暖已经提前进家门📱\n10年质保兜底"
+            }
+          },
+          {
+            "post_id": "6a8c047a000000003302012f",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1787877012000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n买的早不如买得值｜装海信红焰抽暖冬游！\n\n## 正文\n买的早不如买得值🔥\n2026海信热泵节，装红焰采暖，送你暖冬游大奖✈️\n购机即可参与直播抽奖，有机会赢免费长白山暖冬之旅🏔️\n这个冬天，家里暖，心里更暖\n趁着热泵节，把温暖和旅行一起安排上！\n#海",
+            "tag_text": "",
+            "stats": {
+              "like_count": 1,
+              "comment_count": null,
+              "collect_count": 1,
+              "share_count": 282
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k03248dorflgs005ns6ifhg8t4c2cb5vk0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=fc8769c9c3b7b61f88619ba5fb3c8a52&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k03248dorflgs005ns6ifhg8t4c2cb5vk0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=fc8769c9c3b7b61f88619ba5fb3c8a52&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "买的早不如买得值🔥\n2026海信热泵节，装红焰采暖，送你暖冬游大奖✈️\n购机即可参与直播抽奖，有机会赢免费长白山暖冬之旅🏔️\n这个冬天，家里暖，心里更暖\n趁着热泵节，把温暖和旅行一起安排上！\n#海"
+            }
+          },
+          {
+            "post_id": "6a8c044e000000001801a284",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1787704213000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n💰地暖采暖这笔账，明着算才能放心用！\n\n## 正文\n冬天取暖，最怕电费账单“惊喜”。\n采暖这笔账，明着算才能放心用——\n海信红焰采暖，买一得多有保障，家电免费抽，还享十年质保🛡️\n2026海信热泵节正在进行中，早用早享受，省钱又省心🔥\n这个冬天，让",
+            "tag_text": "",
+            "stats": {
+              "like_count": 1,
+              "comment_count": 4,
+              "collect_count": 1,
+              "share_count": 255
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o3248do0f26u105ns6ifhg8t4cruivbco?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=5a0d56299c57902e787486a8011276fa&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o3248do0f26u105ns6ifhg8t4cruivbco?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=5a0d56299c57902e787486a8011276fa&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "冬天取暖，最怕电费账单“惊喜”。\n采暖这笔账，明着算才能放心用——\n海信红焰采暖，买一得多有保障，家电免费抽，还享十年质保🛡️\n2026海信热泵节正在进行中，早用早享受，省钱又省心🔥\n这个冬天，让"
+            }
+          },
+          {
+            "post_id": "6a8bfd4d0000000033020d31",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1787559245000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n里三层外三层的冬天，是时候告别了！\n\n## 正文\n小时候过冬靠“裹”——棉袄棉裤棉被，里三层外三层，还是冻得缩手缩脚。\n现在过冬靠“暖”——一套海信红焰采暖，从脚底暖到头顶，不用裹成熊也能自在过冬🔥\n2026海信热泵节正在进行中，装海信空气能，享1",
+            "tag_text": "",
+            "stats": {
+              "like_count": 3,
+              "comment_count": null,
+              "collect_count": 0,
+              "share_count": 106
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o3248dccabmu105ns6ifhg8t4c7uqeo40?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=bc6496497e0dac9efa58cc8cf6049679&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o3248dccabmu105ns6ifhg8t4c7uqeo40?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=bc6496497e0dac9efa58cc8cf6049679&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "小时候过冬靠“裹”——棉袄棉裤棉被，里三层外三层，还是冻得缩手缩脚。\n现在过冬靠“暖”——一套海信红焰采暖，从脚底暖到头顶，不用裹成熊也能自在过冬🔥\n2026海信热泵节正在进行中，装海信空气能，享1"
+            }
+          },
+          {
+            "post_id": "6a82a58200000000280323a7",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1787281221000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n开信星期五｜今天来玩个眼力游戏：找队友！\n\n## 正文\n开信星期五｜今天的任务：找队友！\n你能把它们配对连成一条线吗？试试你的眼力\n\t\n🔹 产品A：5G+荣耀家\n隐藏技能关键词：自带高速网络 远程控制｜“会思考”的AI空气管家\n\t\n🔹 产品B：Ai家I",
+            "tag_text": "",
+            "stats": {
+              "like_count": 378,
+              "comment_count": 15,
+              "collect_count": 6,
+              "share_count": 362
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323nb7iml70005ns6ifhg8t4cvt20eg8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=d479c0d5af6997025469ff9a498d4b2e&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323nb7iml70005ns6ifhg8t4cvt20eg8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=d479c0d5af6997025469ff9a498d4b2e&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "开信星期五｜今天的任务：找队友！\n你能把它们配对连成一条线吗？试试你的眼力\n\t\n🔹 产品A：5G+荣耀家\n隐藏技能关键词：自带高速网络 远程控制｜“会思考”的AI空气管家\n\t\n🔹 产品B：Ai家I"
+            }
+          },
+          {
+            "post_id": "6a86c0ea00000000280078b0",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1787272215000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n👍5个小妙招改善中央空调凝露滴水！\n\n## 正文\n夏天开空调图个凉快，结果出风口“汗如雨下”，这是为什么？\n凝露滴水怎么预防？5大日常小妙招教你改善：\n✅关紧门窗，别让湿气溜进来\n✅调高设定温度，刚开机设定26℃刚刚好\n✅刚开机时适当调大风量，加快凝",
+            "tag_text": "",
+            "stats": {
+              "like_count": 155,
+              "comment_count": null,
+              "collect_count": 2,
+              "share_count": 8
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o324390radmu205ns6ifhg8t4cr9kppeo?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=b8e4c1585b4127a2b7e1cd5ec12d29ac&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v28.rednotecdn.com/stream/1/110/258/01ea86be96abac7001037001a01e626f0d_258.mp4",
+              "name": "01ea86be96abac7001037001a01e626f0d_258.mp4",
+              "duration": 116.704
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o324390radmu205ns6ifhg8t4cr9kppeo?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=b8e4c1585b4127a2b7e1cd5ec12d29ac&t=6a954be4"
+            ],
+            "download_urls": []
+          },
+          {
+            "post_id": "6a869a5c0000000014028682",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1787216430000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n出伏倒计时｜换季空调这样开，舒服又省电！\n\n## 正文\n好消息，8月24日就要出伏了。\n但别高兴太早——“秋后一伏热死人”，白天秋老虎照样发威，能冲到35-38℃；夜里凉意已经上来，能掉到24-25℃。一天里冷热反复，温差能拉开10℃以上。所以空调还得继续",
+            "tag_text": "",
+            "stats": {
+              "like_count": 253,
+              "comment_count": 2,
+              "collect_count": 1,
+              "share_count": 203
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o32434drjt6u305ns6ifhg8t4cn5iado0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=c9eb9f7c90f2ce6beff75b78c433fbc1&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o32434drjt6u305ns6ifhg8t4cn5iado0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=c9eb9f7c90f2ce6beff75b78c433fbc1&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o32434drjt6u3g5ns6ifhg8t4c5a603j8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=7564314c4e5ee09660c5c7d5c677a848&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o32434drjt6u405ns6ifhg8t4cvfv98o8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=ce1aa094ccc5778c0f178a43f690a219&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "好消息，8月24日就要出伏了。\n但别高兴太早——“秋后一伏热死人”，白天秋老虎照样发威，能冲到35-38℃；夜里凉意已经上来，能掉到24-25℃。一天里冷热反复，温差能拉开10℃以上。所以空调还得继续"
+            }
+          },
+          {
+            "post_id": "6a82c48100000000350145f2",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1786959041000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n藏在天花板的浪漫，一年四季都在\n\n## 正文\n七夕快到了，朋友圈又要被鲜花刷屏了。\n花是浪漫的仪式感，谁不想要呢？\n只是漫长的日子里，有一种浪漫藏在天花板里，一年四季都在！\n\t\n很多女生夏天的日常——\n坐在沙发上，冷风直吹头顶，没一会儿就开始头疼",
+            "tag_text": "",
+            "stats": {
+              "like_count": 164,
+              "comment_count": null,
+              "collect_count": 0,
+              "share_count": 126
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o323vckoch70205ns6ifhg8t4cnerqnq8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=294ea7f733e7f8ba30da509a7e267126&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323vckoch70205ns6ifhg8t4cnerqnq8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=294ea7f733e7f8ba30da509a7e267126&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323vckoch702g5ns6ifhg8t4c1mn9dd0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=5f8b86517da1a93ccc108ed7a5c63344&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "七夕快到了，朋友圈又要被鲜花刷屏了。\n花是浪漫的仪式感，谁不想要呢？\n只是漫长的日子里，有一种浪漫藏在天花板里，一年四季都在！\n\t\n很多女生夏天的日常——\n坐在沙发上，冷风直吹头顶，没一会儿就开始头疼"
+            }
+          },
+          {
+            "post_id": "6a82854c00000000220106fc",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1786938700000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n海信红焰一键节能，舒适恒温又养生\n\n## 正文\n拒绝冬天的凛冽，只留恒温般的舒适~\n红焰一键节能，温暖又养生，\n冬天也能在家穿单衣惬意地撸猫，\n这个冬天再也不怕手脚冰凉",
+            "tag_text": "#海信中央空调[话题]# #好空气海信造[话题]# #海信红焰系列[话题]#",
+            "stats": {
+              "like_count": 3,
+              "comment_count": null,
+              "collect_count": 0,
+              "share_count": 2
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o3241t7482mu105ns6ifhg8t4c1rtnn48?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=5800200c3a41712dd84f89adb41cfe36&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v28.rednotecdn.com/stream/1/110/258/01ea82ac42ab9d9101037001a00e718c9f_258.mp4",
+              "name": "01ea82ac42ab9d9101037001a00e718c9f_258.mp4",
+              "duration": 41.771
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o3241t7482mu105ns6ifhg8t4c1rtnn48?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=5800200c3a41712dd84f89adb41cfe36&t=6a954be4"
+            ],
+            "download_urls": []
+          },
+          {
+            "post_id": "6a7a7c720000000008013588",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1786447829000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n大横厅装两台空调浪费？试试这台90神机\n\n## 正文\n大横厅好看，但选中央空调确实让人头疼\n一台内机带不动，两台内机又觉得浪费\n面积大、跨度宽、层高有限，装完吊顶还容易压抑\n海信「大宽厅90神机」，就是为这种户型设计的\n\t\n✅ 一台覆盖50㎡大空间\n90",
+            "tag_text": "",
+            "stats": {
+              "like_count": 81,
+              "comment_count": null,
+              "collect_count": 0,
+              "share_count": 115
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o323d3n9qb74205ns6ifhg8t4c24rvlu0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=87a23667ec160e8afc5e91ff0abc48c1&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323d3n9qb74205ns6ifhg8t4c24rvlu0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=87a23667ec160e8afc5e91ff0abc48c1&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323d3n9qb742g5ns6ifhg8t4cudrr3l8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=734c78e132df291febc5bfbe873ce595&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "大横厅好看，但选中央空调确实让人头疼\n一台内机带不动，两台内机又觉得浪费\n面积大、跨度宽、层高有限，装完吊顶还容易压抑\n海信「大宽厅90神机」，就是为这种户型设计的\n\t\n✅ 一台覆盖50㎡大空间\n90"
+            }
+          },
+          {
+            "post_id": "6a7acfd1000000003400f9f4",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1786438860000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\nChinamaxxing刷屏｜打卡一个中国化的夏天\n\n## 正文\n最近有个词火到全球刷屏——Chinamaxxing\n翻译过来就是“中国化生活方式的极致体验”\n喝热水、练八段锦、泡脚养生、追中国剧、来中国旅行\n外国网友疯狂打卡中国人的日常\n但真正的Chinamaxx",
+            "tag_text": "",
+            "stats": {
+              "like_count": 110,
+              "comment_count": 16,
+              "collect_count": 6,
+              "share_count": 2
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o323njf99on2205ns6ifhg8t4cog23cm8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=ccc79f8312c9abcc0f622c1e4bb887ea&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323njf99on2205ns6ifhg8t4cog23cm8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=ccc79f8312c9abcc0f622c1e4bb887ea&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323njo25a70005ns6ifhg8t4ckr4s1l8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=ac7ecb6833f742d512a58d9a1b7f872e&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "最近有个词火到全球刷屏——Chinamaxxing\n翻译过来就是“中国化生活方式的极致体验”\n喝热水、练八段锦、泡脚养生、追中国剧、来中国旅行\n外国网友疯狂打卡中国人的日常\n但真正的Chinamaxx"
+            }
+          },
+          {
+            "post_id": "6a798acc000000000600661d",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1786352616000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n💡省电三连｜海信中央空调助你惬意一夏！\n\n## 正文\n大多数人都不知道：\n三伏天究竟怎么设置中央空调才能更舒服？\n海信中央空省电三连招送你惬意一夏！\n\t\n1️⃣短时离家不用关空调\n下楼买菜、取快递可以不用关空调，更省电\n睡觉开启睡眠模式，调个定时开到凌晨",
+            "tag_text": "",
+            "stats": {
+              "like_count": 1,
+              "comment_count": null,
+              "collect_count": 0,
+              "share_count": 2
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323mam7lnmu005ns6ifhg8t4c5r9vdeo?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=a580412e4c8140863c3d401b80227d18&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v28.rednotecdn.com/stream/1/110/258/01ea7979da4fc6c0010370019feac6a1d3_258.mp4",
+              "name": "01ea7979da4fc6c0010370019feac6a1d3_258.mp4",
+              "duration": 83.476
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323mam7lnmu005ns6ifhg8t4c5r9vdeo?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=a580412e4c8140863c3d401b80227d18&t=6a954be4"
+            ],
+            "download_urls": []
+          },
+          {
+            "post_id": "6a756dcc0000000028003eb0",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1786321822000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n今天什么都不用干，安心躺平\n\n## 正文\n8月10日，国际懒惰日。\n一个被全球懒人集体认证的节日——每年这天，你有权理直气壮地什么都不干。但躺平也有讲究，瘫在26℃的房间里，被空调吹到头痛——那不是享受，是受罪。\n所以“懒人哲学”的精髓从来不",
+            "tag_text": "",
+            "stats": {
+              "like_count": 9,
+              "comment_count": 2,
+              "collect_count": 6,
+              "share_count": 132
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323ibob746s005ns6ifhg8t4c17hmj7g?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=9f7b7d8658ca6e277709214f209a4428&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323ibob746s005ns6ifhg8t4c17hmj7g?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=9f7b7d8658ca6e277709214f209a4428&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323ibob746s0g5ns6ifhg8t4cilhseqo?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=ff308b20a0347a08144a00a7ac540790&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323ibob746s1g5ns6ifhg8t4c3s5c0f8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=4e138595f2eb89959412abe8de276e29&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323ibob746s205ns6ifhg8t4c8k67hsg?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=3e9ea41a0e8041f52f2a8380f6c19306&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323ibob746s105ns6ifhg8t4c2l4b1gg?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=e265dde40c5e3ae898afc6978d030016&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "8月10日，国际懒惰日。\n一个被全球懒人集体认证的节日——每年这天，你有权理直气壮地什么都不干。但躺平也有讲究，瘫在26℃的房间里，被空调吹到头痛——那不是享受，是受罪。\n所以“懒人哲学”的精髓从来不"
+            }
+          },
+          {
+            "post_id": "6a7534580000000025000767",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1786069835000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n立秋已读不回，空调还得继续“上班”！\n\n## 正文\n[暗中观察R]立秋：我来了\n[抠鼻R]体感：你谁？\n\t\n🔥说好的秋高气爽呢？？\n高温高湿“全勤营业”，还是得靠空调“续命”\n长时间直吹难免头疼、嗓子干、皮肤紧\n风太小角落还凉不到，加剧体感不适\n这时",
+            "tag_text": "",
+            "stats": {
+              "like_count": 1,
+              "comment_count": 2,
+              "collect_count": 1,
+              "share_count": 3
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323i4m3gfms705ns6ifhg8t4c4dqlclg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=2ea0d7c7f335f0fa9ab4f6c6a5b2a0cd&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323i4m3gfms705ns6ifhg8t4c4dqlclg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=2ea0d7c7f335f0fa9ab4f6c6a5b2a0cd&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323i4m3gfms7g5ns6ifhg8t4c8cc3b20?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=df56fa1861e598f77925eb3554f7bcf1&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323i4m3gfms805ns6ifhg8t4csqcg68o?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=37f2c089db6004dbfbdd84d579520890&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "[暗中观察R]立秋：我来了\n[抠鼻R]体感：你谁？\n\t\n🔥说好的秋高气爽呢？？\n高温高湿“全勤营业”，还是得靠空调“续命”\n长时间直吹难免头疼、嗓子干、皮肤紧\n风太小角落还凉不到，加剧体感不适\n这时"
+            }
+          },
+          {
+            "post_id": "6a71b3a0000000002202f1c1",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1786006872000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n🎁宠粉加码｜十年质保+全屋智控，安排！\n\n## 正文\n海信中央空调「真宠粉门店见」年中宠粉福利进行中🔥\n旗舰新品购机智控礼遇，专享十年质保\n\t\n✨ 购机智控礼遇\n买Ai家II系列新品，送全屋彩屏线控器（至多4个）\n全屋智控一步到位，不用后期再加装，颜值",
+            "tag_text": "",
+            "stats": {
+              "like_count": 11,
+              "comment_count": 9,
+              "collect_count": 12,
+              "share_count": 0
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323en26cv72005ns6ifhg8t4cph8e128?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=88e340a7e63a32d26ee4581ec0b2f398&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g0k0323en26cv72005ns6ifhg8t4cph8e128?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=88e340a7e63a32d26ee4581ec0b2f398&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "海信中央空调「真宠粉门店见」年中宠粉福利进行中🔥\n旗舰新品购机智控礼遇，专享十年质保\n\t\n✨ 购机智控礼遇\n买Ai家II系列新品，送全屋彩屏线控器（至多4个）\n全屋智控一步到位，不用后期再加装，颜值"
+            }
+          },
+          {
+            "post_id": "6a71b5810000000033010680",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1785898849000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n高温预警又来？高温不退，我不退！\n\n## 正文\n今年夏天感觉比去年还猛🌡️\n出个门像进了烤箱，到家还得跟空调斗智斗勇——\n温度调低了冻醒，调高了热醒\n风对着吹头痛，不吹又闷得慌\n海信中央空调「真宠粉门店见」活动\n用爆品钜惠回应大家的夏天困扰……",
+            "tag_text": "",
+            "stats": {
+              "like_count": 52,
+              "comment_count": null,
+              "collect_count": 48,
+              "share_count": 205
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o323engtem746g5ns6ifhg8t4cbsobkf8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=25436180f5d747a8ed576aba4be439a0&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323engtem746g5ns6ifhg8t4cbsobkf8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=25436180f5d747a8ed576aba4be439a0&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323engtem74705ns6ifhg8t4c25eor00?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=472bc9e29b011ed69b56dedce7af297c&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323engtem748g5ns6ifhg8t4c8310vlo?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=5c1f7242311db241aec753321a08f0b3&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323engtem74805ns6ifhg8t4ce4aitl0?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=73af2d6a5b3ddc26af500928b1e588c1&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323engtem747g5ns6ifhg8t4ctojq89o?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=5ea3251cd2cf19bad8192dcdee734b38&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323engtem74605ns6ifhg8t4c6aphqs8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=40fed9cdf8f7f937da504941882f4658&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "今年夏天感觉比去年还猛🌡️\n出个门像进了烤箱，到家还得跟空调斗智斗勇——\n温度调低了冻醒，调高了热醒\n风对着吹头痛，不吹又闷得慌\n海信中央空调「真宠粉门店见」活动\n用爆品钜惠回应大家的夏天困扰……\n"
+            }
+          },
+          {
+            "post_id": "6a700bfa0000000022031f19",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1785747653000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n甲醛开“高温派对”？海信烘房除醛了解一下\n\n## 正文\n最近是不是感觉一出空调房就像进了蒸笼？🌡️\n但告诉你一个“冷知识”：35℃时，甲醛释放量直接暴增约250% ！\n而且湿度一上来，甲醛更容易被“催化”出来。\n有数据显示，7、8月份甲醛超标率高达65%",
+            "tag_text": "",
+            "stats": {
+              "like_count": 107,
+              "comment_count": 1,
+              "collect_count": 149,
+              "share_count": 500
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o323d3ejrb70305ns6ifhg8t4cv3fa4to?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=d48a075c90f06c9c9eefc73467e8b9dc&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323d3ejrb70305ns6ifhg8t4cv3fa4to?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=d48a075c90f06c9c9eefc73467e8b9dc&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323d3ejrb703g5ns6ifhg8t4cb906k9g?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=a7bfc498eb02cce677a6294c5cc245b4&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o323d3ejrb70405ns6ifhg8t4cufilc70?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=fc08efbdc080093ca7090674a5abc5c0&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "最近是不是感觉一出空调房就像进了蒸笼？🌡️\n但告诉你一个“冷知识”：35℃时，甲醛释放量直接暴增约250% ！\n而且湿度一上来，甲醛更容易被“催化”出来。\n有数据显示，7、8月份甲醛超标率高达65%"
+            }
+          },
+          {
+            "post_id": "6a6afd550000000014005a57",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1785717012000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n☀️howto三伏防暑，保姆级指南请收好🔥\n\n## 正文\n2026年三伏天\n最热的中伏桑拿模式正在进行中🔥\n赶紧码住这份防暑指南🌡️\n\t\n中伏：7月25日-8月13日（20天）\n末伏：8月14日-8月23日（10天）\n\t\n最近 话题",
+            "tag_text": "#三伏天养生[话题]#",
+            "stats": {
+              "like_count": 111,
+              "comment_count": 16,
+              "collect_count": 11,
+              "share_count": 0
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o3234afnaems305ns6ifhg8t4c2fv86c0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=20951ed2aed5fbfb5a0bbcb0ab735514&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o3234afnaems305ns6ifhg8t4c2fv86c0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=20951ed2aed5fbfb5a0bbcb0ab735514&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o3234afnaems3g5ns6ifhg8t4c3e53gr8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=7ec31c3e4ad134935c307328d6d9d544&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o3234afnaems405ns6ifhg8t4c698c4fg?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=81933f93824e5939caf8f15cdced0e72&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "2026年三伏天\n最热的中伏桑拿模式正在进行中🔥\n赶紧码住这份防暑指南🌡️\n\t\n中伏：7月25日-8月13日（20天）\n末伏：8月14日-8月23日（10天）\n\t\n最近#三伏天养生[话题]# 话题"
+            }
+          },
+          {
+            "post_id": "6a6c08a00000000027021f4c",
+            "user_id": "5f8693e3000000000100748c",
+            "red_id": "",
+            "created": 1785553231000,
+            "author_name": "海信中央空调",
+            "title": "## 标题\n装个“巨能省”的热泵，抽长白山冰雪之旅？\n\n## 正文\n冬天还没到，海信中央空调已经提前帮咱们规划好暖冬了❄️\n今年装红焰采暖，直接抽暖冬旅游大奖✈️\n\t\n🎁 这次热泵节活动力度有多大？\n✅ 买就抽：热泵抱回家，还能抽冰箱、冰柜、养生壶、神秘福袋！\n✅",
+            "tag_text": "",
+            "stats": {
+              "like_count": 3,
+              "comment_count": 2,
+              "collect_count": 2,
+              "share_count": 0
+            },
+            "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o32395ugs56u2g5ns6ifhg8t4cbdtmtl8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=7664044e1fd86dd4b90667ec53f4c68e&t=6a954be4",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o32395ugs56u2g5ns6ifhg8t4cbdtmtl8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=7664044e1fd86dd4b90667ec53f4c68e&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o32395ugs56u305ns6ifhg8t4cvp1abng?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=411a9f2a46a47e79bea169b5dec35d49&t=6a954be4",
+              "https://sns-i11.rednotecdn.com/spectrum/1040g34o32395ugs56u3g5ns6ifhg8t4ct7om258?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=b0c2dad1a9cfafb2f216769602668da9&t=6a954be4"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "冬天还没到，海信中央空调已经提前帮咱们规划好暖冬了❄️\n今年装红焰采暖，直接抽暖冬旅游大奖✈️\n\t\n🎁 这次热泵节活动力度有多大？\n✅ 买就抽：热泵抱回家，还能抽冰箱、冰柜、养生壶、神秘福袋！\n✅ "
+            }
+          }
+        ],
+        "has_more": true,
+        "cursor": "",
+        "max_cursor": "6a6c08a00000000027021f4c"
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6a954be325f71e00016485f3"
+  },
+  "transport_error": null,
+  "started_at": "2026-08-31T09:39:40.435178+00:00",
+  "finished_at": "2026-08-31T09:39:50.270734+00:00",
+  "elapsed_seconds": 9.84
+}

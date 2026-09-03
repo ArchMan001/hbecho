@@ -23,7 +23,7 @@
 | 2 | ✅ Kiro | 写 `~/.workbench/config.json`，`workbench exec` 实测连通（2026-09-03） | §3.5 |
 | 3 | ✅ Kiro | SSH 密钥已生成并装入 `authorized_keys`，密钥登录实测通过（2026-09-03） | §3.1 |
 | 4 | 我 | 控制台重置 root 密码为**真随机**串。当前密码已存入系统钥匙串但仍是可猜模式（§3.2.1） | §3.2.1 |
-| 5 | 我 | 删掉工作区的 `服务器密码` 明文文件（已存入钥匙串，可安全删除） | §3.2.1 |
+| 5 | ✅ 我 | 工作区 `服务器密码` 文件已删除，钥匙串副本保留（2026-09-03） | §3.2.1 |
 | 6 | ✅ Kiro | SSH 密码认证已关闭并三向验证（密钥通 / 密码被拒 / Workbench 不受影响，2026-09-03） | §4 |
 | 7 | ✅ 共同 | 安全组 22 已收紧到 `223.78.0.0/16`，`0.0.0.0/0` 已删除，四向验证通过（2026-09-03） | §4.1 |
 | 7b | ✅ Kiro | 移除默认安全组里的 `3389/0.0.0.0/0`（Linux 无 RDP，实测无监听，2026-09-03） | §4.1 |
@@ -51,10 +51,10 @@
 | 17 | ✅ Kiro | OSS 现状实测：账号下 0 个 Bucket（2026-09-03） | §1.6 |
 | 18 | ✅ Kiro | 4 个桶已建（`hbecho-ods/media/temp/backup`，cn-beijing，私有）+ 生命周期规则，验收全通过（2026-09-03） | §7.3、§7.5 |
 | 19 | ✅ Kiro | `hbecho-oss-rw` + `hbecho-ecs-role` 已建并绑定；临时凭证与四桶权限边界实测通过，机器上零 AccessKey（2026-09-03） | §7.7 |
-| 20 | ⚠️ 我 | 云监控 Agent：API 安装失败（`YUNDUN.Execute`），需在控制台点「安装插件」。诊断过程见 §12.6 | §12.6 |
+| 20 | ✅ 我 | 云监控 Agent 4.0.0.2 已装、`running`，磁盘/内存/CPU 指标上线。根因是缺服务关联角色，见 §12.6 | §12.6 |
 | 21 | ✅ Kiro | 快照策略 `hbecho-daily`（北京 03:00，保留 7 天）已建并应用到**两块盘**（2026-09-03） | §11.1 |
-| 22 | Kiro | 配告警规则。⚠️ 依赖待办 23（联系人组）和待办 20（磁盘/内存指标需 Agent） | §12 |
-| 23 | 我 | 建告警联系人组，配短信 + 邮件两条通道 | §12.5 |
+| 22 | ✅ Kiro | 四条告警规则已配（磁盘 80% / 内存 85% / 公网流出 24Mbps / CPU 90%），全部绑定 `hbecho-ops` 组 | §12.1 |
+| 23 | ⚠️ 我 | 联系人 `liuxuekui` 与组 `hbecho-ops` 已建。短信 `OK`，**邮箱 `PENDING` 需去邮箱点确认链接** | §12.5 |
 
 ### P3 · 数据库与代码仓库
 
@@ -62,10 +62,10 @@
 |---|---|---|---|
 | 24 | Kiro | 部署 MySQL 8.0.16+，按 §6.2 配参数 | §6 |
 | 25 | Kiro | 跑 §13 全部验收项，**特别是 CHECK 约束和严格模式的破坏性验证** | §13 |
-| 26 | 我 | 建私有 Git 远端仓库（**必须私有**），把地址给我 | §9.3 |
-| 27 | Kiro | `git init` + 首次提交（`.gitignore` 已就位） | §9.1 |
-| 28 | Kiro | 装 pre-commit 密钥扫描钩子 | §9.5 |
-| 29 | 我 | 在服务器建只读部署密钥并加到仓库 | §9.5 |
+| 26 | 我 | 建私有 Git 远端仓库（**必须私有**），把地址给我。分步教程见 §9.7 | §9.7 |
+| 27 | ✅ Kiro | `git init` + 首次提交 `66caf30`（86 文件 / 0.2 MB），提交前密钥扫描通过 | §9.1 |
+| 28 | ✅ Kiro | `.githooks/pre-commit` 已装并启用，四种拦截实测有效 | §9.5 |
+| 29 | 共同 | 服务器只读部署密钥（待办 26 之后）。步骤见 §9.7 步骤五 | §9.7 |
 
 ### P4 · 对外开放前（当前不阻塞开发）
 
@@ -1589,17 +1589,31 @@ OSS_BUCKET_TEMP=<待填写>
 
 > 当前状态：**hbecho 工作区还不是 git 仓库**（已确认 `git status` 返回 not a repository）。本章是从零建立仓库的步骤。
 
-### 9.1 顺序不能颠倒
+### 9.1 顺序与当前进度
 
 ```
-1. 写 .gitignore
-2. 核对工作区里是否还有未被忽略的密钥（§8.1）
-3. git init
-4. 首次提交前 git status --short 逐行看一遍
-5. 建远端（私有仓库），推送
+1. 写 .gitignore                          ✅ 2026-09-03
+2. 装 pre-commit 密钥扫描钩子              ✅ 2026-09-03
+3. 核对工作区里是否还有未被忽略的密钥        ✅ 2026-09-03
+4. git init                               ✅ 2026-09-03（main 分支）
+5. 首次提交前逐行审查暂存内容               ✅ 86 个文件 / 0.2 MB
+6. 首次提交                                ✅ 66caf30
+7. 建远端（私有仓库）并推送                 ⬜ 见 §9.7
 ```
 
 第 1 步必须在 `git init` 之前。一旦密钥进了任何一次 commit，即使下一次 commit 删掉它，它仍在历史里；推送出去之后唯一有效的补救是**轮换密钥**。
+
+首次提交前的实际审查结果：
+
+| 检查项 | 结果 |
+|---|---|
+| `.env` / `服务器密码` / `settings.local.json` | 全部被忽略 ✓ |
+| `临时传递用的文件/*.csv`（含真实 RAM AccessKey） | 被 `*.csv` 规则忽略 ✓ |
+| 暂存内容密钥特征扫描 | 唯一命中是 `.env.example` 里的 `sk-xxxx…` 占位符 ✓ |
+| 11 位手机号形态 | 359 行命中，全部是 raw3 fixture 里的 10 位 epoch 与内容 ID 数字片段，非真实手机号 ✓ |
+| 体积 | 86 文件 / 0.2 MB，无需 LFS |
+
+> ⚠️ `临时传递用的文件/` 下两个 CSV 含**两个 RAM 用户的真实 AccessKey Secret**。它们已被 gitignore 排除，但仍以明文躺在工作区。凭证已经写入 `~/.workbench/config.json` 与 `~/.aliyun/config.json`，**这两个 CSV 可以删掉了**。
 
 ### 9.2 `.gitignore`
 
@@ -1650,30 +1664,167 @@ chore:    配置、依赖、脚本
 
 ### 9.5 提交前的密钥自查
 
-工具化一层，但要清楚它的定位：**钩子是降低失误率的手段，不是安全边界。**真正的边界是"密钥不写进仓库目录"和"泄露后轮换"。
+钩子已就位：[`.githooks/pre-commit`](../../.githooks/pre-commit)，通过 `git config core.hooksPath .githooks` 启用（放在仓库内而不是 `.git/hooks/`，这样它本身能被版本管理、clone 后一条命令启用）。
 
-`.git/hooks/pre-commit`（可执行）：
+要清楚它的定位：**钩子是降低失误率的手段，不是安全边界。**真正的边界是"密钥不写进仓库目录"和"泄露后轮换"。
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-staged=$(git diff --cached --name-only --diff-filter=ACM)
-[ -z "$staged" ] && exit 0
+拦截规则两类：
 
-# 1) 明确禁止的文件名
-if echo "$staged" | grep -qE '(^|/)\.env$|settings\.local\.json$|\.pem$|_ed25519$|id_rsa$'; then
-  echo "✗ 暂存区包含凭证类文件，已阻止提交" >&2
-  exit 1
-fi
+| 类别 | 覆盖 |
+|---|---|
+| 文件名 | `.env` 及变体、`settings.local.json`、`*.pem/*.p12/*.pfx`、`id_rsa`/`id_ed25519`/`*_ed25519`、`服务器密码`、`password*.txt` |
+| 内容特征 | `sk-…`、`LTAI…`、`BEGIN … PRIVATE KEY`、`AccessKeySecret=` |
 
-# 2) 内容特征扫描（示例值请自行加入白名单）
-if git diff --cached -U0 | grep -nE 'sk-[A-Za-z0-9]{16,}|AccessKeySecret["'"'"']?\s*[:=]|LTAI[A-Za-z0-9]{12,}'; then
-  echo "✗ 暂存内容命中密钥特征，请确认后再提交" >&2
-  exit 1
-fi
+白名单：`.env.example` / `.env.sample` 必须能提交（键名模板），示例占位值 `sk-xxxx…`、`<PLACEHOLDER>` 不触发。
+
+四种拦截已逐一实测有效：
+
+```
+sk- 密钥内容        ✓ 已拦住
+LTAI AccessKey     ✓ 已拦住
+私钥头              ✓ 已拦住
+.env.production    ✓ 已拦住
+.env.example       ✓ 不误拦
 ```
 
-服务器侧的 git 凭证用**只读部署密钥**，不要把个人私钥放到服务器上。理由是服务器只需要 `git pull`；给它写权限意味着机器被入侵时攻击者能改代码仓库。
+#### ⚠️ 中文路径会让文件名规则失效
+
+写这个钩子踩到一个坑：`git diff --cached --name-only` 对含非 ASCII 的路径会**转义成八进制并加引号**：
+
+```
+"\351\241\271\347\233\256\345\216\206\345\217\262\346\226\207\346\241\243/.../.env.example"
+```
+
+结果是以 `$` 结尾的文件名正则全部匹配不上（末尾多了个 `"`），`.env.example` 被误判成凭证文件。修法是取列表时关掉转义：
+
+```bash
+staged=$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACM)
+```
+
+**本项目路径大量含中文，任何按文件名匹配的脚本都要加这一项。**
+
+误报时用 `git commit --no-verify` 跳过；确认是真密钥时从暂存区移除并按 §8.6 轮换。
+
+### 9.6 服务器侧凭证
+
+服务器上的 git 凭证用**只读部署密钥**，不要把个人私钥放到服务器上。理由是服务器只需要 `git pull`；给它写权限意味着机器被入侵时攻击者能改代码仓库。
+
+### 9.7 建私有远端仓库
+
+本地已有一个提交，只差远端。你已有 GitHub 与 Codeup 两个平台的私有仓库经验，两者都可以，建议如下。
+
+#### 选哪个作为权威远端
+
+| | Codeup（阿里云） | GitHub |
+|---|---|---|
+| 国内访问速度 | 快 | 慢，大仓库容易超时 |
+| 与本项目云资源同厂商 | 是 | 否 |
+| 私有仓库 | 免费 | 免费 |
+| 生态与协作 | 弱 | 强 |
+
+**建议 Codeup 作权威远端**，GitHub 作可选镜像。理由是这个项目的服务器、OSS 都在阿里云，服务器 `git pull` 走 Codeup 是内网友好的；而项目是内部平台，不需要 GitHub 的开源协作生态。
+
+⚠️ **两个都必须是私有。** 本仓库含甲方身份、组织结构、专员手机号语义、门店编码口径和 AI Master 接口合同。公开等于一次性交出去。旧项目那种 `git push all main` 一次推两个平台的写法可以继承，但它同时也是泄露传播最快的路径——加远端时逐个确认可见性。
+
+#### 步骤一：Codeup 建库
+
+1. 打开 <https://codeup.aliyun.com>，用同一个阿里云账号登录
+2. 「新建代码库」→ 「新建空白代码库」
+3. 填写：
+
+| 字段 | 填什么 |
+|---|---|
+| 代码库名称 | `hbecho` |
+| 路径 | `hbecho` |
+| 可见性 | **私有**（只有成员可访问） |
+| 初始化 README | **不要勾** |
+| 初始化 .gitignore / LICENSE | **不要勾** |
+
+三个"不要勾"是因为本地已经有完整的首次提交，远端带初始文件会造成 `unrelated histories` 冲突，还得多做一次 merge。
+
+4. 建好后复制 SSH 地址，形如
+   `git@codeup.aliyun.com:<组织ID>/hbecho.git`
+
+#### 步骤二：确认 SSH 密钥可用
+
+你本机 `~/.ssh/config` 里已有 Codeup 的配置（用 `~/.ssh/id_ed25519`），旧项目推送过，理论上可直接用：
+
+```bash
+ssh -T git@codeup.aliyun.com
+```
+
+看到欢迎信息即可用。若提示公钥被拒，去 Codeup 个人设置 → SSH 公钥 → 添加 `~/.ssh/id_ed25519.pub` 的内容。
+
+#### 步骤三：加远端并推送
+
+```bash
+cd /Users/liuxuekui/Documents/hbecho
+git remote add origin git@codeup.aliyun.com:<组织ID>/hbecho.git
+git push -u origin main
+```
+
+#### 步骤四（可选）：加 GitHub 镜像
+
+1. GitHub → New repository → 名称 `hbecho` → **Private** → 不要初始化任何文件
+2. 配置双远端一次推送：
+
+```bash
+git remote add github git@github.com:<你的账号>/hbecho.git
+# 建一个虚拟远端 all，一条命令推两处
+git remote add all git@codeup.aliyun.com:<组织ID>/hbecho.git
+git remote set-url --add all git@github.com:<你的账号>/hbecho.git
+git push all main
+```
+
+#### 步骤五：服务器只读部署密钥
+
+服务器只需要 `git pull`，所以给它一把**只读**密钥，而不是你的个人密钥。
+
+```bash
+# ① 在服务器上生成专用密钥（无口令，供自动化使用）
+workbench exec -i i-2zef8qpi1d2mldntjgrv -c '
+mkdir -p /root/.ssh && chmod 700 /root/.ssh
+[ -f /root/.ssh/codeup_deploy ] || ssh-keygen -t ed25519 -f /root/.ssh/codeup_deploy -N "" -C "hbecho-server-deploy"
+cat /root/.ssh/codeup_deploy.pub
+'
+```
+
+② 把输出的公钥加到 Codeup：代码库 → 设置 → 部署密钥 → 添加，**权限选「只读」**。
+
+③ 服务器上配 SSH 别名并 clone：
+
+```bash
+workbench exec -i i-2zef8qpi1d2mldntjgrv -c '
+cat >> /root/.ssh/config <<EOF
+
+Host codeup.aliyun.com
+    HostName codeup.aliyun.com
+    User git
+    IdentityFile /root/.ssh/codeup_deploy
+    IdentitiesOnly yes
+EOF
+chmod 600 /root/.ssh/config
+ssh -T -o StrictHostKeyChecking=accept-new git@codeup.aliyun.com
+'
+```
+
+④ clone 到部署目录：
+
+```bash
+workbench exec -i i-2zef8qpi1d2mldntjgrv -c \
+  'git clone git@codeup.aliyun.com:<组织ID>/hbecho.git /data/app/hbecho && \
+   cd /data/app/hbecho && git config core.hooksPath .githooks && git log --oneline -1'
+```
+
+#### 推送后立刻做的一件事
+
+确认远端历史里没有密钥：
+
+```bash
+git log --all --name-only --pretty=format: | sort -u | grep -E '(^|/)\.env$|服务器密码|settings\.local\.json' || echo clean
+```
+
+期望输出 `clean`。命中的话，补救是**轮换密钥**，改历史只是清理不是补救。
 
 ### 9.6 服务器 clone 后的补齐步骤
 
@@ -2292,7 +2443,15 @@ ssh hbecho 'growpart /dev/<设备> 1 && resize2fs /dev/<设备>p1 && df -h /data
 | 2026-09-03 | 建 `hbecho-oss-rw` 策略 + `hbecho-ecs-role` 角色并绑定实例。服务器装 `ossutil 2.1.2` 且**不配任何 AccessKey**，实测四桶权限边界与设计一致（media/backup 删除被拒） | Kiro |
 | 2026-09-03 | 绑定角色踩到两个隐式拒绝：`ecs:AttachInstanceRamRole` 与 `ram:PassRole` **均不支持资源级 ARN**。策略迭代到 v5 才成功，收紧点转移到 `PassRole` 的 `acs:Service` Condition。§7.7 已记录规律 | Kiro |
 | 2026-09-03 | 建自动快照策略 `hbecho-daily`（`sp-2ze7psqzmbwiw0wh1f51`，UTC 19:00 = 北京 03:00，保留 7 天）并应用到**两块盘**。记录 `timePoints` 是 UTC 小时、`--regionId` 参数名小写两个坑 | Kiro |
-| 2026-09-03 | ⚠️ 云监控 Agent 安装失败（`YUNDUN.Execute`），已排除网络/云助手/Aegis 三个因素。需在控制台点「安装插件」，诊断过程与下一步见 §12.6 | Kiro |
+| 2026-09-03 | ⚠️ 云监控 Agent 安装失败（`YUNDUN.Execute`），已排除网络/云助手/Aegis 三个因素 | Kiro |
+| 2026-09-03 | 控制台点「安装插件」成功，Agent `4.0.0.2` / LoongCollector `3.3.2` / `running`，磁盘内存 CPU 指标上线 | 刘学奎 |
+| 2026-09-03 | 定位根因：缺服务关联角色 `AliyunServiceRoleForCloudMonitor`，云监控无法经云助手下发安装命令。我此前补权限失败是**服务名猜错**——真实值 `cloudmonitor.aliyuncs.com`，不是 `cms.aliyuncs.com`。§12.6 已记录 | Kiro |
+| 2026-09-03 | 建告警联系人 `liuxuekui`（短信 `OK`、邮箱 `PENDING` 待确认）与联系人组 `hbecho-ops` | Kiro |
+| 2026-09-03 | 配四条告警规则并绑定 `hbecho-ops`：磁盘 80%×2、内存 85%×2、公网流出 24Mbps×2、CPU 90%×3，采集周期 60s | Kiro |
+| 2026-09-03 | 工作区 `服务器密码` 明文文件已删除（钥匙串保留副本） | 刘学奎 |
+| 2026-09-03 | 装 `.githooks/pre-commit` 密钥扫描钩子并 `git config core.hooksPath .githooks`；四种拦截实测有效。踩坑：中文路径被 git 转义导致文件名正则失效，需 `core.quotepath=false`（§9.5） | Kiro |
+| 2026-09-03 | `git init`（main）+ 首次提交 `66caf30`，86 文件 / 0.2 MB。提交前逐项审查：凭证文件全部忽略、密钥扫描仅命中 `.env.example` 占位符、359 处手机号形态确认为 fixture 数字 ID 误报 | Kiro |
+| 2026-09-03 | 新增 §9.7 建私有远端仓库分步教程（Codeup 权威 + GitHub 镜像 + 服务器只读部署密钥） | Kiro |
 
 ### 17.1 当前进度
 

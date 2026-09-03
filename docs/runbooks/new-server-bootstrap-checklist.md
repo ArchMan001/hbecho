@@ -1047,7 +1047,7 @@ ossutil --endpoint oss-$REGION-internal.aliyuncs.com --region $REGION --mode Ecs
 workbench exec -P $PROJ -i $INSTANCE -c 'systemctl is-active argusagent'   # 先看装没装
 ```
 
-⚠️ **建议直接在控制台装，不要走 API。** hbecho 实测 API 安装失败：
+⚠️ **第一次装建议直接在控制台点，不要走 API。** hbecho 实测 API 安装失败：
 
 ```bash
 aliyun cms InstallMonitoringAgent --RegionId $REGION --Force true \
@@ -1055,16 +1055,35 @@ aliyun cms InstallMonitoringAgent --RegionId $REGION --Force true \
 # → API 返回 Success: true，但状态查询是 install_faild / YUNDUN.Execute
 ```
 
-已排除的因素：agent 分发桶网络可达、云助手 active、Aegis 已装且 active、补了 `ram:CreateServiceLinkedRole` 也无效。`YUNDUN.Execute` 指分发执行环节失败，API 侧看不到具体原因。手动下载也走不通——分发对象路径已变，猜测的地址全部 404。
+根因是**缺服务关联角色 `AliyunServiceRoleForCloudMonitor`**。控制台的确认弹窗把作用写得很清楚：「允许云监控使用云助手执行命令，以完成自动安装主机监控插件的功能」。没有它，云监控下发不了安装命令，所以卡在"执行"环节——这就是 `YUNDUN.Execute`。
 
-**可靠路径**：控制台 → 云监控 → 主机监控 → 选实例 → 「安装插件」。它会走完整初始化流程（含缺失的服务关联角色），且「手动安装」对话框会给出**当前版本的正确下载命令**，比猜路径靠得住。
+**可靠路径**：控制台 → 云监控 → 主机监控 → 选实例 → 「安装插件」→ 确认创建服务关联角色。它会一次性把角色和插件都搞定。
 
 ```bash
 # 装完确认
 aliyun cms DescribeMonitoringAgentStatuses --InstanceIds $INSTANCE \
-  --RegionId $REGION --profile ${PROJ}-setup | grep -E 'Status|ErrorCode'
+  --RegionId $REGION --profile ${PROJ}-setup | grep -E 'Status|Version'
 # 期望 Status: running
 ```
+
+角色建好后 CLI 才可用（后续机器可以纯 CLI 装）。若要让 `<PROJ>-setup` 自己创建这个角色，策略里加：
+
+```json
+{
+  "Effect": "Allow",
+  "Action": "ram:CreateServiceLinkedRole",
+  "Resource": "*",
+  "Condition": { "StringEquals": { "ram:ServiceName": "cloudmonitor.aliyuncs.com" } }
+}
+```
+
+⚠️ **服务关联角色的服务名不能猜。** hbecho 这里试过 `cms.aliyuncs.com` 和 `monitor.aliyuncs.com`，都不对，真实值是 **`cloudmonitor.aliyuncs.com`**。产品简称、API endpoint、RamCode（`cms`）、SLR 服务名（`cloudmonitor.aliyuncs.com`）这四者经常互不相同。正确做法是先在控制台触发一次（弹窗会显式写出角色名），再读它的信任策略拿服务名：
+
+```bash
+aliyun ram GetRole --RoleName AliyunServiceRoleForCloudMonitor --profile ${PROJ}-setup
+```
+
+> 另外：`argusagent` 服务在 4.x 版显示 `inactive` 是**正常的**，新版走 LoongCollector。判断是否正常要看 API 的 `Status: running`，不要看那个服务名。
 
 ### 6.6 自动快照（D5）
 
@@ -1116,7 +1135,44 @@ aliyun ecs DescribeDisks --RegionId $REGION --InstanceId $INSTANCE --profile ${P
 
 如果用了租约/fencing，再加一条**时钟偏移 > 1 秒**；如果要求"网络请求期间不持有数据库事务"，再加一条**最长活动事务 > 30 秒**——它是那条设计约束被违反的直接信号。
 
-通知至少配短信 + 邮件两条通道。只配邮件的话半夜磁盘满了不会有人知道。
+### 6.7 告警联系人与规则
+
+**告警规则必须绑定联系人组才有意义**，没有组的规则等于只在控制台留个记录。所以先建联系人再建规则。
+
+```bash
+aliyun cms PutContact --ContactName <用户名> --Describe "<项目> 负责人" \
+  --Channels.SMS <手机号> --Channels.Mail <邮箱> --Lang zh-CN --profile ${PROJ}-setup
+aliyun cms PutContactGroup --ContactGroupName ${PROJ}-ops \
+  --ContactNames.1 <用户名> --Describe "..." --profile ${PROJ}-setup
+```
+
+⚠️ **邮箱通道创建后是 `PENDING`，必须去邮箱点确认链接才生效。** 确认前 `Channels.Mail` 显示为空、`ChannelsState.Mail` 为 `PENDING`，**邮件告警不会送达**。短信通道创建即 `OK`，不需要确认。
+
+```bash
+aliyun cms DescribeContactList --ContactName <用户名> --profile ${PROJ}-setup
+# 期望 ChannelsState.Mail 从 PENDING 变 OK
+```
+
+两条通道都要有：短信能半夜叫醒人，邮件能承载细节。只配邮件的话磁盘满了不会有人知道。
+
+规则创建示例（磁盘那条是最关键的）：
+
+```bash
+aliyun cms PutResourceMetricRule --RuleId ${PROJ}-disk-usage --RuleName "${PROJ}-磁盘使用率" \
+  --Namespace acs_ecs_dashboard --MetricName diskusage_utilization \
+  --ContactGroups ${PROJ}-ops \
+  --Escalations.Critical.ComparisonOperator GreaterThanThreshold \
+  --Escalations.Critical.Threshold 80 --Escalations.Critical.Statistics Average \
+  --Escalations.Critical.Times 2 --Interval 60 \
+  --Resources "[{\"instanceId\":\"$INSTANCE\"}]" --profile ${PROJ}-setup
+```
+
+常用 MetricName：`diskusage_utilization`（磁盘）、`memory_usedutilization`（内存）、`CPUUtilization`、`VPC_PublicIP_InternetOutRate`（公网流出，单位 bit/s）。前两个**依赖云监控 Agent**（§6.5）。
+
+```bash
+# 复核
+aliyun cms DescribeMetricRuleList --PageSize 30 --profile ${PROJ}-setup
+```
 
 ---
 
@@ -1238,6 +1294,10 @@ DROP TABLE _probe2;
 | 28 | 快照 `timePoints` 按本地时间填 | 它是 **UTC 小时**。想要北京 03:00 要填 `19`（§6.6） |
 | 29 | `ossutil --mode EcsRamRole` 加 `--ecs-role-name` | 不存在该参数，所有操作失败，看起来像权限问题（§6.3） |
 | 30 | 只看成功/失败不看真实报错 | 参数错误、权限不足、网络不通在包装后长得一样 |
+| 31 | 猜服务关联角色的服务名 | 与产品简称/RamCode 都不同，猜错就静默失败（§6.5） |
+| 32 | 看 `argusagent` 服务状态判断云监控是否正常 | 4.x 版走 LoongCollector，该服务本就 inactive（§6.5） |
+| 33 | 建了告警联系人就以为通道可用 | 邮箱是 `PENDING`，**必须去邮箱点确认链接**才送达；短信才是建完即用（§6.7） |
+| 34 | 按文件名匹配的脚本没关 `core.quotepath` | 含中文的路径被 git 转义成八进制并加引号，`$` 锚点全部失效（§7.2） |
 
 ---
 
@@ -1251,3 +1311,4 @@ DROP TABLE _probe2;
 | 2026-09-03 | 补 §4.5 收紧 22 的实测结果；修正 `RevokeSecurityGroup` 参数笔误 | Kiro |
 | 2026-09-03 | 按 hbecho 阶段 C/D 的实际执行回填：limits 硬限不可压低、sysctl 被 `99-` 覆盖、NVMe 与 API 设备名不同、快照 `timePoints` 用 UTC、`--regionId` 小写、`PassRole` 不支持资源级 ARN、`ossutil EcsRamRole` 无 `--ecs-role-name`、云监控 API 安装失败需走控制台。已知坑扩到 30 条 | Kiro |
 | 2026-09-03 | ⚠️ **更正**：Workbench 并非不使用入方向 22，而是从阿里云内网段发起并**自动写入 `createdByEcsWorkbench` 安全组规则**。先前判成「陈旧 session」是错的。§3.1、§2、§4.5 已按真实机制改写 | Kiro |
+| 2026-09-03 | 再回填一轮：云监控 SLR 服务名 `cloudmonitor.aliyuncs.com` 不可猜、`argusagent` inactive 是正常的、邮箱通道 `PENDING` 需确认、`core.quotepath` 影响文件名匹配。新增 §6.7 告警联系人与规则。已知坑扩到 34 条 | Kiro |

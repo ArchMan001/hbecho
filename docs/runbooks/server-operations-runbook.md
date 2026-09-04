@@ -54,7 +54,7 @@
 | 20 | ✅ 我 | 云监控 Agent 4.0.0.2 已装、`running`，磁盘/内存/CPU 指标上线。根因是缺服务关联角色，见 §12.6 | §12.6 |
 | 21 | ✅ Kiro | 快照策略 `hbecho-daily`（北京 03:00，保留 7 天）已建并应用到**两块盘**（2026-09-03） | §11.1 |
 | 22 | ✅ Kiro | 四条告警规则已配（磁盘 80% / 内存 85% / 公网流出 24Mbps / CPU 90%），全部绑定 `hbecho-ops` 组 | §12.1 |
-| 23 | ⚠️ 我 | 联系人 `liuxuekui` 与组 `hbecho-ops` 已建。短信 `OK`，**邮箱 `PENDING` 需去邮箱点确认链接** | §12.5 |
+| 23 | 🟡 搁置 | 联系人 `liuxuekui` 与组 `hbecho-ops` 已建。短信 `OK` 可用；邮箱 `PENDING`，人工确认为阿里云侧问题，等工单处理，不阻塞其他工作 | §12.5 |
 
 ### P3 · 数据库与代码仓库
 
@@ -62,10 +62,10 @@
 |---|---|---|---|
 | 24 | Kiro | 部署 MySQL 8.0.16+，按 §6.2 配参数 | §6 |
 | 25 | Kiro | 跑 §13 全部验收项，**特别是 CHECK 约束和严格模式的破坏性验证** | §13 |
-| 26 | 我 | 建私有 Git 远端仓库（**必须私有**），把地址给我。分步教程见 §9.7 | §9.7 |
+| 26 | ✅ 共同 | GitHub `origin` 已建并推送（Private，匿名 404 确认）。Codeup 组织创建受阻，暂降级为可选镜像，见 §9.7 | §9.7 |
 | 27 | ✅ Kiro | `git init` + 首次提交 `66caf30`（86 文件 / 0.2 MB），提交前密钥扫描通过 | §9.1 |
 | 28 | ✅ Kiro | `.githooks/pre-commit` 已装并启用，四种拦截实测有效 | §9.5 |
-| 29 | 共同 | 服务器只读部署密钥（待办 26 之后）。步骤见 §9.7 步骤五 | §9.7 |
+| 29 | ✅ 共同 | 服务器只读部署密钥已配、clone 到 `/data/app/hbecho`，写权限实测被 GitHub 拒绝确认只读生效 | §9.7 |
 
 ### P4 · 对外开放前（当前不阻塞开发）
 
@@ -1713,20 +1713,36 @@ staged=$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACM
 
 本地已有一个提交，只差远端。你已有 GitHub 与 Codeup 两个平台的私有仓库经验，两者都可以，建议如下。
 
-#### 选哪个作为权威远端
+#### 2026-09-03 实际状态
+
+| 远端 | 状态 |
+|---|---|
+| GitHub `origin` | ✅ 已建并推送。`git@github.com:ArchMan001/hbecho.git`，Private，匿名访问返回 404 确认 |
+| Codeup | ⬜ 创建云效组织受阻，暂缓。原计划权威远端降级为可选镜像 |
+
+原设计倾向 Codeup 作权威远端（服务器、OSS 都在阿里云，`git pull` 走内网更快），但**这不是硬约束**。GitHub SSH 已验证可用（`ssh -T git@github.com` 认证成功），先以它为权威远端不影响任何后续步骤——服务器只读部署密钥、`git pull` 部署流程同样适用于 GitHub。Codeup 排障通过后按下面步骤补建镜像即可，不需要迁移历史。
+
+#### 选哪个作为权威远端（背景参考，非当前决策依据）
 
 | | Codeup（阿里云） | GitHub |
 |---|---|---|
-| 国内访问速度 | 快 | 慢，大仓库容易超时 |
+| 国内访问速度 | 快 | 正常（非致命慢） |
 | 与本项目云资源同厂商 | 是 | 否 |
 | 私有仓库 | 免费 | 免费 |
 | 生态与协作 | 弱 | 强 |
 
-**建议 Codeup 作权威远端**，GitHub 作可选镜像。理由是这个项目的服务器、OSS 都在阿里云，服务器 `git pull` 走 Codeup 是内网友好的；而项目是内部平台，不需要 GitHub 的开源协作生态。
-
 ⚠️ **两个都必须是私有。** 本仓库含甲方身份、组织结构、专员手机号语义、门店编码口径和 AI Master 接口合同。公开等于一次性交出去。旧项目那种 `git push all main` 一次推两个平台的写法可以继承，但它同时也是泄露传播最快的路径——加远端时逐个确认可见性。
 
-#### 步骤一：Codeup 建库
+#### 步骤一：Codeup 建库（当前受阻，排障后按此操作）
+
+Codeup 挂在云效（云效标准版）之下，建库前必须先建一个云效组织。**遇到创建失败不要换阿里云账号**——组织标识冲突、名称格式、密码强度不达标都会报错，跟账号无关；换账号只会让 ECS 那一整套 RAM 权限重新配一遍，代价远高于排查一个表单错误。常见报错与对策：
+
+| 报错现象 | 对策 |
+|---|---|
+| 组织标识"已被占用" | 全局唯一，换一个更具体的，如 `hbecho-app`、`<你的域名前缀>-hbecho` |
+| 名称格式错误 | 检查首尾有没有多余空格或符号 |
+| 密码强度不足 | 需同时含大小写字母、数字、特殊符号中至少 3 种，8 位以上 |
+| 提示账号已有组织 | 云效个人模式对同账号的组织数量可能有限制，先查该账号下是否已有组织 |
 
 1. 打开 <https://codeup.aliyun.com>，用同一个阿里云账号登录
 2. 「新建代码库」→ 「新建空白代码库」
@@ -1743,53 +1759,39 @@ staged=$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACM
 三个"不要勾"是因为本地已经有完整的首次提交，远端带初始文件会造成 `unrelated histories` 冲突，还得多做一次 merge。
 
 4. 建好后复制 SSH 地址，形如
-   `git@codeup.aliyun.com:<组织ID>/hbecho.git`
-
-#### 步骤二：确认 SSH 密钥可用
-
-你本机 `~/.ssh/config` 里已有 Codeup 的配置（用 `~/.ssh/id_ed25519`），旧项目推送过，理论上可直接用：
-
-```bash
-ssh -T git@codeup.aliyun.com
-```
-
-看到欢迎信息即可用。若提示公钥被拒，去 Codeup 个人设置 → SSH 公钥 → 添加 `~/.ssh/id_ed25519.pub` 的内容。
-
-#### 步骤三：加远端并推送
+   `git@codeup.aliyun.com:<组织标识>/hbecho.git`
+5. 加为镜像远端并同步一次：
 
 ```bash
 cd /Users/liuxuekui/Documents/hbecho
-git remote add origin git@codeup.aliyun.com:<组织ID>/hbecho.git
-git push -u origin main
+git remote add codeup git@codeup.aliyun.com:<组织标识>/hbecho.git
+# 用 SSH 密钥前先确认能连通（若提示公钥被拒，去 Codeup 个人设置 → SSH 公钥 → 添加 ~/.ssh/id_ed25519.pub）
+ssh -T git@codeup.aliyun.com
+git push codeup main
 ```
 
-#### 步骤四（可选）：加 GitHub 镜像
-
-1. GitHub → New repository → 名称 `hbecho` → **Private** → 不要初始化任何文件
-2. 配置双远端一次推送：
+（可选）之后一条命令双推：
 
 ```bash
-git remote add github git@github.com:<你的账号>/hbecho.git
-# 建一个虚拟远端 all，一条命令推两处
-git remote add all git@codeup.aliyun.com:<组织ID>/hbecho.git
-git remote set-url --add all git@github.com:<你的账号>/hbecho.git
+git remote add all git@github.com:ArchMan001/hbecho.git
+git remote set-url --add all git@codeup.aliyun.com:<组织标识>/hbecho.git
 git push all main
 ```
 
-#### 步骤五：服务器只读部署密钥
+#### 步骤二：服务器只读部署密钥
 
-服务器只需要 `git pull`，所以给它一把**只读**密钥，而不是你的个人密钥。
+服务器只需要 `git pull`，所以给它一把**只读**密钥，而不是你的个人密钥——泄露爆炸半径从"能改仓库"降到"只能看代码"。
 
 ```bash
 # ① 在服务器上生成专用密钥（无口令，供自动化使用）
 workbench exec -i i-2zef8qpi1d2mldntjgrv -c '
 mkdir -p /root/.ssh && chmod 700 /root/.ssh
-[ -f /root/.ssh/codeup_deploy ] || ssh-keygen -t ed25519 -f /root/.ssh/codeup_deploy -N "" -C "hbecho-server-deploy"
-cat /root/.ssh/codeup_deploy.pub
+[ -f /root/.ssh/github_deploy ] || ssh-keygen -t ed25519 -f /root/.ssh/github_deploy -N "" -C "hbecho-server-deploy"
+cat /root/.ssh/github_deploy.pub
 '
 ```
 
-② 把输出的公钥加到 Codeup：代码库 → 设置 → 部署密钥 → 添加，**权限选「只读」**。
+② 把输出的公钥加到 GitHub：仓库 `hbecho` → Settings → Deploy keys → Add deploy key，**不勾 "Allow write access"**（默认就是只读）。
 
 ③ 服务器上配 SSH 别名并 clone：
 
@@ -1798,13 +1800,13 @@ workbench exec -i i-2zef8qpi1d2mldntjgrv -c '
 cat >> /root/.ssh/config <<EOF
 
 Host codeup.aliyun.com
-    HostName codeup.aliyun.com
+    HostName github.com
     User git
-    IdentityFile /root/.ssh/codeup_deploy
+    IdentityFile /root/.ssh/github_deploy
     IdentitiesOnly yes
 EOF
 chmod 600 /root/.ssh/config
-ssh -T -o StrictHostKeyChecking=accept-new git@codeup.aliyun.com
+ssh -T -o StrictHostKeyChecking=accept-new git@github.com
 '
 ```
 
@@ -1812,9 +1814,29 @@ ssh -T -o StrictHostKeyChecking=accept-new git@codeup.aliyun.com
 
 ```bash
 workbench exec -i i-2zef8qpi1d2mldntjgrv -c \
-  'git clone git@codeup.aliyun.com:<组织ID>/hbecho.git /data/app/hbecho && \
+  'git clone git@github.com:ArchMan001/hbecho.git /data/app/hbecho && \
    cd /data/app/hbecho && git config core.hooksPath .githooks && git log --oneline -1'
 ```
+
+> Codeup 排障通过并补建镜像后，若想把服务器切到走 Codeup 拉取，重复本节生成一把 `codeup_deploy` 密钥、加到 Codeup 部署密钥、改 `~/.ssh/config` 的 Host 即可，`/data/app/hbecho` 目录不用重建。
+
+#### 2026-09-03 执行记录
+
+服务器上先补装了 `git`（Alinux4 基础镜像不含）：`dnf install -y git` → `2.47.3`。
+
+部署密钥指纹：`SHA256:8V8ryhd5I1rX0quT7Ep/JkOMwvc2ffVy1o9L4L+w9wU`。
+
+clone 成功后做了一次**真实推送测试**以确认只读设置真的生效，而不是只看 GitHub 页面上的勾选状态：
+
+```
+git commit -m "test: 验证部署密钥只读"
+git push origin main
+→ ERROR: The key you are authenticating with has been marked as read only.
+```
+
+GitHub 明确拒绝，证明部署密钥的只读限制在服务端强制生效，不是仅前端隐藏了推送按钮。测试 commit 未能推送，`git reset --hard origin/main` 清理干净，服务器最终停在 `741bb16`，与远端一致。
+
+> ⚠️ 排查记录：这次测试的 `git commit` 因为服务器上没配 `user.name`/`user.email` 而先报了一次 `fatal: unable to auto-detect email address`——**这个报错和只读测试无关**，只是本地提交失败。第一次 `reset --hard HEAD~1` 因此撤过了头（把本该是"空操作"的位置当成了"有一个测试提交"），从 `741bb16` 退到了 `66caf30`。用 `git reset --hard origin/main` 而不是 `HEAD~1` 重新对齐才是正确做法。**教训：`HEAD~1` 假设"上一次提交确实發生过"，验证失败路径时更可靠的是直接对齐到已知的远端引用。**
 
 #### 推送后立刻做的一件事
 
@@ -2098,19 +2120,31 @@ ssh hbecho "chronyc tracking | awk -F: '/System time/{print \$2}'"
 
 | 项 | 值 |
 |---|---|
-| 联系人 | `liuxuekui`（ContactId `4300458`），描述「hbecho 项目负责人 刘学奎」 |
+| 联系人 | `liuxuekui`（ContactId `4300978`），描述「hbecho 项目负责人 刘学奎」 |
 | 短信 | `17863267891` — 状态 **`OK`** ✅ 可用 |
-| 邮箱 | `liuxuekui@hisensebosch.com` — 状态 **`PENDING`** ⚠️ 待确认 |
+| 邮箱 | `liuxuekui@hisensebosch.com` — 状态 **`PENDING`** ⚠️ 待确认，见下方排查 |
 | 联系人组 | `hbecho-ops` → `liuxuekui` |
 
-⚠️ **邮箱需要点确认链接才生效。** 阿里云在创建联系人时向该邮箱发了验证邮件，确认前 `ChannelsState.Mail` 保持 `PENDING`，`Channels.Mail` 显示为空，**邮件告警不会送达**。短信通道创建即为 `OK`，不需要确认。
+**邮箱需要点确认链接才生效**，这一点是设计如此：阿里云在写入联系人时向该邮箱发验证邮件，确认前 `ChannelsState.Mail` 保持 `PENDING`，且**查询接口不会明文回显未激活的邮箱地址**（`Channels.Mail` 显示为空字符串是隱私保护行为，不代表地址没写进去——`DeleteContact` 重建后立即查询同样是空字符串，说明这不是写入失败）。
+
+🟡 **已搁置，人工判定为阿里云侧问题（2026-09-03）。**
+
+排查记录：
+
+| 尝试 | 结果 |
+|---|---|
+| 重新 `PutContact`（同名视为更新） | API 成功，状态仍 `PENDING` |
+| `DeleteContact` 后重建 | API 成功，状态仍 `PENDING`；`Channels.Mail` 立即查询即为空 |
+| 你本人在控制台手动编辑并保存 | 仍未收到确认邮件 |
+
+排除了：邮箱格式错误（语法合法）、企业邮箱拦截（本人直接检查过收件箱，非本机推测）、短信占用额度（两个通道独立，短信已 `OK`）、接口调用失败（每次 `Success: true`）。CLI 侧未再重复尝试——控制台手动操作已经是比 API 更直接的路径，仍不通说明问题在阿里云通知服务侧。
+
+**处置：搁置，不再自动化排查，等人工联系阿里云工单解决。** 不阻塞任何其他工作——短信通道已经 `OK`，四条告警规则都能通过短信送达；`hbecho-ops` 组当前是"短信可用、邮件待修"的降级状态，这是可接受的临时状态，不是配置缺陷。
 
 ```bash
-# 确认后复查，期望 Mail 从 PENDING 变 OK
+# 阿里云侧修复后复查，期望 Mail 从 PENDING 变 OK
 aliyun cms DescribeContactList --ContactName liuxuekui --profile hbecho-setup
 ```
-
-两条通道都要有的理由：短信能在半夜叫醒人，邮件能承载细节。只配邮件的话磁盘满了不会有人知道。
 
 ```bash
 # 创建方式（供复用）
@@ -2403,28 +2437,28 @@ ssh hbecho 'growpart /dev/<设备> 1 && resize2fs /dev/<设备>p1 && df -h /data
 | 2026-09-03 | `.env` 由 `AiMaster接口API Key：sk-…`（全角冒号，非法 dotenv）改为标准 `AIMASTER_API_KEY=`，权限设为 600 | Kiro |
 | 2026-09-03 | `aimaster接口文档/scripts/` 下 4 个脚本的 `load_api_key()` 由正则扫 `sk-` 改为按键名读取，并接入 `AIMASTER_ENABLED` 付费调用开关（默认 `false`，实测能拦住） | Kiro |
 | 2026-09-03 | 外部实测：22 端口对公网开放、SSH 接受密码认证、80/443 不可达。§1.4 记录，处理顺序见 §4 | Kiro |
-| 2026-09-03 | 确认 `旧项目沉淀文档/settings.local.json` 中的密码不属于 hbecho，不需要轮换；仍由 `.gitignore` 忽略 | 刘雪奎 / Kiro |
+| 2026-09-03 | 确认 `旧项目沉淀文档/settings.local.json` 中的密码不属于 hbecho，不需要轮换；仍由 `.gitignore` 忽略 | 刘学奎 / Kiro |
 | 2026-09-03 | 安装 `workbench` CLI v1.0.1 到 `/opt/homebrew/bin`（安装脚本 SHA256 校验通过）；阿里云官方 Skill 装到 `~/.kiro/skills/alibabacloud-workbench-cli/`。§3.4 按实测命令面重写 | Kiro |
 | 2026-09-03 | 更正：v1.0.1 **没有**端口转发子命令，官方描述与实际命令面不符。MySQL 图形客户端仍需 SSH 隧道（§3.4） | Kiro |
-| 2026-09-03 | `AIMASTER_ENABLED` 默认值由 `false` 改为 `true`（单人开发、频繁手工验证）。定位改为止损开关；测试套件与 CI 的离线要求不变（§8.2） | 刘雪奎 / Kiro |
+| 2026-09-03 | `AIMASTER_ENABLED` 默认值由 `false` 改为 `true`（单人开发、频繁手工验证）。定位改为止损开关；测试套件与 CI 的离线要求不变（§8.2） | 刘学奎 / Kiro |
 | 2026-09-03 | 🔴 发现 root 密码为字典高频模式（`品牌名+年份.`），叠加公网 22 + 密码认证开启。处置流程见 §3.2.1，**尚未处置** | Kiro |
 | 2026-09-03 | 新增文档顶部 §待办清单作为唯一待办入口（P0–P4 + 待触发），§17.1 收敛为状态摘要 | Kiro |
 | 2026-09-03 | 新增 §3.6：阿里云统一 CLI 建议（限时限权双身份模型、系统策略选择、我会做/不会做的边界） | Kiro |
 | 2026-09-03 | §7.3 补充：2025-10-13 起 API/SDK/ossutil 新建桶默认开启「阻止公共访问」 | Kiro |
 | 2026-09-03 | 安装 `aliyun` CLI 3.4.11 到 `/opt/homebrew/bin`。确认 `ossutil` 为内置子命令，§7/§13/§14 的 OSS 命令统一改为 `aliyun ossutil` | Kiro |
 | 2026-09-03 | 记录账号 ID `1241086349153033`；§3.5 补齐 RAM 用户创建的逐字段说明与策略授权步骤，策略 JSON 已填入真实账号 ID 与实例 ID | Kiro |
-| 2026-09-03 | 创建 RAM 用户 `hbecho-ops`、`hbecho-setup` 与策略 `hbecho-workbench-ops`、`hbecho-setup-buildout` | 刘雪奎 |
+| 2026-09-03 | 创建 RAM 用户 `hbecho-ops`、`hbecho-setup` 与策略 `hbecho-workbench-ops`、`hbecho-setup-buildout` | 刘学奎 |
 | 2026-09-03 | 写入 `~/.workbench/config.json`（hbecho-ops）与 `~/.aliyun/config.json`（hbecho-setup），均 600 | Kiro |
 | 2026-09-03 | ⚠️ 实测两个身份调用均被拒：`workbench exec` 403 `ImplicitDeny`、`aliyun ecs Describe*` `Forbidden.RAM`。判定为**策略未授权给用户** | Kiro |
 | 2026-09-03 | 实测发现 `ecs-workbench` 不支持资源级授权（控制台标「无效授权」+ 调用 `ImplicitDeny`）。`ecs-workbench:*` 改为 `Resource:*`，收紧点转移到 `ecs:StartTerminalSession`。详见 §3.5 | Kiro |
-| 2026-09-03 | 按决定给 `hbecho-setup` 加入 `RamForInstanceRole` 段；同时在 §3.6 记录其有效权限等级实为账号管理员，控制手段改为生命周期而非 action 列表 | 刘雪奎 / Kiro |
-| 2026-09-03 | 两个策略更新到 v2 并授权给对应用户 | 刘雪奎 |
+| 2026-09-03 | 按决定给 `hbecho-setup` 加入 `RamForInstanceRole` 段；同时在 §3.6 记录其有效权限等级实为账号管理员，控制手段改为生命周期而非 action 列表 | 刘学奎 / Kiro |
+| 2026-09-03 | 两个策略更新到 v2 并授权给对应用户 | 刘学奎 |
 | 2026-09-03 | ✅ 两条通道实测通过：`workbench exec` 返回主机名与 uptime；`aliyun ecs DescribeInstances` 与 `aliyun ossutil ls` 正常 | Kiro |
 | 2026-09-03 | 通过 `workbench exec` 采集机器内部信息，§1.1/§1.2/§1.4 全部实测填写完毕 | Kiro |
 | 2026-09-03 | ✅ **更正**：数据盘并非未采购。`/dev/nvme1n1` 100 GiB 已存在但未初始化。实例详情页面板不显示未初始化磁盘，早前判断有误 | Kiro |
 | 2026-09-03 | 实测 `/root/.ssh/authorized_keys` 为空 → SSH 当前只有密码一条路，因此装公钥必须早于关闭密码认证（§1.4） | Kiro |
 | 2026-09-03 | 实测账号下 0 个 OSS Bucket；§1.6 按 `hbecho-*` 前缀约束给出建议桶名 | Kiro |
-| 2026-09-03 | 确认三桶分离方案；创建 `hbecho-ods` / `hbecho-media` / `hbecho-temp` / `hbecho-backup`（cn-beijing，私有，Standard，LRS） | 刘雪奎 / Kiro |
+| 2026-09-03 | 确认三桶分离方案；创建 `hbecho-ods` / `hbecho-media` / `hbecho-temp` / `hbecho-backup`（cn-beijing，私有，Standard，LRS） | 刘学奎 / Kiro |
 | 2026-09-03 | 配置四桶生命周期规则。踩坑：**同前缀两条规则被 OSS 拒绝（400）**，需把过期与碎片清理合并进同一条 `<Rule>` | Kiro |
 | 2026-09-03 | OSS 验收全通过：四桶匿名 403、`BlockPublicAccess=true`、内网 endpoint 403/44ms、**`hbecho-media` 确认无过期规则** | Kiro |
 | 2026-09-03 | 生成 `~/.ssh/hbecho_ed25519`，公钥装入服务器 `authorized_keys`，指纹比对一致，密钥登录实测通过；写入 `~/.ssh/config` 别名（本地端口 8081/13307，与 hbdam 错开） | Kiro |
@@ -2434,9 +2468,9 @@ ssh hbecho 'growpart /dev/<设备> 1 && resize2fs /dev/<设备>p1 && df -h /data
 | 2026-09-03 | 实测出口 IP 两个：VPN 关 `223.78.94.133`（山东移动）、VPN 开 `50.7.158.251`（FDCservers 东京）。§4.1 记录 VPN 网段不可加白名单及三个方案 | Kiro |
 | 2026-09-03 | 实测账号下只有 hbecho 一台实例，其他地域为 0 → hbdam 不在本账号内 | Kiro |
 | 2026-09-03 | 新建 [`new-server-bootstrap-checklist.md`](new-server-bootstrap-checklist.md)：项目无关的从 0 配置清单，供 hbdam 复用 | Kiro |
-| 2026-09-03 | 采用方案 A 收紧安全组 22：先加 `223.78.0.0/16`（prio 1）→ 验证 SSH → 删 `0.0.0.0/0` → 复核。入方向现只剩 22（网段内）与 ICMP | 刘雪奎 / Kiro |
+| 2026-09-03 | 采用方案 A 收紧安全组 22：先加 `223.78.0.0/16`（prio 1）→ 验证 SSH → 删 `0.0.0.0/0` → 复核。入方向现只剩 22（网段内）与 ICMP | 刘学奎 / Kiro |
 | 2026-09-03 | ⚠️ **更正一处机制理解**：Workbench 并非不使用入方向 22，而是从阿里云内网段（`100.104.x.x/26`）发起并**自动写入 `createdByEcsWorkbench` 安全组规则**。删掉 `0.0.0.0/0` 后首次调用失败、约 68 秒后自愈；先前判成「陈旧 session」是错的。§4.1 已按真实机制改写，并列出正确的排查顺序 | Kiro |
-| 2026-09-03 | 确认 hbdam 位于**另一个阿里云账号**，ECS 与 RAM 完全独立。bootstrap 清单补充多账号共存约定并改为自包含 | 刘雪奎 / Kiro |
+| 2026-09-03 | 确认 hbdam 位于**另一个阿里云账号**，ECS 与 RAM 完全独立。bootstrap 清单补充多账号共存约定并改为自包含 | 刘学奎 / Kiro |
 | 2026-09-03 | 数据盘初始化：确认空盘后 GPT + ext4（label `hbecho-data`）→ fstab 用 UUID + `nofail` + `noatime` → 建 `/data/{mysql,docker,app,logs,backup,tmp}`，`mysql`/`backup` 设 700。`umount`+`mount -a` 验证重启可自动挂载；顺序写 218 MB/s | Kiro |
 | 2026-09-03 | 系统参数：limits 两处 + sysctl 六项。**修正 hbdam 手册两处会出错的值**——`DefaultLimitNOFILE` 改 `65535:524288`（`65535:65535` 会把硬限从 524288 降下来）；删除 `vm.swappiness`（本机无 swap 且被 `99-apsara-sysctl.conf` 覆盖）。用重启 chronyd 验证新服务继承 | Kiro |
 | 2026-09-03 | 装 Docker 28.3.3 + Compose 2.26.1（Alinux4 官方源 `moby`）。镜像加速源从**服务器侧**实测筛选，确认 `registry-1.docker.io` 不可达。`docker pull/run` 端到端验证通过，镜像层落 `/data/docker`，容器 `ulimit -n`=65535 | Kiro |
@@ -2452,6 +2486,10 @@ ssh hbecho 'growpart /dev/<设备> 1 && resize2fs /dev/<设备>p1 && df -h /data
 | 2026-09-03 | 装 `.githooks/pre-commit` 密钥扫描钩子并 `git config core.hooksPath .githooks`；四种拦截实测有效。踩坑：中文路径被 git 转义导致文件名正则失效，需 `core.quotepath=false`（§9.5） | Kiro |
 | 2026-09-03 | `git init`（main）+ 首次提交 `66caf30`，86 文件 / 0.2 MB。提交前逐项审查：凭证文件全部忽略、密钥扫描仅命中 `.env.example` 占位符、359 处手机号形态确认为 fixture 数字 ID 误报 | Kiro |
 | 2026-09-03 | 新增 §9.7 建私有远端仓库分步教程（Codeup 权威 + GitHub 镜像 + 服务器只读部署密钥） | Kiro |
+| 2026-09-03 | Codeup 云效组织创建受阻，改为先建 GitHub `origin`（`git@github.com:ArchMan001/hbecho.git`，Private，匿名 404 确认）并推送两个提交。§9.7 改写为 GitHub 权威 + Codeup 可选镜像 | 刘学奎 / Kiro |
+| 2026-09-03 | 服务器补装 `git 2.47.3`；生成部署密钥 `github_deploy`（指纹 `SHA256:8V8ryhd5I1rX0quT7Ep/JkOMwvc2ffVy1o9L4L+w9wU`），加为 GitHub 只读 Deploy Key，`clone` 到 `/data/app/hbecho` 并设 `core.hooksPath` | 刘学奎 / Kiro |
+| 2026-09-03 | 用真实推送测试确认部署密钥只读在服务端强制生效（`ERROR: ... marked as read only`），非前端隐藏。修正过程中的 `HEAD~1` 误判，改用 `reset --hard origin/main` 对齐 | Kiro |
+| 2026-09-03 | 邮箱告警通道 `PENDING` 问题：本人控制台手动重试仍未收到确认邮件，判定为阿里云侧问题，**搁置等工单处理**，不阻塞其他工作；短信通道已可用 | 刘学奎 |
 
 ### 17.1 当前进度
 

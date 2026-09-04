@@ -60,8 +60,8 @@
 
 | # | 谁 | 事项 | 详见 |
 |---|---|---|---|
-| 24 | Kiro | 部署 MySQL 8.0.16+，按 §6.2 配参数 | §6 |
-| 25 | Kiro | 跑 §13 全部验收项，**特别是 CHECK 约束和严格模式的破坏性验证** | §13 |
+| 24 | ✅ Kiro | 部署 MySQL 8.0.46（Docker），按 §6.2 配参数，密码全程未落地明文/未进命令行 | §6 |
+| 25 | ✅ Kiro | CHECK 约束（`ERROR 3819`）与严格模式（`ERROR 1264`）破坏性验收精确匹配预期报错 | §13 |
 | 26 | ✅ 共同 | GitHub `origin` 已建并推送（Private，匿名 404 确认）。Codeup 组织创建受阻，暂降级为可选镜像，见 §9.7 | §9.7 |
 | 27 | ✅ Kiro | `git init` + 首次提交 `66caf30`（86 文件 / 0.2 MB），提交前密钥扫描通过 | §9.1 |
 | 28 | ✅ Kiro | `.githooks/pre-commit` 已装并启用，四种拦截实测有效 | §9.5 |
@@ -1239,6 +1239,30 @@ Registry Mirrors:     https://docker.m.daocloud.io/
 
 若后续改用 RDS，§6 的参数配置方式、§11 的备份策略和 §13 的验收方式都要整体重写，不是改几行的事。做这个切换时记一条 §17 变更记录并复查全章。
 
+#### 2026-09-04 已部署（Docker）
+
+| 项 | 值 |
+|---|---|
+| 镜像 | `mysql:8.0`，实测 `mysqld Ver 8.0.46` |
+| 容器名 | `hbecho-mysql` |
+| 编排文件 | `/data/app/docker-compose.yml`，配置见 `/data/app/mysql.env`（600，不进仓库） |
+| 数据目录 | `/data/mysql`（挂载卷，700） |
+| 端口 | `127.0.0.1:3306:3306`，容器另暴露 `33060`（X Protocol，未映射到宿主） |
+| root / 应用密码 | 24 位随机串，存本机 Keychain：`hbecho-mysql-root`、`hbecho-mysql-app` |
+| 应用账号 | `hbecho_app`，仅 `hbecho.*` 全权限，不是 `*.*` |
+| 健康检查 | `healthy`（`mysqladmin ping`，10s 间隔） |
+
+部署时**没有把密码经过 `workbench exec` 的命令行参数传递**——那样会留在本机 shell 历史和执行日志里。做法是 `workbench upload` 一个 600 权限的 env 文件到服务器，`docker compose` 用 `env_file` 引用它，密码从未出现在任何命令行里。
+
+```bash
+# 生成与存放（本机执行，不落地明文文件）
+ROOT_PW=$(LC_ALL=C tr -dc 'A-Za-z0-9!@#%^*_+=-' < /dev/urandom | head -c 24)
+security add-generic-password -a "mysql-root@hbecho" -s "hbecho-mysql-root" -w "$ROOT_PW" -U
+# ... 写临时 env 文件，chmod 600，workbench upload，再删本机临时文件
+```
+
+`docker-compose.yml` 里 `command` 段直接把 §6.2 的关键参数（字符集、时区、`sql_mode`、`local_infile`）作为启动参数传给 `mysqld`，不依赖额外的 `my.cnf` 挂载——单实例场景下更简单，参数变更只需改 compose 文件重启容器。
+
 ### 6.2 必须确认的参数
 
 v2 基线要求 MySQL **8.0.16+**，原因是 CHECK 约束从 8.0.16 起才真正强制执行。整个 v2 设计把大量语义不变量放在 CHECK 里（归档状态与 asset/error 的组合、`window_overflow` 必须伴随 `continuity_gap`、`object_category` 隔离等）。**在 8.0.16 之前的版本上，这些 CHECK 会被解析后忽略，建表成功、约束失效、无任何警告。**§13.1 有一条专门的破坏性验证。
@@ -1271,6 +1295,32 @@ mysql ... -e "SELECT @@global.time_zone, @@session.time_zone, NOW(), UTC_TIMESTA
 mysql ... -e "SELECT 1 FROM mysql.user LIMIT 1 FOR UPDATE SKIP LOCKED;" 2>&1 | tail -2
 ```
 
+#### 2026-09-04 实测结果
+
+```
+version              8.0.46
+time_zone (global)   +00:00
+time_zone (session)  +00:00
+sql_mode             STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
+character_set_server utf8mb4
+collation_server     utf8mb4_0900_ai_ci
+local_infile         OFF
+```
+
+**§13.1、§13.2 的破坏性验收已跑，两条都精确匹配预期报错**（不是"没报错"，是"报了预期的那个错"）：
+
+```sql
+CREATE TABLE _check_probe (v INT, CONSTRAINT ck_probe CHECK (v > 0));
+INSERT INTO _check_probe (v) VALUES (-1);
+-- → ERROR 3819 (HY000): Check constraint 'ck_probe' is violated.
+
+CREATE TABLE _strict_probe (n TINYINT);
+INSERT INTO _strict_probe (n) VALUES (99999);
+-- → ERROR 1264 (22003): Out of range value for column 'n' at row 1
+```
+
+两张探针表已 `DROP`，未留痕迹。**结论：8.0.46 上 CHECK 约束和严格模式都真实生效，v2 基线依赖的这两条底层保证成立。**
+
 ### 6.4 账号权限
 
 | 账号 | 权限 | 说明 |
@@ -1281,6 +1331,10 @@ mysql ... -e "SELECT 1 FROM mysql.user LIMIT 1 FOR UPDATE SKIP LOCKED;" 2>&1 | t
 | 迁移账号 | DDL 权限 | 只在执行迁移时使用 |
 
 应用账号与 worker 账号是否拆分、受限过程如何授权，取决于最终选定的 ORM/迁移工具（未决），实施时在此补充实际授权语句。
+
+#### 2026-09-04 现状
+
+只建了 `hbecho_app`（镶入 `MYSQL_USER`/`MYSQL_PASSWORD` 由 MySQL 官方镜像启动时自动创建），权限是官方镜像的默认行为：`GRANT ALL PRIVILEGES ON \`hbecho\`.*`（不是 `*.*`，已用 `SHOW GRANTS` 验证）。**尚未拆分应用账号与 worker 账号、尚未建备份账号/迁移账号**——这是刻意的，因为受限写入过程的设计还没定，拆分账号前先要有过程可以授权给它。等 ORM/迁移工具选定、受限写入过程实现后回来补建。
 
 ---
 
@@ -2490,18 +2544,21 @@ ssh hbecho 'growpart /dev/<设备> 1 && resize2fs /dev/<设备>p1 && df -h /data
 | 2026-09-03 | 服务器补装 `git 2.47.3`；生成部署密钥 `github_deploy`（指纹 `SHA256:8V8ryhd5I1rX0quT7Ep/JkOMwvc2ffVy1o9L4L+w9wU`），加为 GitHub 只读 Deploy Key，`clone` 到 `/data/app/hbecho` 并设 `core.hooksPath` | 刘学奎 / Kiro |
 | 2026-09-03 | 用真实推送测试确认部署密钥只读在服务端强制生效（`ERROR: ... marked as read only`），非前端隐藏。修正过程中的 `HEAD~1` 误判，改用 `reset --hard origin/main` 对齐 | Kiro |
 | 2026-09-03 | 邮箱告警通道 `PENDING` 问题：本人控制台手动重试仍未收到确认邮件，判定为阿里云侧问题，**搁置等工单处理**，不阻塞其他工作；短信通道已可用 | 刘学奎 |
+| 2026-09-04 | 部署 MySQL 8.0.46（Docker，`mysql:8.0` 官方镜像），容器 `hbecho-mysql`，数据落 `/data/mysql`，端口仅绑 `127.0.0.1:3306`。密码经 `workbench upload` 传递，未落地明文文件、未进命令行历史，存本机 Keychain | Kiro |
+| 2026-09-04 | §13.1/§13.2 破坏性验收通过：`CHECK` 约束报 `ERROR 3819`，严格模式报 `ERROR 1264`，均精确匹配预期而非泛泛"有报错"。探针表已清理 | Kiro |
+| 2026-09-04 | 应用账号 `hbecho_app` 权限验证限定在 `hbecho.*`，非 `*.*`；容器 fd 上限 65535（继承 daemon.json）；`local_infile=OFF` | Kiro |
 
 ### 17.1 当前进度
 
 **待办事项统一维护在文档顶部的 §待办清单**，这里只记状态摘要，不重复列条目。
 
-**已完成**：手册与 `.gitignore`、`.env` 规范化与付费开关、`workbench` + `aliyun` CLI 安装与凭证配置、两条通道实测连通、§1 资产清单全部实测填写。
+**已完成**（27/34，1 项搁置）：安全组收紧、SSH 密钥登录、数据盘与系统参数、Docker、实例 RAM 角色、OSS 四桶、自动快照、云监控 Agent 与四条告警规则、GitHub 私有仓库与服务器只读部署密钥、**MySQL 8.0.46 部署并通过 CHECK/严格模式破坏性验收**。
 
-**无阻塞**：两条自动化通道都通了，机器内和控制台操作现在都能做。
+**无阻塞**：两条自动化通道（Workbench + aliyun CLI）都通，机器内和控制台操作都能做；代码能自动拉取更新；数据库已就位可供后续开发使用。
 
-**当前最高风险**：🔴 root 密码是字典高频模式，叠加 22 端口公网开放 + 密码认证开启 + **无任何公钥**（§1.4、§3.2.1）。处理顺序不能颠倒：先装公钥（待办 3）→ 再关密码认证（待办 6）。
+**搁置**：🟡 邮箱告警通道 `PENDING`，判定为阿里云侧问题，等工单处理，不阻塞其他工作（短信已可用）。
 
-**等你决定才能推进的**：OSS 桶拓扑（待办 16）、出口 IP（待办 7）、root 新密码（待办 4）。
+**仍待你处理**（均不紧急）：换真随机 root 密码（待办 4，SSH 已不接受密码认证）；开启会话管理作为浏览器兜底通道（待办 11）；Codeup 镜像排障（待办 26 附属项）；P4 对外开放前置项待备案启动后处理。
 
 ---
 

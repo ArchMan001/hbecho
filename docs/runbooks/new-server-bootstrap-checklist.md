@@ -1204,23 +1204,131 @@ aliyun cms DescribeMetricRuleList --PageSize 30 --profile ${PROJ}-setup
 
 ### 7.3 数据库（E3）
 
-按项目基线选版本，并**用破坏性测试验证关键特性真的生效**。以 MySQL 为例：
+以 MySQL 8.0 为例，hbecho 实测走 Docker 部署，全程未落地明文密码文件到本机磁盘。
 
-```sql
--- CHECK 约束是否真的强制（8.0.16 之前会解析后忽略，建表成功、约束失效、无警告）
-CREATE TABLE _probe (v INT, CONSTRAINT ck CHECK (v > 0));
-INSERT INTO _probe VALUES (-1);   -- 必须报错 3819
-DROP TABLE _probe;
+#### 部署
 
--- 严格模式是否开启（关掉的话非法值被静默截断）
-CREATE TABLE _probe2 (n TINYINT);
-INSERT INTO _probe2 VALUES (99999);  -- 必须报错 1264
-DROP TABLE _probe2;
+```bash
+workbench exec -P $PROJ -i $INSTANCE -c 'docker pull mysql:8.0 && docker run --rm mysql:8.0 mysqld --version'
+# 期望版本 >= 8.0.16（CHECK 约束的强制执行门槛）
 ```
 
-"命令没报错"不等于验证通过。这两条都是**接受了配置但不执行**的失败模式，是最坏的一类——不会有任何提示。
+密码**不要**通过 `workbench exec` 的命令行参数传递（会进 shell 历史和日志），改用 `workbench upload` 传一个 env 文件：
 
-端口只绑 `127.0.0.1`，安全组**永不开放** 3306。
+```bash
+ROOT_PW=$(LC_ALL=C tr -dc 'A-Za-z0-9!@#%^*_+=-' < /dev/urandom | head -c 24)
+APP_PW=$(LC_ALL=C tr -dc 'A-Za-z0-9!@#%^*_+=-' < /dev/urandom | head -c 24)
+security add-generic-password -a "mysql-root@${PROJ}" -s "${PROJ}-mysql-root" -w "$ROOT_PW" -U
+security add-generic-password -a "${PROJ}_app@${PROJ}" -s "${PROJ}-mysql-app" -w "$APP_PW" -U
+
+cat > /tmp/${PROJ}-mysql.env <<EOF
+MYSQL_ROOT_PASSWORD=${ROOT_PW}
+MYSQL_DATABASE=${PROJ}
+MYSQL_USER=${PROJ}_app
+MYSQL_PASSWORD=${APP_PW}
+EOF
+chmod 600 /tmp/${PROJ}-mysql.env
+workbench upload -P $PROJ /tmp/${PROJ}-mysql.env /data/app/mysql.env --instance-id $INSTANCE
+rm -f /tmp/${PROJ}-mysql.env
+unset ROOT_PW APP_PW
+```
+
+`docker-compose.yml`（用 `workbench upload` 传到 `/data/app/docker-compose.yml`）：
+
+```yaml
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ${PROJ}-mysql
+    restart: unless-stopped
+    env_file:
+      - /data/app/mysql.env
+    ports:
+      - "127.0.0.1:3306:3306"      # 只绑本地；安全组永不开放 3306
+    volumes:
+      - /data/mysql:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+      - --sql-mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
+      - --local-infile=0
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+```
+
+```bash
+workbench exec -P $PROJ -i $INSTANCE -c 'cd /data/app && docker compose up -d'
+# 等健康检查通过（约 15-20 秒）
+workbench exec -P $PROJ -i $INSTANCE -c 'docker inspect --format "{{.State.Health.Status}}" ${PROJ}-mysql'
+# 期望: healthy
+```
+
+#### 基础配置验证
+
+```bash
+workbench exec -P $PROJ -i $INSTANCE -c '
+PW=$(grep MYSQL_ROOT_PASSWORD /data/app/mysql.env | cut -d= -f2)
+docker exec '"${PROJ}"'-mysql mysql -uroot -p"$PW" -e \
+  "SELECT @@version, @@global.time_zone, @@sql_mode, @@character_set_server, @@collation_server;"
+'
+```
+
+期望：版本 ≥ 8.0.16；`time_zone` = `+00:00`；`sql_mode` 含 `STRICT_TRANS_TABLES`；`character_set_server` = `utf8mb4`。
+
+#### ⚠️ 破坏性验收——必须看到报错才算通过
+
+**"命令没报错"不等于验证通过。** CHECK 约束和严格模式都是"接受了配置但不执行"的失败模式，8.0.16 之前的版本会把 CHECK 解析后直接忽略，建表成功、约束形同虚设、**没有任何警告**。唯一可靠的证明方式是故意插入一条违规数据，看它是不是真的被拒绝：
+
+```bash
+workbench exec -P $PROJ -i $INSTANCE -c '
+PW=$(grep MYSQL_ROOT_PASSWORD /data/app/mysql.env | cut -d= -f2)
+docker exec -i '"${PROJ}"'-mysql mysql -uroot -p"$PW" '"${PROJ}"' <<SQL
+CREATE TABLE _check_probe (v INT, CONSTRAINT ck_probe CHECK (v > 0));
+INSERT INTO _check_probe (v) VALUES (-1);
+SQL
+'
+# 期望：ERROR 3819 (HY000): Check constraint ck_probe is violated.
+# 看到这行报错才是通过；INSERT 成功执行是失败。
+
+workbench exec -P $PROJ -i $INSTANCE -c '
+PW=$(grep MYSQL_ROOT_PASSWORD /data/app/mysql.env | cut -d= -f2)
+docker exec -i '"${PROJ}"'-mysql mysql -uroot -p"$PW" '"${PROJ}"' <<SQL
+CREATE TABLE _strict_probe (n TINYINT);
+INSERT INTO _strict_probe (n) VALUES (99999);
+SQL
+'
+# 期望：ERROR 1264 (22003): Out of range value for column "n"
+
+# 清理探针表
+workbench exec -P $PROJ -i $INSTANCE -c '
+PW=$(grep MYSQL_ROOT_PASSWORD /data/app/mysql.env | cut -d= -f2)
+docker exec '"${PROJ}"'-mysql mysql -uroot -p"$PW" '"${PROJ}"' \
+  -e "DROP TABLE IF EXISTS _check_probe, _strict_probe;"
+'
+```
+
+hbecho 实测两条报错完全精确匹配（`ERROR 3819`、`ERROR 1264`），MySQL `8.0.46`。
+
+#### 其余验收项
+
+```bash
+workbench exec -P $PROJ -i $INSTANCE -c '
+echo "端口只绑本地:"; ss -tlnp | grep 3306
+echo "应用账号权限（不应是 ALL PRIVILEGES ON *.*）:"
+PW=$(grep MYSQL_ROOT_PASSWORD /data/app/mysql.env | cut -d= -f2)
+docker exec '"${PROJ}"'-mysql mysql -uroot -p"$PW" -e "SHOW GRANTS FOR \"'"${PROJ}"'_app\"@\"%\";"
+echo "容器 fd 上限（应继承 daemon.json 的 default-ulimits）:"
+docker exec '"${PROJ}"'-mysql sh -c "ulimit -n"
+echo "local_infile 应为 OFF:"
+docker exec '"${PROJ}"'-mysql mysql -uroot -p"$PW" -e "SHOW VARIABLES LIKE \"local_infile\";"
+'
+```
+
+期望：`ss` 只看到 `127.0.0.1:3306`；应用账号权限限定在业务库（`GRANT ALL PRIVILEGES ON \`${PROJ}\`.*`），不是 `*.*`；fd 上限 `65535`（继承 §5.5 的 `default-ulimits`）；`local_infile` = `OFF`。
 
 ---
 
@@ -1312,3 +1420,4 @@ DROP TABLE _probe2;
 | 2026-09-03 | 按 hbecho 阶段 C/D 的实际执行回填：limits 硬限不可压低、sysctl 被 `99-` 覆盖、NVMe 与 API 设备名不同、快照 `timePoints` 用 UTC、`--regionId` 小写、`PassRole` 不支持资源级 ARN、`ossutil EcsRamRole` 无 `--ecs-role-name`、云监控 API 安装失败需走控制台。已知坑扩到 30 条 | Kiro |
 | 2026-09-03 | ⚠️ **更正**：Workbench 并非不使用入方向 22，而是从阿里云内网段发起并**自动写入 `createdByEcsWorkbench` 安全组规则**。先前判成「陈旧 session」是错的。§3.1、§2、§4.5 已按真实机制改写 | Kiro |
 | 2026-09-03 | 再回填一轮：云监控 SLR 服务名 `cloudmonitor.aliyuncs.com` 不可猜、`argusagent` inactive 是正常的、邮箱通道 `PENDING` 需确认、`core.quotepath` 影响文件名匹配。新增 §6.7 告警联系人与规则。已知坑扩到 34 条 | Kiro |
+| 2026-09-04 | §7.3 数据库部分从原则描述扩写为完整可执行步骤（基于 hbecho MySQL 8.0.46 实测部署）：密码经 `workbench upload` 传递不进命令行、docker-compose 模板、CHECK/严格模式破坏性验收命令与精确期望报错、账号权限验证 | Kiro |

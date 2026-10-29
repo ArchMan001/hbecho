@@ -1,0 +1,51 @@
+{
+  "case": "C02",
+  "platform": "xiaohongshu",
+  "action": "post_comments_list",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "https://www.xiaohongshu.com/explore/634ed0b300000000070362c6",
+      "max_cursor": 0,
+      "reply_pages": -1
+    }
+  },
+  "started_at": "2026-10-28T05:35:54.974137+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae189c06089b10001e8a0f6",
+      "task_url": "https://fieldshortcut.com/tasks/6ae189c06089b10001e8a0f6",
+      "action": "post_comments_list",
+      "status": "succeeded",
+      "result": {
+        "result": [],
+        "max_cursor": "",
+        "has_more": 0,
+        "total": 6,
+        "post_id": "634ed0b300000000070362c6",
+        "reply_page_count": 0
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae189c06089b10001e8a0f6"
+  },
+  "response_bytes": 386,
+  "response_sha256": "4a9e66901f6685abb5abda9501316d686a8ab2220f8c76f3156aec318f001883",
+  "transport_error": null,
+  "elapsed_seconds": 8.94,
+  "classification": "success"
+}

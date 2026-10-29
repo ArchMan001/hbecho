@@ -1,0 +1,47 @@
+{
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae197fdeb420f000190f9f4",
+      "task_url": "https://fieldshortcut.com/tasks/6ae197fdeb420f000190f9f4",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "7664908151975619961",
+        "platform": "douyin",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": 2060,
+        "like_number": 317,
+        "comment_number": 98,
+        "collect_number": 114,
+        "share_number": 200,
+        "duration_number": 17,
+        "author_homepage": "https://www.douyin.com/user/MS4wLjABAAAAe-APG7a8uOznZ48ipKU7D_1zEUpbLo0LRUjLmR_17rbB4NdB_P6TnTMbGl0AXwfG",
+        "user_id": "83428574162",
+        "created": 1784625499000,
+        "author_name": "曲阳日立中央空调(红星美凯龙店)",
+        "title": "盛夏抗暑",
+        "tag_text": "#日立硬核抗暑#极速降温挑战#三伏天续命神器#日立硬核抗暑 #一人一境舒爽一夏 #日立中央空调品牌月#日立中央空调",
+        "publish_location": "河北省保定市",
+        "related_search_str": "",
+        "cover": "https://p3-sign.douyinpic.com/tos-cn-p-0015c000-ce/osACfFaWlXhVDOjj9fvCzwAzweEUEquQbq6AQS~tplv-dy-360p.webp?lk3s=138a59ce&x-expires=1794376800&x-signature=pGpdjKttuiUETI4uY4J07X46RBk%3D&from=327834062&s=PackSourceEnum_AWEME_DETAIL&se=false&sc=origin_cover&biz_tag=aweme_video&l=2026102814364947FF68780F13D570C2C2\n\nhttps://p3-sign.douyinpic.com/tos-cn-i-0813c000-ce/ocXAdCFX7ID9V3AAlWAwf7EMqfQW9GOEeAVzOE~tplv-dy-resize-walign-adapt-aq:540:q75.webp?lk3s=138a59ce&x-expires=1794376800&x-signature=fCCRsz6G3hU5bAo2NNPdFupoCCs%3D&from=327834062&s=PackSourceEnum_AWEME_DETAIL&se=false&sc=cover&biz_tag=aweme_video&l=2026102814364947FF68780F13D570C2C2",
+        "download_urls": "https://v3-dy-o.zjcdn.com/456ca9466cb342f6b6a1a401d00262b9/6ae1d051/video/tos/cn/tos-cn-ve-15c000-ce/ogrBk8ne0gf7MHIRAAOQAtC8cJvXg5meU2KGI1/?a=1128&ch=26&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=1024&bt=1024&cs=0&ds=3&ft=TrVWihWM4xNduSt.CSDF56.d0pUX1B969VJEbD7iwbPD-Itz&mime_type=video_mp4&qs=0&rc=aDo7ZjY0NDU0aTg7aTk8OUBpamczZ3M5cm9tPDMzbGkzNEBiMDEtMmBiNjUxLWEvNS5hYSNobnBsMmRrZmNhLS1kLWJzcw%3D%3D&btag=c0010e00090008&cc=1f&cdn_type=7&cquery=103S_100b_104i_103Q_103R&dy_q=1793169409&feature_id=f5241e7604dff1d9d6c943fd20bd51a2&l=2026102814364947FF68780F13D570C2C2&n80=1&n80_dm=bjk4LXYtbmNkbi5kb3V5aW52b2QuY29t&n80_tk=dd98bd34f05def337df748496dc7a6b0&pdp=baidup2&pwid=1&req_cdn_type=r\n\nhttps://v5-dy-o-abtest.zjcdn.com/24c9bae364afb04b176642f592677b9e/6ae1d051/video/tos/cn/tos-cn-ve-15c000-ce/ogrBk8ne0gf7MHIRAAOQAtC8cJvXg5meU2KGI1/?a=1128&ch=26&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=1024&bt=1024&cs=0&ds=3&ft=TrVWihWM4xNduSt.CSDF56.d0pUX1B969VJEbD7iwbPD-Itz&mime_type=video_mp4&qs=0&rc=aDo7ZjY0NDU0aTg7aTk8OUBpamczZ3M5cm9tPDMzbGkzNEBiMDEtMmBiNjUxLWEvNS5hYSNobnBsMmRrZmNhLS1kLWJzcw%3D%3D&btag=c0010e00090008&cdn_type=7&cquery=104i_103Q_103R_103S_100b&dy_q=1793169409&feature_id=f5241e7604dff1d9d6c943fd20bd51a2&l=2026102814364947FF68780F13D570C2C2&n80=1&n80_dm=bjk4LXYtbmNkbi5kb3V5aW52b2QuY29t&n80_tk=dd98bd34f05def337df748496dc7a6b0&pdp=baidup2&pwid=1&req_cdn_type=r",
+        "updated": 1793169412530
+      },
+      "error": null,
+      "created_at": "2026-10-28T14:36:45",
+      "updated_at": "2026-10-28T14:36:54"
+    },
+    "request_id": "6ae197fdeb420f000190f9f4"
+  },
+  "error": null,
+  "elapsed": 5.95,
+  "case": "A5-dy-detail-async",
+  "poll": 1
+}

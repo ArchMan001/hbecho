@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-28",
+  "base_url": "https://openapi.fieldshortcut.com",
+  "budget": 40,
+  "calls_used": 14,
+  "results": [
+    {
+      "case": "C01",
+      "platform": "douyin",
+      "action": "media_user_info",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C02",
+      "platform": "xiaohongshu",
+      "action": "media_user_info",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C03",
+      "platform": "douyin",
+      "action": "user_video_list",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C04",
+      "platform": "xiaohongshu",
+      "action": "user_video_list",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C05",
+      "platform": "douyin",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C06",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C07",
+      "platform": "douyin",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C08",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C09",
+      "platform": "douyin",
+      "action": "media_user_info",
+      "mode": "async",
+      "classification": "success"
+    },
+    {
+      "case": "C10",
+      "platform": "xiaohongshu",
+      "action": "user_video_list",
+      "mode": "async",
+      "classification": "provider_failed"
+    },
+    {
+      "case": "C11",
+      "platform": "douyin",
+      "action": "media_user_info",
+      "mode": "sync",
+      "classification": "success"
+    }
+  ]
+}

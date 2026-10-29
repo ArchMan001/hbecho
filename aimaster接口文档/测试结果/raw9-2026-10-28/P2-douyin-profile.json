@@ -1,0 +1,37 @@
+{
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae197a52bcec60001463422",
+      "task_url": "https://fieldshortcut.com/tasks/6ae197a52bcec60001463422",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "Gaoyun1526526960",
+        "nickname": "柠宝妈妈",
+        "signature": "80后宝妈｜分享真实带娃踩坑经验\n哺乳期｜辅食｜母婴好物｜居家收纳\n仅个人经验，仅供参考",
+        "location": "",
+        "avatar": "https://p3-pc.douyinpic.com/aweme/1080x1080/aweme-avatar/tos-cn-avt-0015_c98624f36cf8f42036d1b5abadf4ffd3.jpeg?from=2956013662",
+        "cover": "https://p3-pc-sign.douyinpic.com/obj/douyin-user-image-file/3f9d9f6ba7967a3a86bd9eaf079a1bdb?lk3s=93de098e&x-expires=1793340000&x-signature=XSQ83HhKdBR4%2BS7eIokPWBPKkkc%3D&from=2480802190",
+        "follower_count": "",
+        "following_count": "1",
+        "like_count": "",
+        "post_count": "",
+        "follower_number": 0,
+        "following_number": 1,
+        "like_number": 0,
+        "post_number": 0,
+        "updated": 1793169322042
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae197a52bcec60001463422"
+  },
+  "error": null,
+  "elapsed": 11.95,
+  "case": "P2",
+  "url": "https://www.douyin.com/user/MS4wLjABAAAAIeVxV9G6jjApuoXCcLNctc2-3CwjpG26XSEuB9ZmzNogepEvJ6hZG7Q7Tez7C2Ip"
+}

@@ -3,11 +3,13 @@
 > **状态**：`draft`  
 > **模式**：Design-First  
 > **实现状态**：仅定义可验收需求；尚未执行 [`tasks.md`](tasks.md)  
+> **所属域**：A 数据底座 · **目录命名**：旧名 `data-foundation-tracer`，按域代号应为 `a-data-foundation-tracer`  
+> **最近核对**：2026-10-29（偏差见 [`design.md`](design.md) 附录）  
 > **更新日期**：2026-09-02
 
 ## 1. Introduction
 
-`data-foundation-tracer` 证明数据底座的第一条纵向链路：一个已授权的内部调用方提交 `MediaStaff + 平台 + 主页入口` 后，系统能够追踪到稳定的 `ExternalAccount`，建立或复用 `AccountAssignment`，保存主页快照，完整处理首个已返回列表页，建立后续同步检查点，并异步归档头像、背景图和内容封面。
+`data-foundation-tracer` 证明数据底座的第一条纵向链路：一个已授权的内部调用方提交 `MediaStaff + 平台 + 主页入口` 后，系统能够追踪到稳定的 `ExternalAccount`，建立或复用账号并写入其当前归属，保存主页快照，完整处理首个已返回列表页，建立后续同步检查点，并异步归档头像、背景图和内容封面。
 
 首版验收平台是抖音和小红书。AI Master 只是本 Feature 内部的供应商 Adapter；需求不建设通用供应商 API 平台，也不宣称支持尚未实测的平台或 action。
 
@@ -16,11 +18,11 @@
 冲突时按以下顺序裁决：
 
 1. [`CONTEXT.md`](../../../CONTEXT.md)：领域词汇、身份、归属、发现、快照、媒资和时间不变量；
-2. [`database-design-v2.md`](../../../docs/domains/data-foundation/database-design-v2.md)：数据底座当前实施基线；
+2. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座当前实施基线；
 3. [AI Master V1.2 文档](<../../../aimaster接口文档/FieldShortcut A Master API 开发文档 V1.2.md>)：供应商声明的候选合同；
 4. 已保存的抖音与小红书 [`raw3` 证据](../../../aimaster接口文档/测试结果/raw3/)：已观察响应形态，但它们是解析后 JSON 包络，不是原始 HTTP bytes；
 5. 本 Requirements 与 [`design.md`](design.md)：本 Feature 的需求和设计；
-6. `docs/archive/` 及 `项目历史文档/`：仅作历史输入，不能覆盖前述来源。
+6. `HBECHO设计方案/archive/` 及 `HBECHO设计方案/archive/legacy/项目历史文档/`：仅作历史输入，不能覆盖前述来源。
 
 供应商文档与实测证据冲突时，不得静默猜测；应能力门控、记录差异并保留为未决合同。
 
@@ -116,7 +118,7 @@
 #### Acceptance Criteria
 
 1. IF all three parse attempts fail or no verified locator is produced, THEN THE Tracer SHALL end in a terminal parse-failed state with a stable reason and attempt summary.
-2. IF Requirement 4.1 applies, THEN THE Tracer SHALL NOT create an `ExternalAccount`, account identifier, `AccountAssignment`, profile snapshot, content snapshot, `ContentDiscovery` or checkpoint.
+2. IF Requirement 4.1 applies, THEN THE Tracer SHALL NOT create an `ExternalAccount`, account identifier, current assignment, profile snapshot, content snapshot, `ContentDiscovery` or checkpoint.
 3. WHEN parse evidence was captured before terminal failure, THE Tracer SHALL retain that operational evidence according to ODS retention without promoting it to business master data.
 
 ### Requirement 5: Namespaced, text-preserving account identity
@@ -144,15 +146,15 @@
 4. GIVEN the saved Hitachi Xiaohongshu fixtures, WHEN the page is processed, THE Tracer SHALL keep profile ID `49328995493` and dominant list-author ID `5decba2300000000010007e1` in different namespaces while binding both to the same target `ExternalAccount`.
 5. WHEN a dominant-author decision is made or rejected, THE Tracer SHALL retain the policy version, exact author counts, denominator and rejection reason in traceable evidence.
 
-### Requirement 7: Assignment creation without ownership theft
+### Requirement 7: Current assignment without ownership theft
 
 **User Story:** As a business owner, I want tracer assignment to respect existing ownership, so that ingestion cannot silently transfer an account between staff members.
 
 #### Acceptance Criteria
 
-1. WHEN a resolved account has no conflicting effective assignment, THE Tracer SHALL create or reuse an `AccountAssignment` to the submitted `MediaStaff` with a traceable start and source.
-2. WHEN the same effective assignment already exists, THE Tracer SHALL reuse it idempotently rather than append an equivalent duplicate.
-3. IF the account is effectively assigned to a different `MediaStaff`, THEN THE Tracer SHALL preserve the existing assignment, SHALL NOT auto-close or overwrite it, and SHALL expose an assignment-conflict outcome for authorized resolution.
+1. WHEN a resolved account has no conflicting current assignment, THE Tracer SHALL create or reuse the account and record its current assignment to the submitted `MediaStaff` as a single current fact in the same record, recording the assignment source and time; it SHALL NOT open time-bounded assignment intervals.
+2. WHEN the account is already assigned to the same `MediaStaff`, THE Tracer SHALL treat the call as a no-op rather than write a parallel assignment fact.
+3. IF the account is currently assigned to a different `MediaStaff`, THEN THE Tracer SHALL preserve the existing owner, SHALL NOT auto-rebind, close or overwrite it, and SHALL expose an assignment-conflict outcome for authorized resolution.
 4. WHEN an assignment conflict occurs, THE Tracer SHALL retain supplier evidence and identity observations but SHALL NOT represent the submitted `MediaStaff` as the account owner.
 5. THE Tracer SHALL NOT create a parallel natural-person `Staff`, platform-account or account-dealer binding model.
 

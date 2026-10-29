@@ -1,0 +1,51 @@
+{
+  "case": "C09",
+  "platform": "douyin",
+  "action": "tasks.get",
+  "mode": "async-poll",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/tasks/6ae168cf2bcec600014629bf",
+  "request": {
+    "method": "GET",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "started_at": "2026-10-28T03:15:37.156067+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae168cf2bcec600014629bf",
+      "task_url": "https://fieldshortcut.com/tasks/6ae168cf2bcec600014629bf",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "HITACHI1",
+        "nickname": "日立中央空调",
+        "signature": "【全屋全感 定制舒适】\n中央空调丨新风丨地暖丨加湿丨除湿丨净化\n每天10:00-22:00直播\n官号2号：@日立变频中央空调",
+        "location": "山东",
+        "avatar": "https://p3-pc.douyinpic.com/aweme/1080x1080/aweme-avatar/tos-cn-i-0813_okeC4Ay6A5AIUA212gCiiO2QEC7fFAWE5gBBAY.jpeg?from=2956013662",
+        "cover": "https://p3-pc-sign.douyinpic.com/obj/c8510002be9a3a61aad2?lk3s=93de098e&x-expires=1793329200&x-signature=uGO2UTt7F5sd4st5ubY15VKOoJc%3D&from=2480802190",
+        "follower_count": "1194350",
+        "following_count": "16",
+        "like_count": "1544503",
+        "post_count": "603",
+        "follower_number": 1194350,
+        "following_number": 16,
+        "like_number": 1544503,
+        "post_number": 603,
+        "updated": 1793157331251
+      },
+      "error": null,
+      "created_at": "2026-10-28T11:15:27",
+      "updated_at": "2026-10-28T11:15:33"
+    },
+    "request_id": "6ae168cf2bcec600014629bf"
+  },
+  "response_bytes": 1059,
+  "response_sha256": "b9f363bbfb0f68a493eb7b3c28cbb11bf3f32088b96449b8e27274353806f556",
+  "transport_error": null,
+  "elapsed_seconds": 6.41,
+  "classification": "success"
+}

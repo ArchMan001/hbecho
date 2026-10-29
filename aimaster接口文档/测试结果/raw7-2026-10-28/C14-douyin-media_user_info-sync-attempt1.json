@@ -1,0 +1,58 @@
+{
+  "case": "C14",
+  "platform": "douyin",
+  "action": "media_user_info",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media_user_info",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_user_info",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "https://www.douyin.com/user/MS4wLjABAAAA8xzA5Dl7N--l2aBhBJ-cZd1VCTLrU6SitX9dTWbRmmU?from_tab_name=main&relation=0&vid=7688996630141924731"
+    }
+  },
+  "started_at": "2026-10-28T06:05:32.392620+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae190b2eb420f000190f6bf",
+      "task_url": "https://fieldshortcut.com/tasks/6ae190b2eb420f000190f6bf",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "157659394",
+        "nickname": "南和日立中央空调",
+        "signature": "🏠【定制空气 定义舒适】\n🏅中央空调|地暖|新风|加湿|除湿|净化\n🏅领先的科技、创新的方案、卓越的服务\n🏅品质有保障❤️用心做服",
+        "location": "河北",
+        "avatar": "https://p3-pc.douyinpic.com/aweme/1080x1080/aweme-avatar/mosaic-legacy_2f82400039003635ccc6b.jpeg?from=2956013662",
+        "cover": "https://p3-pc-sign.douyinpic.com/obj/tos-cn-i-0813/6da9cdfe486e4a8895c15f8aff3de521?lk3s=93de098e&x-expires=1793340000&x-signature=44ohS49ti3lKqrcfZmYvhsOR51s%3D&from=2480802190",
+        "follower_count": "811",
+        "following_count": "49",
+        "like_count": "21049",
+        "post_count": "230",
+        "follower_number": 811,
+        "following_number": 49,
+        "like_number": 21049,
+        "post_number": 230,
+        "updated": 1793167539827
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae190b2eb420f000190f6bf"
+  },
+  "response_bytes": 1058,
+  "response_sha256": "31dd0ff900bc83086a9a4e6f30c3ec0c68250ba4d0538d4b44b797ff0a8d578e",
+  "transport_error": null,
+  "elapsed_seconds": 9.02,
+  "classification": "success"
+}

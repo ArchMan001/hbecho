@@ -1,0 +1,187 @@
+{
+  "case": "C03",
+  "platform": "xiaohongshu",
+  "action": "user_video_list",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/user_video_list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/user_video_list",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "我在小红书收获了3397次赞与收藏，点击链接或复制口令来看我的主页>> https://xhslink.cn/o/2zMPN8P7pyN",
+      "max_cursor": "634ed0b300000000070362c6"
+    }
+  },
+  "started_at": "2026-10-28T05:36:03.911418+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae189c9eb420f000190f463",
+      "task_url": "https://fieldshortcut.com/tasks/6ae189c9eb420f000190f463",
+      "action": "user_video_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "post_id": "632d16c70000000018018b47",
+            "user_id": "5b7025b12ef20900013f05f2",
+            "red_id": "",
+            "created": 1663899335000,
+            "author_name": "整点薯片",
+            "title": "## 标题\n大二菜鸟如何第一次做竞赛就获奖\n\n## 正文\n第一次做竞赛是亚洲低碳设计竞赛（AILCD），最后拿了个荣誉提名奖[doge][doge][doge]\n1、时间\n这是我第一次和两个同年级的女生（一个保研哈工，一个AA留学）做竞赛，前后历时三个月，准",
+            "tag_text": "",
+            "stats": {
+              "like_count": 359,
+              "comment_count": 28,
+              "collect_count": 232,
+              "share_count": 22
+            },
+            "cover": "https://sns-i11.rednotecdn.com/03029n016mexyyij10y010lzmfhcuw8717?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=ea7dee21e6dc759c3aaf03fbb780da24&t=6ae189cc",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/03029n016mexyyij10y010lzmfhcuw8717?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=ea7dee21e6dc759c3aaf03fbb780da24&t=6ae189cc",
+              "https://sns-i11.rednotecdn.com/03029n016mexyyij10y010lzmfhbvzb1h6?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=cca3fe36dbea89736a81cfe82ed3420a&t=6ae189cc",
+              "https://sns-i11.rednotecdn.com/03029n016mexyyij10y010lzmfhdgtv18r?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=4d78d456db5c6721c79975ad0eb7c9ff&t=6ae189cc",
+              "https://sns-i11.rednotecdn.com/03029n016mexyyij10y010lzmfha5posoq?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=120c5d206915d8ae9fb7bd7d0eda87fd&t=6ae189cc"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "第一次做竞赛是亚洲低碳设计竞赛（AILCD），最后拿了个荣誉提名奖[doge][doge][doge]\n1、时间\n这是我第一次和两个同年级的女生（一个保研哈工，一个AA留学）做竞赛，前后历时三个月，准"
+            }
+          },
+          {
+            "post_id": "63299275000000000800aeb3",
+            "user_id": "5b7025b12ef20900013f05f2",
+            "red_id": "",
+            "created": 1663668853000,
+            "author_name": "整点薯片",
+            "title": "## 标题\n如何21天做完一个竞赛（Evolo荣誉提名）\n\n## 正文\n这是我和璐子忙里偷闲带着三个学弟学妹做的，用了不到三周，每天投入时间也不长，仅供参考。\n————————————————————\n忙里偷闲给学弟学妹们分享一下，在课业繁忙的大三如何21天做完斩获Evo",
+            "tag_text": "",
+            "stats": {
+              "like_count": 562,
+              "comment_count": 31,
+              "collect_count": 435,
+              "share_count": 91
+            },
+            "cover": "https://sns-i11.rednotecdn.com/03029k016mexyyij10y0113351ndret4g4?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=086871c002954a76d8205072e9c8a1b8&t=6ae189cc",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/03029k016mexyyij10y0113351ndret4g4?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=086871c002954a76d8205072e9c8a1b8&t=6ae189cc",
+              "https://sns-i11.rednotecdn.com/03029k016mexyyij10y07133527c7glol8?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=5bbbbd788dc4f7839b8a391cb8a6bd0b&t=6ae189cc",
+              "https://sns-i11.rednotecdn.com/03029k016mexyyij10y0113351nc5qnk3g?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=b64c582e45112f26b34b6a30eedbc15e&t=6ae189cc",
+              "https://sns-i11.rednotecdn.com/03029k016mexyyij10y0113351n960j8jh?imageView2/2/w/1440/format/webp&ap=12&sc=USR_DTL&sign=ae3a938eab1575c256fe5926a98ac90d&t=6ae189cc"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "这是我和璐子忙里偷闲带着三个学弟学妹做的，用了不到三周，每天投入时间也不长，仅供参考。\n————————————————————\n忙里偷闲给学弟学妹们分享一下，在课业繁忙的大三如何21天做完斩获Evo"
+            }
+          },
+          {
+            "post_id": "631478260000000011010355",
+            "user_id": "5b7025b12ef20900013f05f2",
+            "red_id": "",
+            "created": 1662285862000,
+            "author_name": "整点薯片",
+            "title": "## 标题\n徒手线|建筑功底\n\n## 正文\n不小心翻到大一的第一个作品，记忆正在杀死我哈哈哈哈。第一次画的徒手线，一稿完成[偷笑R][偷笑R]。当时感觉自己特别厉害[doge][doge][doge]。。献丑了献丑了勿喷",
+            "tag_text": "#建筑学[话题]#",
+            "stats": {
+              "like_count": 67,
+              "comment_count": 4,
+              "collect_count": 30,
+              "share_count": 4
+            },
+            "cover": "https://sns-i11.rednotecdn.com/010294016mexyyij10y0112qgv1dp6muik?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=7fb6acd4df27f8518db3d5d4dde07503&t=6ae189cc",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/010294016mexyyij10y0112qgv1dp6muik?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=7fb6acd4df27f8518db3d5d4dde07503&t=6ae189cc"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "不小心翻到大一的第一个作品，记忆正在杀死我哈哈哈哈。第一次画的徒手线，一稿完成[偷笑R][偷笑R]。当时感觉自己特别厉害[doge][doge][doge]。。献丑了献丑了勿喷#建筑学[话题]#   "
+            }
+          },
+          {
+            "post_id": "6314163e000000001203866f",
+            "user_id": "5b7025b12ef20900013f05f2",
+            "red_id": "",
+            "created": 1662260798000,
+            "author_name": "整点薯片",
+            "title": "## 标题\n建筑竞赛分享|资料分享\n\n## 正文\n很多学弟学妹私信我关于竞赛的事情，我这正好有一份三个专业的国内知名竞赛名单（来源于我的本科学院），大家可以自行取用呀   #城乡规划[话题",
+            "tag_text": "#建筑设计竞赛[话题]# #资料分享[话题]# #建筑学[话题]#",
+            "stats": {
+              "like_count": 68,
+              "comment_count": 80,
+              "collect_count": 48,
+              "share_count": 4
+            },
+            "cover": "https://sns-i11.rednotecdn.com/010294016mexyyij10y0112qgv1aofo1o0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=d73a999c34b13ed8f413c761cc6c09fc&t=6ae189cc",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "images": [
+              "https://sns-i11.rednotecdn.com/010294016mexyyij10y0112qgv1aofo1o0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=d73a999c34b13ed8f413c761cc6c09fc&t=6ae189cc"
+            ],
+            "download_urls": [],
+            "text": {
+              "content": "很多学弟学妹私信我关于竞赛的事情，我这正好有一份三个专业的国内知名竞赛名单（来源于我的本科学院），大家可以自行取用呀#建筑设计竞赛[话题]# #资料分享[话题]# #建筑学[话题]# #城乡规划[话题"
+            }
+          }
+        ],
+        "has_more": false,
+        "cursor": "",
+        "max_cursor": "6314163e000000001203866f"
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae189c9eb420f000190f463"
+  },
+  "response_bytes": 6900,
+  "response_sha256": "90eb35053680657f7048733a3fe1e1d4de91b3637a31fbb6fb3e525702dacd9a",
+  "transport_error": null,
+  "elapsed_seconds": 12.05,
+  "classification": "success"
+}

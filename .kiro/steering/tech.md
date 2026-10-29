@@ -4,7 +4,7 @@ inclusion: always
 
 # 技术基线
 
-- 数据获取与资产域当前基线是 `docs/domains/data-foundation/database-design-v2.md`；不要在下游模块重建平行的组织、专员、平台账号或媒资主档。
+- 数据获取与资产域当前基线是 `HBECHO设计方案/domains/data-foundation/database-design-v2.md`；不要在下游模块重建平行的组织、专员、平台账号或媒资主档。
 - MySQL 基线为 8.0.16+ InnoDB：内部 ID 使用 signed `BIGINT`，API 输出十进制字符串；时间保存 UTC `DATETIME(6)`；状态使用 `VARCHAR + CHECK`，不用 MySQL `ENUM`。
 - 外部 ID 始终按原始文本处理；哈希命中后复核原文。真实 `0`、字段缺失、显式 null、非法值必须保留不同语义。
 - 网络请求期间不持有数据库事务。供应商请求/响应 body 或传输错误必须先以原始字节可靠落入私有 ODS OSS，再运行版本化适配器。

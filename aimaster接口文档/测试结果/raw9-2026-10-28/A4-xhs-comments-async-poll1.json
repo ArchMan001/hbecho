@@ -1,0 +1,67 @@
+{
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae197e7d57ee40001cd1432",
+      "task_url": "https://fieldshortcut.com/tasks/6ae197e7d57ee40001cd1432",
+      "action": "post_comments_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "id": "6926f4dc000000001600f919",
+            "post_id": "632d16c70000000018018b47",
+            "content": "小宝 我想问一下 那个地形图是要发邮件找他要么",
+            "author": {
+              "id": "a30849a4350ae2cef01bceb155078",
+              "name": "吃啥呢给我掰点.",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo30ph400p96g004a62r0v4g4ch3uilo0o?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 4
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1764160733000,
+            "download_urls_str": "",
+            "updated": 1793169385496
+          },
+          {
+            "id": "632d173d0000000025008fa3",
+            "post_id": "632d16c70000000018018b47",
+            "content": "今日没课，线上溜溜[doge][doge][doge] 有需要的学弟学妹可以问问题，乐意提供帮助",
+            "author": {
+              "id": "ac0c3932cc291771de6f729f4f84b",
+              "name": "整点薯片",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo320oq6cukm86g4ad377ir21fieokrja8?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 2,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1663899453000,
+            "download_urls_str": "",
+            "updated": 1793169385496
+          }
+        ],
+        "max_cursor": "",
+        "has_more": 0,
+        "total": 28,
+        "post_id": "632d16c70000000018018b47",
+        "reply_page_count": 0
+      },
+      "error": null,
+      "created_at": "2026-10-28T14:36:23",
+      "updated_at": "2026-10-28T14:36:26"
+    },
+    "request_id": "6ae197e7d57ee40001cd1432"
+  },
+  "error": null,
+  "elapsed": 5.9,
+  "case": "A4-xhs-comments-async",
+  "poll": 1
+}

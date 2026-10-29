@@ -1,0 +1,48 @@
+{
+  "case": "C04",
+  "platform": "xiaohongshu",
+  "action": "tasks.get",
+  "mode": "async-poll",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/tasks/6ae1866f2bcec60001462dbf",
+  "request": {
+    "method": "GET",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "started_at": "2026-10-28T05:22:01.040485+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1866f2bcec60001462dbf",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1866f2bcec60001462dbf",
+      "action": "user_video_list",
+      "status": "failed",
+      "result": null,
+      "error": {
+        "code": "RESULT_VALIDATION_FAILED",
+        "message": "1 validation error for UserVideoListOpenAPIResult\n  Input should be a valid dictionary or instance of UserVideoListOpenAPIResult [type=model_type, input_value='{\"result\":[{\"post_id\":\"6...\":null,\"collect_count\":', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.11/v/model_type",
+        "details": [
+          {
+            "type": "model_type",
+            "loc": [],
+            "msg": "Input should be a valid dictionary or instance of UserVideoListOpenAPIResult",
+            "ctx": {
+              "class_name": "UserVideoListOpenAPIResult"
+            }
+          }
+        ]
+      },
+      "created_at": "2026-10-28T13:21:51",
+      "updated_at": "2026-10-28T13:21:54"
+    },
+    "request_id": "6ae1866f2bcec60001462dbf"
+  },
+  "response_bytes": 848,
+  "response_sha256": "29ebfc8c507f5e1f946b0a48693e39a1802c6f8926604767bdb3e87cf2d3c6d7",
+  "transport_error": null,
+  "elapsed_seconds": 5.95,
+  "classification": "provider_failed"
+}

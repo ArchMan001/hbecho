@@ -1,0 +1,20 @@
+{
+  "case": "W3",
+  "http": 500,
+  "body": {
+    "code": "RESULT_VALIDATION_FAILED",
+    "message": "1 validation error for MediaCommentsListOpenAPIResult\n  Input should be a valid dictionary or instance of MediaCommentsListOpenAPIResult [type=model_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.11/v/model_type",
+    "details": [
+      {
+        "type": "model_type",
+        "loc": [],
+        "msg": "Input should be a valid dictionary or instance of MediaCommentsListOpenAPIResult",
+        "ctx": {
+          "class_name": "MediaCommentsListOpenAPIResult"
+        }
+      }
+    ],
+    "request_id": "6ae1ae51eb420f000190ff9c"
+  },
+  "elapsed": 9.18
+}

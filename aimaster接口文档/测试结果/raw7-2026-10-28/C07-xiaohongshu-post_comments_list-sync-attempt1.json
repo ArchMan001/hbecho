@@ -1,0 +1,153 @@
+{
+  "case": "C07",
+  "platform": "xiaohongshu",
+  "action": "post_comments_list",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "如何21天做完一个竞赛（Evolo荣誉提名） 这是我和璐子... https://xhslink.cn/o/5ajIs8UBi74",
+      "max_cursor": 0,
+      "reply_pages": -2
+    }
+  },
+  "started_at": "2026-10-28T06:04:01.119730+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae19057eb420f000190f696",
+      "task_url": "https://fieldshortcut.com/tasks/6ae19057eb420f000190f696",
+      "action": "post_comments_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "id": "67fcae3f000000001e022049",
+            "post_id": "63299275000000000800aeb3",
+            "content": "太帅了啊啊啊啊啊",
+            "author": {
+              "id": "ab9bdb1c6bc78080a457d1e165a48",
+              "name": "安礼jRe",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/64219c6ef2aadfb42d446250.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1744612928000,
+            "download_urls_str": "",
+            "updated": 1793167450182,
+            "parent_id": null
+          },
+          {
+            "id": "634904260000000012009f2e",
+            "post_id": "63299275000000000800aeb3",
+            "content": "想问一下参加竞赛需要报班学习吗",
+            "author": {
+              "id": "a0dd9ef121e024bdfdbc0607e70f2",
+              "name": "天赋一饼",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/62540085dfa63b39a0310c83.jpg?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1665729574000,
+            "download_urls_str": "",
+            "updated": 1793167450182,
+            "parent_id": null
+          },
+          {
+            "id": "634e81ff000000001b038d88",
+            "post_id": "63299275000000000800aeb3",
+            "content": "如果你自己做不下去报个班也无妨，如果想报我可以给你推荐我学长开的[doge][doge] 大牛",
+            "author": {
+              "id": "ac0c3932cc291771de6f729f4f84b",
+              "name": "整点薯片",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo320oq6cukm86g4ad377ir21fieokrja8?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1666089471000,
+            "download_urls_str": "",
+            "updated": 1793167451870,
+            "parent_id": "634904260000000012009f2e"
+          },
+          {
+            "id": "6346b95a00000000170152ac",
+            "post_id": "63299275000000000800aeb3",
+            "content": "好厉害[哭惹R]",
+            "author": {
+              "id": "a83ce37c161be1c388c26f56ffe89",
+              "name": "西九龍城重案組屠鴉冒險家",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo32321mt8m7v205n3kk91k5p6mqbidm48?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1665579354000,
+            "download_urls_str": "",
+            "updated": 1793167450182,
+            "parent_id": null
+          },
+          {
+            "id": "632eb62200000000070061ef",
+            "post_id": "63299275000000000800aeb3",
+            "content": "不愧是东南的，好厉害的学长",
+            "author": {
+              "id": "a1525946d35baca2ac5edcd790f30",
+              "name": "歪比巴卜",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1000g2jo2p7gjtssk406g5nf0rav095o1pgdjk18?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 2,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1664005666000,
+            "download_urls_str": "",
+            "updated": 1793167450182,
+            "parent_id": null
+          }
+        ],
+        "max_cursor": "",
+        "has_more": 0,
+        "total": 31,
+        "post_id": "63299275000000000800aeb3",
+        "reply_page_count": 1,
+        "reply_count": 1
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae19057eb420f000190f696"
+  },
+  "response_bytes": 2887,
+  "response_sha256": "87f77b5af9419163344b3b381411f3e16d01dbf0358b3f8dabd18b892ffc29e0",
+  "transport_error": null,
+  "elapsed_seconds": 12.0,
+  "classification": "success"
+}

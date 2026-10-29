@@ -1,0 +1,32 @@
+{
+  "case": "K1",
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1adf825f71e0001dd7048",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1adf825f71e0001dd7048",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "3xcqkweabmmz6pk",
+        "nickname": "陇西海信空气能.中央空调",
+        "signature": "空气能采暖，中央空调，太阳能空气能中央热水，系统解决服务商",
+        "follower_count": "209",
+        "following_count": "271",
+        "like_count": "917",
+        "post_count": "23",
+        "follower_number": 209,
+        "following_number": 271,
+        "like_number": 917,
+        "post_number": 23,
+        "updated": 1793175044759
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae1adf825f71e0001dd7048"
+  },
+  "elapsed": 21.06
+}

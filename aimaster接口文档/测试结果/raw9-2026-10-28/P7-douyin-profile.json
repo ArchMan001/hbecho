@@ -1,0 +1,37 @@
+{
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae197ded57ee40001cd142d",
+      "task_url": "https://fieldshortcut.com/tasks/6ae197ded57ee40001cd142d",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "27699689785",
+        "nickname": "武汉众承昱盛暖通工程有限公司",
+        "signature": "众承昱盛10多年暖通经验，服务客户超10000户，客户满意度99.99%\n五一活动火热进行中，优惠折扣福利多多\n🎁给大家分享空调干货·避坑指南·工地模板\n📱可私信免费预约设计咨询\n🆒武汉可免费上门量房\n品类：中央空调，风管机，暖气，热水，净水，新风，除湿等产品\n营业时间：9:00-18:30\n地址🏠：武昌区友谊大道金盛国际家居一楼(靠近车管所)",
+        "location": "",
+        "avatar": "https://p3-pc.douyinpic.com/aweme/1080x1080/aweme-avatar/tos-cn-i-0813c000-ce_oQDAvdyyIEPcHPkgmMaiAXBpSxizxANmLAcAx.jpeg?from=2956013662",
+        "cover": "https://p3-pc-sign.douyinpic.com/obj/c8510002be9a3a61aad2?lk3s=93de098e&x-expires=1793340000&x-signature=B%2BD3Mj0QgFk%2B4CFrr74u6rEAXbQ%3D&from=2480802190",
+        "follower_count": "36",
+        "following_count": "6",
+        "like_count": "",
+        "post_count": "",
+        "follower_number": 36,
+        "following_number": 6,
+        "like_number": 0,
+        "post_number": 0,
+        "updated": 1793169376453
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae197ded57ee40001cd142d"
+  },
+  "error": null,
+  "elapsed": 8.93,
+  "case": "P7",
+  "url": "https://www.douyin.com/user/MS4wLjABAAAA3NtJKYznBNY8iEQBqlPQ5SVIQcCnE8P3Ia-ypOX2cv_maAfpDn-5ORF-I9Def1y7"
+}

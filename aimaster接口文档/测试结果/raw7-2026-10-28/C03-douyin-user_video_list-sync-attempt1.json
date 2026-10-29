@@ -1,0 +1,48 @@
+{
+  "case": "C03",
+  "platform": "douyin",
+  "action": "user_video_list",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/user_video_list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/user_video_list",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "0- 长按复制此条消息，打开抖音搜索，查看TA的更多作品。 https://v.douyin.com/sQi3uYr-Fvg/ 5@5.com :8pm",
+      "max_cursor": 0
+    }
+  },
+  "started_at": "2026-10-28T06:03:20.417037+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1902fd57ee40001cd10f0",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1902fd57ee40001cd10f0",
+      "action": "user_video_list",
+      "status": "succeeded",
+      "result": {
+        "result": [],
+        "has_more": false,
+        "cursor": "",
+        "max_cursor": 0
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae1902fd57ee40001cd10f0"
+  },
+  "response_bytes": 330,
+  "response_sha256": "bd53db17c7acbc249a4c2e8970f6d90b59575db3509f101dfb84fa7fcddead26",
+  "transport_error": null,
+  "elapsed_seconds": 10.12,
+  "classification": "success"
+}

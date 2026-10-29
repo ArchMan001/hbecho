@@ -1,0 +1,253 @@
+# hbecho 文档索引
+
+> 状态：Current  
+> 作用：项目文档的唯一导航页；定义权威顺序、状态和新旧边界。  
+> 更新日期：2026-10-29
+
+## 1. 从这里开始
+
+按任务选择入口：
+
+1. 理解领域词汇与不可违反的事实：[`CONTEXT.md`](../CONTEXT.md)
+2. 查看不可协商的跨模块条款：[`constitution.md`](governance/constitution.md)（v0，待逐条确认）
+3. 理解产品目标、模块地图和阶段：[`prd-platform.md`](prd-platform.md)；已开写的子 PRD：[A 数据底座](prd-domain-a-data-foundation.md)、[B 访问控制](prd-domain-b-access-control.md)、[C 识别能力](prd-domain-c-signals.md)、[D 规则与考核](prd-domain-d-rule-engine.md)、[E 指标与看板](prd-domain-e-metrics.md)、[F 业务应用](prd-domain-f-business-apps.md)、[G 学习平台](prd-domain-g-learning.md)
+4. 实现数据获取与资产域：[`database-design-v2.md`](domains/data-foundation/database-design-v2.md)
+5. 实现当前纵向切片：[`data-foundation-tracer`](../.kiro/specs/data-foundation-tracer/)
+6. 评审后续模块设计：[`access-control`](../.kiro/specs/access-control/design.md)、[`rule-engine`](../.kiro/specs/rule-engine/design.md)、[`metrics-and-dashboard`](../.kiro/specs/metrics-and-dashboard/design.md)
+7. 配置 hbecho 的服务器、OSS、密钥、Git 与部署：[`server-operations-runbook.md`](runbooks/server-operations-runbook.md)
+8. 开发、验证、CI、测试 ECS 与生产发布：[`dev-test-deploy-workflow.md`](runbooks/dev-test-deploy-workflow.md)
+9. 从 0 配置一台新服务器（hbdam 或其他项目）：[`new-server-bootstrap-checklist.md`](runbooks/new-server-bootstrap-checklist.md)
+10. 查看难逆的技术决定与未决选型：[`adr/README.md`](architecture/adr/README.md)
+11. 查看自动注入但不独立裁决事实的精简规则：[`product.md`](../.kiro/steering/product.md)、[`tech.md`](../.kiro/steering/tech.md)、[`structure.md`](../.kiro/steering/structure.md)、[`data-discipline.md`](../.kiro/steering/data-discipline.md)、[`server-access.md`](../.kiro/steering/server-access.md)、[`no-reinventing-wheels.md`](../.kiro/steering/no-reinventing-wheels.md)、[`dev-ci-cadence.md`](../.kiro/steering/dev-ci-cadence.md)
+12. 复核待确认的子 PRD 素材：[`prd-drafts-子PRD草案/`](prd-drafts-子PRD草案/README.md)（`draft`，不是实现依据）
+
+## 2. 文档状态
+
+| 状态 | 含义 | 是否可作为当前实现依据 |
+|---|---|---|
+| `current` | 已确认的当前基线 | 是，按其适用范围使用 |
+| `draft` | 正在评审的提案；允许保留明确未决项 | 否；评审通过前不可当成已冻结合同 |
+| `superseded` | 已被新文档替代，仅保留背景、反例和迁移线索 | 否 |
+| `archived` | 历史记录、复盘或证据，不再维护 | 否；实测证据除外，见权威顺序 |
+
+“文件较新”不自动代表“更权威”；必须以本索引标注的状态和适用范围为准。
+
+## 3. 冲突时的权威顺序
+
+1. [`CONTEXT.md`](../CONTEXT.md)：已确认领域词汇、语义边界和不变量。
+2. [`database-design-v2.md`](domains/data-foundation/database-design-v2.md)：数据获取与资产域的当前实施基线。
+3. [AI Master API V1.2](../aimaster接口文档/FieldShortcut%20A%20Master%20API%20开发文档%20V1.2.md) 与 [`raw3`](../aimaster接口文档/测试结果/raw3/)：外部合同与实测证据。文档与实测冲突时，raw3 只证明“样本中观察到的行为”，不能外推为供应商长期合同。
+4. `.kiro/specs/*`：各模块的当前需求、设计和任务；不得静默改写前 3 项事实。
+5. [`prd-platform.md`](prd-platform.md)：产品方向、模块边界和路线图，不承载表级实现。
+6. `superseded` 与 `archived` 文档：只用于追溯，不参与当前实现裁决。
+
+`.kiro/steering/` 是上述权威内容的精简、always-included 派生规则，不新增独立事实层级，也不能覆盖本节。修改 steering 时必须同步核对其来源文档；发生漂移时，以本索引及前述权威来源为准并修正 steering。
+
+若当前 Spec 与领域不变量或 v2 基线冲突，先停止实现并显式修订文档；不得通过代码或局部 SQL 暗中选择一方。
+
+**宪法与 ADR 的位置**：`HBECHO设计方案/governance/constitution.md` 是前四项的**跨模块索引**，不新增事实。v0 尚未逐条确认，此时只作检查清单；确认后升级为「规则的有无与边界以宪法为准，细节与论证以原文为准」，冲突时必须在同一次变更里修改两处。`HBECHO设计方案/architecture/adr/` 记录难以逆转且存在真实取舍的决定；ADR 不得改写 `CONTEXT.md` 或 v2 的领域语义。
+
+## 4. 五类项目文档
+
+| 类别 | 目录 | 承载内容 | 不应承载 |
+|---|---|---|---|
+| 产品需求 | `HBECHO设计方案/`（总 PRD `prd-platform.md`；子 PRD `prd-domain-<代号>-<slug>.md`） | 目标、非目标、模块地图、阶段、域边界、跨域决策 | DDL、接口逐字段说明 |
+| 架构与领域 | `CONTEXT.md`、`HBECHO设计方案/domains/`、`HBECHO设计方案/architecture/`、`HBECHO设计方案/governance/` | 领域语义、模块边界、实施基线、必要 ADR、不可协商条款索引 | 单次任务清单 |
+| Kiro Specs | `.kiro/specs/<code>-<slice>/` | 可验收需求、实现设计、执行任务 | 全项目巨型总设计 |
+| Runbook 与证据 | `HBECHO设计方案/runbooks/`、`aimaster接口文档/` | 运维步骤、供应商合同、fixture 与实测记录 | 未标状态的产品决策 |
+| 历史归档 | `HBECHO设计方案/archive/` | superseded 方案、旧稿、复盘、评审证据、legacy 输入 | 当前实现依据 |
+
+### 4.1 命名规范（对齐 hbdam 的做法）
+
+- 总 PRD：`HBECHO设计方案/prd-platform.md`
+- 子 PRD：`HBECHO设计方案/prd-domain-<代号>-<slug>.md`
+- 技术设计草案（尚未走产品评审时）：`HBECHO设计方案/sdd-domain-<代号>-<slug>.md`
+- Spec：`.kiro/specs/<代号>-<切片>/`，四件套 `requirements.md` / `design.md` / `tasks.md` / `acceptance.md`
+- 归档：一律进入 `HBECHO设计方案/archive/`；跨项目或早期沉淀的历史资料进入 `archive/legacy/`
+
+**域代号（2026-10-27 已确认，决策人刘学奎，即 `prd-platform.md` D-01）**：
+
+| 代号 | 域 | 对应现状 |
+|---|---|---|
+| A | 数据底座（组织、账号、同步、ODS、内容、媒资） | `prd-domain-a-data-foundation.md` + `database-design-v2` + `data-foundation-tracer` |
+| B | 访问控制（User、Session、Capability、DataScope） | `prd-domain-b-access-control.md` + `access-control` design |
+| C | 识别能力（文本信号、视觉模板匹配、特征存储） | `prd-domain-c-signals.md`（草稿） |
+| D | 规则与考核 | `prd-domain-d-rule-engine.md` + `rule-engine` design |
+| E | 指标、报表与看板 | `prd-domain-e-metrics.md`（草稿） + `metrics-and-dashboard` design |
+| F | 业务应用（点检、账号档案、内容库、任务闭环） | `prd-domain-f-business-apps.md`（草稿） |
+| G | 学习平台 | `prd-domain-g-learning.md`（草稿） |
+| H | AI 能力 | 未立项 |
+| I | 运维与成本 | 未立项 |
+
+**旧编号已作废**：此前本表把 C 记为规则、D 记为指标、G 记为成本与治理、H 记为学习与 AI，且缺 I。该写法与 `prd-platform.md` §4.1 冲突，已于 2026-10-28 按 D-01 修正。现有 `.kiro/specs/*` 目录名在对应域 PRD 开工前保持不变，之后按 `<代号>-<切片>` 一次性重命名并修复链接。
+
+`HBECHO设计方案/architecture/` 与 `HBECHO设计方案/runbooks/` 在出现首份有效内容时创建；不以空目录或占位文档制造虚假完备度。
+
+## 5. 当前权威矩阵
+
+| 范围 | 文档 | 状态 | 说明 |
+|---|---|---|---|
+| 数据底座领域语言 | [`CONTEXT.md`](../CONTEXT.md) | current | 只含词汇、语义和不变量，不加入表名、框架或接口决策 |
+| 产品总纲 | [`prd-platform.md`](prd-platform.md) | draft（逐章复核中） | v1.0 重构：定位、基线、域划分 A–I、跨域决策、1.0 范围、需求编号与追踪矩阵 |
+| 域 A 产品需求 | [`prd-domain-a-data-foundation.md`](prd-domain-a-data-foundation.md) | draft（v1.0 定稿候选，盘问中） | 数据底座：组织主数据、账号与归属、AI Master 客户端、同步编排、原始证据、明细层、媒资 |
+| 域 B 产品需求 | [`prd-domain-b-access-control.md`](prd-domain-b-access-control.md) | current（v1.2 定稿） | 访问控制：开户与激活、登录会话、生命周期、Capability、DataScope、管理范围、10 个出口、审计 |
+| 域 A → C 供数说明 | [`domain-a-handoff-to-c.md`](domain-a-handoff-to-c.md) | draft | A 能给 C 的事实、粒度、质量限制与待对齐项 |
+| 域 C 产品需求 | [`prd-domain-c-signals.md`](prd-domain-c-signals.md) | draft（v0.1 初稿） | 识别能力：文本信号、素材比对（图片一致 / 元素 / 文字）、音频图片视频理解、特征存储、信号五态 |
+| 域 D 产品需求 | [`prd-domain-d-rule-engine.md`](prd-domain-d-rule-engine.md) | draft（v0.3 初稿） | 规则与考核：三层向导的职责与边界、逐层允许条件、2026-10-28 明确不做的 12 项 |
+| 域 E 产品需求 | [`prd-domain-e-metrics.md`](prd-domain-e-metrics.md) | draft（v0.1.6 初稿） | 指标、报表与看板：唯一口径、投影与原子切换、三张视图、单张固定看板、唯一导出出口；1.0 不做全量内容明细、自助分析、个人视图与 n_day |
+| 域 F 产品需求 | [`prd-domain-f-business-apps.md`](prd-domain-f-business-apps.md) | draft（v0.3 初稿） | 业务应用：F 域边界（只编排不复制）、1.0 只做 F5 导入中心（平台级主数据 + 分公司活动名单），F1–F4／F6–F9 仅简版场景 |
+| 域 G 产品需求 | [`prd-domain-g-learning.md`](prd-domain-g-learning.md) | draft（v0.4 初稿） | 学习平台：1.0 只做 G1 内容管理 + G2 学习中心 + 进度记录 + 总部总量；视频走 VOD、不定义学完、不做考试积分排行榜 |
+| Kiro steering | [`product`](../.kiro/steering/product.md) · [`tech`](../.kiro/steering/tech.md) · [`structure`](../.kiro/steering/structure.md) | current（derived） | 从本索引、总纲、CONTEXT 与 v2 提炼的自动注入规则；无独立裁决权 |
+| 数据底座编码纪律 | [`data-discipline.md`](../.kiro/steering/data-discipline.md) | current（derived） | 从 CONTEXT 不变量与 tracer R2/R5/R9/R10/R13/R18 提炼的六条预防性纪律；当前无机器守护 |
+| 服务器访问 | [`server-access.md`](../.kiro/steering/server-access.md) | current | 2026-10-14 用户决定：只走 Workbench；同时适用于 hbecho 与 hbdam |
+| 选型纪律 | [`no-reinventing-wheels.md`](../.kiro/steering/no-reinventing-wheels.md) | current | 成熟方案优先的判断阶梯与记录格式 |
+| 开发节奏 | [`dev-ci-cadence.md`](../.kiro/steering/dev-ci-cadence.md) | current | 分支、推送、等待 CI 与合并规则；应用代码落地后补实测条目 |
+| 不可协商条款 | [`constitution.md`](governance/constitution.md) | draft（待逐条确认） | 18 条跨模块条款；确认前是索引，不具裁判权 |
+| 架构决策 | [`adr/README.md`](architecture/adr/README.md) | current | 7 项已定决定（ADR-0001～0007）+ 10 项选型登记（9 项已关闭，仅「Branch 范围与品牌 grant 求交」未决）；新决定必须单独写 ADR |
+| 开发测试部署流程 | [`dev-test-deploy-workflow.md`](runbooks/dev-test-deploy-workflow.md) | current | 当前唯一实例是**测试 ECS**，生产 ECS 未购买；只有本机 verify 与 CI 可用 |
+| 本机验证与 CI | [`verify.sh`](../scripts/verify.sh) · [`ci.yml`](../.github/workflows/ci.yml) · [`pre-commit`](../.githooks/pre-commit) | current | verify 当前仅覆盖密钥、文档链接、文档登记与 spec 结构；pre-commit 只扫暂存区 |
+| 数据底座数据库 | [`database-design-v2.md`](domains/data-foundation/database-design-v2.md) | draft（待 A 域 PRD 逐表复核） | 28 表草案；v1 不参与新实现 |
+| 数据底座字段字典 | [`field-dictionary.md`](domains/data-foundation/field-dictionary.md) | draft | 主页/列表/详情/评论的规范字段、含义、值状态与 10 个未确认语义 |
+| 数据底座 tracer | [requirements](../.kiro/specs/data-foundation-tracer/requirements.md) · [design](../.kiro/specs/data-foundation-tracer/design.md) · [tasks](../.kiro/specs/data-foundation-tracer/tasks.md) | draft | 首个 Design-First 纵向切片；AI Master 是内部适配器 |
+| 访问控制 | [`design.md`](../.kiro/specs/access-control/design.md) | draft | 认证、Capability、DataScope、异步任务撤权语义 |
+| 规则引擎 | [`design.md`](../.kiro/specs/rule-engine/design.md) | draft | 消费 v2 终态快照；规则、证据和重算归规则域所有 |
+| 指标与看板 | [`design.md`](../.kiro/specs/metrics-and-dashboard/design.md) | draft | 依赖规则 outcome；统一口径、投影、报表、看板与导出 |
+| 学习平台 | [requirements](../.kiro/specs/g-learning-min/requirements.md) · [design](../.kiro/specs/g-learning-min/design.md) · [tasks](../.kiro/specs/g-learning-min/tasks.md) · [acceptance](../.kiro/specs/g-learning-min/acceptance.md) | draft | 1.0 课程/资料上传即发布、VOD 视频、进度与续播、总部汇总；新增 5 张表 |
+| 子 PRD 草案 | [`prd-drafts-子PRD草案/`](prd-drafts-子PRD草案/README.md) | draft | 2026-08 的旧设计稿，待逐份复核；不是实现依据 |
+| 服务器与部署运维 | [`server-operations-runbook.md`](runbooks/server-operations-runbook.md) | current | hbecho 专属：ECS/OSS 资产、系统与 MySQL 配置、密钥、Git、部署、备份、监控与验收。文档顶部 §待办清单 是搭建期待办的唯一入口 |
+| 新服务器从 0 配置 | [`new-server-bootstrap-checklist.md`](runbooks/new-server-bootstrap-checklist.md) | current | 项目无关的可复用清单，供 hbdam 或任何新项目使用。内容来自 hbecho 一次实际执行，每条经过验证 |
+| AI Master 外部合同 | [V1.2 文档](../aimaster接口文档/FieldShortcut%20A%20Master%20API%20开发文档%20V1.2.md) · [返回字段](../aimaster接口文档/返回字段与特殊情况.md) · [能力与计费清单](../aimaster接口文档/AI%20Master%20能力与计费清单.xlsx) · [测试覆盖](../aimaster接口文档/测试覆盖与补测清单.md) | evidence | 字段与特殊情况的实测清单；点数表；SLA 与单价仍缺 |
+| AI Master 实测 | [`raw3`](../aimaster接口文档/测试结果/raw3/) · [`raw4`](../aimaster接口文档/测试结果/raw4-2026-10-28/) | evidence | raw3：25 个成功样本；raw4（2026-10-28）：补测视频详情、评论与异步，发现异步小红书列表失败 |
+
+## 6. 模块依赖
+
+```mermaid
+flowchart LR
+  A[A 数据底座] --> C[C 识别]
+  A --> D[D 规则]
+  C --> D
+  D --> E[E 指标]
+  A --> E
+  B[B 访问控制] --> A
+  B --> D
+  B --> E
+  B --> G[G 学习]
+  B --> H[H AI]
+  I[I 运维与成本] --> A
+  I --> C
+  I --> D
+  I --> H
+  F[F 业务应用] --> A
+  F --> D
+  F --> E
+```
+
+域代号与边界以 [`prd-platform.md` §4](prd-platform.md) 为准；访问控制与成本守卫是横切关口，不得被某个业务模块复制实现。
+
+## 7. 当前 Spec 路线图
+
+1.0 共 9 个 spec，定义见 [`prd-platform.md` §7.2](prd-platform.md)。
+
+| 顺序 | Spec | 验收结果 |
+|---:|---|---|
+| 1 | `a-data-foundation-tracer` | 抖音、小红书各一个账号从入口解析到主页、首屏、检查点和媒资进度可查询 |
+| 2 | `a-full-sync` | 抖音、小红书、快手各若干账号完成一轮周期同步，含详情与按规则圈定的评论 |
+| 3 | `a-master-data-import` | 用两类 CSV 分别导入固定信息与账号信息，冲突可回流重试 |
+| 4 | `b-access-control` | 真实用户可登录，Capability 与 DataScope 生效，无授权旁路 |
+| 5 | `c-signals` | 文本信号与模板匹配落入特征表，可被规则引用 |
+| 6 | `d-rule-engine` | 业务能配 0 档规则、试运行、看证据、发布 |
+| 7 | `e-metrics` | 点检表、看板与导出共享唯一口径，比率可上卷 |
+| 8 | `g-learning-min` | 课程可上传、播放并记录进度 |
+| 9 | `h-ai-min` | AI 调用经网关计量审计；单条脚本分析可用；规则辅助只产出草稿 |
+
+### 7.1 现有 spec 目录登记（2026-10-29 核对）
+
+| 目录 | 域 | 命名 | 文件齐全度 | 上游 PRD | 已知偏差 |
+|---|---|---|---|---|---|
+| `data-foundation-tracer` | A | 旧名，应为 `a-data-foundation-tracer` | requirements / design / tasks | A v1.0（定稿候选） | 已按 D-28 / D-25 修正归属与命名空间；v2 两表待复核 |
+| `access-control` | B | 旧名，应为 `b-access-control` | 仅 design | B v1.2（current） | design 附录：8 项开放决策中 5 项已关闭，Capability 清单未同步 |
+| `rule-engine` | D | 旧名，应为 `d-rule-engine` | 仅 design（`requirements.md` 已移除） | D v0.3 | 已改：3 个评论刷量算子改「搁置」；requirements / tasks 仍缺 |
+| `metrics-and-dashboard` | E | 旧名，应为 `e-metrics` | 仅 design | E v0.1.6 | 已改：`n_day` 降为 2.0、投影自动激活；另有 4 处待处理 |
+| `g-learning-min` | G | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | G v0.4 | 已按 ADR-0007 去掉自动截图；PRD §10.1 待同步 |
+
+> 旧名目录在对应域 spec 开工前按 `<代号>-<切片>` 一次性重命名，并修复全部链接。各文件头已标注所属域与命名状态；偏差只记录在各文件的「已知过时内容」附录，不修改正文。
+
+不创建覆盖全项目的巨型 Spec。每个 Spec 必须有独立可验收边界；跨域只通过明确契约连接。
+
+## 8. 历史资料
+
+### 8.1 已明确替代
+
+| 文档 | 状态 | 当前替代 |
+|---|---|---|
+| [`database-design-v1.md`](archive/data-foundation/database-design-v1.md) | archived | [`database-design-v2.md`](domains/data-foundation/database-design-v2.md) |
+| [`data-supply-mvp.md`](archive/data-foundation/data-supply-mvp.md) | superseded | v2 + `data-foundation-tracer` |
+| [`data-supply-and-assets.md`](archive/data-foundation/data-supply-and-assets.md) | superseded | v2 + `data-foundation-tracer` |
+
+两份 superseded 数据供给稿仍可用于追溯 parser fixture、错误分类、反腐层、限流/熔断和 raw-before-parse 的早期思路，但其中的旧表名、旧状态、旧组织模型和 API 假设均不得直接实现。
+
+### 8.2 受控历史资料（legacy）
+
+以下文件位于 `HBECHO设计方案/archive/legacy/`，只作为历史输入：
+
+- `HBECHO设计方案/archive/legacy/域E-用户与权限详细设计.md`
+- `HBECHO设计方案/archive/legacy/域E-用户与权限详细设计-评审意见.md`
+- `HBECHO设计方案/archive/legacy/原来的数据库表init文件`（旧库建表脚本；表名、组织模型与字段语义均不得直接实现）
+- `项目历史文档/hbdam项目服务器运维手册.md`、`项目历史文档/旧项目沉淀文档/`、`项目历史文档/爬虫四环节问题复盘与解法.md`、`项目历史文档/项目全面复盘与重构建议.md`（跨项目沉淀，不属于本项目设计稿）
+
+`archive/legacy/` 是为保留既有外部引用而集中保存的**受控历史位置**；其中的 hbecho 文档必须有 `superseded/archived` 头并由本索引登记。跨项目沉淀（hbdam 手册等）不要求补写本项目状态头，但同样不得作为当前实现依据。新归档不得再放入 `legacy/`，应直接进入 `HBECHO设计方案/archive/`。移动这些文件时必须同步修复全部引用。
+
+这些文件中的结论只有被当前总 PRD、`HBECHO设计方案/domains/` 或 `.kiro/specs/*` 明确吸收后才生效。
+
+### 8.3 设计评审记录
+
+`archive/semantic-review/` 保存 2026-09-03 对 tracer 设计与 v2 基线的多轮独立评审输出，最新一轮结论为 `APPROVED`。
+
+- 状态：`archived`（证据，不再维护）
+- 用途：追溯当时发现的问题、修复过程与验收向量；不构成当前实现合同
+- 不得新增：新的评审记录应放在对应 spec 目录下，或进入 `HBECHO设计方案/archive/`
+- 权威性：低于 `.kiro/specs/*` 与 v2；评审通过不等于实现完成
+
+### 8.4 子 PRD 草案（待复核）
+
+`prd-drafts-子PRD草案/` 保存 2026-08 的一批产品与模块设计稿。**2026-10-26 由刘学奎决定：它们不是历史沉淀，而是子 PRD 的素材**；此前 `superseded` / `archived` 的登记作废。
+
+| 文件 | 对应将来的子 PRD | 规模 |
+|---|---|---|
+| [`hbecho-设计大纲.md`](prd-drafts-子PRD草案/hbecho-设计大纲.md) | 总 PRD 的补充素材 | 852 行 |
+| [`hbecho-平台底座首版产品设计.md`](prd-drafts-子PRD草案/hbecho-平台底座首版产品设计.md) | 访问控制 | — |
+| [`hbecho-模块设计-权限中心.md`](prd-drafts-子PRD草案/hbecho-模块设计-权限中心.md) | 访问控制 | — |
+| [`hbecho-模块设计-规则引擎.md`](prd-drafts-子PRD草案/hbecho-模块设计-规则引擎.md) | 规则与考核 | — |
+| [`hbecho-模块设计-指标与看板.md`](prd-drafts-子PRD草案/hbecho-模块设计-指标与看板.md) | 指标、报表与看板 | — |
+| [`1.0范围决策.md`](prd-drafts-子PRD草案/1.0范围决策.md) | 讨论记录，待并入总 PRD 第七章 | — |
+
+规则：
+
+1. 本目录全部为 `draft`，**不是实现依据**；不得照抄旧表名、旧角色矩阵、旧技术选型。
+2. 与 `prd-platform.md`、`domains/`、`.kiro/specs/*/design.md` 冲突时，以后者为准。
+3. 复核通过的内容写进 `prd-domain-<代号>-<slug>.md`，本目录保留原样。
+4. 已明确作废的结论记录到对应子 PRD 的「不继承」清单，不静默删除。
+
+## 9. 变更规则
+
+1. 修改领域词义或不变量：先更新 `CONTEXT.md`，并检查所有受影响 Spec。
+2. 修改数据底座物理模型：更新 v2，记录迁移影响；不可在下游 Spec 复制出平行主档。
+3. 新功能：创建小而可验收的 `.kiro/specs/<feature>/`，优先纵向切片。
+4. 难以逆转且存在真实取舍的跨模块决定：在 `HBECHO设计方案/architecture/adr/` 创建 ADR；普通实现细节不建 ADR。
+5. 被替代文档不得删除；新归档或可安全迁移的文件移动到 `HBECHO设计方案/archive/`，在文首标明状态、替代文档和禁止用途。`HBECHO设计方案/archive/legacy/` 是受控历史位置，按 §8.2 管理，不得扩张。
+6. 所有链接使用工作区相对路径；移动文件后必须检查断链和旧路径引用。
+
+## 10. 尚未冻结的跨模块决定
+
+完整清单、卡住的范围与决策人见 [`prd-platform.md` §11](prd-platform.md)。本节只保留最容易被误当成已决定、且当前确实仍未关闭的几条：
+
+- Python 能力的运行形态（T-01）：常驻小服务方向已定（D-35），部署形态待 ADR；阻塞 `c-signals`；
+- Branch 范围是否需与显式品牌 grant 求交（`architecture/adr/README.md` 未决选型 #7）；
+- 评论采集的具体参数：排名范围（全平台 / 本分公司 / 本活动）、排名依据、阈值、Top N、观察窗口、每账号页数与条数上限——A 域已把定义推给 D 域活动规则，D 域 PRD 尚未承接；
+- 互动总数中 share / forward / collect 的跨平台口径：1.0 搁置，未定前 `interactions_total` 不上线；
+- VOD 接入细节：地域、转码模板组与码率档位、播放域名与备案、RAM 授权、计费口径（G 10.1，阻塞 `g-learning-min`）；
+- CSV 编码判定与公式注入防护口径（F 8.2，阻塞 `f-data-import`）。
+
+以下各项**已关闭**，不要再当作未决项：`RoleCode`（D-22）、`User ↔ MediaStaff` 严格一对一（B 域 PRD §8.3）、被监控账号数（D-30，6,000 全部监控）、部署拓扑与反代形态（ADR-0006）、Store 的 dealer/brand/sector 可变性与历史归属快照（D-18）、登录手机号存储方式（D-42，明文）、标准图的存储与版本化（存 OSS，按「计划 ID + 计划版本 + 图片 SHA-256」定位）。
+
+未决项必须保持可见，不得在代码或文档示例中被悄悄“默认确认”。

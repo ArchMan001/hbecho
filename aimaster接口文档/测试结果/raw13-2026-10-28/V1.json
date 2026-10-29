@@ -1,0 +1,44 @@
+{
+  "case": "V1",
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1bac36089b10001e8b287",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1bac36089b10001e8b287",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "3x29z4cn3ygqdsc",
+        "platform": "kuaishou",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": 805625,
+        "like_number": 6201,
+        "comment_number": 85,
+        "collect_number": 959,
+        "share_number": 208,
+        "duration_number": 219,
+        "author_homepage": "https://www.kuaishou.com/profile/3xgxa5ihm6dke52",
+        "user_id": "3xgxa5ihm6dke52",
+        "created": 1793114102973,
+        "author_name": "卤班剧场",
+        "title": "",
+        "tag_text": "#神仙剪刀手 #老铁全求观影指南",
+        "related_search_str": "强子陈静大结局版",
+        "cover": "http://ws2.a.kwimgs.com/upic/2026/10/27/23/BMjAyNjEwMjcyMzE0MTlfNTgzMzk3NjMxXzIxMzY4NjU0MjI1MF8yXzM=_hd_Bc78a66d8f8215c98cdc7ba6db5a9acce.kpg?tag=1-1793178310-sp-0-olzbnu3ve6-3b87aba28634abb7&type=hot&clientCacheKey=3x29z4cn3ygqdsc_hd.kpg&di=62a25250&bp=10321",
+        "download_urls": "http://v1.kwaicdn.com/ksc2/4l0NAdrfGX72Lf42Yt1jrVHI9aHk3cCelQJfqy___QCEm5BKaC-3fEvHFCGJJeFIyZrFdtBJooubmoAlI87tSUBjBIRKthJ87kYUACS6oCtH1lGeI9eP9gimSMGVJhxB.mp4?pkey=AAVWEWQE7HsKpHnHdZ4Kctw4mHh9lb0O8XM935JHggmBSya0mjlvAoChd0J1jY-9Hl_Q6EHHQXB1M4ORjeE7BhtIrqy07BUETdcklJXeziRzsWpkjTIomDhfhLsJICKqrvk&tag=1-1793178310-sp-0-3bs3kjfcge-38cbf9b1078fb99b&type=hot&clientCacheKey=3x29z4cn3ygqdsc_54b1ecb4&di=62a25250&bp=10321&kwai-not-alloc=35&tt=v8L3UtV6&ss=vpm",
+        "updated": 1793178310695
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae1bac36089b10001e8b287"
+  },
+  "elapsed": 8.95
+}

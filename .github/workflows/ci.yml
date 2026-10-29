@@ -1,0 +1,40 @@
+# hbecho CI
+#
+# 当前只有一个 verify job：跑 scripts/verify.sh（密钥、Markdown 链接、文档登记与 spec 结构）。
+# 它不碰数据库、不构建镜像、不发起任何付费调用。
+#
+# 刻意没有 continue-on-error：失败就是失败。CI 显示绿但实际没验，比没有 CI 更糟。
+#
+# 应用代码落地后按 HBECHO设计方案/runbooks/dev-test-deploy-workflow.md §5.2 增加：
+#   app-verify  —— MySQL 服务容器 → 空库迁移 → typecheck → 测试 → 静态门禁 → 生产构建
+#   image       —— 仅在应用/worker 路径变化或手动触发时构建并推 ACR
+#   deploy-test —— 手动触发，测试 ECS 拉同一标签验收
+#   deploy-prod —— 手动触发 + 环境审批
+# 在这些 job 真正可跑之前，不要创建空壳。
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 历史密钥扫描需要完整历史；浅克隆会让「历史干净」变成假绿
+          fetch-depth: 0
+      - name: 本机验证入口
+        run: ./scripts/verify.sh

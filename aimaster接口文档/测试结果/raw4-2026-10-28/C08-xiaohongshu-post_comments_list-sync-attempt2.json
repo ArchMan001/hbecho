@@ -1,0 +1,71 @@
+{
+  "case": "C08",
+  "platform": "xiaohongshu",
+  "action": "post_comments_list",
+  "mode": "sync",
+  "attempt": 2,
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "出伏倒计时｜换季空调这样开，舒服又省电！ https://xhslink.cn/o/3FgtGUlhO8s",
+      "max_cursor": 0,
+      "reply_pages": -1
+    }
+  },
+  "started_at": "2026-10-28T03:15:09.128748+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae168c3d57ee40001cd09de",
+      "task_url": "https://fieldshortcut.com/tasks/6ae168c3d57ee40001cd09de",
+      "action": "post_comments_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "id": "6a87c8e7000000000b017c80",
+            "post_id": "6a869a5c0000000014028682",
+            "content": "顶楼这个户型，Ai家II还是5G+荣耀家更适合[害羞R]",
+            "author": {
+              "id": "a16dfa3b2855e91977d5b093e972c",
+              "name": "鱼🐟鱼",
+              "avatar": "https://sns-avatar-qc.rednotecdn.com/avatar/1040g2jo3267q3p8fk46g5n7i81e4b7vvpscet5g?imageView2/2/w/120/format/jpg"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787283688000,
+            "download_urls_str": "",
+            "updated": 1793157318961
+          }
+        ],
+        "max_cursor": "",
+        "has_more": 0,
+        "total": 2,
+        "post_id": "6a869a5c0000000014028682",
+        "reply_page_count": 0
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae168c3d57ee40001cd09de"
+  },
+  "response_bytes": 875,
+  "response_sha256": "91101a2985ee01eb7d8e9992d9d5131605ee1c19324ecb5abd749f24fbfbc26e",
+  "transport_error": null,
+  "elapsed_seconds": 12.01,
+  "classification": "success"
+}

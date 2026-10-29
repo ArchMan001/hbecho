@@ -1,0 +1,45 @@
+{
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1c3cb2bcec60001464304",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1c3cb2bcec60001464304",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "3x29z4cn3ygqdsc",
+        "platform": "kuaishou",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": 838777,
+        "like_number": 6413,
+        "comment_number": 90,
+        "collect_number": 1002,
+        "share_number": 213,
+        "duration_number": 219,
+        "author_homepage": "https://www.kuaishou.com/profile/3xgxa5ihm6dke52",
+        "user_id": "3xgxa5ihm6dke52",
+        "created": 1793114102973,
+        "author_name": "卤班剧场",
+        "title": "",
+        "tag_text": "#神仙剪刀手 #老铁全求观影指南",
+        "cover": "http://zj66.a.kwimgs.com/upic/2026/10/27/23/BMjAyNjEwMjcyMzE0MTlfNTgzMzk3NjMxXzIxMzY4NjU0MjI1MF8yXzM=_hd_Bc78a66d8f8215c98cdc7ba6db5a9acce.kpg?tag=1-1793180634-sp-0-nt0dxthcgr-81cf5936cc5cd68f&type=hot&clientCacheKey=3x29z4cn3ygqdsc_hd.kpg&di=df5bae43&bp=10321",
+        "download_urls": "http://k0u6fy6yc4y57zw2409x8c44x9e00x103xx17z.djvod.ndcimgs.com/ksc1/whmsOoB0oU8U9BByx8lQzjvQWMgnnnUn4V8V6f4c3KncVJI98yvUj5yc40yWVxz1C8yYn27O0NU5i5ORonsvhk1DjLRQqcACeIS0RTLXhNgIQg9VcmB1DiO49E1Ys51S.mp4?tag=1-1793180634-sp-0-jayntcge9c-14ca2ee33e4f55e8&provider=self&clientCacheKey=3x29z4cn3ygqdsc_54b1ecb4&di=df5bae43&bp=10321&x-ks-ptid=213686542250&kwai-not-alloc=self-cdn&kcdntag=p:Henan;i:ChinaMobile;ft:UNKNOWN;h:HOT;pn:kuaishouVideoProjection&ocid=1100000080&tt=v8L3UtV6&ss=vpm",
+        "updated": 1793180635764
+      },
+      "error": null,
+      "created_at": "2026-10-28T17:43:39",
+      "updated_at": "2026-10-28T17:43:57"
+    },
+    "request_id": "6ae1c3cb2bcec60001464304"
+  },
+  "error": null,
+  "elapsed": 5.92,
+  "case": "A3-kuaishou-detail-async",
+  "poll": 2
+}

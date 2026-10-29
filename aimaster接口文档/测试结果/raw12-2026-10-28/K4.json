@@ -1,0 +1,44 @@
+{
+  "case": "K4",
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1ae26eb420f000190ff8d",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1ae26eb420f000190ff8d",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "3xx33ggte9tessy",
+        "platform": "kuaishou",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": 2436,
+        "like_number": 19,
+        "comment_number": 3,
+        "collect_number": 0,
+        "share_number": 1,
+        "duration_number": 7,
+        "author_homepage": "https://www.kuaishou.com/profile/3xfgdjw9dfsc2uu",
+        "user_id": "3xfgdjw9dfsc2uu",
+        "created": 1766911789144,
+        "author_name": "岫岩海信空气能-勇哥",
+        "title": "",
+        "tag_text": "#海信空气能\n海信空气能稳定运行中",
+        "related_search_str": "海信空气能静宁总店",
+        "cover": "http://ws2.a.kwimgs.com/upic/2025/12/28/16/BMjAyNTEyMjgxNjQ5MzZfNzU3NjUyNzY0XzE4MzU1MzQ4MDg2OF8yXzM=_hd_B7e58f352767bb970f1f8baa4657c68fd.kvif?tag=1-1793175082-sp-0-lw7d59hp8s-fe24e94594b2f97a&clientCacheKey=3xx33ggte9tessy_hd.kvif&di=ac3bd2fa&bp=10321",
+        "download_urls": "http://v1.kwaicdn.com/ksc2/bu63W2wntlTjrZH86S9uEt9t_IDHc_jGBDFJvGtKH0kCUv2SThTgjMnwUfRmMEd2HXO2fkY6Vy2UC-R4jUmnG9tIqYMuWgYUK5rpGuzT7bjHY-HWRByxmZugzNMwtPLBOleBrB-rKv1JijLWrfGyQPAD5P0qSvF1A-20EYiFH-JtqpvGQ8rg_0WtQHc2xi3j.mp4?pkey=AAVHLQhY_nZ-DArIkkPg_W7wS_fy_ZPJy_0fdjDHSfDXw2jR8JjdDAjdHC0JQ62c8_f3PTKMbcsrHJ3TFqB-z93QqTMmFSURmM2m8B_aVwiIXYJHnfzeAdE7kQL88kBFCvY&tag=1-1793175082-sp-0-5xngf9ch3o-6c6a6f9446044080&clientCacheKey=3xx33ggte9tessy_b.mp4&di=ac3bd2fa&bp=10321&kwai-not-alloc=35&tt=b&ss=vpm",
+        "updated": 1793175084414
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae1ae26eb420f000190ff8d"
+  },
+  "elapsed": 11.96
+}

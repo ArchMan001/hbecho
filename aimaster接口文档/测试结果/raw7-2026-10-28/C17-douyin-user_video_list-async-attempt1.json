@@ -1,0 +1,43 @@
+{
+  "case": "C17",
+  "platform": "douyin",
+  "action": "user_video_list",
+  "mode": "async",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/user_video_list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/user_video_list",
+    "params": {
+      "async": "true"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "https://www.douyin.com/user/MS4wLjABAAAA8xzA5Dl7N--l2aBhBJ-cZd1VCTLrU6SitX9dTWbRmmU?from_tab_name=main&relation=0&vid=7688996630141924731",
+      "max_cursor": 0
+    }
+  },
+  "started_at": "2026-10-28T06:06:09.189420+00:00",
+  "http_status": 202,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae190d7d57ee40001cd113b",
+      "task_url": "https://fieldshortcut.com/tasks/6ae190d7d57ee40001cd113b",
+      "action": "user_video_list",
+      "status": "running",
+      "result": null,
+      "error": null,
+      "created_at": "2026-10-28T14:06:15",
+      "updated_at": "2026-10-28T14:06:15"
+    },
+    "request_id": "6ae190d7d57ee40001cd113b"
+  },
+  "response_bytes": 309,
+  "response_sha256": "4e541df38c155cc693865f844ebfd917835a4b27fd7809abeff4075c4d130c7b",
+  "transport_error": null,
+  "elapsed_seconds": 6.27,
+  "classification": "pending"
+}

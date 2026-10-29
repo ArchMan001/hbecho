@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-28",
+  "base_url": "https://openapi.fieldshortcut.com",
+  "budget": 20,
+  "calls_used": 3,
+  "results": [
+    {
+      "case": "C01",
+      "platform": "xiaohongshu",
+      "action": "media_comments",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C02",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C03",
+      "platform": "xiaohongshu",
+      "action": "user_video_list",
+      "mode": "sync",
+      "classification": "success"
+    }
+  ]
+}

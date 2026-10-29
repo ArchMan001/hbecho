@@ -1,0 +1,58 @@
+{
+  "case": "C01",
+  "platform": "douyin",
+  "action": "media_user_info",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media_user_info",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_user_info",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "9- 长按复制此条消息，打开抖音搜索，查看TA的更多作品。 https://v.douyin.com/MPOAlEqWpec/ 1@3.com :1pm"
+    }
+  },
+  "started_at": "2026-10-28T03:13:24.584323+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1685ad57ee40001cd09c6",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1685ad57ee40001cd09c6",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "HITACHI1",
+        "nickname": "日立中央空调",
+        "signature": "【全屋全感 定制舒适】\n中央空调丨新风丨地暖丨加湿丨除湿丨净化\n每天10:00-22:00直播\n官号2号：@日立变频中央空调",
+        "location": "山东",
+        "avatar": "https://p3-pc.douyinpic.com/aweme/1080x1080/aweme-avatar/tos-cn-i-0813_okeC4Ay6A5AIUA212gCiiO2QEC7fFAWE5gBBAY.jpeg?from=2956013662",
+        "cover": "https://p3-pc-sign.douyinpic.com/obj/c8510002be9a3a61aad2?lk3s=93de098e&x-expires=1793329200&x-signature=uGO2UTt7F5sd4st5ubY15VKOoJc%3D&from=2480802190",
+        "follower_count": "1194349",
+        "following_count": "16",
+        "like_count": "1544502",
+        "post_count": "603",
+        "follower_number": 1194349,
+        "following_number": 16,
+        "like_number": 1544502,
+        "post_number": 603,
+        "updated": 1793157212644
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae1685ad57ee40001cd09c6"
+  },
+  "response_bytes": 1025,
+  "response_sha256": "b70bb2bdc240f0680fef1bc983549d2bb84237b48065fac2bc4e35151214c936",
+  "transport_error": null,
+  "elapsed_seconds": 9.19,
+  "classification": "success"
+}

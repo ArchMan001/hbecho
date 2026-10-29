@@ -4,6 +4,8 @@
 > **模式**：Design-First  
 > **需求**：[`requirements.md`](requirements.md)  
 > **实施计划**：[`tasks.md`](tasks.md)（仅规划，尚未执行）  
+> **所属域**：A 数据底座 · **目录命名**：旧名 `data-foundation-tracer`，按域代号应为 `a-data-foundation-tracer`  
+> **最近核对**：2026-10-29（偏差见文末附录）  
 > **更新日期**：2026-09-02
 
 ## 1. Overview
@@ -14,7 +16,7 @@
 已授权内部主体 + Platform + MediaStaff + 主页入口
 → 最多 3 次入口解析
 → ExternalAccount + namespaced identifiers
-→ AccountAssignment
+→ account record + current assignment
 → finalized profile snapshot
 → complete returned first page
 → ContentSnapshot + ContentDiscovery
@@ -32,10 +34,10 @@
 ### 2.1 Decision order
 
 1. [`CONTEXT.md`](../../../CONTEXT.md)：领域语义和不可违反的不变量；
-2. [`database-design-v2.md`](../../../docs/domains/data-foundation/database-design-v2.md)：数据底座实体、历史事实、任务、ODS、快照、检查点和媒资基线；
+2. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座实体、历史事实、任务、ODS、快照、检查点和媒资基线；
 3. [AI Master V1.2 文档](<../../../aimaster接口文档/FieldShortcut A Master API 开发文档 V1.2.md>) 与已保存的 [`raw3` 结果](../../../aimaster接口文档/测试结果/raw3/)：供应商声明与已观察证据；二者冲突时必须显式记录，样本行为不能外推为长期合同；
 4. 本 Spec：tracer 的需求、Interface、流程和验收边界，不得静默改写前 3 项事实；
-5. [`data-supply-mvp.md`](../../../docs/archive/data-foundation/data-supply-mvp.md)、[`data-supply-and-assets.md`](../../../docs/archive/data-foundation/data-supply-and-assets.md) 及其他 archive：仅可选择性吸收经验。
+5. [`data-supply-mvp.md`](../../../HBECHO设计方案/archive/data-foundation/data-supply-mvp.md)、[`data-supply-and-assets.md`](../../../HBECHO设计方案/archive/data-foundation/data-supply-and-assets.md) 及其他 archive：仅可选择性吸收经验。
 
 历史稿、供应商示例或脚本不能覆盖 `CONTEXT.md` 与 v2。供应商声明和实测不一致时必须保留差异，不能靠实现猜测。
 
@@ -44,7 +46,7 @@
 | 等级 | 含义 | 本设计中的例子 |
 |---|---|---|
 | `invariant` | 当前领域必须遵守 | 外部 ID 按文本；历史归属不回写；临时 URL 不是媒资身份 |
-| `baseline` | 当前实施基线 | v2 的 ExternalAccount、Assignment、Snapshot、Discovery、ProviderCall、Checkpoint、Media 语义 |
+| `baseline` | 当前实施基线 | v2 的 ExternalAccount、账号当前归属、Snapshot、Discovery、ProviderCall、Checkpoint、Media 语义 |
 | `observed` | 已在保存证据中看到 | 抖音列表 20 条且有异作者；小红书列表 21 条；两平台 cursor 类型不同 |
 | `declared` | 供应商文档声称，但仍需能力验证 | 认证方式、异步任务模式、字段及 action 支持范围 |
 | `candidate` | 本设计建议，尚可在 requirements/tasks 前调整 | 内部 HTTP 路径、默认 limit、轮询参数和阈值 |
@@ -89,7 +91,7 @@
 本 Feature 使用并遵守 v2 所拥有的事实：
 
 - `MediaStaff`、`ExternalAccount`、namespaced account identifier；
-- `AccountAssignment` 历史归属；
+- `AccountAssignment` 当前归属（账号记录上的单一事实，不建独立表）；
 - profile/content immutable snapshot 与 current pointer；
 - `ContentDiscovery` 列表出现事实；
 - sync root/task/batch、`ProviderCall`、ODS payload 与 continuity/data-quality issue；
@@ -109,7 +111,7 @@
 | `StageLease` | Worker 对某一可变阶段的限时占有和 fencing token |
 | `TracerStatus` | 从本地事实组装的只读、脱敏进度视图 |
 
-`ProviderCall`、快照、Assignment、Checkpoint 和 MediaAsset 仍由数据底座拥有；TracerRoot 不复制其业务字段。
+`ProviderCall`、快照、账号与当前归属、Checkpoint 和 MediaAsset 仍由数据底座拥有；TracerRoot 不复制其业务字段。
 
 ### 4.3 Persistence mapping to v2
 
@@ -127,7 +129,7 @@ Tracer workflow 不新增平行持久化模型，映射如下：
 | dominant-author decision | 成功绑定长期写入 `external_account_identifiers.binding_policy_version/binding_evidence/binding_evidence_sha256/evidence_batch_id`；拒绝长期写入 `data_quality_issues.detail + batch_id`；两者共用 v2 `dominant-list-author-evidence.v1` |
 | root status | 在一年任务保留窗口内，从 batch/root/child tasks 与现有 identity/snapshot/checkpoint/media facts 投影；到期后不从长期业务事实反推旧 operational status |
 
-`result_summary` 只能保存可重建展示摘要；关键幂等、状态和身份不得藏在无约束 JSON 中。账号 namespace 直接使用 v2 注册的 `douyin.user_id`、`douyin.sec_uid`、`xiaohongshu.profile.user_id`、`xiaohongshu.content.user_id` 等代码。
+`result_summary` 只能保存可重建展示摘要；关键幂等、状态和身份不得藏在无约束 JSON 中。账号 namespace 直接使用代码枚举中的 `douyin.user_id`、`douyin.sec_uid`、`xiaohongshu.profile.user_id`、`xiaohongshu.content.user_id` 等标识（D-25：命名空间是代码枚举，不是独立表）。
 
 ## 5. Deep Module architecture
 
@@ -283,17 +285,17 @@ sequenceDiagram
 1. **Authorize and deduplicate**：在任何网络/付费行为前校验用途受限 Capability、目标范围、platform/action capability 和 command idempotency。
 2. **Resolve locator**：保留原文；最多三次。三次失败后只保留运维证据，不创建任何业务身份或快照。
 3. **Fetch profile**：每次调用必须先 capture；成功 envelope 不等于业务成功，Adapter 仍需验证 supplier status、response action 和 payload schema。
-4. **Resolve identity and assignment**：先按 namespace 解析/复用账号，再创建或复用 Assignment；冲突不抢占。
+4. **Resolve identity and assignment**：先按 namespace 解析/复用账号，再在同一账号记录上写入或复用当前归属；冲突不抢占。
 5. **Project profile**：写 immutable snapshot 和媒资引用；fencing 控制 current。
 6. **Fetch first page**：处理完整返回数组。`initial_content_limit` 只在页边界决定是否继续，本 Spec 的最低验收只要求完整首个返回页。
 7. **Bind list identity**：小红书在完整页上计算唯一主导作者；抖音保留同 payload 官方多标识；少数异作者只进内容事实。
-8. **Project list**：每个条目都形成/复用 ContentSnapshot 和 ContentDiscovery，携带 target account、assignment、batch/page、returned author 和 call lineage。
+8. **Project list**：每个条目都形成/复用 ContentSnapshot 和 ContentDiscovery，携带 target account、采集当时的归属快照、batch/page、returned author 和 call lineage。
 9. **Advance checkpoint**：只有整页 required projection 完成后推进，保留 cursor 原值与类型。
 10. **Archive media**：structured result 可以先完成；头像、背景和封面按引用异步归档，并在 status 中独立汇总。
 
 ### 7.3 Assignment conflict
 
-若已存在其他 `MediaStaff` 的有效 Assignment：
+若账号当前已归属其他 `MediaStaff`：
 
 - 不关闭、不覆盖、不创建重叠归属；
 - root 进入 `blocked_assignment_conflict` 或等价可处理状态；
@@ -423,7 +425,7 @@ canonical request bytes
 
 ### 9.3 Retention
 
-ProviderCall、task 与 raw payload 保留一年；正式 profile/content snapshot、Assignment、Discovery、Checkpoint 和 MediaAsset 长期保留。长期业务解释不能只依赖一年后会删除的 raw body。
+ProviderCall、task 与 raw payload 保留一年；正式 profile/content snapshot、账号与当前归属、Discovery、Checkpoint 和 MediaAsset 长期保留。长期业务解释不能只依赖一年后会删除的 raw body。
 
 ## 10. Identity and assignment semantics
 
@@ -465,9 +467,9 @@ ProviderCall、task 与 raw payload 保留一年；正式 profile/content snapsh
 
 已观察 target account `HITACHI1` 的 20 条主页列表包含作者 `HITACHI2023`。该条仍属于“从 target 主页列表发现”的 ContentDiscovery；returned author 作为独立事实保存。它默认解释为合法共创/异作者内容，不自动创建 `HITACHI2023` ExternalAccount，也不单凭差异生成质量问题。
 
-### 10.5 Assignment
+### 10.5 Current assignment
 
-Tracer 只使用 v2 AccountAssignment。没有冲突时创建/复用 submitted MediaStaff 的有效归属；已有其他有效 owner 时 fail closed，不抢占。账号转移必须走独立、受审计的归属流程，不由采集结果隐式触发。
+归属是账号记录上的**当前单一事实**，不建独立归属表、不存时间区间（D-16、D-28）。没有冲突时，Tracer 在创建或复用账号的同一次短事务里写入 submitted `MediaStaff` 作为当前归属，并记录归属来源与时间；已有其他 owner 时 fail closed，不抢占，也不关闭或改写原归属。账号转移必须走独立、受审计的管理员改绑流程，不由采集结果隐式触发。内容与发现需要保留采集当时的归属时，记录**采集时的归属快照值**（D-67），不引用归属行。
 
 ## 11. Snapshot, complete-page and checkpoint semantics
 
@@ -500,9 +502,9 @@ receive page N
 
 - Content identity 按 platform + external content identifier；
 - Snapshot 是一次版本化观察；
-- Discovery 保存“哪个 target account、哪个 Assignment、哪个 batch 看到该 content”；
-- 同一 content 经不同 Assignment/主页发现时保留多个 Discovery，不因 content dedupe 丢归属；
-- 同一 batch + Assignment 的列表若重复返回同一 content ID，每个 entry 都必须经过验证和计数，但按 v2 只形成一个 Discovery；重复位置/count 留在一年期 page/ProviderCall evidence，并生成可观察质量摘要；
+- Discovery 保存“哪个 target account、采集当时的归属快照、哪个 batch 看到该 content”；
+- 同一 content 经不同归属/主页发现时保留多个 Discovery，不因 content dedupe 丢归属；
+- 同一 batch + 账号的列表若重复返回同一 content ID，每个 entry 都必须经过验证和计数，但按 v2 只形成一个 Discovery；重复位置/count 留在一年期 page/ProviderCall evidence，并生成可观察质量摘要；
 - returned author 与 target account 分列；
 - 少数异作者、共创或跨发不会改变 target list discovery。
 
@@ -571,7 +573,7 @@ type TracerStatus = {
   rootTaskId: string;
   state: string;
   stages: Array<{ name: string; state: string; attempts: number }>;
-  target?: { accountId?: string; assignmentId?: string };
+  target?: { accountId?: string; ownerMediaStaffId?: string };
   structured: {
     profileFinalized: boolean;
     returnedEntries: number;
@@ -686,7 +688,7 @@ GET  /internal/data-foundation/account-tracers/{root_task_id}
 | Locator fail ×3 | no ExternalAccount/identifier/assignment/snapshot/discovery/checkpoint |
 | ODS write failure | decoder/projector invocation count = 0 |
 | Duplicate command | same root，no duplicate call/effect |
-| Assignment conflict | old assignment unchanged，submitted staff not represented as owner |
+| Assignment conflict | old owner unchanged，submitted staff not represented as owner |
 | Dominant-author tie | no binding，data-quality issue |
 | Stale worker | immutable history may remain，current/checkpoint unchanged |
 | Media failure | structured checkpoint retained，media warning visible |
@@ -750,3 +752,17 @@ smoke 独立于 CI，必须先显示并确认 capability、locator allowlist、c
 - paid smoke 的每次预算和 allowlist。
 
 这些未决项不阻塞 Design-First 文档完成，但不得由实现默认值悄悄变成产品合同。
+
+---
+
+## 附录：已知过时内容（2026-10-29 核对）
+
+> 本节只记录偏差，不修改正文。偏差的根在 [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：它仍是 2026-09 草案，尚未按 D-25 / D-28 复核。
+
+| # | 位置 | 原写法 | 现处理 | 来源 |
+|---|---|---|---|---|
+| 1 | requirements R7、design §10.5 与身份链、tasks 任务 4 | 把 `AccountAssignment` 当独立实体，归属带 `traceable start` 的区间语义 | 已改为「归属是账号记录上的当前单一事实」，不建独立表、不存时间区间；发现保留采集时的归属快照值 | D-16、D-28、D-67 |
+| 2 | design §10.1 与 §6 | 写「使用 v2 注册的 namespace 代码」 | 已改为代码枚举（命名空间不是表）；新增 namespace 须改 CONTEXT 与枚举 | D-25 |
+| 3 | v2 §6.3 / §8.3 | `identifier_namespaces`、`staff_account_assignments` 两张表仍在 v2 | **v2 未改**；v2 复核前不得据此建表，实施时以本节与 D-25 / D-28 为准 | D-25、D-28 |
+
+**核对为一致的部分**（不需改动）：首版验收平台为抖音与小红书（快手在 `a-full-sync`，D-47）；不写死 `async=false/true`，异步未实测即门控；20 / 21 条是实测证据而非业务上限（D-12）；ODS 一年、快照与媒资长期保留（D-10）。

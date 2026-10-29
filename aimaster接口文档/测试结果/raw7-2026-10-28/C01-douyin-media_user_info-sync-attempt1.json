@@ -1,0 +1,58 @@
+{
+  "case": "C01",
+  "platform": "douyin",
+  "action": "media_user_info",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media_user_info",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_user_info",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "5- 长按复制此条消息，打开抖音搜索，查看TA的更多作品。 https://v.douyin.com/Own0gt7Z-pM/ 8@1.com :8pm"
+    }
+  },
+  "started_at": "2026-10-28T06:02:57.137631+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1901725f71e0001dd6724",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1901725f71e0001dd6724",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "550217799442596",
+        "nickname": "用户2250285114382",
+        "signature": "-",
+        "location": "",
+        "avatar": "",
+        "cover": "",
+        "follower_count": "",
+        "following_count": "",
+        "like_count": "",
+        "post_count": "",
+        "follower_number": 0,
+        "following_number": 0,
+        "like_number": 0,
+        "post_number": 0,
+        "updated": 1793167388282
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae1901725f71e0001dd6724"
+  },
+  "response_bytes": 558,
+  "response_sha256": "94893da005a742fd3f4ad598e4fd949e1b45045bcd0d16f22137718706630ee9",
+  "transport_error": null,
+  "elapsed_seconds": 12.07,
+  "classification": "success"
+}

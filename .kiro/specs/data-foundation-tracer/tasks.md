@@ -4,6 +4,8 @@
 > **执行状态**：本文件只规划；本轮文档重组**不执行任何实现任务**  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
+> **所属域**：A 数据底座 · **目录命名**：旧名 `data-foundation-tracer`，按域代号应为 `a-data-foundation-tracer`  
+> **最近核对**：2026-10-29（偏差见 [`design.md`](design.md) 附录）  
 > **更新日期**：2026-09-02
 
 ## Planning rules
@@ -51,12 +53,12 @@
 - [ ] 4. 打通抖音账号 tracer 纵向切片
   - **Requirements:** R3, R4, R5, R7, R8, R9, R10, R11, R14, R18
   - 实现抖音 Home locator 策略与最多三次解析；三次失败终态不得产生 account/identifier/assignment/snapshot/discovery/checkpoint。
-  - 通过 captured `media_user_info` 创建/复用 namespaced ExternalAccount 标识，建立无冲突 AccountAssignment，投影 finalized profile snapshot 和 profile media references；若 locator 阶段已产生同一 captured profile payload 必须复用。
-  - 覆盖已有其他 MediaStaff 有效归属：保留旧 Assignment、root 进入 blocked conflict、submitted staff 不成为 owner，默认不再发后续付费调用。
+  - 通过 captured `media_user_info` 创建/复用 namespaced ExternalAccount 标识，并在同一账号记录上写入无冲突的当前归属，投影 finalized profile snapshot 和 profile media references；若 locator 阶段已产生同一 captured profile payload 必须复用。
+  - 覆盖已有其他 MediaStaff 当前归属的情况：保留原归属、root 进入 blocked conflict、submitted staff 不成为 owner，默认不再发后续付费调用。
   - 通过 captured `user_video_list` 处理完整 20 entries，按 v2 创建/复用 ContentSnapshot 与每条批次级 ContentDiscovery，保留 target 与 returned author 两份事实。
   - 对 `HITACHI2023` 只记录 returned-author content fact，不创建账号/归属，也不单凭差异创建质量问题。
   - 在全页投影完成后保存 integer cursor checkpoint；用 fence 防止旧 run 回退 current/checkpoint。
-  - **Offline acceptance:** 一次命令得到 target `HITACHI1`、1 个有效 assignment、1 个 finalized profile、20/20 processed entries、20 个预期批次级 discovery、无 `HITACHI2023` ExternalAccount、integer checkpoint；ProviderCall 数符合任务 1 锁定策略，duplicate/resume 无重复业务事实；assignment-conflict fixture 保持旧 owner 且不会继续付费。
+  - **Offline acceptance:** 一次命令得到 target `HITACHI1`、1 个当前归属、1 个 finalized profile、20/20 processed entries、20 个预期批次级 discovery、无 `HITACHI2023` ExternalAccount、integer checkpoint；ProviderCall 数符合任务 1 锁定策略，duplicate/resume 无重复业务事实；assignment-conflict fixture 保持旧 owner 且不会继续付费。
 
 - [ ] 5. 打通小红书多命名空间身份纵向切片
   - **Requirements:** R3, R4, R5, R6, R7, R8, R9, R10, R14, R18

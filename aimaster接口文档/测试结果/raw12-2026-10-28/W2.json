@@ -1,0 +1,43 @@
+{
+  "case": "W2",
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1ae47eb420f000190ff9a",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1ae47eb420f000190ff9a",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "14898847112850311168",
+        "platform": "wechat_channels",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": 0,
+        "like_number": 17,
+        "comment_number": 2,
+        "collect_number": 9,
+        "share_number": 0,
+        "duration_number": 48,
+        "author_homepage": null,
+        "user_id": "v2_060000231003b20faec8c5e0881acad1c706e532b077fd857dc5c528b533da1f81c48a6b9c0c@finder",
+        "created": 1776080979000,
+        "author_name": "清河约克中央空调",
+        "title": "#五一焕新家约克鲜出发#中央空调怎么选#约克vrf中央空调 #除甲醛中央空调 #清河县 #高端家居",
+        "tag_text": "#五一焕新家约克鲜出发#中央空调怎么选#约克vrf中央空调 #除甲醛中央空调 #清河县 #高端家居",
+        "cover": "https://wxapp.tc.qq.com/251/20304/stodownload?encfilekey=oibeqyX228riaCwo9STVsGLPj9UYCicgttvQAhDXuH0ibYtWQ2cM9Efy6icNAxshIiaopiaWxfTIv4hD9VwrvcDL0B7984Wc87Cn5xfRnFmxz03cYt08KnJAia1mn3JWLSPCcaTrUmhrhiblZIFw&hy=SH&idx=1&m=a832e36f74f6328c66d9b7541f2c34df&uzid=1&picformat=200&wxampicformat=503&token=ic1n0xDG6awibF0VB0icjqVrCBEn3fNZSGWmIqiccGZSEAL38bber6ob8zoUYN5TXfc1JmHIVR9GV4CyHmMJlO1Nd7iaNDLj0CibonDr8WHwHA2Aic0aCVFYtUTOAljPrKDE1ylF9b68GiaHaOWxWFq9jIMyVMgQWfibqulvh2xdrRGic1QQOvPBks8EKmU9Eck1u9vrLyLdF97kIFukqy5zzSZTdg4nWkEb3DXU5x",
+        "download_urls": "",
+        "updated": 1793175114568
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae1ae47eb420f000190ff9a"
+  },
+  "elapsed": 9.07
+}

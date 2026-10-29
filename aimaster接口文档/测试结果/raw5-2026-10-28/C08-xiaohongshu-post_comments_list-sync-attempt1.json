@@ -1,0 +1,51 @@
+{
+  "case": "C08",
+  "platform": "xiaohongshu",
+  "action": "post_comments_list",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "旧垣光“隐”—“天华杯一等奖”是什么体验 这算是我... https://xhslink.cn/o/4hMmW8UF4S9",
+      "max_cursor": 0,
+      "reply_pages": -2
+    }
+  },
+  "started_at": "2026-10-28T05:22:47.085621+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae186aceb420f000190f393",
+      "task_url": "https://fieldshortcut.com/tasks/6ae186aceb420f000190f393",
+      "action": "post_comments_list",
+      "status": "succeeded",
+      "result": {
+        "result": [],
+        "max_cursor": "",
+        "has_more": 0,
+        "total": 6,
+        "post_id": "634ed0b300000000070362c6",
+        "reply_page_count": 0
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae186aceb420f000190f393"
+  },
+  "response_bytes": 386,
+  "response_sha256": "a2eb77fe966f6daf8ec2c94472de9f196bdc18d6e4e682d013606f31b02be3a2",
+  "transport_error": null,
+  "elapsed_seconds": 8.9,
+  "classification": "success"
+}

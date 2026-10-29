@@ -1,0 +1,59 @@
+{
+  "case": "C06",
+  "platform": "xiaohongshu",
+  "action": "tasks.get",
+  "mode": "async-poll",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/tasks/6ae1868e6089b10001e8a029",
+  "request": {
+    "method": "GET",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "started_at": "2026-10-28T05:22:32.088584+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1868e6089b10001e8a029",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1868e6089b10001e8a029",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "634ed0b300000000070362c6",
+        "platform": "xiaohongshu",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": null,
+        "like_number": 200,
+        "comment_number": 6,
+        "collect_number": 190,
+        "share_number": 15,
+        "duration_number": 0,
+        "author_homepage": "https://www.xiaohongshu.com/user/profile/5b7025b12ef20900013f05f2",
+        "user_id": "5b7025b12ef20900013f05f2",
+        "created": 1666109619000,
+        "author_name": "整点薯片",
+        "title": "## 标题\n旧垣光“隐”—“天华杯一等奖”是什么体验\n\n## 正文\n这算是我大三第二次参加的竞赛（第一次获的是AILCD荣誉提名奖），体验就是非常痛苦、非常痛苦、非常痛苦。。。。。。。\n前期：\n当年的主题是“身体与空间“，对于一个竞赛而言，这个主题非常非常的弱，似乎你做什么都可以，但浮于表面的设计又深入不下去。我们探讨了大概半个月的时间，在众多资讯中我找到了”广州竹筒屋“，打算在闭塞中寻求设计的意义。（细节请看图纸）\n深化：\n玩概念还是做细节是摆在我面前的第一个问题，日本的很多大师的手法浮现在团队的眼前，但最后我们都没有使用，而是真的去考究狭小空间的处理手法和细节。这个过程及其的痛苦，因为它真的很局促。\n后期：\n很无奈，我们当时封存了半个月，因为真的不好把握将设计表达到位。直到交图前一个星期，才开始图纸的制作，很幸运，有时候放下一段时间反而会更好。\n后记：\n这是我做的最痛苦的一个竞赛，前后两三个月。它突然不是我想象的这么简单，我很幸运刚开始做的两个竞赛都取得了不错的成绩。希望热爱建筑的学弟学妹不要轻言放弃。\nPs.我最满意的一点是我起的这个名字——“旧垣光隐“高度概括了我的作品，那么的诗意，那么的充满设计与人性的光辉。",
+        "tag_text": "#建筑设计竞赛 #建筑学 #分享 #天华 #天华杯 #空间 #空间设计 #东南大学 #线稿 #广州 #剖面图 #ps #建筑设计 #作品集",
+        "cover": "https://sns-i11.rednotecdn.com/0302aj016mexyyij10y0100hj3tciyn9y7?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=08e7e8f05a24c6f66af47abaec7428a2&t=6ae1868f",
+        "download_urls": "https://sns-i11.rednotecdn.com/0302aj016mexyyij10y0100hj3tciyn9y7?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=08e7e8f05a24c6f66af47abaec7428a2&t=6ae1868f\n\nhttps://sns-i11.rednotecdn.com/0302aj016mexyyij10y0700hj4fd8unhbk?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=b85e876e46053986578e56064bdfd5ce&t=6ae1868f\n\nhttps://sns-i11.rednotecdn.com/0302aj016mexyyij10y0100hj3tbo52wna?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=755b67b27127b28f9b1b03623e1efc8d&t=6ae1868f\n\nhttps://sns-i11.rednotecdn.com/0302aj016mexyyij10y0100hj3taazqhty?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=ff0f96448b1a580adfb4683d66398007&t=6ae1868f\n\nhttps://sns-i11.rednotecdn.com/0302aj016mexyyij10y0100hj3t9pezoik?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=fcb276c36b4cd07ea3cf954e69efffa1&t=6ae1868f\n\nhttps://sns-i11.rednotecdn.com/0302aj016mexyyij10y0100hj3t8lt31sv?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=85267fa2b56fec0976a6d5a0a7fa1749&t=6ae1868f",
+        "updated": 1793164944645
+      },
+      "error": null,
+      "created_at": "2026-10-28T13:22:22",
+      "updated_at": "2026-10-28T13:22:25"
+    },
+    "request_id": "6ae1868e6089b10001e8a029"
+  },
+  "response_bytes": 3942,
+  "response_sha256": "9cb83b155baf9bd5984b262e22ccf8bd8d29a3cee2762cc6f62a61ccbd0311ee",
+  "transport_error": null,
+  "elapsed_seconds": 6.05,
+  "classification": "success"
+}

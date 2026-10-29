@@ -3,6 +3,8 @@
 > **状态**：`draft`  
 > **模式**：Design-First；当前只有设计草案，不代表实现已冻结  
 > **适用范围**：平台用户、会话认证、Capability、DataScope、用户与授权管理、异步任务及最终出口授权  
+> **所属域**：B 访问控制 · **目录命名**：旧名 `access-control`，按域代号应为 `b-access-control`（重命名在 B 域 spec 开工前执行）  
+> **最近核对**：2026-10-29（与 B 域 PRD v1.2 存在偏差，见文末附录）  
 > **更新日期**：2026-09-02
 
 ## 1. Overview
@@ -35,13 +37,13 @@ flowchart LR
 冲突时按以下顺序裁决：
 
 1. [`CONTEXT.md`](../../../CONTEXT.md)：`MediaStaff`、`ExternalAccount`、组织、历史归属与监控语义；
-2. [`database-design-v2.md`](../../../docs/domains/data-foundation/database-design-v2.md)：数据底座当前主档和引用路径；
+2. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座当前主档和引用路径；
 3. 本设计：访问控制域的 User、Session、Capability、Grant 与 DataScope；
 4. 历史输入：
-   - [`域E-用户与权限详细设计.md`](../../../域E-用户与权限详细设计.md)
-   - [`域E-用户与权限详细设计-评审意见.md`](../../../域E-用户与权限详细设计-评审意见.md)
-   - [`media-platform-3.0-模块设计-权限中心.md`](../../../项目历史文档/media-platform-3.0-模块设计-权限中心.md)
-   - [`平台底座首版产品设计`](../../../项目历史文档/media-platform-3.0-平台底座首版产品设计.md)
+   - [`HBECHO设计方案/archive/legacy/域E-用户与权限详细设计.md`](../../../HBECHO设计方案/archive/legacy/域E-用户与权限详细设计.md)
+   - [`HBECHO设计方案/archive/legacy/域E-用户与权限详细设计-评审意见.md`](../../../HBECHO设计方案/archive/legacy/域E-用户与权限详细设计-评审意见.md)
+   - [`hbecho-模块设计-权限中心.md`](../../../HBECHO设计方案/prd-drafts-子PRD草案/hbecho-模块设计-权限中心.md)
+   - [`平台底座首版产品设计`](../../../HBECHO设计方案/prd-drafts-子PRD草案/hbecho-平台底座首版产品设计.md)
 
 历史文档只提供候选经验；与前两项冲突的角色、组织或账号模型不被继承。
 
@@ -441,3 +443,22 @@ EffectiveTaskScope = SubmittedScope ∩ CurrentSubjectScopeAtExecution
 - 高风险审计写入失败时各动作的 fail-closed 等级；
 - 只读范围缓存 TTL 与授权版本失效机制；
 - 经销商/门店用户默认“仅本人”还是“本门店”，最终以 User↔MediaStaff 决策为前提。
+
+---
+
+## 附录：已知过时内容（2026-10-29 核对）
+
+> 本节只记录偏差，不修改正文。正文仍是本 spec 的技术草案；凡与 B 域 PRD v1.2 冲突处，以 PRD 为准。
+
+| # | 位置 | 本设计的写法 | 当前事实 | 来源 |
+|---|---|---|---|---|
+| 1 | §7.1 Naming | 10 个 Capability 只是“命名示例，不是已冻结清单” | B 域 §7 已冻结角色 × Capability 矩阵 | B 域 PRD v1.2 |
+| 2 | §7.1 Naming | 无 `activity_plan.create`、`activity_plan.join`、`learning.report.read`、`learning.tag.manage` | 四项已登记（前两项 v1.1，后两项 v1.2） | B 域 PRD v1.1、v1.2 |
+| 3 | §14 Open Decisions 1 | 最终 RoleProfile / RoleCode 待定，尤其 `dealer_staff` 是否重命名 | 已关闭：`platform_admin` / `hq_manager` / `branch_manager` / `store_staff`，不保留 `dealer_staff` | D-22 |
+| 4 | §14 Open Decisions 2 | User ↔ MediaStaff 是否严格一对一带开 | 已关闭：`store_staff` 与一个 `MediaStaff` 一对一，绑不上拒绝本人范围 | B 域 PRD §8.3 |
+| 5 | §14 Open Decisions 4 | Store 的 dealer / brand / sector 是否可变带开 | 已关闭：视为不可变，不做组织历史归属快照 | D-18 |
+| 6 | §14 Open Decisions 5 | 手机号明文还是 `ciphertext + lookup HMAC` 带开 | 已关闭：明文保存 | D-42 |
+| 7 | §14 Open Decisions 6 | 登录标识、密码策略、会话有效期带开 | 已关闭：15 天滑动会话；密码只保留最短 8 位 | D-40、D-45 |
+| 8 | §14 Open Decisions 3 | Branch 范围是否与品牌 Grant 求交 | 仍未决，保持不变 | ADR 未决选型 #7 |
+
+**未同步但不算冲突**：B 域 v1.2 的 10 个数据出口与审计可见性（仅 `platform_admin` 可读审计，D-41）在本文中没有展开；本设计只给出口授权语义，不列出口清单。

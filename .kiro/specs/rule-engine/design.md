@@ -3,6 +3,8 @@
 > **状态**：`draft`  
 > **模式**：Design-First；本轮重构历史技术设计，不包含 requirements/tasks  
 > **适用范围**：考核项、规则目录、纯求值、依赖规划、运行与证据、结果激活及下游契约  
+> **所属域**：D 规则与考核 · **目录命名**：旧名 `rule-engine`，按域代号应为 `d-rule-engine`；本目录当前只有 design.md（`requirements.md` 已从仓库移除）  
+> **最近核对**：2026-10-29（偏差见文末附录）  
 > **更新日期**：2026-09-02
 
 ## 1. Overview
@@ -44,10 +46,10 @@ flowchart LR
 优先级：
 
 1. [`CONTEXT.md`](../../../CONTEXT.md)：身份、归属、发现、快照、ValueState 和媒资不变量；
-2. [`database-design-v2.md`](../../../docs/domains/data-foundation/database-design-v2.md)：数据底座实体、状态、事务和当前接入契约；
+2. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座实体、状态、事务和当前接入契约；
 3. [`access-control/design.md`](../access-control/design.md)：Capability、DataScope、异步范围交集与当前查询授权语义；
 4. 本设计：规则域拥有的规则、运行、证据和 outcome；
-5. 历史输入：[`media-platform-3.0-模块设计-规则引擎.md`](../../../项目历史文档/media-platform-3.0-模块设计-规则引擎.md)。
+5. 历史输入：[`hbecho-模块设计-规则引擎.md`](../../../HBECHO设计方案/prd-drafts-子PRD草案/hbecho-模块设计-规则引擎.md)。
 
 历史设计中的产品能力可被吸收，但旧 DDL、SQL、表名和组织假设不是实施基线。本文刻意不定义物理 schema。
 
@@ -478,7 +480,7 @@ interface RuleOutcomeReader {
 1. 首个 Rule Engine Spec 是否同时实现 CollectionDecisionModule 和 AssessmentModule；
 2. 活动 assessment 的 snapshot 选择策略：指定 batch、截止时点 as-of，还是运行开始时冻结 current；
 3. 内容结果 grain 和多 discovery/共创计数规则；
-4. 历史归属按 discovery 时 assignment 还是 published_at 回溯；
+4. ~~历史归属按 discovery 时 assignment 还是 published_at 回溯~~ —— 已关闭：**判定按执行时的当前归属**，已保存结果不因改绑回溯改写（2026-10-29）；
 5. 同一专员同平台多账号的账号型考核聚合策略；
 6. participant 集合是否排除同步异常，及 coverage 质量指标；
 7. `published_at` 缺失和 `content_kind` 归一化策略；
@@ -499,3 +501,92 @@ interface RuleOutcomeReader {
 - 大 dry-run 的分层抽样阈值；
 - OCR 是否可一票否决、frames 是否首版开放；
 - 视频下载预算、审批阈值和各类漂移阈值。
+
+## 17. Operator Catalog（2026-10-28 定稿）
+
+> 来源：三层向导的业务操作（D 域 PRD §2）。本节只列**能力目录**，不定义物理 schema。
+>
+> 状态含义：**1.0 / 2.0** 启用；**暂不添加** 清单保留但暂不注册，等业务提出时再加（2026-10-29 决策：没有被业务操作消费的算子先不做）；**搁置** 随刷流量一起暂缓；**admin** 仅研发应急。
+
+### 17.1 第 1 层 · 基础筛选（0 档，只用列表与主页字段）
+
+| 算子 | 业务操作 | 依赖信号 | 状态 |
+|---|---|---|---|
+| `published.within_window` | 发布时间在窗口内 | `content.published_at` | 1.0 |
+| `published.on_dates` | 发布在指定日期（多个） | `content.published_at` | 暂不添加 |
+| `platform.in_list` | 平台属于某几个 | `content.platform` | 1.0（公共条件注入） |
+| `content_type.equals` | 内容形态等于 | `content.kind` | 1.0（公共条件注入） |
+| `duration.between` | 视频时长在区间 | `content.duration_sec` | 1.0 |
+| `image.count_gte` | 图文图片数量 ≥ N | `content.image_count` | 1.0 |
+| `text.contains_all` | 文本含全部关键词 | `text.title_normalized`、`text.body_normalized` | 1.0 |
+| `text.contains_any` | 文本含任一关键词 | 同上 | 1.0 |
+| `hashtag.includes_all` | 话题含全部 | `text.hashtags` | 1.0 |
+| `hashtag.includes_any` | 话题含任一 | `text.hashtags` | 1.0 |
+| `metric.like.gte` | 点赞数 ≥ N | `content.like_count` | 1.0 |
+| `metric.comment.gte` | 评论数 ≥ N | `content.comment_count` | 1.0 |
+| `metric.collect.gte` | 收藏数 ≥ N | `content.collect_count` | 1.0 |
+| `metric.share.gte` | 转发数 ≥ N | `content.share_count` | 1.0 |
+| `in_campaign.is_true` | 在活动参与范围内 | 无（名单注入） | 1.0（隐式） |
+| `mention.includes` | @ 提及某人 | `text.mentions` | 暂不添加 |
+| `poi.in_list` | 位置在列表 | `text.poi` | 暂不添加 |
+| `link.contains` | 正文含链接 | `text.links` | 暂不添加 |
+| `content.author_is_account` | 作者就是被采集账号 | `content.author_id` | 暂不添加 |
+| `store_tier.in_list` | 门店等级属于 | 组织事实 | 暂不添加 |
+| `certified.is_true` | 专员已认证 | 组织事实 | 暂不添加 |
+| `sync_health.is_ok` | 同步状态正常 | 同步事实 | 暂不添加 |
+| `text.regex` | 正则匹配 | `text.title_normalized`、`text.body_normalized` | admin |
+
+### 17.2 第 2 层 · 素材比对（1–3 档，输出 0–10 分，阈值由业务定）
+
+| 算子 | 业务操作 | 依赖信号 | 状态 |
+|---|---|---|---|
+| `image.matches_reference` | 图和标准图是不是同一张 | `content.cover_template_score` / `account.bg_template_score` / `account.avatar_template_score`（按 target） | 1.0 |
+| `image.contains_element` | 图里有没有这张元素图 | `content.cover_element_score` / `account.bg_element_score` / `account.avatar_element_score`（按 target） | 1.0 |
+| `image.contains_text` | 图里有没有这些字 | `content.cover_ocr_text` / `account.bg_ocr_text` / `account.avatar_ocr_text`（按 target） | 2.0 |
+
+### 17.3 第 3 层 · 内容理解（2–3 档）
+
+| 算子 | 业务操作 | 依赖信号 | 形态 | 状态 |
+|---|---|---|---|---|
+| `speech.contains` | 口播提到某些词 | `content.asr_text` | 判定算子 | 2.0 |
+| `speech.matches_standard` | 口播内容符合标准 | `content.asr_judgement` | 判定算子（读 AI 信号） | 2.0 |
+| `vision.matches_standard` | 画面内容符合标准 | `content.vision_judgement` | 判定算子（读 AI 信号） | 2.0 |
+| `vision_frame.contains_element` | 关键帧里出现某元素 | `content.frame_element_score` | 判定算子 | 2.0 |
+| `ai.judge` | 多信号综合判定 | `content.ai_judgement` | 判定算子（读 AI 信号） | 2.0 |
+| `comment.text_contains` | 评论正文含关键词 | `comment.text_normalized` | 判定算子 | 1.0 |
+| `comment.author_is_account` | 评论作者是某账号 | `comment.author_id` | 判定算子 | 1.0（待 ID 对齐验证） |
+| `comment.count_anomaly` | 评论数异常 | `content.comment_count_ratio` | 判定算子 | 搁置 |
+| `comment.emoji_ratio_gte` | 表情占比 ≥ N | `content.comment_emoji_ratio` | 判定算子 | 搁置 |
+| `comment.duplicate_ratio_gte` | 重复率 ≥ N | `content.comment_duplicate_ratio` | 判定算子 | 搁置 |
+| `content.engagement_anomaly` | 互动量偏离账号常态 | `content.engagement_ratio` | 判定算子 | 搁置 |
+| `content.play_engagement_ratio` | 播放互动比异常 | `content.play_ratio` | 判定算子 | 搁置 |
+| `content.rank_top_percent` | 账号内排名前 N% | `content.rank_percentile` | 判定算子 | 搁置 |
+
+### 17.4 三条硬约束
+
+1. **`requiredSignals` 静态声明，不随参数变化。** 因此互动数拆成四个算子，而不是一个 `metric.gte(metric: ...)`——后者只能把四个信号全声明，导致「只要点赞却因分享缺失判 `signal_missing`」。
+2. **第 3 层判定算子不调模型**，只读 C 已产出的判定信号（D 域 PRD §2.5 做法 B）。真正调模型的是 C 的识别能力，结果落库并带模型与提示词版本。
+3. **评论比率是内容级聚合**，挂在 `content` 对象上，不是单条评论。
+
+### 17.5 对 §16 的影响
+
+2026-10-28 已关闭或收窄的开放项：
+
+| §16 项 | 现状 |
+|---|---|
+| 8. 四平台 tag/hashtag 抽取、归一化和版本 | 1.0 只做抖音与小红书；归一化规则见 C 域 PRD §4.2 |
+| 9. 派生特征的 owner、事实键、保留期与失效策略 | owner = C；保留期按 3 个月申诉期分档（C 域 PRD §6.4） |
+| 10. 媒资/特征完成通知 | 1.0 用轮询（C 域 PRD 13.6 建议），事件机制 2.0 |
+| 11. carried-forward 是否允许判当前图 | 不允许（C 域 PRD §5.5） |
+| `metric.gte` 何时启用 | 已拆为四个 `metric.*.gte`，1.0 启用；互动基线类搁置 |
+
+---
+
+## 附录：已知过时内容（2026-10-29 核对）
+
+> 本节只记录偏差，不修改正文。§17 算子目录本身已按 2026-10-28 / 10-29 的 D 域与 C 域结论对齐。
+
+| # | 位置 | 原写法 | 现处理或当前事实 | 来源 |
+|---|---|---|---|---|
+| 1 | §17.3 第 3 层 | 三个评论刷量算子原标 **1.0** | 已改为**搁置**（刷评、刷表情随 D 域 §4 一起搁置） | D 域 PRD §4 |
+| 2 | §16 标题 | “P0 before requirements/tasks” | 本目录 `requirements.md` 已从仓库移除，当前只有 design.md；何时补写 requirements / tasks 未定 | git 记录 |

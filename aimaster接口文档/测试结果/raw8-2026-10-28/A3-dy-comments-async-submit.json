@@ -1,0 +1,20 @@
+{
+  "http": 202,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae195e5d57ee40001cd1344",
+      "task_url": "https://fieldshortcut.com/tasks/6ae195e5d57ee40001cd1344",
+      "action": "post_comments_list",
+      "status": "running",
+      "result": null,
+      "error": null,
+      "created_at": "2026-10-28T14:27:49",
+      "updated_at": "2026-10-28T14:27:49"
+    },
+    "request_id": "6ae195e5d57ee40001cd1344"
+  },
+  "error": null,
+  "elapsed": 6.13,
+  "case": "A3-dy-comments-async"
+}

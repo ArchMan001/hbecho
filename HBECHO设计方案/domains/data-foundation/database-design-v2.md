@@ -23,7 +23,7 @@ v2 采用五层模型：
 4. **长期业务快照层**：账号主页快照、内容批次快照、列表出现记录和评论最新态；
 5. **长期媒资层**：OSS 对象、SHA-256 字节资产和快照媒资引用。
 
-v1 的 37 张表压缩并补齐业务主档后，v2 共 28 张表。主要简化：
+v1 的 37 张表压缩并补齐业务主档后，v2 共 30 张表。主要简化：
 
 - 删除 `monitoring_targets`，账号监控职责进入账号归属；
 - 删除 `projection_runs`，快照保存 `adapter_version`，必要时使用维护脚本；
@@ -31,7 +31,8 @@ v1 的 37 张表压缩并补齐业务主档后，v2 共 28 张表。主要简化
 - current 指针合入 `external_accounts` 和 `contents`；
 - 评论三层合并为一张最新态表；
 - OSS 媒资从 12 张压缩为 3 张，下载任务复用同步任务；
-- 不预留当前没有证据的供应商私有内容标识表。
+- 不预留当前没有证据的供应商私有内容标识表；
+- 新增 `import_batches` 与 `import_row_results` 两张导入审计表（2026-11-02）：主数据导入与名单导入共用，失败行与冲突行长期可查、可重试。
 
 ### 1.2 本轮范围
 
@@ -121,8 +122,8 @@ raw3 未覆盖：失败响应、完整异步轮询链、快手全链路、视频
 ## 3. 核心业务不变量
 
 1. 经销商、门店、专员、平台账号必须分离；一个门店单品牌，经销商可多品牌。
-2. 专员只属于一个门店；账号同一时间只属于一名专员；归属变更不迁移历史。
-3. 分公司、经销商、门店、专员、账号五级共同决定实际监控状态。
+2. 专员只属于一个门店；归属型账号同一时间只属于一名专员，外部型账号没有专员归属；归属变更不迁移历史。
+3. 分公司、经销商、门店、专员、账号五级共同决定实际监控状态；外部型账号没有上级链，只由自身开关决定。
 4. 账号不合并；昵称和主页链接不是账号身份。
 5. 账号普通采集失败不改变状态；`deleted` 只能由运营人工确认。
 6. 每个已经返回的列表页面必须完整处理；检查点只决定是否继续请求下一页。
@@ -165,14 +166,14 @@ flowchart TD
   RP --> OO
 ```
 
-### 4.1 28 张表总览
+### 4.1 30 张表总览
 
 | 分组 | 表 |
 |---|---|
 | 平台参考（3） | `platforms`, `data_providers`, `identifier_namespaces` |
 | 组织主档（7） | `brands`, `regions`, `branches`, `sectors`, `dealers`, `stores`, `media_staff` |
 | 账号与画像（4） | `external_accounts`, `external_account_identifiers`, `staff_account_assignments`, `account_profile_snapshots` |
-| 同步与 ODS（7） | `sync_settings`, `sync_batches`, `sync_tasks`, `sync_checkpoints`, `ods_provider_calls`, `ods_payloads`, `data_quality_issues` |
+| 同步、导入与 ODS（9） | `sync_settings`, `sync_batches`, `sync_tasks`, `sync_checkpoints`, `ods_provider_calls`, `ods_payloads`, `data_quality_issues`, `import_batches`, `import_row_results` |
 | 内容与评论（4） | `contents`, `content_snapshots`, `content_discoveries`, `comments` |
 | OSS 与媒资（3） | `oss_objects`, `media_assets`, `media_references` |
 
@@ -351,11 +352,18 @@ TypeScript、Python、SQL migration fixture 与任何其他实现必须对上述
 - `store_name VARCHAR(200) NOT NULL`；
 - `dealer_id/brand_id/sector_id BIGINT NOT NULL FK`；
 - `store_tier VARCHAR(64) NULL`；
-- `status VARCHAR(32) NOT NULL`；
+- `status VARCHAR(32) NOT NULL`：`active` / `closed`；
 - `monitoring_enabled BOOLEAN NOT NULL DEFAULT TRUE`；
+- `source_batch_id BIGINT NULL FK`：最近一次写入该行的 `import_batches`；
 - `created_at/updated_at DATETIME(6) NOT NULL`。
 
-约束/索引：`UQ(store_code)`；`IDX(dealer_id, status)`；`IDX(brand_id, status)`；`IDX(sector_id, status)`。门店单品牌；等级更新覆盖当前值，不保留历史。
+约束/索引：`UQ(brand_id, store_code)`；`IDX(dealer_id, status)`；`IDX(brand_id, status)`；`IDX(sector_id, status)`；`IDX(source_batch_id)`。
+
+门店单品牌：`brand_id` 是门店身份的一部分，不是可变属性。名称、等级、经销商、板块更新当前值，不保留变化历史（2026-11-02 决策，推翻「经销商 / 品牌 / 板块不可变」）。
+
+`store_id` 是唯一权威身份，门店编码只是属性。门店编码在全公司一个编号池内使用，同一编码在每个品牌下最多一条，因此唯一键是 `(brand_id, store_code)`；编码变更不改变 `store_id`。
+
+`status='closed'` 只由有权限的人在导入差异确认或主数据修正时写入。**导入不会因为某行在文件中消失就自动关闭门店**——消失只产生待确认项，因为导出范围和编码变更都可能造成同样的现象。
 
 ### 7.7 `media_staff`
 
@@ -432,10 +440,13 @@ TypeScript、Python、SQL migration fixture 与任何其他实现必须对上述
 
 ### 8.3 `staff_account_assignments`
 
+**作用**：账号的当前监控对象。表名沿用 v1，语义扩展为「谁在关注这个账号」：`watch_type='staff'` 时是原有的专员归属；`watch_type='external'` 时是外部监控对象（竞品、官方号），没有门店与专员。
+
 字段：
 
 - `assignment_id BIGINT PK`；
-- `staff_id/account_id BIGINT NOT NULL FK`；
+- `watch_type VARCHAR(16) NOT NULL DEFAULT 'staff'`：`staff` / `external`；
+- `staff_id BIGINT NULL FK`；`account_id BIGINT NOT NULL FK`；
 - `monitoring_enabled BOOLEAN NOT NULL DEFAULT TRUE`；
 - `current_home_locator LONGTEXT NOT NULL`、`current_home_locator_sha256 BINARY(32) NOT NULL`；
 - `previous_home_locator LONGTEXT NULL`、`previous_home_locator_sha256 BINARY(32) NULL`；
@@ -443,10 +454,22 @@ TypeScript、Python、SQL migration fixture 与任何其他实现必须对上述
 - `valid_from DATETIME(6) NOT NULL`；
 - `valid_to DATETIME(6) NULL`；
 - `ended_reason VARCHAR(128) NULL`；
-- `active_account_guard BIGINT GENERATED`：有效归属时等于 `account_id`，否则 null；
+- `active_account_guard BIGINT GENERATED`：有效记录时等于 `account_id`，否则 null；
 - `created_at/updated_at DATETIME(6) NOT NULL`。
 
-约束/索引：`UQ(active_account_guard)` 保证账号当前独占；`valid_to > valid_from`；上一入口值与摘要同空同非空；`IDX(staff_id, valid_from, valid_to)`；`IDX(account_id, valid_from)`。
+约束/索引：`CHECK ((watch_type='staff' AND staff_id IS NOT NULL) OR (watch_type='external' AND staff_id IS NULL))`；`UQ(active_account_guard)` 保证一个账号在当前只有一条记录，两种类型都适用；`valid_to > valid_from`；上一入口值与摘要同空同非空；`IDX(staff_id, valid_from, valid_to)`；`IDX(account_id, valid_from)`；`IDX(watch_type, monitoring_enabled)`。
+
+**两种类型的行为差异**：
+
+| | `staff` | `external` |
+|---|---|---|
+| 归属 | 门店 → 专员 → 经销商 → 组织链 | 无 |
+| 实际监控 | 五级状态与开关共同计算 | 只取账号状态与自身开关，没有上级链 |
+| 15 天无计划引用自动停采 | 适用 | **不适用**，纯开关控制（2026-11-02 决策） |
+| 数据范围 | 组织子树 × 品牌 | 默认只有平台级可见 |
+| 创建入口 | 活动计划名单导入 | 外部账号监控清单（仅超管） |
+
+`external` 型与竞品、官方号共用一套表达：业务上它们都只是「被观察的账号」，不区分归属主体（2026-11-02 决策，放弃第三型 `brand`）。
 
 运营提交账号后先创建 `resolve_account` 任务，最多解析 3 次。全部失败时不创建账号和归属，但任务与 ODS 保留一年。若已存在账号归属于他人，不自动抢占，创建归属冲突问题等待人工处理。
 
@@ -469,7 +492,7 @@ TypeScript、Python、SQL migration fixture 与任何其他实现必须对上述
 
 ---
 
-## 9. 同步控制、ODS 与质量问题（7）
+## 9. 同步控制、导入审计、ODS 与质量问题（9）
 
 ### 9.1 `sync_settings`
 
@@ -666,6 +689,54 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 
 约束/索引：`UQ(issue_fingerprint)`；severity 为 `info/warning/error/critical`；status 为 `open/acknowledged/resolved/ignored`；`IDX(status, severity, last_seen_at)`；`IDX(issue_code, last_seen_at)`；各业务 FK 索引。问题不自动删除；ODS 来源到期后可置空。
 
+### 9.8 `import_batches`
+
+**作用**：每一次主数据导入或名单导入的批次账。导入分「预检 → 确认 → 落库」三段，批次记录贯穿全程；没有它，失败行无法追溯、也无法重试。
+
+字段：
+
+- `import_batch_id BIGINT PK`；
+- `import_kind VARCHAR(16) NOT NULL`：`master_data`（权威主档）/ `roster`（活动计划名单）；
+- `plan_id BIGINT NULL`：`roster` 时必填，逻辑引用 A 域活动计划；`master_data` 时为空；
+- `uploaded_by_user_id BIGINT NOT NULL`；`uploaded_at DATETIME(6) NOT NULL`；
+- `file_name VARCHAR(512) NULL`；`file_sha256 BINARY(32) NULL`；`template_version VARCHAR(32) NULL`；
+- `brand_scope JSON NULL`：本次可写入的品牌集合，用于解释被跳过的行；
+- `total_rows INT NOT NULL`；`new_rows/skipped_rows/error_rows/conflict_rows INT NOT NULL DEFAULT 0`；
+- `status VARCHAR(16) NOT NULL`：`prechecking / precheck_failed / awaiting_confirm / writing / completed / failed`；
+- `confirmed_by_user_id BIGINT NULL`；`confirmed_at DATETIME(6) NULL`；
+- `created_at/updated_at DATETIME(6) NOT NULL`。
+
+约束/索引：`IDX(import_kind, uploaded_at)`；`IDX(plan_id, uploaded_at)`；status 取值受 CHECK 约束；批次不物理删除，失败批次保留以便重试与追责。
+
+> 预检阶段只写本表与 `import_row_results`，不改业务表；确认后才进入 `writing`。这是「解析与落库分阶段」的落点，见 §12.1。
+
+### 9.9 `import_row_results`
+
+**作用**：批次内每一行的处理结果。它让「失败行留在页面可追溯、可重试」成为数据事实，而不是一份关掉就找不回的 CSV。
+
+字段：
+
+- `import_row_result_id BIGINT PK`；
+- `import_batch_id BIGINT NOT NULL FK`；
+- `row_no INT NOT NULL`：文件内行号，从 1 开始，不含表头；
+- `raw_row JSON NOT NULL`：原始单元格按模板列名的快照，不做规范化；
+- `outcome VARCHAR(32) NOT NULL`：`imported / unchanged / conflict / invalid`；
+- `reason_code VARCHAR(64) NULL`；`reason_detail VARCHAR(1024) NULL`；
+- `store_id/account_id/staff_id BIGINT NULL`：命中对象；
+- `resolved_at DATETIME(6) NULL`；`resolved_by_user_id BIGINT NULL`；
+- `created_at DATETIME(6) NOT NULL`。
+
+约束/索引：`UQ(import_batch_id, row_no)`；`IDX(outcome, created_at)`；`IDX(store_id)`；`IDX(account_id)`；行结果与批次同寿命保留，不随业务数据删除。
+
+| `outcome` | 含义 | 是否需要人处理 |
+|---|---|---|
+| `imported` | 本次写入成功 | 否 |
+| `unchanged` | 与库中一致、未写入；名单中即「账号已存在且归属同一专员」 | 否 |
+| `conflict` | 与既有事实冲突（归属他人、编码重复等） | 是 |
+| `invalid` | 行级校验不通过（门店不存在、品牌不符、链接无效等） | 是 |
+
+> 账号解析是异步的：`invalid` 中的「链接解析失败」可在解析失败后回写同一行，不新增第二行。
+
 ---
 
 ## 10. 内容、批次快照、列表出现与评论（4）
@@ -828,13 +899,29 @@ CHECK 约束必须保证上述 asset/error/carried 组合。新快照创建新�
 
 ## 12. 关键业务流程与事务边界
 
-### 12.1 CRM 主档导入
+### 12.1 权威主档导入
 
-1. 按业务编码 upsert 品牌、组织、经销商、门店；
-2. 门店编码必填；经销商编码未提供时可空，后续首次补齐后不可随名称修改；
-3. 手机号规范化后 upsert 专员，手机号冲突进入数据质量问题；
-4. 主档名称和门店等级更新当前值，不保留变化历史；
-5. 不物理删除 CRM 中消失的记录，只设 `inactive`。
+**输入**：一份「在营、非数字门店」的权威导出，11 列——门店名称、撤店情况、是否数字门店、门店编码、经销商名称、经销商编码、所属分公司、分公司编码、主营业务、主营业务编码、店面标准。
+
+品牌与板块**不在文件中**，由 `主营业务编码` 经映射产生：13/15 → 日立、23/25 → 海信、33 → 约克VRF；15/25 → 水机、其余 → 家装。大区由 42 行「分公司 → 大区」对照表解析。
+
+**顺序**：
+
+1. 建 `import_batches`（`import_kind='master_data'`），逐行写 `import_row_results`；此时只写导入审计表，不动业务表；
+2. 文件级预检：模板列齐全、编码可识别、表头行检测、非空；
+3. 只处理 `撤店情况='无撤销'` 且 `是否数字门店='否'` 的行；其余行记 `invalid` 并写明原因；
+4. 按 `(brand_id, store_code)` 匹配门店：命中则更新属性，未命中则新建；
+5. 经销商按经销商编码匹配；编码为空、`--`、`#N/A` 的行记 `invalid` 并回流，不静默丢弃；
+6. 品牌、板块、大区、分公司由映射解析；未命中记 `invalid`；
+7. 名称、等级、经销商、板块更新当前值，不保留变化历史；
+8. **本期未出现的门店不自动关闭**：生成待确认项，由有权限的人确认「已撤店」后置 `status='closed'`；
+9. 展示「新增 N / 更新 M / 未变 K / 错误 J / 待确认撤店 P」，确认后才写入业务表。
+
+**幂等**：同一文件重复导入时，所有行都是 `unchanged`，不产生业务副作用。
+
+**失败语义**：单行失败不影响其他行；整批拒绝只发生在文件级预检。
+
+**品牌范围**：总部人员只能写入其授权品牌的行；其余品牌的行记 `invalid` 并说明「不在授权品牌内」。大区、分公司是跨品牌共享对象，只有超管可在主数据修正中修改。
 
 ### 12.2 新账号录入
 
@@ -1114,7 +1201,7 @@ Pydantic 使用 `model_fields_set` 区分缺失与显式 null。外部 ID 即使
 
 ## 20. 上线验收清单
 
-1. 28 张表与本文总览完全一致；
+1. 30 张表与本文总览完全一致；
 2. 同手机号不能创建两个专员业务身份；
 3. 同账号不能有两个同时有效归属；
 4. 上级监控关闭后下级自身开关不被改写；
@@ -1144,7 +1231,7 @@ Pydantic 使用 `model_fields_set` 区分缺失与显式 null。外部 ID 即使
 
 ## 21. 最终决策摘要
 
-- v2 为 28 张表；v1 保留，不覆盖。
+- v2 为 30 张表；v1 保留，不覆盖。
 - 单企业、无 tenant、无旧库迁移。
 - 组织、专员、账号和归属分离；业务状态与监控开关分离。
 - 全局北京时间每周一或两次；错过不补跑；全量批次不重叠。

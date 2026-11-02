@@ -29,5 +29,5 @@
 详见 [`INDEX.md`](../INDEX.md) §8.4。摘要：
 
 - 技术选型（NestJS / Prisma / BullMQ / Redis / Dify）已被 ADR-0004 延迟决定取代；
-- 数据模型（`staffs` / `staff_accounts` / `staff_store_relations`）已被 v2 的 28 表取代；
+- 数据模型（`staffs` / `staff_accounts` / `staff_store_relations`）已被 v2 的 30 表取代；
 - 个人权限覆盖、20 条窗口上限、pHash 去重、旧库存量迁移等假设均与当前基线冲突。

@@ -76,6 +76,7 @@
 | 32 | 我 | 开自动续费，或设 2027-08 到期提醒（当前是手动续费） | §1.1 |
 | 33 | — | 满足最小访问控制闭环后才开放 80/443 | §10.6 |
 | 34 | ✅ 我 | VOD 已开通（2026-10-29，华北2 北京）：`hbecho-vod-manage` 策略已加，点播系统存储已启用，`hbecho-course` 模板组已建（`3ca24a90956dbbfa16f1f6cf2fe6ad3a`）。**剩余**：播放域名（等备案）、自动截图模板（`InternalError`，暂缓） | §1.7、§3.6 |
+| 35 | ✅ 我 | `hbecho-course` 桶已建（2026-10-30，cn-beijing、私有、无过期规则 + 碎片 7 天）；「阻止公共访问」已开启；`hbecho-oss-rw` 已更新为 v2，新增 `CourseDocReadWriteDelete`；上传/列举/删除实测通过 | §1.6、§7 |
 
 ### 待触发（有前置条件，暂不做）
 
@@ -237,7 +238,7 @@ hbecho 与 hbdam 的差别：hbecho 首版是内部渐进开放的平台，媒�
 
 Bucket 拓扑是一个难以逆转的决定（改桶等于搬对象 + 改 `oss_objects.bucket/object_key`），**写入第一个对象之前必须先定**。规划、取舍和生命周期规则见 §7；这里只登记结果。
 
-**2026-09-03 已按三桶分离方案创建完成**，四个桶均在 `cn-beijing`、私有 ACL、Standard、LRS、「阻止公共访问」为 `true`。
+**2026-09-03 已按三桶分离方案创建完成**，四个桶均在 `cn-beijing`、私有 ACL、Standard、LRS、「阻止公共访问」为 `true`。**2026-10-30 新增第五个桶 `hbecho-course`**（课程资料，私有 ACL，实例角色可删），详见 ADR-0001 修订。
 
 桶名以 `hbecho-` 开头是硬约束——`hbecho-setup-buildout` 策略把 OSS 权限限定在 `acs:oss:*:1241086349153033:hbecho-*`（§3.6）。要用别的命名必须同步改策略。
 
@@ -247,6 +248,7 @@ Bucket 拓扑是一个难以逆转的决定（改桶等于搬对象 + 改 `oss_o
 | 正式媒资（`object_category='media'`） | `hbecho-media` | 2026-09-03 15:45:51 | **无过期规则** + 碎片 7 天 |
 | 临时对象（`object_category='temp'`） | `hbecho-temp` | 2026-09-03 15:45:52 | 过期 3 天 + 碎片 1 天 |
 | 数据库备份 | `hbecho-backup` | 2026-09-03 15:45:53 | `mysql/` 前缀 30 天 + 碎片 7 天 |
+| 课程资料（PDF / JPG / PNG） | `hbecho-course` | 2026-10-30 09:34:23 | **无过期规则** + 碎片 7 天；实例角色可删（ADR-0001 修订） |
 
 Endpoint：
 

@@ -10,6 +10,8 @@
 
 ## Planning rules
 
+**首批范围（2026-10-30 决定）**：先做不依赖 VOD 的那一半——任务 1、2、3、5、9；视频相关（4、6、7）等播放域名备案后再做。任务顺序不变，只是执行时跳过视频部分。
+
 - 任务按纵向结果排序：每个任务结束时留下可运行、可观察的增量，不建空表或空接口。
 - 默认验收离线：VOD 与 OSS 全部走 fake transport，禁用网络；真实 smoke 需人工批准并记预算。
 - 不在任务中重新选型；技术栈沿用 ADR-0005，目录结构以首批应用代码落地时确定的约定为准（本文件只写模块名，不写死路径）。
@@ -21,7 +23,7 @@
 - [ ] 1. 建表与数据约束
   - **Requirements:** G-1、G-2、G-15
   - **Design:** §3
-  - 迁移新增 `courses`、`course_brand_scopes`、`tags`、`course_tags`、`learning_progress` 五张表，含 §3.1 的组合 CHECK、唯一键与 RESTRICT 外键。
+  - 迁移新增 `courses`、`course_brand_scopes`、`tags`、`course_tags`、`learning_progress` 五张表，含 §3.1 的组合 CHECK（`kind` × 文件字段、`audience_level` 枚举）、唯一键与 RESTRICT 外键。
   - **验证**：干净库连续执行两次迁移幂等；故意写错 `kind='video'` 但缺 `vod_video_id` 时数据库报错；删除被引用的课程被 RESTRICT 拒绝。
 
 - [ ] 2. 标签集合管理
@@ -33,20 +35,20 @@
 - [ ] 3. 资料课程创建（OSS 直传）
   - **Requirements:** G-1、G-5、G-15
   - **Design:** §4.2、§3.6
-  - 签名直传地址、HEAD 校验（size / content-type）、校验失败删除对象、创建课程行；格式白名单 PDF / JPG / PNG；上限取配置。
+  - 签名直传地址（`hbecho-course` 桶，前缀 `doc/`）、HEAD 校验（size / content-type）、校验失败删除对象、创建课程行；格式白名单 PDF / JPG / PNG；上限取配置。
   - **验证**：fake OSS 下超限拒绝、格式错误拒绝、HEAD 不匹配时对象被删且不建行；成功后课程状态为 `published`。
 
 - [ ] 4. 视频课程创建（VOD）
   - **Requirements:** G-1、G-4
   - **Design:** §4.1
-  - 取上传凭证时显式传 `TemplateGroupId=3ca24a90956dbbfa16f1f6cf2fe6ad3a` 与 `cn-beijing` endpoint；上传完成后按状态建行（`transcoding` 或 `normal`）；转码完成后回填 `duration_sec`。
+  - 取上传凭证时显式传 `TemplateGroupId=3ca24a90956dbbfa16f1f6cf2fe6ad3a` 与 `cn-beijing` endpoint；上传完成后按状态建行（`transcoding` 或 `normal`）；转码完成后回填 `duration_sec`；创建接口带 `Idempotency-Key`，重复提交返回同一课程。
   - **验证**：fake VOD 覆盖凭证成功、失败、转码中、转码失败四种；凭证请求中断言模板组与 endpoint；转码中可建行但播放接口返回 202。
 
 - [ ] 5. 课程列表、详情与可见范围
   - **Requirements:** G-1、G-2、G-8、G-12
   - **Design:** §5.1
-  - 列表按「已发布 + 品牌范围交集」过滤，支持标题子串搜索、单标签筛选、`inProgress` 筛选；返回 `inProgress` 与 `lastLearnedAt`。
-  - **验证**：`brand_scope='all'` 的课程在任何品牌可见；指定集合只对交集品牌可见；范围外返回 403 而非空页；多标签参数被拒绝。
+  - 列表按「已发布 + 品牌范围交集 + 人员级别」过滤，支持标题子串搜索、单标签筛选、`inProgress` 筛选；返回 `inProgress` 与 `lastLearnedAt`。
+  - **验证**：`brand_scope='all'` 的课程在任何品牌可见；指定集合只对交集品牌可见；`branch_and_above` 课程对 `store_staff` 不可见；`hq_and_above` 对 `branch_manager` 不可见；范围外返回 403 而非空页；多标签参数被拒绝；**越权测试**：A 品牌账号访问 B 品牌课程的详情、播放、下载、搜索、汇总全部拒绝。
 
 - [ ] 6. 播放凭证与资料预览
   - **Requirements:** G-5、G-6
@@ -57,8 +59,8 @@
 - [ ] 7. 学习进度与续播
   - **Requirements:** G-7
   - **Design:** §4.4、§5.2
-  - 心跳上报 upsert；位置回退保护（30 秒阈值可配）；`play_count` 在真正起播时 +1。
-  - **验证**：同一用户同一课程只有一行；模拟拖动到 0 秒不清零；换设备后读到同一位置；并发上报不产生重复行。
+  - 心跳上报 upsert；**不做位置回退保护**（G-D18）；单次增量超过 60 秒截断（G-D19）；`play_count` 在真正起播时 +1。
+  - **验证**：同一用户同一课程只有一行；上报 0 秒后读到 0 秒（确认无隐藏保护）；单次上报 600 秒时 `watched_sec` 只增 60；换设备后读到同一位置；并发上报不产生重复行。
 
 - [ ] 8. 替换、下架与审计
   - **Requirements:** G-9、G-13
@@ -75,10 +77,16 @@
 - [ ] 10. 总部汇总
   - **Requirements:** G-11
   - **Design:** §5.3
-  - 四个累计指标；`range` 参数只接受 `all`；`branch_manager` / `store_staff` 403。
+  - 四个累计指标；人数/时长/次数含已下架课程（G-D20），课程数只算已发布；多品牌默认合计可切换；`range` 参数只接受 `all`；`branch_manager` / `store_staff` 403。
   - **验证**：学习人数去重；响应无个人标识；同一「全部品牌」课程跨品牌不重复计人；口径与页面文案一致。
 
-- [ ] 11. 权限接入、离线验收与文档回写
+- [ ] 11. 定时清理：残渣与归档
+  - **Requirements:** G-4、G-9
+  - **Design:** §6
+  - 两个独立任务：① 扫描 VOD 中无 `courses.vod_video_id` 引用的视频，超过 24 小时删除（G-D23）；② 扫描下架满 30 天的课程，删除媒体并把 `status` 置 `archived`（G-D37）。
+  - **验证**：孤儿视频 12 小时保留、30 小时删除；有课程引用的不删；下架 29 天的课程不动、31 天的归档且媒体已删；归档课程详情/播放/下载均 403；进度与汇总数字不下降。
+
+- [ ] 12. 权限接入、离线验收与文档回写
   - **Requirements:** G-12、G-14
   - **Design:** §7、§8
   - 接入四个 Capability；确认业务代码无角色判断；补 acceptance 全部自动项；回写 runbook 与 ADR 的实测值。

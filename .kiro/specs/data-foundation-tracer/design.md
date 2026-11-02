@@ -80,7 +80,7 @@
 - 不创建自然人 `Staff`，不恢复旧 `platform_accounts/staff_accounts/account_dealer_bindings`；
 - 不解决规则、指标、看板、导出或完整用户 RBAC；
 - 不把 `monitoring_enabled` 解释为用户查看权限；
-- 不复制 v2 的 28 表 DDL或整份供应商文档；
+- 不复制 v2 的 30 表 DDL或整份供应商文档；
 - 不冻结 Web 框架、ORM、迁移工具、队列、缓存或部署拓扑；
 - 不把成功 fixture 外推为所有平台能力。
 
@@ -660,7 +660,7 @@ GET  /internal/data-foundation/account-tracers/{root_task_id}
 - media pending/archived/failed/bytes/dedupe；
 - root age、stage age、retry wait、terminal category。
 
-关联键使用 rootTaskId、task/batch、ProviderCall、ODS ref、account、assignment、snapshot、discovery、checkpoint 和 media reference/asset。日志不输出 secret、完整手机号、raw body 或临时 URL。
+关联键使用 rootTaskId、task/batch、ProviderCall、ODS ref、account、assignment、snapshot、discovery、checkpoint 和 media reference/asset。日志不输出 secret、raw body 或临时 URL；手机号按明文记录（B 域 PRD v1.9）。
 
 ## 16. Verification strategy
 
@@ -764,5 +764,6 @@ smoke 独立于 CI，必须先显示并确认 capability、locator allowlist、c
 | 1 | requirements R7、design §10.5 与身份链、tasks 任务 4 | 把 `AccountAssignment` 当独立实体，归属带 `traceable start` 的区间语义 | 已改为「归属是账号记录上的当前单一事实」，不建独立表、不存时间区间；发现保留采集时的归属快照值 | D-16、D-28、D-67 |
 | 2 | design §10.1 与 §6 | 写「使用 v2 注册的 namespace 代码」 | 已改为代码枚举（命名空间不是表）；新增 namespace 须改 CONTEXT 与枚举 | D-25 |
 | 3 | v2 §6.3 / §8.3 | `identifier_namespaces`、`staff_account_assignments` 两张表仍在 v2 | **v2 未改**；v2 复核前不得据此建表，实施时以本节与 D-25 / D-28 为准 | D-25、D-28 |
+| 4 | design 日志字段 | 原写「日志不输出……完整手机号」 | 已按 2026-10-30 决定改为手机号明文可记录；secret、raw body、临时 URL 仍不写 | D-42、B 域 PRD v1.9 |
 
 **核对为一致的部分**（不需改动）：首版验收平台为抖音与小红书（快手在 `a-full-sync`，D-47）；不写死 `async=false/true`，异步未实测即门控；20 / 21 条是实测证据而非业务上限（D-12）；ODS 一年、快照与媒资长期保留（D-10）。

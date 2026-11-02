@@ -17,7 +17,7 @@
 冲突时按此顺序裁决，不在代码或局部 SQL 里暗中选择一方：
 
 1. `CONTEXT.md` —— 领域词汇、语义边界、不变量
-2. `HBECHO设计方案/domains/data-foundation/database-design-v2.md` —— 数据底座实施基线（28 表）
+2. `HBECHO设计方案/domains/data-foundation/database-design-v2.md` —— 数据底座实施基线（30 表）
 3. `aimaster接口文档/` 的 V1.2 文档与 `raw3` 实测 —— 外部合同与证据
 4. `.kiro/specs/*` —— 各模块需求、设计、任务
 5. `HBECHO设计方案/prd-platform.md` —— 产品方向与阶段
@@ -58,6 +58,7 @@ gh run watch <run-id> --exit-status   # 合并前等 CI
 - 平台与供应商是两个维度；组织与账号是不同实体，不压成一行
 - 外部 ID 按原始文本 + 命名空间；真实 0 / 缺失 / null / 非法四态不互转
 - 归属是账号上的当前单一事实；采集不抢占、改绑受审计、不物理删除
+- 采集只有一份；三层是活动计划 → 监控判定计划 → 计划看板（`prd-platform.md` §6.11）
 - 先落 ODS 再解析；网络 IO 期间不持有数据库事务
 - 已返回的页整页处理；检查点只在整页终态后推进
 - 未验证的 capability 不得启用；默认测试离线，CI 禁止真实付费调用

@@ -375,7 +375,7 @@ EffectiveTaskScope = SubmittedScope ∩ CurrentSubjectScopeAtExecution
 - 导出提交、执行、取消、交付与下载 URL 签发；
 - 高成本操作的授权与拒绝。
 
-事件包含 actor、subject、action、resource、decision、policy/grant version、范围 fingerprint、before/after 安全摘要、reason、trace/request/job ID 和 UTC 时间。日志不保存密码、Token、API key、Cookie、完整手机号或大范围明细。
+事件包含 actor、subject、action、resource、decision、policy/grant version、范围 fingerprint、before/after 安全摘要、reason、trace/request/job ID 和 UTC 时间。日志不保存密码、Token、API key、Cookie 或大范围明细；手机号按明文记录（B 域 PRD v1.9）。
 
 ### 11.2 Sensitive data
 
@@ -460,5 +460,6 @@ EffectiveTaskScope = SubmittedScope ∩ CurrentSubjectScopeAtExecution
 | 6 | §14 Open Decisions 5 | 手机号明文还是 `ciphertext + lookup HMAC` 带开 | 已关闭：明文保存 | D-42 |
 | 7 | §14 Open Decisions 6 | 登录标识、密码策略、会话有效期带开 | 已关闭：15 天滑动会话；密码只保留最短 8 位 | D-40、D-45 |
 | 8 | §14 Open Decisions 3 | Branch 范围是否与品牌 Grant 求交 | 仍未决，保持不变 | ADR 未决选型 #7 |
+| 9 | 日志与审计字段 | 原写「日志不保存……完整手机号」 | 已按 B 域 v1.9 改为手机号明文可记录；密码、Token、API key、Cookie 仍不记录 | D-42、B 域 PRD v1.9 |
 
 **未同步但不算冲突**：B 域 v1.2 的 10 个数据出口与审计可见性（仅 `platform_admin` 可读审计，D-41）在本文中没有展开；本设计只给出口授权语义，不列出口清单。

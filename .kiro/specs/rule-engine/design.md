@@ -76,7 +76,7 @@ flowchart LR
 - 不渲染报表、Excel 或看板，不重新定义指标口径；
 - 不定义 User、Role 或 DataScope，只消费授权上下文；
 - 不把活动 UI、规则向导 UI 或审批界面当作本模块接口；
-- 不复制 v2 的 28 表，不把规则字段追加到 finalized 快照；
+- 不复制 v2 的 30 表，不把规则字段追加到 finalized 快照；
 - 不默认启用 MySQL 分区、Redis 锁或某个队列/ORM；
 - 不把旧 `Staff`、主账号、结构化 hashtags 或 `sync_status='ok'` 假设带入新设计。
 
@@ -437,7 +437,7 @@ interface RuleOutcomeReader {
 - continuity gap、ValueState 覆盖和数据质量问题；
 - 新旧 outcome 漂移、人工批准和原子激活失败。
 
-关联键包括 `evaluationRunId`、`outcomeSetId`、`assessmentItemId`、`contentSnapshotId`、`discoveryId`、`assignmentId`、`mediaReferenceId`、`mediaAssetId` 和依赖任务引用。日志不写完整手机号、临时签名 URL 或模型 secret。
+关联键包括 `evaluationRunId`、`outcomeSetId`、`assessmentItemId`、`contentSnapshotId`、`discoveryId`、`assignmentId`、`mediaReferenceId`、`mediaAssetId` 和依赖任务引用。日志不写临时签名 URL 或模型 secret；手机号按明文记录（B 域 PRD v1.9）。
 
 ## 14. Verification and Acceptance Boundaries
 
@@ -590,3 +590,4 @@ interface RuleOutcomeReader {
 |---|---|---|---|---|
 | 1 | §17.3 第 3 层 | 三个评论刷量算子原标 **1.0** | 已改为**搁置**（刷评、刷表情随 D 域 §4 一起搁置） | D 域 PRD §4 |
 | 2 | §16 标题 | “P0 before requirements/tasks” | 本目录 `requirements.md` 已从仓库移除，当前只有 design.md；何时补写 requirements / tasks 未定 | git 记录 |
+| 3 | 日志字段 | 原写「日志不写完整手机号」 | 已按 2026-10-30 决定改为手机号明文可记录；签名 URL 与模型 secret 仍不写 | D-42、B 域 PRD v1.9 |

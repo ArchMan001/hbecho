@@ -4,7 +4,7 @@
 > **模式**：Design-First；当前只有设计草案，不代表实现已冻结  
 > **适用范围**：平台用户、会话认证、Capability、DataScope、用户与授权管理、异步任务及最终出口授权  
 > **所属域**：B 访问控制 · **目录命名**：旧名 `access-control`，按域代号应为 `b-access-control`（重命名在 B 域 spec 开工前执行）  
-> **最近核对**：2026-10-29（与 B 域 PRD v1.2 存在偏差，见文末附录）  
+> **最近核对**：2026-11-02（与 B 域 PRD v1.16 的偏差见文末附录）  
 > **更新日期**：2026-09-02
 
 ## 1. Overview
@@ -429,7 +429,7 @@ EffectiveTaskScope = SubmittedScope ∩ CurrentSubjectScopeAtExecution
 
 1. 最终 RoleProfile/RoleCode，尤其 `dealer_staff` 是否重命名；
 2. User 与 MediaStaff 首版是否严格一对一，以及跨品牌/门店现实人员如何映射；
-3. Branch 范围是否还必须与显式品牌 Grant 求交；
+3. ~~Branch 范围是否还必须与显式品牌 Grant 求交~~ —— 已关闭：求交，品牌必须显式授予（ADR-0010、B 域 PRD v1.16 §8.1）；
 4. Store 的 dealer/brand/sector 是否不可变；若可变，历史 AttributionSnapshot 由哪个域拥有；
 5. User 登录手机号采用明文还是 `ciphertext + lookup HMAC`；
 6. 登录标识、密码策略、Access/Refresh 有效期和 Session 并发上限；
@@ -448,7 +448,7 @@ EffectiveTaskScope = SubmittedScope ∩ CurrentSubjectScopeAtExecution
 
 ## 附录：已知过时内容（2026-10-29 核对）
 
-> 本节只记录偏差，不修改正文。正文仍是本 spec 的技术草案；凡与 B 域 PRD v1.2 冲突处，以 PRD 为准。
+> 本节只记录偏差，不修改正文。正文仍是本 spec 的技术草案；凡与 B 域 PRD v1.16 冲突处，以 PRD 为准。
 
 | # | 位置 | 本设计的写法 | 当前事实 | 来源 |
 |---|---|---|---|---|
@@ -459,7 +459,8 @@ EffectiveTaskScope = SubmittedScope ∩ CurrentSubjectScopeAtExecution
 | 5 | §14 Open Decisions 4 | Store 的 dealer / brand / sector 是否可变带开 | 已关闭：视为不可变，不做组织历史归属快照 | D-18 |
 | 6 | §14 Open Decisions 5 | 手机号明文还是 `ciphertext + lookup HMAC` 带开 | 已关闭：明文保存 | D-42 |
 | 7 | §14 Open Decisions 6 | 登录标识、密码策略、会话有效期带开 | 已关闭：15 天滑动会话；密码只保留最短 8 位 | D-40、D-45 |
-| 8 | §14 Open Decisions 3 | Branch 范围是否与品牌 Grant 求交 | 仍未决，保持不变 | ADR 未决选型 #7 |
+| 8 | §14 Open Decisions 3 | Branch 范围是否与品牌 Grant 求交 | 已关闭，保持不变：求交，品牌必须显式授予，见 ADR-0010 与 B 域 PRD v1.16 §8.1 | ADR-0010 |
 | 9 | 日志与审计字段 | 原写「日志不保存……完整手机号」 | 已按 B 域 v1.9 改为手机号明文可记录；密码、Token、API key、Cookie 仍不记录 | D-42、B 域 PRD v1.9 |
+| 10 | §12 Failure Semantics | 主数据状态失效或 ID 无法映射 → 空 DataScope 或拒绝 | 已按 B 域 v1.16 区分：品牌/组织停用不影响读范围；不存在或无法映射返回 403，不返回空列表 | B-D25、B-D26 |
 
-**未同步但不算冲突**：B 域 v1.2 的 10 个数据出口与审计可见性（仅 `platform_admin` 可读审计，D-41）在本文中没有展开；本设计只给出口授权语义，不列出口清单。
+**未同步但不算冲突**：B 域 v1.16 的 10 个数据出口与审计可见性（仅 `platform_admin` 可读审计，D-41）在本文中没有展开；本设计只给出口授权语义，不列出口清单。

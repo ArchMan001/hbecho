@@ -342,5 +342,25 @@
         "errorCode": "RESULT_VALIDATION_FAILED"
       }
     }
+  ],
+  "mediaSamples": [
+    {
+      "id": "media.douyin.cover_540_heic",
+      "source": "tests/fixtures/media/douyin-cover-540.heic",
+      "sourceSha256": "7d109e54b2023f5240a1ff97d26f28ce0083f4882735e98eb563371a5eba44c2",
+      "byteLength": 12592,
+      "mimeType": "image/heic",
+      "dimensions": {
+        "width": 540,
+        "height": 960
+      },
+      "evidenceLabel": "fixture_observed",
+      "derivedFrom": "抖音 user_video_list 的 cover 数组第 2 条候选（540 宽 HEVC 编码的 HEIC），2026-11-04 由刘学奎提供",
+      "use": [
+        "python_decode_test",
+        "media_archive_offline_test"
+      ],
+      "note": "sharp 的预编译包解不了 HEVC 编码的 HEIC（sharp #1105），解码由 Python 能力服务的 ffmpeg >= 7.1 承担（ADR-0012）"
+    }
   ]
 }

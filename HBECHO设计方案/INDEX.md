@@ -71,7 +71,7 @@
 | 架构与领域 | `CONTEXT.md`、`HBECHO设计方案/domains/`、`HBECHO设计方案/architecture/`、`HBECHO设计方案/governance/` | 领域语义、模块边界、实施基线、必要 ADR、不可协商条款索引 | 单次任务清单 |
 | Kiro Specs | `.kiro/specs/<code>-<slice>/` | 可验收需求、实现设计、执行任务 | 全项目巨型总设计 |
 | Runbook 与证据 | `HBECHO设计方案/runbooks/`、`aimaster接口文档/` | 运维步骤、供应商合同、fixture 与实测记录 | 未标状态的产品决策 |
-| 应用代码与测试 | `src/`（领域模块在 `src/modules/<模块>/`，schema 在 `src/db/`）、`drizzle/`（drizzle-kit 迁移与手写 SQL 迁移）、`tests/`（`tests/fixtures/` 登记证据而不复制，`tests/harness/` 为离线测试挂具）；目录约定见 [ADR-0013](architecture/adr/0013-repository-layout.md) | 实现与其自动化验收 | 设计结论；与 CONTEXT / v2 冲突时以文档为准 |
+| 应用代码与测试 | `src/`（领域模块在 `src/modules/<模块>/`，schema 在 `src/db/`）、`drizzle/`（drizzle-kit 迁移与手写 SQL 迁移）、`tests/`（`tests/fixtures/` 登记证据而不复制，`tests/harness/` 为离线测试挂具）、`services/capability/`（Python 能力服务，ADR-0012；目前只有标准化衍生图的转换函数与 pytest 单测）；目录约定见 [ADR-0013](architecture/adr/0013-repository-layout.md) | 实现与其自动化验收 | 设计结论；与 CONTEXT / v2 冲突时以文档为准 |
 | 历史归档 | `HBECHO设计方案/archive/` | superseded 方案、旧稿、复盘、评审证据、legacy 输入 | 当前实现依据 |
 
 ### 4.1 命名规范（对齐 hbdam 的做法）
@@ -126,7 +126,7 @@
 | 不可协商条款 | [`constitution.md`](governance/constitution.md) | current（索引） | 18 条跨模块条款；索引，不新增事实、不裁决冲突 |
 | 架构决策 | [`adr/README.md`](architecture/adr/README.md) | current | 13 项已定决定（ADR-0001～0013）+ 10 项选型登记（全部关闭）；新决定必须单独写 ADR |
 | 开发测试部署流程 | [`dev-test-deploy-workflow.md`](runbooks/dev-test-deploy-workflow.md) | current | 当前唯一实例是**测试 ECS**，生产 ECS 未购买；只有本机 verify 与 CI 可用 |
-| 本机验证与 CI | [`verify.sh`](../scripts/verify.sh) · [`ci.yml`](../.github/workflows/ci.yml) · [`pre-commit`](../.githooks/pre-commit) | current | verify 覆盖 Node 版本、类型检查、离线测试（禁网）、密钥、文档链接、文档登记与 spec 结构；尚无静态门禁与真实数据库集成测试；pre-commit 只扫暂存区 |
+| 本机验证与 CI | [`verify.sh`](../scripts/verify.sh) · [`ci.yml`](../.github/workflows/ci.yml) · [`pre-commit`](../.githooks/pre-commit) | current | verify 覆盖 Node 版本、类型检查、离线测试（禁网）、迁移一致、MySQL 8.4 数据库测试、密钥、文档链接、文档登记与 spec 结构，以及 Python 能力服务单测（环境满足 pytest 与 ffmpeg ≥ 7.1 时；CI 不验 Python 侧）；尚无静态门禁与真实数据库集成测试；pre-commit 只扫暂存区 |
 | 数据底座数据库 | [`database-design-v2.md`](domains/data-foundation/database-design-v2.md) | draft（待 A 域 PRD 逐表复核） | 30 表草案；v1 不参与新实现 |
 | 数据底座字段字典 | [`field-dictionary.md`](domains/data-foundation/field-dictionary.md) | draft | 主页/列表/详情/评论的规范字段、含义、值状态与 10 个未确认语义 |
 | 数据底座 tracer | [requirements](../.kiro/specs/a-data-foundation-tracer/requirements.md) · [design](../.kiro/specs/a-data-foundation-tracer/design.md) · [tasks](../.kiro/specs/a-data-foundation-tracer/tasks.md) · [acceptance](../.kiro/specs/a-data-foundation-tracer/acceptance.md) | draft | 首个 Design-First 纵向切片；已按 A v1.9 与 raw4/raw5/raw8 校准；AI Master 是内部适配器 |

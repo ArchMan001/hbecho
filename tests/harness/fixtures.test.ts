@@ -1,5 +1,6 @@
 // fixture manifest 与 loader 的验收：来源、checksum、evidence label、不含 secret。
 // 对应 tasks 任务 1「建立 fixture 清单、来源、checksum 和 evidence label」。
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
@@ -59,6 +60,18 @@ describe("manifest", () => {
         action: body?.data?.action ?? null,
         errorCode: body?.data?.error?.code ?? (typeof body?.code === "string" ? body.code : null),
       }).toEqual(e.observed);
+    }
+  });
+});
+
+describe("媒资样本（mediaSamples）", () => {
+  it("每个样本文件存在，SHA-256 与长度和登记值一致", () => {
+    const samples = (loadManifest() as unknown as { mediaSamples: Array<{ id: string; source: string; sourceSha256: string; byteLength: number }> }).mediaSamples;
+    expect(samples.length).toBeGreaterThan(0);
+    for (const s of samples) {
+      const bytes = readFileSync(new URL(`../../${s.source}`, import.meta.url));
+      expect(createHash("sha256").update(bytes).digest("hex"), s.id).toBe(s.sourceSha256);
+      expect(bytes.byteLength, s.id).toBe(s.byteLength);
     }
   });
 });

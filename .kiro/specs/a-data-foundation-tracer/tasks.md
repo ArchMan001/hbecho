@@ -1,7 +1,7 @@
 # A Data Foundation Tracer Implementation Plan
 
 > **状态**：`draft`  
-> **执行状态**：任务 1–6 已完成（6/9）；任务 7 未开始  
+> **执行状态**：任务 1–7 已完成（7/9）；任务 8 未开始  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
 > **验收**：[`acceptance.md`](acceptance.md)  
@@ -234,7 +234,7 @@
 
   - **任务 6 未覆盖、已转交后续任务的验收项：** 取消发生在整页事务进行中（事务是原子的，取消只会发生在其前后，前后两种在任务 4 已覆盖）；「条目内重复位置进入 ProviderCall evidence」只做到了子任务摘要与质量问题，ProviderCall 行本身不增加列。
   - **实现留下的取舍（供复核）：** ① 不可投影的条目（缺失 / 非法 / 超长 `post_id`）计入「已处理」并留一条 `field_contract_anomaly`，**不阻塞检查点**——否则一条坏数据会让这个账号永远无法建立基线；证据仍在 ODS（一年）。② 重复条目、不可投影条目、游标异常都用 `field_contract_anomaly`，靠 `detail.reason` 区分，没有新增问题码；根任务警告阶段名为 `list`（身份类问题为 `identity`）。③ 投影抛出的任何异常都映射成 `projection / page_projection_failed`，root 与子任务 `failed`，没有重试——重试策略在任务 8；基础设施类异常（断连）会被同样处理，任务 8 要区分。④ `ContentListProjector` / `CheckpointModule` 是接口 + 默认实现，编排器通过 `deps.projector` 注入（仅测试使用）；没有为 `CheckpointModule` 加注入点（暂无测试需要）。
-- [ ] 7. 打通正式媒资归档与独立进度
+- [x] 7. 打通正式媒资归档与独立进度
   - **Requirements:** R8, R12, R15, R16, R18
   - 从 profile/content snapshot 产生 avatar、background、cover 的 versioned MediaReference；抖音生成 avatar/background，小红书不生成；封面数组选第 2 条（抖音），单值 `cover` 直接用（小红书）；临时 URL 只作 source locator。
   - 实现 `MediaArchiveModule`：idempotent demand、bounded fake/real download seam、私有临时对象、完整 bytes SHA-256、size/type verification、formal MediaAsset dedupe 和 verified binding。
@@ -243,6 +243,26 @@
   - Root/status 分开显示 structured checkpoint 与 media pending/archived/carried_forward/retryable/terminal warning；media failure 不回滚结构化结果；续用旧资产标 `carried_forward`，不表示本轮成功。
   - **Offline acceptance:** fake OSS 下相同 bytes 去重、不同 bytes 不按 URL 合并；过期 URL/超限/截断/失败都保留 snapshot 和 warning；衍生图有独立 SHA-256 且原图仍在；小红书无 avatar/background 引用；默认测试无网络媒体请求。
 
+  - **完成记录（2026-11-04）：** `./scripts/verify.sh` 通过（unit 18 个文件 231 条；db 11 个文件 208 条，其中媒资归档 19 条；Python 侧 `services/capability` pytest 7 条，用真实 HEIC 样本，本机已验证；**CI 不验 Python 侧**，见下）。对 12 处关键逻辑做了变异检查（资产按 SHA 去重、同次运行重试上限、轮次上限、续用旧资产、失败重试范围、衍生图复用、转换结果类型校验、白名单、重定向逐跳校验、截断检测、过期状态码），1 个幸存的是等价变异；转换结果类型校验最初幸存，补了「转换服务返回非 JPEG」用例后被杀。Python 侧另做 2 处变异（qscale、目标宽度），均被杀。
+  - **Requirements → 覆盖测试**：
+
+    | Requirement | 任务 7 覆盖的部分 | 测试 |
+    |---|---|---|
+    | R8.5 / R12.1 | 头像 / 背景 / 封面引用在任务 4–5 已按版本化快照创建（`pending`）；归档把它们推进为 `archived`，临时 URL 只留在 `source_locator` | `archive.db.test.ts` |
+    | R12.2 | 抖音 22 个引用（头像 + 背景 + 20 封面）；小红书只有 21 个封面，没有 avatar / background（含衍生角色） | 同上 |
+    | R12.3 | 封面引用的是第 2 条候选（任务 4 已断言），归档下载的就是该地址 | 同上 |
+    | R12.4 | 完整字节的 SHA-256 判同：20 个封面 URL 各异、字节相同 → 1 份资产；不同字节 → 不同资产；新批次 URL 变了、字节没变 → 不产生新资产；对象 key 内容寻址（`media/<sha[0:2]>/<sha>`），不含任何主机 / 查询串；读回校验 | 同上 |
+    | R12.5 | 标准化衍生图（JPEG、540×960）是独立资产、独立 SHA-256，原图仍在，两者互不替代；用 `*_normalized` 角色的引用指向衍生资产；转换按唯一原图做一次，已有衍生图则复用 | 同上 |
+    | R12.5（真实 HEIC） | 真实抖音封面（HEVC 编码的 HEIC）经 ffmpeg 转为 540 宽 JPEG（估算质量 ≈ 79）；更宽的输入等比缩到 540；乱码 / 空 / 截断输入是 `ConversionError`，不是空图 | `services/capability/tests/test_image.py` |
+    | R12.6 | 结构化先完成，根状态 `structured_succeeded_media_pending`；归档不下载、不改写已终态的主页 / 内容快照与检查点；归档后 `succeeded` | 同上 |
+    | R12.8 | 过期 URL（403 / 404 / 410）→ `failed / source_expired`，不用同一个 URL 重试，下一轮也不重试；可重试错误（超时 / 重置 / 5xx / 429 / 截断）同次运行内最多 2 次、最多 3 轮，之后 `rounds_exhausted` 不再请求；超限 / 非图片 / 被守卫拒绝 → 终态，不重试；下载失败且上一快照有已验证资产 → `carried_forward`（原图与衍生图都续用，保留本轮失败码，不算本轮归档成功） | 同上 |
+    | R12.9 / R16.2 | 全程 fake 媒资 transport / fake 转换器 / fake OSS；未登记 URL 立即失败；网络拒绝挂具仍然生效 | 同上 |
+    | R15.2 / R15.3 | status 的媒资进度分开显示 `pending / archived / carriedForward / failed`，失败再分 `retryable / needsFreshUrl / terminal`；`succeeded_with_warnings` 在存在失败或续用时出现 | 同上、`status.db.test.ts` |
+    | R18.1 / R18.2 / R18.5 | 每个引用一个短事务，先按 `download_media` 子任务 fencing 校验；被取代的 worker 不创建资产、不改引用；下载 / 转换期间数据库没有打开的事务（`information_schema.innodb_trx` 断言） | 同上 |
+    | design §12.3 | URL 守卫：只允许 http(s)，白名单为 fixture 里出现的 CDN（`douyinpic.com`、`rednotecdn.com`），拒绝 IP 字面量 / localhost / 内网名 / 凭据 / 非默认端口；重定向最多 3 跳、逐跳重新校验；20 MB 上限；按字节嗅探类型（HTML 错误页即使 200 也拒绝） | `media-archive.unit.test.ts` |
+
+  - **任务 7 未覆盖、已转交后续任务的验收项：** 真实 HTTP 下载 transport、Python 能力服务的 HTTP 外壳与 Node 客户端、真实 OSS（媒资桶）实现 → 与任务 9 之后的部署一起；真实媒资 URL 有效期（ENV8）和真实下载 → 需要批准的 smoke；`download_media` 的 worker 调度与取消协作 → 任务 8。
+  - **实现留下的取舍（供复核）：** ① **没有引入 sharp**：ADR-0005 登记了它，但你批准的依赖清单里没有；衍生图的所有格式（含 WebP / JPEG）都走 `ImageConverter` 端口，由 Python 能力服务的 ffmpeg 承担。需要 sharp 的话请告诉我。② Python 侧只实现了转换**函数**与单测，没有 FastAPI 外壳（没有可测的部分，不写没人验证的代码）；`pyproject.toml` 的运行时依赖为空，开发依赖只有 pytest。③ ffmpeg 的 mjpeg 只有整数 qscale，「q80」取 qscale 6（实测约 q79，qscale 5 约 q82），单测允许 77–83。④ 衍生图**总是**缩放到 540 宽（含比 540 小的图），与「标准化」一致。⑤ **没有「私有临时对象」暂存**：下载上限 20 MB，整份在内存里校验；对象 key 内容寻址，重复写是幂等的，所以不需要先落临时再搬运。媒资桶没有 orphan sweeper（ODS sweeper 只扫 `ods/`）：对象写成功而数据库事务失败时会留下一个以 SHA 命名的孤儿，下次同字节会复用它。⑥ 每轮一个 `download_media` 子任务（idempotency key 含轮次），最多 3 轮；重试不重开终态任务。子任务总是 `succeeded`，媒资失败只是警告。⑦ 衍生引用在**归档时**才创建（`pending` 阶段只有原始引用），所以归档前 `media.total` 是 22，归档后是 44。⑧ 失败码分三类（见 `media-failure`）：`retryable` / `needs_fresh_url` / `terminal`；DB 的 `archive_status` 仍只有 v2 的四个值，类别由 `last_error_code` 推出；**未登记的失败码按 terminal 统计**，不假定可重试。⑨ 续用只在**下载失败**时发生；转换失败不续用（原图本轮已拿到）。⑩ `verify.sh` 新增第 9 步 Python 单测：需要 pytest（`services/capability/.venv`）与 ffmpeg ≥ 7.1，不满足时打印 `SKIPPED（Python 侧未验证）` 且最终一行写「Python 侧未验证」；**CI 的 ubuntu 自带 ffmpeg 6.x，所以 CI 不验 Python 侧**（dev-ci-cadence 已有「CI 绿 ≠ Python 侧验过」的提醒）。要让 CI 验，需要在 workflow 里装静态 ffmpeg ≥ 7.1，这会引入一个新的下载源，我没有擅自加。
 - [ ] 8. 补齐同步/异步、租约、重试、取消与恢复
   - **Requirements:** R2, R13, R14, R15, R18
   - 对 verified synchronous action 实现单次 captured terminal result；对 verified asynchronous profile 实现 captured submission + persisted task ID + each-poll ProviderCall + bounded terminal handling；`user_video_list` 异步按 raw4/raw5/raw8 结论保持 disabled。

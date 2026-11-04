@@ -155,7 +155,7 @@ describe("A8 状态可区分（R15.2、R15.3）", () => {
     await ref("background", { archiveStatus: "archived", mediaAssetId: asset });
     let s = found(await status.get(id, serviceActor()));
     expect(s.state).toBe("structured_succeeded_media_pending");
-    expect(s.media).toEqual({ total: 2, pending: 1, archived: 1, failed: 0, carriedForward: 0 });
+    expect(s.media).toEqual({ total: 2, pending: 1, archived: 1, failed: 0, carriedForward: 0, retryable: 0, needsFreshUrl: 0, terminal: 0 });
 
     await t.db.update(mediaReferences).set({ archiveStatus: "archived", mediaAssetId: asset }).where(eq(mediaReferences.role, "avatar"));
     s = found(await status.get(id, serviceActor()));
@@ -165,7 +165,7 @@ describe("A8 状态可区分（R15.2、R15.3）", () => {
     await ref("background_normalized", { archiveStatus: "carried_forward", mediaAssetId: asset, lastErrorCode: "download_failed", isCarriedForward: true });
     s = found(await status.get(id, serviceActor()));
     expect(s.state).toBe("succeeded_with_warnings");
-    expect(s.media).toEqual({ total: 4, pending: 0, archived: 2, failed: 1, carriedForward: 1 });
+    expect(s.media).toEqual({ total: 4, pending: 0, archived: 2, failed: 1, carriedForward: 1, retryable: 0, needsFreshUrl: 0, terminal: 1 }); // 未登记的失败码不当作可重试
 
     await setRoot(id, { status: "succeeded_with_gap", continuityGapDetected: true, stopReason: "end_of_list_rebased" });
     expect(found(await status.get(id, serviceActor())).state).toBe("succeeded_with_warnings");

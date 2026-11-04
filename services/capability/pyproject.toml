@@ -1,0 +1,13 @@
+[project]
+name = "hbecho-capability"
+version = "0.0.0"
+description = "hbecho Python 能力服务（ADR-0012）：图像 / 音视频辅助计算，不持有业务状态、不连业务库"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+# 开发依赖：只用于离线单测（ADR-0012，2026-11-04 批准）
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

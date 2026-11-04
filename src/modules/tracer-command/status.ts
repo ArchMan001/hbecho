@@ -14,6 +14,7 @@ import {
   syncCheckpoints,
   syncTasks,
 } from "../../db/schema";
+import { classifyMediaFailure } from "../media-failure";
 import type { Clock } from "../raw-capture";
 import { inScope, requireCapability, type ActorContext } from "./actor";
 import { decimalId } from "./canonical";
@@ -49,7 +50,19 @@ export interface TracerStatusFound {
     checkpointEstablished: boolean;
     cursorType?: "string" | "integer" | "null";
   };
-  media: { total: number; pending: number; archived: number; failed: number; carriedForward: number };
+  media: {
+    total: number;
+    pending: number;
+    archived: number;
+    /** failed = retryable + needsFreshUrl + terminal。 */
+    failed: number;
+    carriedForward: number;
+    /** 同一个 URL 还可能成功（网络、CDN 抖动、转换服务暂不可用），会有界地重试。 */
+    retryable: number;
+    /** 签名 URL 过期，必须等下一次采集拿到新地址。 */
+    needsFreshUrl: number;
+    terminal: number;
+  };
   entryOutcome?: EntryOutcome;
   warnings: Array<{ code: string; stage: string }>;
   qualityIssues: Array<{ code: string; status: string }>;
@@ -120,7 +133,7 @@ export function createTracerStatusQuery(deps: { db: Db; clock: Clock }): TracerS
         discoveries: 0,
         checkpointEstablished: false,
       };
-      const media = { total: 0, pending: 0, archived: 0, failed: 0, carriedForward: 0 };
+      const media = { total: 0, pending: 0, archived: 0, failed: 0, carriedForward: 0, retryable: 0, needsFreshUrl: 0, terminal: 0 };
 
       if (root.accountId !== null) {
         const [snap] = await db
@@ -150,24 +163,30 @@ export function createTracerStatusQuery(deps: { db: Db; clock: Clock }): TracerS
         }
 
         const profileRefs = await db
-          .select({ status: mediaReferences.archiveStatus, n: count() })
+          .select({ status: mediaReferences.archiveStatus, code: mediaReferences.lastErrorCode, n: count() })
           .from(mediaReferences)
           .innerJoin(accountProfileSnapshots, eq(accountProfileSnapshots.profileSnapshotId, mediaReferences.profileSnapshotId))
           .where(and(eq(accountProfileSnapshots.batchId, root.batchId), eq(accountProfileSnapshots.accountId, root.accountId)))
-          .groupBy(mediaReferences.archiveStatus);
+          .groupBy(mediaReferences.archiveStatus, mediaReferences.lastErrorCode);
         const contentRefs = await db
-          .select({ status: mediaReferences.archiveStatus, n: count() })
+          .select({ status: mediaReferences.archiveStatus, code: mediaReferences.lastErrorCode, n: count() })
           .from(mediaReferences)
           .innerJoin(contentSnapshots, eq(contentSnapshots.contentSnapshotId, mediaReferences.contentSnapshotId))
           .innerJoin(contents, eq(contents.contentId, contentSnapshots.contentId))
           .where(and(eq(contentSnapshots.batchId, root.batchId), eq(contents.accountId, root.accountId)))
-          .groupBy(mediaReferences.archiveStatus);
+          .groupBy(mediaReferences.archiveStatus, mediaReferences.lastErrorCode);
         for (const r of [...profileRefs, ...contentRefs]) {
           const n = Number(r.n);
           media.total += n;
           if (r.status === "pending") media.pending += n;
           else if (r.status === "archived") media.archived += n;
-          else if (r.status === "failed") media.failed += n;
+          else if (r.status === "failed") {
+            media.failed += n;
+            const cls = classifyMediaFailure(r.code);
+            if (cls === "retryable") media.retryable += n;
+            else if (cls === "needs_fresh_url") media.needsFreshUrl += n;
+            else media.terminal += n;
+          }
           else if (r.status === "carried_forward") media.carriedForward += n;
         }
       }

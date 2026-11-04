@@ -1,7 +1,7 @@
 # A Data Foundation Tracer Implementation Plan
 
 > **状态**：`draft`  
-> **执行状态**：任务 1–5 已完成（5/9）；任务 6 未开始  
+> **执行状态**：任务 1–6 已完成（6/9）；任务 7 未开始  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
 > **验收**：[`acceptance.md`](acceptance.md)  
@@ -203,7 +203,7 @@
 
   - **任务 5 未覆盖、已转交后续任务的验收项：** 同批次重复内容、空 / null 游标、`id_window` / `empty` 入库 → 任务 6；小红书封面 WebP 的下载与衍生图 → 任务 7；异步与恢复策略 → 任务 8。
   - **实现留下的取舍（供复核）：** ① 拒绝决定的问题码是 `dominant_author_rejected`（design 只列了「至少覆盖」的五个码，这是新增的）；`discriminator` = 策略版本 + 拒绝原因，所以同一批次同一原因重放不重复。② 拒绝决定**不让 root 失败**：账号、主页快照、内容和检查点照常建立，root 为 `succeeded` 并带 `dominant_author_rejected` 警告；因为 R6.2 只要求「不猜测绑定并创建质量问题」。③ 主导作者绑定的 `confidence` 记 `observed`（不是 `verified`），后续人工裁决可升级。④ 抖音与小红书共用同一条流程，平台差异只在 `PlatformStrategy.listBindings`（抖音：`sec_uid`；小红书：主导作者）；`DEFAULT_STRATEGIES` 现在包含小红书。⑤ 小红书列表条目还有 `red_id`（小红书号），不在 D-25 的命名空间枚举里，没有处理。
-- [ ] 6. 完成跨平台完整页、按账号内容与 typed checkpoint 契约
+- [x] 6. 完成跨平台完整页、按账号内容与 typed checkpoint 契约
   - **Requirements:** R8, R9, R10, R11, R14, R18
   - 抽取 `ContentListProjector` 和 `CheckpointModule` 的平台无关 Interface；停止判断只能发生在完整页提交之后。
   - 明确 content identity、按账号粒度的 immutable snapshot、target-list Discovery、returned author 和 assignment context 的 grain；不同账号的同一 content 各保留一份 snapshot/discovery；同一 batch+账号的重复 entry 全部处理但只生成一个 discovery，重复位置/count 进入 page/call evidence 和质量摘要。
@@ -212,6 +212,28 @@
   - 覆盖 empty-success（0 条 + `has_more=false` → `empty` 锚点）、entry projection failure、duplicate entry、same content across accounts、null/empty/long cursor、旧批次迟到和 cancellation。
   - **Offline acceptance:** contract checks 证明 returned count 等于 required processed count 后才推进；同一列表重复 content ID 不丢 entry 处理证据也不违反 discovery 唯一键；同一 content 在两个账号各有一份 snapshot/discovery；21-entry page 不被 local limit 截断；integer/string round-trip 不互转；三种 anchor mode 均可重建；任一 entry 失败或 stale fence 时 checkpoint version 不前进。
 
+  - **完成记录（2026-11-04）：** `./scripts/verify.sh` 通过（unit 17 个文件 218 条；db 10 个文件 189 条，其中模块级 12 条、编排层页契约 11 条）。对 11 处关键逻辑做了变异检查（处理数校验、重复条目问题、游标异常问题及其 `has_more` 条件与空串条件、合并规则、`post_id` 上限、处理数统计、锚点回退、检查点不改写、投影异常处理），全部被杀。**诚实说明：** 任务 4 为了让抖音链路能跑通，已经把页投影、检查点与合并写成了平台无关的实现，所以任务 6 的大部分用例在补充实现之前就是绿的；真正红的是：超长 `post_id`、`processedEntries` 与页完整性校验、`ContentListProjector` / `CheckpointModule` 接口与注入、重复条目的质量摘要、`has_more=true` 配空 / null / 缺失游标的质量问题、投影异常 → `page_projection_failed`。
+  - **Requirements → 覆盖测试**（只列任务 6 新增或补强的部分）：
+
+    | Requirement | 任务 6 覆盖的部分 | 测试 |
+    |---|---|---|
+    | R9.3 | 同一作品出现在两个账号的列表：各一条内容、一份快照、一条发现，不跨账号合并（直接对 `projectContentPage` 断言） | `projection.db.test.ts` |
+    | R9.4 | 同一 batch + 账号的重复条目：全部处理（`processedEntries` 含重复），一个内容 / 快照 / 发现，发现记首次位置；重复位置进入子任务 `result_summary.duplicate_entries` 与 `field_contract_anomaly` 质量问题 | `projection.db.test.ts`、`tracer-flow.page-contract.db.test.ts` |
+    | R9.5 | 合并后落库：后到真实 0 覆盖先到的 5；后到 missing / null / invalid 不擦除已有有效值；先到的非有效态被后到的有效值替换；播放数恒 `unsupported` | `merge.test.ts`、`projection.db.test.ts` |
+    | R9.6 | `content_kind` 后到的 `unknown` 不覆盖已推断的形态，不输出 `mixed` | `merge.test.ts` |
+    | R9.9 | 0 条 + `has_more=false`：任务成功、`empty` 锚点、无内容 / 发现 / 引用 / 质量问题 | `tracer-flow.page-contract.db.test.ts` |
+    | R9.1 / R9.2 / R9.11 | 25 条一页、limit=1：25 条全部处理，只请求一页；21 条页不截断（合并层） | 同上、`merge.test.ts` |
+    | R10.1 / R10.5 | 检查点只在 `processedEntries === returnedEntries` 之后建立；整页投影在事务里失败（写完全部内容后注入失败）→ 整页回滚，无内容 / 发现 / 引用 / 检查点，主页事实保留，root 以 `projection / page_projection_failed` 失败；已处理数不足 → `page_incomplete`，无检查点 | 同上、`projection.db.test.ts`（整页原子） |
+    | R10.2 / R10.3 | 长期检查点只有 v2 列（列集合断言）；`has_more` / 页数 / 处理条数只在一年期任务 lineage | `projection.db.test.ts` |
+    | R10.4 | 整数游标超过 2^53 仍保持原文；字符串游标（含空串）、`{kind:null}`；缺失 / 非法游标不存；超长（8000 字符）游标往返不变；integer 与 string 不互转 | 同上 |
+    | R10.6 | 已存在检查点不被改写（版本、游标、锚点不变）；较新批次先到、较旧批次后到时检查点与 current 都不倒退（任务 4 的编排用例） | 同上、`tracer-flow.douyin.db.test.ts` |
+    | R10.7 | `time` / `id_window` / `empty` 三种锚点入库并可重建；无效发布时间（0、负数、超出 DATETIME、非 value）不参与取最大值 | 同上、`anchor.test.ts` |
+    | R10.8 / R10.10 | 首屏不足 limit 且 `has_more=true`：不请求第二页，按首屏建立基线，不记连续性缺口 | `tracer-flow.page-contract.db.test.ts` |
+    | R10.11 | `has_more=true` 配 null / 空串 / 缺失游标：质量问题（`cursor_missing_while_has_more`），按已处理页建立基线，不再请求；`has_more=false` 时空 / null 是正常结束 | 同上 |
+    | R18.2 / R18.4 | 陈旧 fence 不写（任务 4 已覆盖）；整页事务与 root 终态原子，所以「检查点推进但页未完成」不可表达 | 同上 |
+
+  - **任务 6 未覆盖、已转交后续任务的验收项：** 取消发生在整页事务进行中（事务是原子的，取消只会发生在其前后，前后两种在任务 4 已覆盖）；「条目内重复位置进入 ProviderCall evidence」只做到了子任务摘要与质量问题，ProviderCall 行本身不增加列。
+  - **实现留下的取舍（供复核）：** ① 不可投影的条目（缺失 / 非法 / 超长 `post_id`）计入「已处理」并留一条 `field_contract_anomaly`，**不阻塞检查点**——否则一条坏数据会让这个账号永远无法建立基线；证据仍在 ODS（一年）。② 重复条目、不可投影条目、游标异常都用 `field_contract_anomaly`，靠 `detail.reason` 区分，没有新增问题码；根任务警告阶段名为 `list`（身份类问题为 `identity`）。③ 投影抛出的任何异常都映射成 `projection / page_projection_failed`，root 与子任务 `failed`，没有重试——重试策略在任务 8；基础设施类异常（断连）会被同样处理，任务 8 要区分。④ `ContentListProjector` / `CheckpointModule` 是接口 + 默认实现，编排器通过 `deps.projector` 注入（仅测试使用）；没有为 `CheckpointModule` 加注入点（暂无测试需要）。
 - [ ] 7. 打通正式媒资归档与独立进度
   - **Requirements:** R8, R12, R15, R16, R18
   - 从 profile/content snapshot 产生 avatar、background、cover 的 versioned MediaReference；抖音生成 avatar/background，小红书不生成；封面数组选第 2 条（抖音），单值 `cover` 直接用（小红书）；临时 URL 只作 source locator。

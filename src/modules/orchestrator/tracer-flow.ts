@@ -25,7 +25,7 @@ import {
   type Platform,
   type ProfileData,
 } from "../provider-adapter";
-import { establishInitialCheckpoint, projectContentPage, projectProfile, recordIssue, validPublishedAtMs } from "../projection";
+import { checkpointModule, contentListProjector, cursorAnomaly, projectProfile, recordIssue, validPublishedAtMs, type ContentListProjector } from "../projection";
 import {
   StaleFenceError,
   interpretCaptured,
@@ -53,6 +53,8 @@ export interface TracerRunDeps {
   config?: TracerConfig;
   strategies?: Readonly<Record<string, PlatformStrategy>>;
   hooks?: TracerRunHooks;
+  /** 默认是真实的整页投影；测试用来注入「第 N 条失败」「已处理数不足」。 */
+  projector?: ContentListProjector;
 }
 
 /** 测试用的崩溃 / 抢占点：钩子抛出的异常不会被吞掉。 */
@@ -80,6 +82,7 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
   const rootId = BigInt(rootTaskIdIn);
   const config = deps.config ?? DEFAULT_CONFIG;
   const strategies = deps.strategies ?? DEFAULT_STRATEGIES;
+  const projector = deps.projector ?? contentListProjector;
   const result = (kind: RunKind): RunResult => ({ kind, rootTaskId: rootId.toString() });
 
   const claim = await claimTask(db, rootId, { workerId: deps.workerId, leaseMs: deps.leaseMs ?? DEFAULT_LEASE_MS, now: clock.now() });
@@ -336,11 +339,12 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
   await deps.hooks?.beforePageProjection?.();
   const [listCall] = await db.select().from(odsProviderCalls).where(eq(odsProviderCalls.providerCallId, page.captured.providerCallId));
   const listReceivedAt = listCall!.responseReceivedAt ?? clock.now();
-  const projected = await retryDuplicate(() =>
+  const projectAndFinish = (): Promise<Fenced<void>> =>
+    retryDuplicate(() =>
     withFences(db, clock, [{ taskId: rootId, token }, { taskId: child.taskId, token: ctoken }], async (tx, tasks) => {
       const now = clock.now();
       const owner = await loadOwnerSnapshot(tx, intake.assignmentId);
-      const res = await projectContentPage(tx, {
+      const res = await projector.projectCompletePage(tx, {
         batchId: root.batchId,
         platformId: root.platformId,
         accountId: intake.accountId,
@@ -380,21 +384,27 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
         await recordIssue(tx, { code: i.code, severity: i.severity, batchId: root.batchId, accountId: intake.accountId, providerCallId: page!.captured.providerCallId, discriminator: i.discriminator, detail: i.detail, now });
         warnings.push({ code: i.code, stage: "identity" });
       }
+      // 页必须全部到达终态才能建立检查点（任一条没有处理 → 整页回滚）
+      if (res.processedEntries !== res.returnedEntries) throw new PageIncompleteError(res.processedEntries, res.returnedEntries);
+      const listIssue = async (discriminator: string, detail: Record<string, unknown>) => {
+        await recordIssue(tx, { code: "field_contract_anomaly", severity: "warning", batchId: root.batchId, accountId: intake.accountId, providerCallId: page!.captured.providerCallId, discriminator, detail, now });
+        warnings.push({ code: "field_contract_anomaly", stage: "list" });
+      };
       if (res.unprojectable.length > 0) {
-        await recordIssue(tx, {
-          code: "field_contract_anomaly",
-          severity: "warning",
-          batchId: root.batchId,
-          accountId: intake.accountId,
-          providerCallId: page!.captured.providerCallId,
-          discriminator: "list.entry.post_id_unusable",
-          detail: { entries: res.unprojectable },
-          now,
+        await listIssue("list.entry.post_id_unusable", { reason: "entry_unprojectable", entries: res.unprojectable });
+      }
+      if (res.duplicates.length > 0) {
+        // 重复条目全部处理过，只保留一个 discovery；重复位置进入质量摘要
+        await listIssue("list.duplicate_entries", {
+          reason: "duplicate_list_entries",
+          entries: res.duplicates.map((d) => ({ platform_content_id: d.platformContentId, positions: d.positions })),
         });
       }
+      const anomaly = cursorAnomaly(page!.data.hasMore, page!.data.maxCursor);
+      if (anomaly) await listIssue("list.cursor_missing_while_has_more", { reason: anomaly.reason, has_more: true, cursor_kind: anomaly.cursorKind });
 
       const anchorEntries = page!.data.entries.flatMap((e) => (e.postId.state === "value" ? [{ platformContentId: e.postId.value, publishedAtMs: e.publishedAtMs }] : []));
-      const cp = await establishInitialCheckpoint(tx, {
+      const cp = await checkpointModule.establishInitial(tx, {
         accountId: intake.accountId,
         providerId: root.providerId,
         batchId: root.batchId,
@@ -432,8 +442,23 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
       );
       await finishRoot(tx, tasks.get(rootId)!, { status: "succeeded", entryOutcome: "normal", summary, warnings, accountId: intake.accountId, assignmentId: intake.assignmentId }, now);
     }),
-  );
+    );
+
+  let projected: Fenced<void>;
+  try {
+    projected = await projectAndFinish();
+  } catch (e) {
+    // 整页事务已回滚（无内容 / 发现 / 检查点）；技术失败不会变成空列表
+    return failList("projection", e instanceof PageIncompleteError ? "page_incomplete" : "page_projection_failed", page.attempt);
+  }
   return projected.ok ? result("succeeded") : staleResult(projected);
+}
+
+class PageIncompleteError extends Error {
+  constructor(processed: number, returned: number) {
+    super(`页未处理完：已处理 ${processed} / 返回 ${returned}`);
+    this.name = "PageIncompleteError";
+  }
 }
 
 // ───────────────────────── 内部 ─────────────────────────

@@ -3,6 +3,8 @@
 import type { ListEntry } from "../provider-adapter";
 import type { ValueState } from "../provider-adapter";
 
+export const MAX_POST_ID_LENGTH = 2048;
+
 export interface MergedContent {
   platformContentId: string;
   entry: ListEntry;
@@ -55,6 +57,11 @@ export function mergeEntries(entries: readonly ListEntry[]): {
       continue;
     }
     const id = e.postId.value;
+    // contents.platform_content_id 是 VARCHAR(2048)：放不下的 ID 不可投影，而不是让整页写入失败
+    if (id.length > MAX_POST_ID_LENGTH) {
+      unprojectable.push({ position: e.position, reason: "post_id_too_long" });
+      continue;
+    }
     const cur = byId.get(id);
     if (!cur) byId.set(id, { platformContentId: id, entry: e, firstPosition: e.position, positions: [e.position] });
     else {

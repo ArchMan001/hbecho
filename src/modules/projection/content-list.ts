@@ -34,6 +34,11 @@ export interface ProjectPageInput {
 
 export interface ProjectPageResult {
   returnedEntries: number;
+  /**
+   * 已到达终态的条目数 = 形成内容的条目（含重复出现的）+ 不可投影的条目。
+   * 检查点只在 processedEntries === returnedEntries 时才能建立（R10.1、R10.5）。
+   */
+  processedEntries: number;
   /** 形成了内容快照与发现的内容数（同一内容重复出现只算一个）。 */
   projectedContents: number;
   /** 无法投影的条目（缺少可用的 post_id）：已计入终态，留下质量问题，不阻塞检查点。 */
@@ -47,7 +52,8 @@ const PINNED_POSITIONS = 3; // 第一页前三位可能置顶（v2 §9.4 第 3 �
 
 export async function projectContentPage(tx: DbTx, p: ProjectPageInput): Promise<ProjectPageResult> {
   const { merged, unprojectable, duplicates } = mergeEntries(p.page.entries);
-  const base = { returnedEntries: p.page.entries.length, unprojectable, duplicates };
+  const processedEntries = merged.reduce((n, m) => n + m.positions.length, 0) + unprojectable.length;
+  const base = { returnedEntries: p.page.entries.length, processedEntries, unprojectable, duplicates };
 
   const contentIds: bigint[] = [];
   for (const m of merged) {
@@ -182,3 +188,10 @@ async function insertCover(tx: DbTx, p: ProjectPageInput, contentSnapshotId: big
   });
 }
 
+
+/** 平台无关的完整页投影接口：只在一个调用方给定的事务里完成整页；停止 / 续页判断只能发生在它提交之后。 */
+export interface ContentListProjector {
+  projectCompletePage(tx: DbTx, input: ProjectPageInput): Promise<ProjectPageResult>;
+}
+
+export const contentListProjector: ContentListProjector = { projectCompletePage: projectContentPage };

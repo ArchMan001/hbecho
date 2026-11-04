@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import type { DbTx } from "../../db/client";
 import { syncCheckpoints } from "../../db/schema";
 import { jcsSha256 } from "../canonical-json";
-import type { TypedCursor } from "../provider-adapter";
+import type { TypedCursor, ValueState } from "../provider-adapter";
 import { computeInitialAnchor, type AnchorEntry } from "./anchor";
 
 export const CHECKPOINT_ACTION = "fetch_content_list";
@@ -69,4 +69,21 @@ export async function establishInitialCheckpoint(tx: DbTx, i: EstablishInput): P
     updatedAt: i.now,
   });
   return { established: true, version: 1n };
+}
+
+/** 检查点模块接口：长期检查点只保存 v2 字段；has_more / 页数 / 处理条数留在一年期 task / call lineage。 */
+export interface CheckpointModule {
+  establishInitial(tx: DbTx, input: EstablishInput): Promise<EstablishResult>;
+}
+
+export const checkpointModule: CheckpointModule = { establishInitial: establishInitialCheckpoint };
+
+/**
+ * has_more=true 但游标为空 / null / 缺失时无法继续翻页（D-53）：不请求下一页，按已处理页建立基线，并留一条质量问题。
+ * has_more=false 时空或 null 游标是正常结束。
+ */
+export function cursorAnomaly(hasMore: ValueState<boolean>, cursor: TypedCursor): { reason: "cursor_missing_while_has_more"; cursorKind: string } | null {
+  if (hasMore.state !== "value" || !hasMore.value) return null;
+  const unusable = cursor.kind === "null" || cursor.kind === "absent" || cursor.kind === "invalid" || (cursor.kind === "string" && cursor.value === "");
+  return unusable ? { reason: "cursor_missing_while_has_more", cursorKind: cursor.kind } : null;
 }

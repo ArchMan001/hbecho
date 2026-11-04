@@ -350,7 +350,7 @@ Capability 采用稳定的 `resource.action` 形式；业务代码只检查 Capa
 | `data.sync.trigger` | 手工同步 | ✅ |
 | `data.raw_payload.read` | 查看原始载荷 | ✅ |
 | `data.master_data.import` | 导入权威主档；授权品牌内门店非结构字段（名称 / 等级 / 撤店确认）+ 已有结构下新增门店；不含跨品牌对象与关系变更 | ✅ |
-| `data.master_data.correct` | 单条纠错：名称、店面标准等非结构字段 | ✅ |
+| `data.master_data.correct` | 单条纠错：名称、店面标准等非结构字段；专员停用 / 恢复（A §5.4 的离职、调岗、录错） | ✅ |
 | `data.master_data.structure` | 手动结构变更：新建 / 修改经销商、板块、分公司、大区；给门店换经销商 / 板块；手动单条新建门店、单条停用启用 | ✅ |
 | `monitor.external.manage` | 维护外部监控账号清单（竞品与官方号） | ✅ |
 | `activity_plan.create` | 创建与维护活动计划（创建、暂停、归档、删除） | ✅ |
@@ -384,7 +384,7 @@ Capability 采用稳定的 `resource.action` 形式；业务代码只检查 Capa
 | `data.sync.trigger` | 手工同步 | 目标账号范围 | ✅ | 授权品牌 | 本分公司 | ❌ |
 | `data.raw_payload.read` | 查看供应商原始载荷 | 业务范围 + 高敏 | ✅ | ❌ | ❌ | ❌ |
 | `data.master_data.import` | 导入权威主档；授权品牌内门店非结构字段 + 已有结构下新增门店 | 授权品牌 | ✅ | ✅ | ❌ | ❌ |
-| `data.master_data.correct` | 单条纠错：名称、店面标准 | 授权品牌 | ✅ | ✅ | ❌ | ❌ |
+| `data.master_data.correct` | 单条纠错：名称、店面标准；专员停用 / 恢复 | 授权品牌 | ✅ | ✅ | ❌ | ❌ |
 | `data.master_data.structure` | 手动结构变更：经销商 / 板块 / 分公司 / 大区、换关系、单条新建门店、停用启用 | 平台级（组织对象跨品牌） | ✅ | ❌ | ❌ | ❌ |
 | `monitor.external.manage` | 外部监控账号清单 | 平台级 | ✅ | ❌ | ❌ | ❌ |
 | `activity_plan.create` | 创建与维护活动计划（创建、暂停、归档、删除） | 授权品牌 | ✅ | ✅ | ❌ | ❌ |

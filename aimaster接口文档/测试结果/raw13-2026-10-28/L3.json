@@ -1,0 +1,738 @@
+{
+  "case": "L3",
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1bacc25f71e0001dd76b3",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1bacc25f71e0001dd76b3",
+      "action": "user_video_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "post_id": "3xm4ryyan9wcshi",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1789545569636,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "一楼出租，二楼自住，一定要注意一点\n石家庄栾城赵家庄村 自建小别墅🏡\n果断选择空气能 完美实现冬暖夏凉",
+            "tag_text": "#空气能 #农村采暖 #热泵 #自建房",
+            "related_search_terms": [
+              "栾城赵家庄村"
+            ],
+            "stats": {
+              "play_count": 9275,
+              "like_count": 16,
+              "comment_count": 3,
+              "collect_count": 2,
+              "share_count": 15
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/09/16/15/BMjAyNjA5MTYxNTU4NDFfMTgwMTkwNDQwNF8yMDkwOTIzMTM0MTBfMV8z_480p_B9fe4f89e574014e857ad1dd8cb787d82.kvif?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xm4ryyan9wcshi_480p.kvif&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjA5MDkyMzEzNDEwXzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjA5MDkyMzEzNDEwXzE4MDE5MDQ0MDQ.m4a",
+              "duration": 48
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y13zw2408x8738x1400x5xx13z.djvod.ndcimgs.com/ksc1/85nys6G6LE1l-41lBUn_GsT5EyouiWFSvXn5Ul6s-9DWJke0fbhoZGhuPGAXDXFpumRBlZuejaEpETUwPcf2ZQsj1AQgx9Wl2jAmMRatbCGWNB3mBC84rzNbC-tnrQCB.mp4?tag=1-1793178322-p-0-g7odgrj86n-243a4d71c35ba6f7&provider=self&clientCacheKey=3xm4ryyan9wcshi_0fac3d13&di=af1552c6&bp=10461&x-ks-ptid=209092313410&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "85nys6G6LE1l-41lBUn_GsT5EyouiWFSvXn5Ul6s-9DWJke0fbhoZGhuPGAXDXFpumRBlZuejaEpETUwPcf2ZQsj1AQgx9Wl2jAmMRatbCGWNB3mBC84rzNbC-tnrQCB.mp4",
+              "duration": 48.666
+            },
+            "images": [],
+            "related_search_str": "栾城赵家庄村"
+          },
+          {
+            "post_id": "3x2xuzike7b4jpu",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1761534069856,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "石家庄栾城北长村自建房 小别墅🏡\n天然气壁挂炉采暖太贵了，果断选择空气能取暖",
+            "tag_text": "#空气能 #农村采暖 #农村自建房",
+            "related_search_terms": [
+              "栾城别墅建筑二层"
+            ],
+            "stats": {
+              "play_count": 7442,
+              "like_count": 33,
+              "comment_count": 9,
+              "collect_count": 5,
+              "share_count": 11
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2025/10/27/11/BMjAyNTEwMjcxMTAwMzFfMTgwMTkwNDQwNF8xNzgzOTI1NzU4MzNfMV8z_480p_B2d386ca82fa3f24722328eb1ab8832d5.kvif?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3x2xuzike7b4jpu_480p.kvif&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MTc4MzkyNTc1ODMzXzE4MDE5MDQ0MDQ.m4a",
+              "name": "MTc4MzkyNTc1ODMzXzE4MDE5MDQ0MDQ.m4a",
+              "duration": 41
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y13zw2408x8738x1400x5xx13z.djvod.ndcimgs.com/ksc1/k098JCHg1HLKbzlYTHdUd60GxQWG7-qZS56jDqbrvsx0tOFcUyJn-cwLaJ5xRqlvA8RTQLxsvs0tHmygYEk-6sbdRoFx2Pg7xtK0q2r1e_S-D1ibEYaDe5ZO3xjXZwUs.mp4?tag=1-1793178322-p-0-xipgen0mxt-765300f0eadf8b32&provider=self&clientCacheKey=3x2xuzike7b4jpu_0e4331a8&di=af1552c6&bp=10461&x-ks-ptid=178392575833&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "k098JCHg1HLKbzlYTHdUd60GxQWG7-qZS56jDqbrvsx0tOFcUyJn-cwLaJ5xRqlvA8RTQLxsvs0tHmygYEk-6sbdRoFx2Pg7xtK0q2r1e_S-D1ibEYaDe5ZO3xjXZwUs.mp4",
+              "duration": 41.866
+            },
+            "images": [],
+            "related_search_str": "栾城别墅建筑二层"
+          },
+          {
+            "post_id": "3xfun528yz7sywg",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1716023504469,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "国产空调四巨头，海信  海尔  格力  美的，哪个好",
+            "tag_text": "#格力 #美的 #海信",
+            "related_search_terms": [
+              "海信空调为什么不建议买"
+            ],
+            "stats": {
+              "play_count": 47189,
+              "like_count": 224,
+              "comment_count": 86,
+              "collect_count": 39,
+              "share_count": 33
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2024/05/18/17/BMjAyNDA1MTgxNzEwNTNfMTgwMTkwNDQwNF8xMzI2ODgyODgxMzZfMV8z_480p_Baaddbf4af127b51abd57fb6cd9ceb9c8.kvif?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xfun528yz7sywg_480p.kvif&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MTMyNjg4Mjg4MTM2XzE4MDE5MDQ0MDQ.m4a",
+              "name": "MTMyNjg4Mjg4MTM2XzE4MDE5MDQ0MDQ.m4a",
+              "duration": 88
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y13zw2408x8738x1400x5xx13z.djvod.ndcimgs.com/ksc1/7QpfjFoHpDV14Ld9RjmgAa8asdCoDO54akDBZah9KdWkw_t3B5rFMQF3H47K1W_9rLLQQpVU99O78R6U6fsYfonl428kmlxw8iaqQqgLonKyhMYRabZPi0oxPoNO3CwAljESnZgbTEXeKx7uTcifqQ.mp4?tag=1-1793178322-p-0-em8llcpopk-89288c9b676ccee3&provider=self&clientCacheKey=3xfun528yz7sywg_f6b04438&di=af1552c6&bp=10461&x-ks-ptid=132688288136&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "7QpfjFoHpDV14Ld9RjmgAa8asdCoDO54akDBZah9KdWkw_t3B5rFMQF3H47K1W_9rLLQQpVU99O78R6U6fsYfonl428kmlxw8iaqQqgLonKyhMYRabZPi0oxPoNO3CwAljESnZgbTEXeKx7uTcifqQ.mp4",
+              "duration": 88.419
+            },
+            "images": [],
+            "related_search_str": "海信空调为什么不建议买"
+          },
+          {
+            "post_id": "3xq5t284fsrsb99",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1793087235823,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "栾城范台村 农村自建房旧房改造 海信空气能安装完成",
+            "tag_text": "#空气能 #旧房改造翻新#农村自建房#同城",
+            "related_search_terms": [
+              "纽恩泰空气能太垃圾了"
+            ],
+            "stats": {
+              "play_count": 5250,
+              "like_count": 6,
+              "comment_count": 2,
+              "collect_count": 2,
+              "share_count": 2
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/10/27/15/BMjAyNjEwMjcxNTQ2NDhfMTgwMTkwNDQwNF8yMTM2Mzk5NzI1MzZfMV8z_low_Ba68f720496c521c39f6fe431b85e84f9.webp?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xq5t284fsrsb99_low.webp&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjEzNjM5OTcyNTM2XzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjEzNjM5OTcyNTM2XzE4MDE5MDQ0MDQ.m4a",
+              "duration": 23
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y16zw2408x8738x1400x5xx16z.djvod.ndcimgs.com/ksc1/xABuIuVLuJlP_1UklDaTPgTx0XQSrfqAgn8vyeqNeeXS4tGFluIpAVFWDszwEsb9VCRZH83dn7bJzxihE_OoCnrrhHZklANICK1XqvFbN6vFOeJjH2J7PbXEeUWR4oyC.mp4?tag=1-1793178322-p-0-8xdmrhbcij-f857a0dd0c82fb72&provider=self&clientCacheKey=3xq5t284fsrsb99_d67e002a&di=af1552c6&bp=10461&x-ks-ptid=213639972536&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:UNKNOWN;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "xABuIuVLuJlP_1UklDaTPgTx0XQSrfqAgn8vyeqNeeXS4tGFluIpAVFWDszwEsb9VCRZH83dn7bJzxihE_OoCnrrhHZklANICK1XqvFbN6vFOeJjH2J7PbXEeUWR4oyC.mp4",
+              "duration": 23.4
+            },
+            "images": [],
+            "related_search_str": "纽恩泰空气能太垃圾了"
+          },
+          {
+            "post_id": "3x7abz5bkmhthpg",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1792570482149,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "楼底回迁 海信90知风 风管机安装完成",
+            "tag_text": "#栾城装修 #海信中央空调 #林荫观澜 #风管机",
+            "related_search_terms": [
+              "风管机的致命缺点"
+            ],
+            "stats": {
+              "play_count": 4070,
+              "like_count": 7,
+              "comment_count": 3,
+              "collect_count": 0,
+              "share_count": 0
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/10/21/16/BMjAyNjEwMjExNjEzNThfMTgwMTkwNDQwNF8yMTI5NDc1NzIzNTZfMV8z_low_Be19c2061fa07d1e50b3f69798618b039.webp?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3x7abz5bkmhthpg_low.webp&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjEyOTQ3NTcyMzU2XzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjEyOTQ3NTcyMzU2XzE4MDE5MDQ0MDQ.m4a",
+              "duration": 56
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y13zw2408x8738x1400x5xx13z.djvod.ndcimgs.com/ksc1/nDe2Fmp8MleXV2r1-WJK6rrEZOmXb2WpzcjkQWguTe7jWCk5YaCyS9o7MK82FOoJeKCO8NeCoT1JeTO4dnDlKy71-p5lk4RGS0Hd34VRpRH_KIG71nvI7CwfRgfDg4gH.mp4?tag=1-1793178322-p-0-bnbwmrojcy-65d5cd6cac123460&provider=self&clientCacheKey=3x7abz5bkmhthpg_6f994547&di=af1552c6&bp=10461&x-ks-ptid=212947572356&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "nDe2Fmp8MleXV2r1-WJK6rrEZOmXb2WpzcjkQWguTe7jWCk5YaCyS9o7MK82FOoJeKCO8NeCoT1JeTO4dnDlKy71-p5lk4RGS0Hd34VRpRH_KIG71nvI7CwfRgfDg4gH.mp4",
+              "duration": 56.133
+            },
+            "images": [],
+            "related_search_str": "风管机的致命缺点"
+          },
+          {
+            "post_id": "3x6vh6agrp37khw",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1792483337414,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "石家庄栾城窦妪村 农村自建房取暖\n天然气壁挂炉采暖太贵了，果断选择空气能取暖，舒适又节能",
+            "tag_text": "#空气能 #农村采暖 #农村自建房 #窦妪",
+            "related_search_terms": [
+              "石家庄窦妪村小区"
+            ],
+            "stats": {
+              "play_count": 4517,
+              "like_count": 6,
+              "comment_count": 2,
+              "collect_count": 1,
+              "share_count": 3
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/10/20/16/BMjAyNjEwMjAxNjAxNTFfMTgwMTkwNDQwNF8yMTI4NDI0MzA5NTNfMV8z_low_B1b16132a879247057faf9ea20b50f7da.webp?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3x6vh6agrp37khw_low.webp&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjEyODQyNDMwOTUzXzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjEyODQyNDMwOTUzXzE4MDE5MDQ0MDQ.m4a",
+              "duration": 30
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y16zw2408x8738x1400x5xx16z.djvod.ndcimgs.com/ksc1/TbNR3oD2YxjjfRw8XXuN3W5vxICJVCGh8Mvljs5dKZ7m4bn7t5PCjDFCDa5BCYzKR6-bbNVlVtls71IcLK2BLNIIgl95Jm1KLwKzW9qlr73o6rGqec_UDtANA3IoMqJQ.mp4?tag=1-1793178322-p-0-rs0if8oqgl-2b16833d1d7890ba&provider=self&clientCacheKey=3x6vh6agrp37khw_579a35f1&di=af1552c6&bp=10461&x-ks-ptid=212842430953&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "TbNR3oD2YxjjfRw8XXuN3W5vxICJVCGh8Mvljs5dKZ7m4bn7t5PCjDFCDa5BCYzKR6-bbNVlVtls71IcLK2BLNIIgl95Jm1KLwKzW9qlr73o6rGqec_UDtANA3IoMqJQ.mp4",
+              "duration": 30.366
+            },
+            "images": [],
+            "related_search_str": "石家庄窦妪村小区"
+          },
+          {
+            "post_id": "3xqav2dqbkz888e",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1792399199144,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "石家庄栾城自建房\n海信空气能落地实景效果",
+            "tag_text": "#空气能 #热泵 #农村采暖 #自建房",
+            "related_search_terms": [
+              "河北空气能价格表"
+            ],
+            "stats": {
+              "play_count": 4093,
+              "like_count": 4,
+              "comment_count": 1,
+              "collect_count": 0,
+              "share_count": 0
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/10/19/16/BMjAyNjEwMTkxNjM5MTlfMTgwMTkwNDQwNF8yMTI3NDI5NTA5MTZfMV8z_low_Bb2622638bf418df62771666331778910.webp?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xqav2dqbkz888e_low.webp&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://ty2.a.kwimgs.com/bs2/ost/MjEyNzQyOTUwOTE2XzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjEyNzQyOTUwOTE2XzE4MDE5MDQ0MDQ.m4a",
+              "duration": 52
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y1fzw2408x8738x1400x5xx1fz.djvod.ndcimgs.com/ksc1/hJqdW1g5zgdsIA_cMYn9tuKJOSTC5OPU2n3rVm0iTVbY-WomieUlnBrFM7RHqXIoI9fUSEdM44oUHCrLRzO2Aev3TexuPlieRI4LGA6jaPt4BKlTrf6ojDj9ji5hmrGR.mp4?tag=1-1793178322-p-0-yfjyxm4v3c-666d5339c4526a99&provider=self&clientCacheKey=3xqav2dqbkz888e_77a416e6&di=af1552c6&bp=10461&x-ks-ptid=212742950916&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "hJqdW1g5zgdsIA_cMYn9tuKJOSTC5OPU2n3rVm0iTVbY-WomieUlnBrFM7RHqXIoI9fUSEdM44oUHCrLRzO2Aev3TexuPlieRI4LGA6jaPt4BKlTrf6ojDj9ji5hmrGR.mp4",
+              "duration": 52.933
+            },
+            "images": [],
+            "related_search_str": "河北空气能价格表"
+          },
+          {
+            "post_id": "3xpyxpr687ga4dg",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1792055138382,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "正太玖章 海信中央空调交底",
+            "tag_text": "#中央空调 #万源雅筑 #春熙雅苑 #林荫观澜",
+            "related_search_terms": [
+              "正太玖章中央空调"
+            ],
+            "stats": {
+              "play_count": 4129,
+              "like_count": 14,
+              "comment_count": 2,
+              "collect_count": 0,
+              "share_count": 0
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/10/15/17/BMjAyNjEwMTUxNzA0NDJfMTgwMTkwNDQwNF8yMTIyNzAzMjg0ODBfMV8z_low_B8af036ea5aade90c54d1527f0523ad2b.webp?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xpyxpr687ga4dg_low.webp&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjEyMjcwMzI4NDgwXzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjEyMjcwMzI4NDgwXzE4MDE5MDQ0MDQ.m4a",
+              "duration": 80
+            },
+            "video": {
+              "url": "http://k0u1ybdy5dy15zw2408x8738x1400x31xx15z.djvod.ndcimgs.com/ksc1/RjnyMGGWHDFG_5qkHxtWB4sp0hQ-CCYMl2pqAoCJjpoeFjL9J_RpJ6LxMDYNTfgC-krKa-9PLZF4XljkZnse83W_Ili9LXGUItAhKXjGG3KoLM1rIKgwBX887oW_dNhp.mp4?tag=1-1793178322-p-0-f1dehqzek8-e8d783c5e29b6211&provider=self&clientCacheKey=3xpyxpr687ga4dg_3f1a3d85&di=af1552c6&bp=10461&x-ks-ptid=212270328480&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=97&tt=sl200UltraV1&ss=vpm",
+              "name": "RjnyMGGWHDFG_5qkHxtWB4sp0hQ-CCYMl2pqAoCJjpoeFjL9J_RpJ6LxMDYNTfgC-krKa-9PLZF4XljkZnse83W_Ili9LXGUItAhKXjGG3KoLM1rIKgwBX887oW_dNhp.mp4",
+              "duration": 80.5
+            },
+            "images": [],
+            "related_search_str": "正太玖章中央空调"
+          },
+          {
+            "post_id": "3xxtaq6jnkxn54y",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1792029803965,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "农村自建房 什么最重要？我感觉是 冬暖夏凉！",
+            "tag_text": "#空气能 #热泵 #农村自建别墅",
+            "related_search_terms": [
+              "空气能取暖原理"
+            ],
+            "stats": {
+              "play_count": 4006,
+              "like_count": 5,
+              "comment_count": 0,
+              "collect_count": 0,
+              "share_count": 0
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/10/15/10/BMjAyNjEwMTUxMDAyMzRfMTgwMTkwNDQwNF8yMTIyMzI0MDUwODBfMV8z_480p_Bf484480cc0f3e02ae779d9d5caa014ca.kvif?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xxtaq6jnkxn54y_480p.kvif&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjEyMjMyNDA1MDgwXzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjEyMjMyNDA1MDgwXzE4MDE5MDQ0MDQ.m4a",
+              "duration": 34
+            },
+            "video": {
+              "url": "http://k0u1ybdy5dydzw2408x8738x1400x31xxdz.djvod.ndcimgs.com/ksc1/aH94d1fgmTFk1knbzsgpu9sKRC6MRxO14aaAHu8FpMXYaddDB7SWIoi8PL7vK1Ve-SYKTk3UsL3krDbtyv1TWJiKCb1NxmLQlnjg1dnPCJ5E7uJlvvrRl7gvh6LDO6Ry.mp4?tag=1-1793178322-p-0-feniirrwod-99157ab455d2ec20&provider=self&clientCacheKey=3xxtaq6jnkxn54y_125eee15&di=af1552c6&bp=10461&x-ks-ptid=212232405080&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=97&tt=sl200UltraV1&ss=vpm",
+              "name": "aH94d1fgmTFk1knbzsgpu9sKRC6MRxO14aaAHu8FpMXYaddDB7SWIoi8PL7vK1Ve-SYKTk3UsL3krDbtyv1TWJiKCb1NxmLQlnjg1dnPCJ5E7uJlvvrRl7gvh6LDO6Ry.mp4",
+              "duration": 34.632
+            },
+            "images": [],
+            "related_search_str": "空气能取暖原理"
+          },
+          {
+            "post_id": "3xs446ik6f5pt3y",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1791708411905,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "万源雅筑 海信中央空调安装完成",
+            "tag_text": "#中央空调 #万源雅筑 #春熙雅苑 #林荫观澜",
+            "related_search_terms": [
+              "小户型中央空调安装视频教程"
+            ],
+            "stats": {
+              "play_count": 4089,
+              "like_count": 9,
+              "comment_count": 4,
+              "collect_count": 0,
+              "share_count": 0
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/10/11/16/BMjAyNjEwMTExNjQ2MThfMTgwMTkwNDQwNF8yMTE4NjUxMTU2NTdfMV8z_480p_B1fced3924f0934d3eb31d15c00d37807.kvif?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xs446ik6f5pt3y_480p.kvif&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjExODY1MTE1NjU3XzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjExODY1MTE1NjU3XzE4MDE5MDQ0MDQ.m4a",
+              "duration": 47
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y13zw2408x8738x1400x5xx13z.djvod.ndcimgs.com/ksc1/uyG7lcZtWwNpafmea3kV-N5ttYG5oldyF2oF4OuZCNTrd-nXnpy-a1nyJLrOth-xmoCt9fjJJUmI61xZ2ENmIr_GwLDd0So1ypDu0qewWkEg-fPaaCSyMQ9UaExZVbHN.mp4?tag=1-1793178322-p-0-yzhashxvsk-17f2f93d16d768f5&provider=self&clientCacheKey=3xs446ik6f5pt3y_6634df53&di=af1552c6&bp=10461&x-ks-ptid=211865115657&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "uyG7lcZtWwNpafmea3kV-N5ttYG5oldyF2oF4OuZCNTrd-nXnpy-a1nyJLrOth-xmoCt9fjJJUmI61xZ2ENmIr_GwLDd0So1ypDu0qewWkEg-fPaaCSyMQ9UaExZVbHN.mp4",
+              "duration": 47.266
+            },
+            "images": [],
+            "related_search_str": "小户型中央空调安装视频教程"
+          },
+          {
+            "post_id": "3xg94rvm7nxks3y",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1791530716536,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "石家庄栾城赵家庄村 自建小别墅🏡\n果断选择空气能 完美实现冬暖夏凉",
+            "tag_text": "#空气能 #农村采暖 #热泵 #农村自建房",
+            "related_search_terms": [
+              "河北故城平房出售"
+            ],
+            "stats": {
+              "play_count": 4222,
+              "like_count": 5,
+              "comment_count": 1,
+              "collect_count": 1,
+              "share_count": 1
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/10/09/15/BMjAyNjEwMDkxNTI0NDJfMTgwMTkwNDQwNF8yMTE2NDU0MzgyNDJfMV8z_480p_Bc71b92771b58afc1938cf0d85e223f5b.kvif?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xg94rvm7nxks3y_480p.kvif&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjExNjQ1NDM4MjQyXzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjExNjQ1NDM4MjQyXzE4MDE5MDQ0MDQ.m4a",
+              "duration": 39
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y16zw2408x8738x1400x5xx16z.djvod.ndcimgs.com/ksc1/Lfn4d5w57d48cmi5wnSGeeY_pIBcaraAib9URo-RcF1ZOmeZAVnbe4n2DhIv0BOh_FVLh8c5HEiKGl9vqTUvjmIucTUTsOsAQD7RzxagjH1ERrmR0EFjTHCRf5h69yYi.mp4?tag=1-1793178322-p-0-krgilfsqye-4a95a1ad742b68d3&provider=self&clientCacheKey=3xg94rvm7nxks3y_594bb7b4&di=af1552c6&bp=10461&x-ks-ptid=211645438242&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "Lfn4d5w57d48cmi5wnSGeeY_pIBcaraAib9URo-RcF1ZOmeZAVnbe4n2DhIv0BOh_FVLh8c5HEiKGl9vqTUvjmIucTUTsOsAQD7RzxagjH1ERrmR0EFjTHCRf5h69yYi.mp4",
+              "duration": 39.533
+            },
+            "images": [],
+            "related_search_str": "河北故城平房出售"
+          },
+          {
+            "post_id": "3x223ppg6wexnvi",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1789632305611,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "不管是新建房还是旧房子，都可以用空气能！\n石家庄栾城吴郭村 选择海信空气能 带地暖制热，又舒适又省钱，再也不用心疼冬天的取暖费了[强]",
+            "tag_text": "#空气能 #海信空气能 #空气能热泵 #热泵",
+            "related_search_terms": [
+              "栾城家电专卖店"
+            ],
+            "stats": {
+              "play_count": 5254,
+              "like_count": 13,
+              "comment_count": 3,
+              "collect_count": 1,
+              "share_count": 3
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/09/17/16/BMjAyNjA5MTcxNjA0MzVfMTgwMTkwNDQwNF8yMDkxODUxNzQ0MjZfMV8z_low_B6a56a18dfce270f0acac127679a6c74a.webp?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3x223ppg6wexnvi_low.webp&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjA5MTg1MTc0NDI2XzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjA5MTg1MTc0NDI2XzE4MDE5MDQ0MDQ.m4a",
+              "duration": 34
+            },
+            "video": {
+              "url": "http://k0u1ybdy5dy14zw2408x8738x1400x31xx14z.djvod.ndcimgs.com/ksc1/jq_vtMOhm1gdGxae4-ONpBrGcwJxGiC-fr0IEQBfoECoaLVTbBC4rr_s2p3bSHh0Ch9u5Jd7YaSMc9yOyaWx5-QdCyCLKduREPQB01xBSQW_5k73pMPoz5FjPH8MKnUs.mp4?tag=1-1793178322-p-0-67sobsyde3-052863be64dedab8&provider=self&clientCacheKey=3x223ppg6wexnvi_b06d3328&di=af1552c6&bp=10461&x-ks-ptid=209185174426&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=97&tt=sl200UltraV1&ss=vpm",
+              "name": "jq_vtMOhm1gdGxae4-ONpBrGcwJxGiC-fr0IEQBfoECoaLVTbBC4rr_s2p3bSHh0Ch9u5Jd7YaSMc9yOyaWx5-QdCyCLKduREPQB01xBSQW_5k73pMPoz5FjPH8MKnUs.mp4",
+              "duration": 34.166
+            },
+            "images": [],
+            "related_search_str": "栾城家电专卖店"
+          },
+          {
+            "post_id": "3x2d6prura4ws9s",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1789284545448,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "石家庄栾城永安村 自建房 自建别墅🏡！选择海信空气能 ，冷暖两用，舒适又节能",
+            "tag_text": "#栾城装修 #空气能 #农村采暖 #自建房装修",
+            "related_search_terms": [
+              "永安海信空气能"
+            ],
+            "stats": {
+              "play_count": 5385,
+              "like_count": 9,
+              "comment_count": 5,
+              "collect_count": 0,
+              "share_count": 2
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/09/13/15/BMjAyNjA5MTMxNTI4MzBfMTgwMTkwNDQwNF8yMDg4MTM4ODg3NjJfMV8z_low_Bc1f86e8d6034ff6407ecb3abca2b65be.webp?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3x2d6prura4ws9s_low.webp&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjA4ODEzODg4NzYyXzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjA4ODEzODg4NzYyXzE4MDE5MDQ0MDQ.m4a",
+              "duration": 42
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y13zw2408x8738x1400x5xx13z.djvod.ndcimgs.com/ksc1/czDxKQkIQKNifdmllHuNSwcdVBuo0ZKYAFeIljKah0BeM3K8nzgBu2ATL04h7SeiPetz8vM97K-frxJQ9Vx7CfgdoDnooI2cNmMd2Iw7kQlb1o02-xwTa5C2cUlohELh.mp4?tag=1-1793178322-p-0-ao3rrgxzrc-5f2c46bfc731c2a4&provider=self&clientCacheKey=3x2d6prura4ws9s_a0d9cb2f&di=af1552c6&bp=10461&x-ks-ptid=208813888762&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "czDxKQkIQKNifdmllHuNSwcdVBuo0ZKYAFeIljKah0BeM3K8nzgBu2ATL04h7SeiPetz8vM97K-frxJQ9Vx7CfgdoDnooI2cNmMd2Iw7kQlb1o02-xwTa5C2cUlohELh.mp4",
+              "duration": 42.366
+            },
+            "images": [],
+            "related_search_str": "永安海信空气能"
+          },
+          {
+            "post_id": "3xbannru4qzqxq2",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1788765355924,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "",
+            "tag_text": "#万岁山武侠城 #万岁山浪漫夜 #孔明灯",
+            "related_search_terms": [
+              "孔明灯"
+            ],
+            "stats": {
+              "play_count": 3855,
+              "like_count": 20,
+              "comment_count": 2,
+              "collect_count": 0,
+              "share_count": 0
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/09/07/15/BMjAyNjA5MDcxNTE1MzlfMTgwMTkwNDQwNF8yMDgxOTA0Mjk1MjhfMV8z_low_B75ec1022dd36caf5922a435096340555.webp?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xbannru4qzqxq2_low.webp&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjA4MTkwNDI5NTI4XzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjA4MTkwNDI5NTI4XzE4MDE5MDQ0MDQ.m4a",
+              "duration": 8
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y13zw2408x8738x1400x5xx13z.djvod.ndcimgs.com/ksc1/97Lga2c1l44evh9l_gLVFZby3y3Ie5fa_oMe-aMG73-CU9Xdp0Do0H2t4Oya2eG_OSsHXyGb_vOEVvH_FYBaNhoO66fwMjltLC_RGjpJuj6svJtLqp9HZUxQJYuVyVCU.mp4?tag=1-1793178322-p-0-74hpspnpre-a1256f45f36056da&provider=self&clientCacheKey=3xbannru4qzqxq2_62a8a126&di=af1552c6&bp=10461&x-ks-ptid=208190429528&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "97Lga2c1l44evh9l_gLVFZby3y3Ie5fa_oMe-aMG73-CU9Xdp0Do0H2t4Oya2eG_OSsHXyGb_vOEVvH_FYBaNhoO66fwMjltLC_RGjpJuj6svJtLqp9HZUxQJYuVyVCU.mp4",
+              "duration": 8.266
+            },
+            "images": [],
+            "related_search_str": "孔明灯"
+          },
+          {
+            "post_id": "3x9jxsnzch3nv6y",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1788709934183,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "万人大合唱",
+            "tag_text": "",
+            "related_search_terms": [
+              "倪齐民"
+            ],
+            "stats": {
+              "play_count": 3632,
+              "like_count": 17,
+              "comment_count": 2,
+              "collect_count": 0,
+              "share_count": 1
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/09/06/23/BMjAyNjA5MDYyMzUxNDRfMTgwMTkwNDQwNF8yMDgxNDM3MjgyOTZfMV8z_low_B304d4de2803b21adb0b49c985698eb74.webp?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3x9jxsnzch3nv6y_low.webp&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y1fzw2408x8738x1400x5xx1fz.djvod.ndcimgs.com/ksc1/bTLj3KlRO1NIYuYDhd3NbaZ_EXHZRqTT2FU8Y1Voqbg90FmhmKd31lL6IbCuO29HeyWbwO4JYp81TYlPh-pZ8E-U34HIl7g1aHAvm_oJJ4bVTuD7yWJoUO44nTj8hxDx.mp4?tag=1-1793178322-p-0-atdqtgvojq-723740b8d4cc6848&provider=self&clientCacheKey=3x9jxsnzch3nv6y_2503aa97&di=af1552c6&bp=10461&x-ks-ptid=208143728296&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "bTLj3KlRO1NIYuYDhd3NbaZ_EXHZRqTT2FU8Y1Voqbg90FmhmKd31lL6IbCuO29HeyWbwO4JYp81TYlPh-pZ8E-U34HIl7g1aHAvm_oJJ4bVTuD7yWJoUO44nTj8hxDx.mp4",
+              "duration": 12.2
+            },
+            "images": [],
+            "related_search_str": "倪齐民"
+          },
+          {
+            "post_id": "3x4techja3xw7qm",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1788505310908,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "石家庄栾城樊家屯村 旧房改造 农村自建房取暖\n，选择海信空气能带地暖制热，舒适又节能",
+            "tag_text": "#空气能 #农村采暖 #农村自建房 #旧房改造",
+            "related_search_terms": [
+              "海信最新取暖方式"
+            ],
+            "stats": {
+              "play_count": 3553,
+              "like_count": 4,
+              "comment_count": 3,
+              "collect_count": 0,
+              "share_count": 0
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/09/04/15/BMjAyNjA5MDQxNTAxMTZfMTgwMTkwNDQwNF8yMDc4NjEzMDYwMzNfMV8z_low_B6cd63a80a62c6b023b701906c0209083.webp?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3x4techja3xw7qm_low.webp&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjA3ODYxMzA2MDMzXzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjA3ODYxMzA2MDMzXzE4MDE5MDQ0MDQ.m4a",
+              "duration": 52
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y13zw2408x8738x1400x5xx13z.djvod.ndcimgs.com/ksc1/Rr46Y-gNUGWchcYx4qTeyY-d95V2ANKqmAVEiFoOXxA8E1kbpbUlOuxwDiB1lYquJYeZ2ON9u1asAQTYirlJdHjXX3JGM-4tpTBjIAvex6WON5Xpc4kQE6-NW6mm51Ll.mp4?tag=1-1793178322-p-0-ypfneji2u4-f8c080bc06e562e8&provider=self&clientCacheKey=3x4techja3xw7qm_0ba8bccc&di=af1552c6&bp=10461&x-ks-ptid=207861306033&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "Rr46Y-gNUGWchcYx4qTeyY-d95V2ANKqmAVEiFoOXxA8E1kbpbUlOuxwDiB1lYquJYeZ2ON9u1asAQTYirlJdHjXX3JGM-4tpTBjIAvex6WON5Xpc4kQE6-NW6mm51Ll.mp4",
+              "duration": 52.199
+            },
+            "images": [],
+            "related_search_str": "海信最新取暖方式"
+          },
+          {
+            "post_id": "3xtim8cpvwbbdzi",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1788247436779,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "石家庄栾城北屯村第二户海信空气能安装完成\n农村自建房取暖  首选海信空气能\n舒适又节能",
+            "tag_text": "#海信空气能 #空气能 #农村采暖 #农村自建房",
+            "related_search_terms": [
+              "空气能"
+            ],
+            "stats": {
+              "play_count": 4152,
+              "like_count": 10,
+              "comment_count": 2,
+              "collect_count": 0,
+              "share_count": 0
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/09/01/15/BMjAyNjA5MDExNTIyMzVfMTgwMTkwNDQwNF8yMDc1OTg5NjM3ODBfMV8z_480p_B7a59b2321e3def99a99a88cdd3503f44.kvif?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xtim8cpvwbbdzi_480p.kvif&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjA3NTk4OTYzNzgwXzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjA3NTk4OTYzNzgwXzE4MDE5MDQ0MDQ.m4a",
+              "duration": 43
+            },
+            "video": {
+              "url": "http://k0u1ybdy5dy15zw2408x8738x1400x31xx15z.djvod.ndcimgs.com/ksc1/-HZqvf-xpZZXKaufREITOq6GVAhsVgPrRzLapNvIYYQLpnf_u659EBzBhdiCmRSvMxG9W6z2Q586O69tZS4wBcxDPeSRtHS1nNyt90zAlLZzCrrTATa_an55JOvccrQq.mp4?tag=1-1793178322-p-0-oxp8orbdkm-24ff0621d49ca0d2&provider=self&clientCacheKey=3xtim8cpvwbbdzi_147e029f&di=af1552c6&bp=10461&x-ks-ptid=207598963780&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=97&tt=sl200UltraV1&ss=vpm",
+              "name": "-HZqvf-xpZZXKaufREITOq6GVAhsVgPrRzLapNvIYYQLpnf_u659EBzBhdiCmRSvMxG9W6z2Q586O69tZS4wBcxDPeSRtHS1nNyt90zAlLZzCrrTATa_an55JOvccrQq.mp4",
+              "duration": 43.799
+            },
+            "images": [],
+            "related_search_str": "空气能"
+          },
+          {
+            "post_id": "3xqqni4cykrfpma",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1788165513711,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "石家庄栾城南高村 自建房 自建别墅🏡！选择海信空气能 ，冷暖两用，舒适又节能",
+            "tag_text": "#空气能 #农村采暖 #自建房装修 #栾城空气能",
+            "related_search_terms": [
+              "栾城区东牛村"
+            ],
+            "stats": {
+              "play_count": 3342,
+              "like_count": 8,
+              "comment_count": 4,
+              "collect_count": 0,
+              "share_count": 0
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/08/31/16/BMjAyNjA4MzExNjM3MTFfMTgwMTkwNDQwNF8yMDc1MTAyODg1ODZfMV8z_low_Bb81282888abc07d356f568aaab812cb1.webp?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xqqni4cykrfpma_low.webp&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjA3NTEwMjg4NTg2XzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjA3NTEwMjg4NTg2XzE4MDE5MDQ0MDQ.m4a",
+              "duration": 39
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y13zw2408x8738x1400x5xx13z.djvod.ndcimgs.com/ksc1/cm5qJOh7tiQd-hjiHvHsDqsFIWOraKv_VBbTqGIyWfF-FS8JcUvio14jVSbTHc9sW-SXXyekumh6-7I0VFWSSrxVABjwMeMOZaETx_P03iFEApj7HT-yK9ne8pxyVzBa.mp4?tag=1-1793178322-p-0-fzv3fqyrwu-52303cd9bd7cfeac&provider=self&clientCacheKey=3xqqni4cykrfpma_2b436e52&di=af1552c6&bp=10461&x-ks-ptid=207510288586&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "cm5qJOh7tiQd-hjiHvHsDqsFIWOraKv_VBbTqGIyWfF-FS8JcUvio14jVSbTHc9sW-SXXyekumh6-7I0VFWSSrxVABjwMeMOZaETx_P03iFEApj7HT-yK9ne8pxyVzBa.mp4",
+              "duration": 39.199
+            },
+            "images": [],
+            "related_search_str": "栾城区东牛村"
+          },
+          {
+            "post_id": "3xngf6ve4f5zxa2",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1786950485698,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "石家庄栾城北屯村 农村自建房取暖\n天然气壁挂炉采暖太贵了，果断选择空气能取暖夏天用风盘制冷，冬天带地暖制热，舒适又节能",
+            "tag_text": "#栾城装修 #空气能 #农村采暖 #农村自建房",
+            "related_search_terms": [
+              "北屯村"
+            ],
+            "stats": {
+              "play_count": 5128,
+              "like_count": 17,
+              "comment_count": 2,
+              "collect_count": 1,
+              "share_count": 2
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/08/17/15/BMjAyNjA4MTcxNTA3MzJfMTgwMTkwNDQwNF8yMDU4NTY4MTczMDhfMV8z_480p_Ba42cd8c90f4d7752c982c48705d3c5cb.kvif?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xngf6ve4f5zxa2_480p.kvif&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjA1ODU2ODE3MzA4XzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjA1ODU2ODE3MzA4XzE4MDE5MDQ0MDQ.m4a",
+              "duration": 40
+            },
+            "video": {
+              "url": "http://k0u1ybdy5dydzw2408x8738x1400x31xxdz.djvod.ndcimgs.com/ksc1/lFz5hbOtWxXLdd4Ac5PudWukLeUepAcqylheZVwnRQa-saavuuvLly2LEAP7PUFbL6G1SoKpzJ0tlDfdjHpe3_TaO46IjUa6UCHegj2C6awwdTEsB7wphzrNPaTgiOW1.mp4?tag=1-1793178322-p-0-0s9rmm1ews-0b93434c94ca154e&provider=self&clientCacheKey=3xngf6ve4f5zxa2_afc11549&di=af1552c6&bp=10461&x-ks-ptid=205856817308&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=97&tt=sl200UltraV1&ss=vpm",
+              "name": "lFz5hbOtWxXLdd4Ac5PudWukLeUepAcqylheZVwnRQa-saavuuvLly2LEAP7PUFbL6G1SoKpzJ0tlDfdjHpe3_TaO46IjUa6UCHegj2C6awwdTEsB7wphzrNPaTgiOW1.mp4",
+              "duration": 40.732
+            },
+            "images": [],
+            "related_search_str": "北屯村"
+          },
+          {
+            "post_id": "3xmkxexd5tpq7y9",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1786607310283,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "石家庄王家屯村 厂房办公室和宿舍\n安装海信空气能，冬暖夏凉 又舒适又省钱！",
+            "tag_text": "#空气能 #自建房装修 #农村自建房#石家庄装修#厂房",
+            "related_search_terms": [
+              "石家庄邮专宿舍"
+            ],
+            "stats": {
+              "play_count": 4270,
+              "like_count": 5,
+              "comment_count": 1,
+              "collect_count": 0,
+              "share_count": 0
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/08/13/15/BMjAyNjA4MTMxNTQ3MzRfMTgwMTkwNDQwNF8yMDU0MjQ5MDc5ODlfMV8z_480p_Bae2a5014dd39f62085450d05e52840ed.kvif?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xmkxexd5tpq7y9_480p.kvif&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjA1NDI0OTA3OTg5XzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjA1NDI0OTA3OTg5XzE4MDE5MDQ0MDQ.m4a",
+              "duration": 33
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y15zw2408x8738x1400x5xx15z.djvod.ndcimgs.com/ksc1/GMaEDMpImnGPiE6tWKmAQCP7XzQb6RR_Loe-fH8Uok2n6WyYuIjqAOL34TBBFK-29BeS17YDEvPXLmaUq9-BitbmZphTxHRPyECGSCujusu27yjTJ_FoaqB9RCCapTjh.mp4?tag=1-1793178322-p-0-ryugcljbud-88db6578f6866b99&provider=self&clientCacheKey=3xmkxexd5tpq7y9_1c97009a&di=af1552c6&bp=10461&x-ks-ptid=205424907989&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "GMaEDMpImnGPiE6tWKmAQCP7XzQb6RR_Loe-fH8Uok2n6WyYuIjqAOL34TBBFK-29BeS17YDEvPXLmaUq9-BitbmZphTxHRPyECGSCujusu27yjTJ_FoaqB9RCCapTjh.mp4",
+              "duration": 33.133
+            },
+            "images": [],
+            "related_search_str": "石家庄邮专宿舍"
+          },
+          {
+            "post_id": "3xuxsgqnbv3qd2w",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1785999565044,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "栾城汪家庄村 农村自建房🏡 旧房改造翻新\n又装好一户海信空气能，冬暖夏凉 又舒适又省钱！",
+            "tag_text": "#空气能 #自建房装修 #农村自建房 #农村人冬天取暖神器",
+            "related_search_terms": [
+              "栾城区汪家庄村"
+            ],
+            "stats": {
+              "play_count": 6408,
+              "like_count": 13,
+              "comment_count": 2,
+              "collect_count": 3,
+              "share_count": 4
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/08/06/14/BMjAyNjA4MDYxNDU4NDlfMTgwMTkwNDQwNF8yMDQ2NDEyMTc5MDFfMV8z_480p_B4173e11f23be5282db20e06ced491cf3.kvif?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xuxsgqnbv3qd2w_480p.kvif&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjA0NjQxMjE3OTAxXzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjA0NjQxMjE3OTAxXzE4MDE5MDQ0MDQ.m4a",
+              "duration": 52
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y13zw2408x8738x1400x5xx13z.djvod.ndcimgs.com/ksc1/rcpnlZ3lilmPsxmTEXCbgl0SM88_eI2hk1dC8ccg-Xf1KRSl98ykJv57NKpYaz6lcHy2mQkYTHXuIBcAStyHsDl-n7cP2QpAJoF7Z3WqIgL8OgMsmDeZZlpZ1QCaf_id.mp4?tag=1-1793178322-p-0-byzgj6tppq-d71a73e9f2a51d91&provider=self&clientCacheKey=3xuxsgqnbv3qd2w_ba26d10c&di=af1552c6&bp=10461&x-ks-ptid=204641217901&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "rcpnlZ3lilmPsxmTEXCbgl0SM88_eI2hk1dC8ccg-Xf1KRSl98ykJv57NKpYaz6lcHy2mQkYTHXuIBcAStyHsDl-n7cP2QpAJoF7Z3WqIgL8OgMsmDeZZlpZ1QCaf_id.mp4",
+              "duration": 52.133
+            },
+            "images": [],
+            "related_search_str": "栾城区汪家庄村"
+          },
+          {
+            "post_id": "3x5adt7w9qdq8ni",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1785830003683,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "",
+            "tag_text": "#这就是我们每天的工作 #中央空调",
+            "related_search_terms": [
+              "石家庄栾城区璟园现状"
+            ],
+            "stats": {
+              "play_count": 4310,
+              "like_count": 10,
+              "comment_count": 4,
+              "collect_count": 2,
+              "share_count": 0
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/08/04/15/BMjAyNjA4MDQxNTQ4MzJfMTgwMTkwNDQwNF8yMDQ0MjM0MDM2MzhfMF8z_480p_B947186f674f2d6e034d543942fe58f1d.kvif?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3x5adt7w9qdq8ni_480p.kvif&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjA0NDIzNDAzNjM4XzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjA0NDIzNDAzNjM4XzE4MDE5MDQ0MDQ.m4a",
+              "duration": 57
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y16zw2408x8738x1400x5xx16z.djvod.ndcimgs.com/ksc1/upoM6F6J7WHfe8i-xK3G7Ln-rvvlmCFs4S5K615ED7ScaO-TSw8ulC9MRJ1ioqaY7dsTrv6Q3CoWspv4Y29ZWXiLlfqmdnJz6zXwukYaz2vqhy88V5ZlLIRRvX7Yttf1.mp4?tag=1-1793178322-p-0-vw1o9yu5ev-ceb1c933517fe288&provider=self&clientCacheKey=3x5adt7w9qdq8ni_86a78b52&di=af1552c6&bp=10461&x-ks-ptid=204423403638&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "upoM6F6J7WHfe8i-xK3G7Ln-rvvlmCFs4S5K615ED7ScaO-TSw8ulC9MRJ1ioqaY7dsTrv6Q3CoWspv4Y29ZWXiLlfqmdnJz6zXwukYaz2vqhy88V5ZlLIRRvX7Yttf1.mp4",
+              "duration": 57.933
+            },
+            "images": [],
+            "related_search_str": "石家庄栾城区璟园现状"
+          },
+          {
+            "post_id": "3xhmtg2xpxu66ua",
+            "user_id": "3x8en3bfsqc7qyk",
+            "created": 1785568867703,
+            "author_name": "栾城中央空调/空气能李浩",
+            "title": "栾城乏马村 农村自建房🏡 旧房改造翻新\n又装好一户海信空气能，冬暖夏凉 又舒适又省钱！",
+            "tag_text": "#空气能 #自建房装修 #农村自建房 #农村老房子翻新改造",
+            "related_search_terms": [
+              "栾城区乏马村最新视频"
+            ],
+            "stats": {
+              "play_count": 4921,
+              "like_count": 5,
+              "comment_count": 0,
+              "collect_count": 0,
+              "share_count": 1
+            },
+            "cover": "http://zj66.a.kwimgs.com/upic/2026/08/01/15/BMjAyNjA4MDExNTIwMzJfMTgwMTkwNDQwNF8yMDQwODQxNjk3MTJfMV8z_480p_Bfbbfcc67fe3a7b1fce25d2354424bb5d.kvif?tag=1-1793178322-p-0-5967be10b83044ab-3d4b358efb604372&clientCacheKey=3xhmtg2xpxu66ua_480p.kvif&di=af1552c6&bp=10461",
+            "audio": {
+              "url": "http://hw.a.yximgs.com/bs2/ost/MjA0MDg0MTY5NzEyXzE4MDE5MDQ0MDQ.m4a",
+              "name": "MjA0MDg0MTY5NzEyXzE4MDE5MDQ0MDQ.m4a",
+              "duration": 49
+            },
+            "video": {
+              "url": "http://k0ud2y4cy39y13zw2408x8738x1400x5xx13z.djvod.ndcimgs.com/ksc1/yzR7LPyFO0R0pEZwvEqFPuhuUScuI4Ql9oHJjwe4ROL_7dVqpkrFJXqTG77b9jEGwsk0X73y3bOVFPy2hDthJ-ACkq-18czuc9aqpx6nXelzj1JBT5nL8lWdrvtirRBF.mp4?tag=1-1793178322-p-0-ono0gsrgov-0e305b9965e1e734&provider=self&clientCacheKey=3xhmtg2xpxu66ua_9d1c6e79&di=af1552c6&bp=10461&x-ks-ptid=204084169712&kwai-not-alloc=self-cdn&kcdntag=p:Jilin;i:ChinaUnicom;ft:UNKNOWN;h:COLD;pn:kuaishouVideoProjection&ocid=98&tt=sl200UltraV1&ss=vpm",
+              "name": "yzR7LPyFO0R0pEZwvEqFPuhuUScuI4Ql9oHJjwe4ROL_7dVqpkrFJXqTG77b9jEGwsk0X73y3bOVFPy2hDthJ-ACkq-18czuc9aqpx6nXelzj1JBT5nL8lWdrvtirRBF.mp4",
+              "duration": 49.866
+            },
+            "images": [],
+            "related_search_str": "栾城区乏马村最新视频"
+          }
+        ],
+        "has_more": true,
+        "cursor": "",
+        "max_cursor": "1.785394950371E12"
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae1bacc25f71e0001dd76b3"
+  },
+  "elapsed": 15.1
+}

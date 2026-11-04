@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 
 CRED_RE='(^|/)\.env$|(^|/)\.env\.|settings\.local\.json$|\.pem$|\.p12$|\.pfx$|(^|/)id_(rsa|ed25519)$|_ed25519$|_rsa$|(^|/)服务器密码$|password.*\.txt$'
 ALLOW_RE='(^|/)\.env\.example$|(^|/)\.env\.sample$'
-CONTENT_RE='sk-[A-Za-z0-9_-]{16,}|LTAI[A-Za-z0-9]{12,}|BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY|AccessKeySecret["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9/+]{16,}'
+CONTENT_RE='(^|[^A-Za-z0-9])sk-[A-Za-z0-9_-]{16,}|LTAI[A-Za-z0-9]{12,}|BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY|AccessKeySecret["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9/+]{16,}'
 PLACEHOLDER_RE='sk-x{8,}|LTAIx{6,}|<[A-Za-z_]+>|LTAI\.\.\.|sk-\.\.\.|FAKE'
 
 # ── 原始实测样本的豁免（2026-10-28，刘学奎同意）────────────────

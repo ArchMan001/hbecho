@@ -67,6 +67,14 @@ describe("HttpProviderTransport", () => {
     expect(String((err as Error).message)).not.toContain(API_KEY);
   });
 
+  it("连接超时（undici UND_ERR_CONNECT_TIMEOUT）→ timeout + delivered=no：TCP 没建起来，请求不可能发出", async () => {
+    const { t } = harness(async () => {
+      throw Object.assign(new TypeError("fetch failed"), { cause: { code: "UND_ERR_CONNECT_TIMEOUT" } });
+    });
+    const err = await t.send({ method: "GET", path: "/x", query: {}, body: null }).catch((e: unknown) => e);
+    expect(err).toMatchObject({ kind: "timeout", delivered: "no" });
+  });
+
   it("响应体读到一半失败 → truncated，并保留已到达的 httpStatus", async () => {
     const { t } = harness(async () => {
       const res = new Response("x", { status: 200 });

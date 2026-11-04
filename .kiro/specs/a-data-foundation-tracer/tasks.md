@@ -1,7 +1,7 @@
 # A Data Foundation Tracer Implementation Plan
 
 > **状态**：`draft`  
-> **执行状态**：任务 1–9 的**实现范围**已完成（9/9）；任务 9 的**真实 smoke 尚未执行**，等待人工批准（见任务 9 完成记录）  
+> **执行状态**：任务 1–9 的**实现范围**已完成（9/9）；任务 9 的**真实 smoke 首轮已执行**（2026-11-04，2 次调用中 1 次成功、1 次连接超时）；小红书同步轮与异步主页轮**尚未执行**，各自需要单独批准（见任务 9 完成记录）  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
 > **验收**：[`acceptance.md`](acceptance.md)  
@@ -323,7 +323,13 @@
     6. 合计首轮最多约 **60 点 ≈ 1.2 元**。QPS 仍未知，并发为 1。
   - **接线缺口（执行前必须先做，需要你批准的依赖 / 工作）：** ① 真实 `ProviderTransport`（HTTP + `X-Api-Key` 认证头注入）；② 真实私有 ODS 的 `ObjectStore`（`ali-oss`，ADR-0005 已登记但**未批准安装**）；③ secret provider（从环境 / 密钥库读取，不进仓库）。三者没有接线之前，`pnpm smoke run` 通过门槛后以**退出码 5**（`executor_not_wired`）停止，不会发出任何调用——这是刻意的。
   - **接线完成记录（2026-11-04，决策人 liuxuekui：本机 smoke 先用 `hbecho-setup` 的 AccessKey，覆盖运维手册 §8.4/§8.5 原先「OSS 不含任何 AccessKey」的绝对写法）：** ① 真实 `ProviderTransport`（`src/modules/raw-capture/http-transport.ts`：注入 `X-Api-Key`；4xx/5xx 是已捕获响应，不是传输失败；连接类错误 `delivered=no`、超时与中断 `delivered=unknown`）；② 真实私有 ODS 的 `ObjectStore`（`src/modules/raw-capture/oss-store.ts`，`ali-oss` 6.23.0 + `@types/ali-oss`，ADR-0005 已登记；错误信息只留错误码）；③ secret provider（`src/modules/smoke/secrets.ts`：只读环境变量，缺失即失败，消息只含变量名）；④ 装配在 `src/worker/smoke-wiring.ts`，**只在 preflight 通过后**才打开连接池、构造 SDK；⑤ `.env` 由 Node `loadEnvFile` 载入（不引 dotenv）；⑥ smoke 的 ODS 对象键统一加 `smoke/` 前缀（`GatewayDeps.keyPrefix`，键原样写入 `oss_objects.object_key`）。已验证：`pnpm smoke preview` 通过（20 点 / 0.4 元）；真实 OSS 只读自检通过（`hbecho-ods` 当前 0 对象）；本机 `verify.sh` 通过。**仍未发出任何真实 AI Master 调用。** 真实 smoke 还缺 `HBECHO_DATABASE_URL`（用哪个库未定）与审批签发。
-  - **本机 smoke 数据库（2026-11-04，liuxuekui 定）：** 用本机专用持久库 `hbecho_smoke`，容器 `hbecho-smoke-mysql`（`127.0.0.1:3307`，MySQL 8.4）；迁移已跑通（27 张表含 `__drizzle_migrations`、4 个平台、1 个供应商、1 个触发器、UTC）。容器用 `--skip-log-bin` 启动：binlog 开启时非 SUPER 用户无法执行迁移里的 `CREATE TRIGGER`，而应用账号不应拿 SUPER。重建命令见运维手册 §8.5。**仍未发出任何真实 AI Master 调用。**
+  - **本机 smoke 数据库（2026-11-04，liuxuekui 定）：** 用本机专用持久库 `hbecho_smoke`，容器 `hbecho-smoke-mysql`（`127.0.0.1:3307`，MySQL 8.4）；迁移已跑通（27 张表含 `__drizzle_migrations`、4 个平台、1 个供应商、1 个触发器、UTC）。容器用 `--skip-log-bin` 启动：binlog 开启时非 SUPER 用户无法执行迁移里的 `CREATE TRIGGER`，而应用账号不应拿 SUPER。重建命令见运维手册 §8.5。
+  - **首轮真实 smoke 结果（2026-11-04，liuxuekui 签发；抖音同步 2 次调用 / 预算 20 点）：**
+    - `douyin / media_user_info / synchronous`：`transport_failed` → `ambiguous`。ODS 里的 transport_error 为 `{"kind":"timeout","delivered":"unknown","message":"供应商请求失败（timeout/UND_ERR_CONNECT_TIMEOUT）"}`——undici 的 10 秒连接超时。同期 `curl` 实测 connect 约 50 ms、TLS < 1 s，属一次偶发，不是链路整体不可达。**请求字节已落 ODS，但没有响应证据；供应商是否已处理未知**（smoke 不自动重试）。
+    - `douyin / user_video_list / synchronous`：HTTP 200、187,726 字节、20 条；`result` 的键（`result / has_more / cursor / max_cursor`）与首条字段与 raw3 样本一致；`provider_task_id` 存在。计 10 点。
+    - 合计 2 次调用、估算 10 点（约 0.2 元），预算未用尽。证据：ProviderCall 1/2、ODS 对象 4 个（`smoke/ods/20261104/...`）。**未写任何业务事实**（账号 / 归属 / 快照 / 内容 / 检查点）。
+    - 由本轮暴露并修复的缺陷：`UND_ERR_CONNECT_TIMEOUT` 原先被归为 `delivered=unknown`，把「请求确定没发出、可安全重试」误判成 ambiguous；已改为 `delivered=no` 并补用例。
+    - 观察：`async=false` 的 `user_video_list` 响应仍是**任务信封**（`data.task_id / status / result`），与 raw3 样本一致——同步模式不是裸结果，解码器按信封处理才是对的。
   - **实现留下的取舍（供复核）：** ① 开关值是一个不会被随手设成 `1` 的字符串。② 审批绑定计划摘要，所以「批准之后改 locator / 预算」不可能；审批有效期最长 24 小时。③ smoke 创建的批次 / 任务只用于挂 ProviderCall 与成本累计（`subject_type='smoke'`），结束后标记 `succeeded` 以便一年清理回收；预算是**全局**的（所有条目挂在同一个 smoke 根任务下）。④ smoke **不重试**（包括校验失败与 429）：失败如实进摘要，由操作人决定；ambiguous 同样不重发。⑤ smoke 里 locator 原样发送（不做最小清洗），因为 allowlist 按原文核对；`AllowlistTransport` 对轮询只检查路径形态与「计划里存在异步条目」，任务 ID 的归属由执行器保证。⑥ CLI 的 `preview` 不需要审批与开关：它只校验计划和算预算，没有副作用。⑦ 「将实测结果更新为对应 capability 的 evidence」没有自动化：真实 smoke 之后由人把摘要里的证据引用写回 `capability.ts` / manifest，并记录认证头、QPS、TTL、schema 差异——避免自动外推。
 
 ## 实施前必须关闭的文档冲突（2026-11-04 已关闭）

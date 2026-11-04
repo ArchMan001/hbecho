@@ -72,7 +72,8 @@ export class OssObjectStore implements ObjectStore {
 
   async put(key: string, bytes: Uint8Array): Promise<StoredObject> {
     try {
-      await this.client.put(key, bytes, { timeout: this.timeoutMs });
+      // ali-oss 的 put 只接受 String / Buffer / ReadableStream；直接传 Uint8Array 会抛 TypeError。
+      await this.client.put(key, Buffer.from(bytes), { timeout: this.timeoutMs });
     } catch (e) {
       throw wrap(e, "put");
     }

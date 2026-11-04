@@ -57,6 +57,8 @@ describe("OssObjectStore", () => {
     const out = await store.put("smoke/ods/20261104/request_body/x", bytes);
     expect(out).toEqual({ sha256: sha(bytes), byteLength: 5 });
     expect(rec.put[0]!.name).toBe("smoke/ods/20261104/request_body/x");
+    // ali-oss 只接受 String / Buffer / ReadableStream：传 Uint8Array 会在真实 SDK 里抛 TypeError。
+    expect(Buffer.isBuffer(rec.put[0]!.bytes)).toBe(true);
   });
 
   it("get：不存在返回 null，其余错误上抛", async () => {

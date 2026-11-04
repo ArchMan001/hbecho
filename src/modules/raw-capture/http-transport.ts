@@ -17,7 +17,18 @@ export interface HttpTransportOptions {
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 /** 有证据表明请求没到远端：可以安全地当作新 attempt 重试。 */
-const NOT_DELIVERED_CODES = new Set(["ENOTFOUND", "EAI_AGAIN", "ECONNREFUSED", "ENETUNREACH", "EHOSTUNREACH", "ERR_INVALID_URL", "CERT_HAS_EXPIRED", "DEPTH_ZERO_SELF_SIGNED_CERT"]);
+const NOT_DELIVERED_CODES = new Set([
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "ECONNREFUSED",
+  "ENETUNREACH",
+  "EHOSTUNREACH",
+  "ERR_INVALID_URL",
+  "CERT_HAS_EXPIRED",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  // undici 的连接超时：TCP 都没建起来，请求字节一定没发出（与 UND_ERR_HEADERS_TIMEOUT 不同，后者已连接、结果未知）
+  "UND_ERR_CONNECT_TIMEOUT",
+]);
 
 function causeCode(e: unknown): string | null {
   for (let cur = e as { code?: unknown; cause?: unknown; name?: unknown } | undefined; cur; cur = cur.cause as typeof cur) {

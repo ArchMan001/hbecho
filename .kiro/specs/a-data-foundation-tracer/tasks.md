@@ -1,7 +1,7 @@
 # A Data Foundation Tracer Implementation Plan
 
 > **状态**：`draft`  
-> **执行状态**：任务 1–9 的**实现范围**已完成（9/9）；任务 9 的**真实 smoke 首轮已执行**（2026-11-04，2 次调用中 1 次成功、1 次连接超时）；小红书同步轮与异步主页轮**尚未执行**，各自需要单独批准（见任务 9 完成记录）  
+> **执行状态**：任务 1–9 的**实现范围**已完成（9/9）；任务 9 的**真实 smoke 已执行完毕**（2026-11-04，抖音同步 / 小红书同步 / 抖音异步共 4 次运行、7 次调用，1 次连接超时、其余成功）；capability 仍全部 `activation=disabled`  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
 > **验收**：[`acceptance.md`](acceptance.md)  
@@ -330,6 +330,13 @@
     - 合计 2 次调用、估算 10 点（约 0.2 元），预算未用尽。证据：ProviderCall 1/2、ODS 对象 4 个（`smoke/ods/20261104/...`）。**未写任何业务事实**（账号 / 归属 / 快照 / 内容 / 检查点）。
     - 由本轮暴露并修复的缺陷：`UND_ERR_CONNECT_TIMEOUT` 原先被归为 `delivered=unknown`，把「请求确定没发出、可安全重试」误判成 ambiguous；已改为 `delivered=no` 并补用例。
     - 观察：`async=false` 的 `user_video_list` 响应仍是**任务信封**（`data.task_id / status / result`），与 raw3 样本一致——同步模式不是裸结果，解码器按信封处理才是对的。
+  - **后续三轮真实 smoke（2026-11-04，liuxuekui 授权「抖音和小红书直接跑，不再逐轮签发」）：**
+    - `douyin / media_user_info / synchronous`（补跑）：HTTP 200、1,025 字节、解码成功、6.8 s，10 点。
+    - `xiaohongshu / media_user_info / synchronous` + `user_video_list / synchronous`：均 HTTP 200、解码成功（7.16 s / 6.50 s），合计 40,341 字节，30 点。
+    - `douyin / media_user_info / asynchronous`：提交 HTTP **202**（2.30 s）+ 1 次轮询（0.16 s）即 `succeeded`，10 点（轮询不计点）。
+    - 本批合计 5 次调用、1 次轮询、估算 50 点（1.0 元）。证据：ProviderCall 3–7，ODS 对象共 14 个。**业务表仍全为 0**（账号 / 归属 / 快照 / 内容 / 发现 / 检查点）。
+    - **异步实测结论：** ① 终态 schema 与同步一致（`data.result` 含 `user_id / nickname / signature / location / avatar / cover / follower_count / following_count / like_count / post_count`）；② 任务约 2–3 秒完成，2 秒轮询间隔在首次轮询即命中终态；③ **响应里的 `created_at / updated_at` 是 +08:00 本地时间且不带偏移**（`2026-11-04T22:58:53`，对应 UTC 14:58:53）——解析时不能当 UTC；④ 响应里**没有 TTL 字段**，任务保留时长仍未知，不能外推。轮询默认值（2 s / 最多 30 次 / 最长 120 s）本轮未被证伪，保留。
+    - capability 登记表本来就把这些 tuple 标为 `smoke_verified`，本轮只是补了 2026-11-04 的实跑证据；`activation` 仍全部 `disabled`，**没有自动升级为 `approved`**。
   - **实现留下的取舍（供复核）：** ① 开关值是一个不会被随手设成 `1` 的字符串。② 审批绑定计划摘要，所以「批准之后改 locator / 预算」不可能；审批有效期最长 24 小时。③ smoke 创建的批次 / 任务只用于挂 ProviderCall 与成本累计（`subject_type='smoke'`），结束后标记 `succeeded` 以便一年清理回收；预算是**全局**的（所有条目挂在同一个 smoke 根任务下）。④ smoke **不重试**（包括校验失败与 429）：失败如实进摘要，由操作人决定；ambiguous 同样不重发。⑤ smoke 里 locator 原样发送（不做最小清洗），因为 allowlist 按原文核对；`AllowlistTransport` 对轮询只检查路径形态与「计划里存在异步条目」，任务 ID 的归属由执行器保证。⑥ CLI 的 `preview` 不需要审批与开关：它只校验计划和算预算，没有副作用。⑦ 「将实测结果更新为对应 capability 的 evidence」没有自动化：真实 smoke 之后由人把摘要里的证据引用写回 `capability.ts` / manifest，并记录认证头、QPS、TTL、schema 差异——避免自动外推。
 
 ## 实施前必须关闭的文档冲突（2026-11-04 已关闭）

@@ -1,6 +1,6 @@
 # A Data Foundation Tracer Implementation Plan
 
-> **状态**：`draft`  
+> **状态**：`current`（2026-11-04 实现完成，已合并 main）  
 > **执行状态**：任务 1–9 的**实现范围**已完成（9/9）；任务 9 的**真实 smoke 已执行完毕**（2026-11-04，抖音同步 / 小红书同步 / 抖音异步共 4 次运行、7 次调用，1 次连接超时、其余成功）；capability 仍全部 `activation=disabled`  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  

@@ -1,6 +1,6 @@
 # A Data Foundation Tracer Design
 
-> **状态**：`draft`  
+> **状态**：`current`（2026-11-04 实现完成，已合并 main）  
 > **模式**：Design-First  
 > **需求**：[`requirements.md`](requirements.md)  
 > **实施计划**：[`tasks.md`](tasks.md)（仅规划，尚未执行）  

@@ -1,6 +1,6 @@
 # hbecho · 新媒体运营平台
 
-把组织、门店、新媒体专员、平台账号、内容与媒资采集为可追溯的事实，再用版本化规则、统一指标与受控访问串成业务链路。当前处于**阶段 1 之前的实现起点**：领域与数据底座基线已完成，基础设施已就绪，**应用代码已开始**（`a-data-foundation-tracer` 逐任务实施中，进度以其 `tasks.md` 勾选为准）。
+把组织、门店、新媒体专员、平台账号、内容与媒资采集为可追溯的事实，再用版本化规则、统一指标与受控访问串成业务链路。当前处于**阶段 1 之前的实现起点**：领域与数据底座基线已完成，基础设施已就绪，**首个纵向切片已落地**（`a-data-foundation-tracer` 任务 1–9 完成、真实 smoke 已执行，2026-11-04 合并 main，进度以其 `tasks.md` 为准）。
 
 ## 必读（每次会话）
 
@@ -69,7 +69,7 @@ gh run watch <run-id> --exit-status   # 合并前等 CI
 
 - 产品主线：`HBECHO设计方案/prd-platform.md`（总 PRD）；子 PRD 为 `HBECHO设计方案/prd-domain-<代号>-<slug>.md`
 - 完整 spec：`.kiro/specs/<name>/`（`requirements.md` / `design.md` / `tasks.md`；`acceptance.md` 在需要时增加）
-- 当前实施切片：`.kiro/specs/a-data-foundation-tracer/`（status: draft；进度看 `tasks.md` 勾选状态）
+- 当前实施切片：`.kiro/specs/a-data-foundation-tracer/`（status: current；2026-11-04 实现完成并合并 main，进度看 `tasks.md` 勾选状态）
 - 宪法：`HBECHO设计方案/governance/constitution.md`（v0，待逐条确认）
 - ADR：`HBECHO设计方案/architecture/adr/README.md`
 - 开发与部署流程：`HBECHO设计方案/runbooks/dev-test-deploy-workflow.md`

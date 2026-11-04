@@ -1,6 +1,6 @@
 # A Data Foundation Tracer Acceptance
 
-> **状态**：`draft`  
+> **状态**：`current`（2026-11-04 实现完成，已合并 main）  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
 > **任务**：[`tasks.md`](tasks.md)  

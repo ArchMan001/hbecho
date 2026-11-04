@@ -1,6 +1,6 @@
 # A 数据底座 Tracer（a-data-foundation-tracer）· 需求
 
-> **状态**：`draft`
+> **状态**：`current`（2026-11-04 实现完成，已合并 main）
 >
 > **模式**：Design-First
 >

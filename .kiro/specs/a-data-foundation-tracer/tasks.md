@@ -7,7 +7,7 @@
 > **验收**：[`acceptance.md`](acceptance.md)  
 > **所属域**：A 数据底座 · **目录命名**：`a-data-foundation-tracer`，符合 `<代号>-<切片>`  
 > **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.10（2026-11-04，定稿候选）  
-> **最近核对**：2026-11-04（A v1.10；v2 六项冲突已修订）  
+> **最近核对**：2026-11-04（A v1.10；v2 六项冲突已修订；design §18 P0 已按默认值关闭）  
 > **更新日期**：2026-11-04
 
 ## Planning rules
@@ -26,26 +26,29 @@
   - **Requirements:** R2, R5, R6, R9, R10, R11, R13, R16, R19
   - 建立抖音/小红书 `media_user_info` 与 `user_video_list` fixture 清单、来源、checksum 和 evidence label；明确 raw3 是解析后包络，raw4/raw5/raw8 是保存的请求/响应样本，都不替代实现层 raw-before-parse 故障注入。
   - 定义 versioned Adapter 输入/输出合同：requested action、expected response action、captured actual response action、五态值状态（`value/missing/explicit_null/invalid/unsupported`）、外部 ID text、identifier namespace、`content_kind`、完整 entries 和 typed cursor；expected/actual 必须分列，mismatch 保留两值并分类。
-  - 锁定主页入口类型（`home/video/note/unknown`）、最小清洗规则、最多三次尝试的策略分配，以及非主页入口不建账号/归属/不重试的合同。
-  - 锁定哪些 Home locator strategy 会产生 captured terminal `media_user_info` payload；已有 payload 必须复用，只有没有 payload 的 strategy 才允许一次独立 profile fetch，并明确每种策略的预期 ProviderCall 数。
-  - 锁定首版 Xiaohongshu dominant-author policy（唯一最高、最低占比/绝对多数、空值与异常分布）及 policy version；未决时绑定 capability 保持 disabled。
+  - 锁定主页入口类型（`home/video/note/unknown`）、最小清洗规则（截掉路径之后的分享文案，原值与清洗值都保留），以及非主页入口不建账号/归属/不重试的合同。
+  - 单一解析策略：清洗后直接调 `media_user_info`，其返回即主页投影来源；「最多三次」是对 `RESULT_VALIDATION_FAILED` 的有界重试；成功路径调用数固定为主页 1 + 列表 1。
+  - 实现 Xiaohongshu dominant-author policy `dominant-list-author.v1`：唯一最高且占非空作者条目 ≥ 80%；阈值为配置。
   - 定义 platform × action × mode × environment capability registry，显式区分 `supplier_declared/fixture_observed/smoke_verified` 与 `production approved`；按 raw4/raw5/raw8 固化“同步主页/列表、异步主页可用；异步列表 provider-failed”的 tuple 结论；所有 production activation 保持 `disabled`。
   - 固定测试 harness 的 network-denied、fixture transport、fake clock/fake OSS seam，并确保 fixture 与日志不含 secret。
   - **Offline acceptance:**
     - 抖音 fixture 被识别为 target `HITACHI1`、20 entries、foreign author `HITACHI2023`、integer cursor；`content_kind` 按条目规则推断；列表播放数为 `unsupported`；
     - 小红书 fixture 被识别为 profile `49328995493`、dominant author `5decba2300000000010007e1`、21 entries、string cursor；无 avatar/background 引用；封面选第 2 条；
-    - 已选 locator/profile 策略的 ProviderCall 数与锁定合同一致，重复提交或已有 captured profile payload 不增加调用；
+    - 成功路径 ProviderCall 数 = 主页 1 + 列表 1；重复提交不增加调用；
+    - 主导作者：21/21 绑定；唯一最高但低于 80%、tie、空作者均拒绝；
     - 非主页入口、`unknown` 入口类型和三次失败都不产生账号/归属；
     - fixture-observed tuple 不能在 production environment 激活；尝试真实 socket 或未注册 platform/action/mode 时测试立即失败，且没有付费调用。
 
 - [ ] 2. 建立 tracer 命令、幂等根任务与本地状态纵向骨架
   - **Requirements:** R1, R15, R18
-  - 实现 `AccountTracerCommandModule` 和 `TracerStatusQuery` 的稳定 Interface；HTTP path 或其他 transport 在本任务中按评审结果冻结，但 transport 不泄漏到 Module 内部。
+  - 实现 `AccountTracerCommandModule` 和 `TracerStatusQuery`，入口为 CLI `pnpm tracer submit|status|cancel`（design §14），不做 HTTP。
+  - 建立 Drizzle schema 与迁移（本任务首次建表）：v2 中 tracer 用到的表；验证 drizzle-kit 能否生成 CHECK、复合外键、生成列唯一键与受限写入过程，不支持的部分写手写 SQL 迁移，并把结论回填 ADR-0005「已知坑」第 7 行（R6-06）。
+  - 准备测试种子：品牌、大区、分公司、板块、经销商、门店、`MediaStaff` 各若干行（复用 `seed/分公司-大区对照.csv`），只用于离线测试与测试机一次性库。
   - 在任何网络行为前执行 service-principal Capability、目标 scope、capability gate、canonical payload 和 idempotency 校验；同账号同动作已有活动任务时复用。
   - 将 canonical command 固定映射为 root SyncTask：platform、`subject_type='media_staff'`、staff subject ID、原始 locator，以及通过两字段 `data-foundation-tracer-task-parameters.v1` persistence-projection schema 校验的 effective limit；再组装独立五字段 `data-foundation-tracer-command.v1` aggregate，摘要严格按 v2 §5.5 的 RFC 8785 JCS UTF-8 bytes 计算，不做 Unicode normalization，并锁定 command 跨实现 digest vector。
   - 建立 root/stage 状态、logical-effect key、cancel、lease/fencing 和 audit-safe event；一年窗口内相同 key+payload 返回同一 root，不同 payload 返回 conflict，窗口外按新命令处理。
   - Status 从本地事实组装 structured/media/failure 进度与 entry outcome，执行 scope/redaction；查询路径不得调用 provider 或 media origin。为 secret、raw body、完整 ODS key、临时 URL、越权 account/assignment ID 建立逐字段 deny/redaction policy。
-  - **Offline acceptance:** duplicate submission、key conflict、unauthorized/unsupported preflight、cancel、同账号同动作复用和 unknown/out-of-scope status 均有稳定结果；TypeScript/Python/SQL fixture 对 v2 command exact JCS bytes 产生同一 SHA-256，覆盖 Unicode、转义、key 输入顺序、BIGINT decimal string、integer 与 absent/null/unknown-field rejection；redaction fixture 证明上述敏感字段不出现在 body/log；fake clock 证明一年内返回原 root、到期后旧 status 不再承诺且复用 key 创建新 root 仍不重复长期业务事实；对 status query 断言 ProviderTransport 调用次数为 0。
+  - **Offline acceptance:** duplicate submission、key conflict、unauthorized/unsupported preflight、cancel、同账号同动作复用和 unknown/out-of-scope status 均有稳定结果；TypeScript 实现对 v2 §5.5 两个固定向量的 exact JCS bytes 产生文档指定的 SHA-256，覆盖 Unicode、转义、key 输入顺序、BIGINT decimal string、integer 与 absent/null/unknown-field rejection；redaction fixture 证明上述敏感字段不出现在 body/log；fake clock 证明一年内返回原 root、到期后旧 status 不再承诺且复用 key 创建新 root 仍不重复长期业务事实；对 status query 断言 ProviderTransport 调用次数为 0。
 
 - [ ] 3. 打通 raw-before-parse ProviderCall 纵向链路
   - **Requirements:** R2, R13, R14, R16, R18
@@ -53,10 +56,10 @@
   - 每个 submit/poll/retry 使用独立 ProviderCall，分列记录 requested action、immutable expected response action 与 captured actual response action，并记录 `prepared/in_flight/terminal/ambiguous`、mode、attempt、timing、bytes、hash、safe metadata、root/task correlation 和 Adapter version；排除认证 header/secret。
   - 让 fake OSS 支持 request-intent failure、durable-write failure、hash mismatch、truncated body、in-flight process loss 和 terminal-capture failure；解析可从 captured ref 重放但不覆盖旧 lineage。
   - 实现一年保留期的 payload→call→task 清理闭包及 ODS orphan sweeper；证明不会删除长期 snapshot/assignment/discovery/checkpoint/media facts，且清理可幂等重跑。
-  - 确保所有网络等待发生在数据库事务之外，提交结果时复核 lease/fence；发送前取消、预算或本地策略封口把 durable intent 置为 `terminal/not_sent`；已知未送达的 transport failure 与远端结果不明的 `ambiguous` 分开，后者没有供应商幂等或 reconcile 证据时不得盲目重发。
+  - 确保所有网络等待发生在数据库事务之外，提交结果时复核 lease/fence；发送前取消、预算或本地策略封口把 durable intent 置为 `terminal/not_sent`；已知未送达的 transport failure 与远端结果不明的 `ambiguous` 分开，后者永久保持 ambiguous；因 tracer 的 action 都是只读查询，允许在有界重试内新发一次 ProviderCall（计入预算），不实现对账（requirements 2.7）。
   - 将 HTTP 400 `INVALID_REQUEST`、HTTP 500 `RESULT_VALIDATION_FAILED`、间歇性 `result: null` 分类到不同的 retry policy；`RESULT_VALIDATION_FAILED` 有界重试，重试耗尽后由业务层决定 `invalid_link`，不得在首次响应时断言账号不存在。
   - 成功解析后，locator 与账号 ID 必须在同一条 captured terminal payload 的同一短事务中成对写入；不得跨调用拼接。
-  - **Offline acceptance:** request intent 未提交时 network send=0；prepared 后取消得到 `terminal/not_sent` 且 send=0；终态 ODS write/integrity failure 时 decoder/projector=0；expected/actual action mismatch 同时保留两值并进入 `invalid_response`；完整响应、known non-delivery transport error、timeout/process-loss ambiguous 及 reconciled 两种终态都满足 v2 字段/nullability/payload 矩阵；self-reference、仅 correlation ID、不同 task/provider/platform、pending/invalid 或无完整 terminal payload 的 reconcile call 均不能终态化 ambiguous，只有同 logical effect 的 captured terminal call 经 versioned mapping 后可以；resume 不重复已完成或结果不明的付费 effect；stale worker 不能提交可变状态；fake clock 推进一年清理后长期业务事实仍存在；locator/account ID 跨调用拼接的负例被拒绝。
+  - **Offline acceptance:** request intent 未提交时 network send=0；prepared 后取消得到 `terminal/not_sent` 且 send=0；终态 ODS write/integrity failure 时 decoder/projector=0；expected/actual action mismatch 同时保留两值并进入 `invalid_response`；完整响应、known non-delivery transport error、timeout/process-loss ambiguous 都满足 v2 字段/nullability/payload 矩阵；ambiguous 后最多再发一次新 ProviderCall，原调用不被改写，业务事实不重复；resume 不重复已完成的付费 effect；stale worker 不能提交可变状态；fake clock 推进一年清理后长期业务事实仍存在；locator/account ID 跨调用拼接的负例被拒绝。
 
 - [ ] 4. 打通抖音账号 tracer 纵向切片
   - **Requirements:** R3, R4, R5, R7, R8, R9, R10, R11, R14, R18, R19
@@ -66,8 +69,9 @@
   - 通过 captured `user_video_list` 处理完整 20 entries，按账号粒度创建/复用 ContentSnapshot 与 ContentDiscovery，保留 target 与 returned author 两份事实；按规则推断 `content_kind`；列表播放数记 `unsupported`；封面选第 2 条候选。
   - 对 `HITACHI2023` 只记录 returned-author content fact，不创建账号/归属，也不单凭差异创建质量问题。
   - 在全页投影完成后按 `time` / `id_window` / `empty` 规则建立 integer cursor checkpoint；用 fence 防止旧 run 回退 current/checkpoint。
-  - 计算首次录入结果：正常、`invalid_link` 或 `suspected_empty`；后者写可查询的 `data_quality_issues`，不自动纳入监控，也不改账号状态。
-  - **Offline acceptance:** 一次命令得到 target `HITACHI1`、1 个当前归属、1 个 finalized profile、20/20 processed entries、20 个预期账号级 discovery、无 `HITACHI2023` ExternalAccount、integer checkpoint、正确的 `content_kind` 与 `unsupported` 播放数、第 2 条封面引用、可查询的 entry outcome；ProviderCall 数符合任务 1 锁定策略，duplicate/resume 无重复业务事实；assignment-conflict fixture 保持旧 owner 且不会继续付费；疑似空账号 fixture 产生 issue 但账号 status 不变。
+  - 计算首次录入结果：正常、`invalid_link` 或 `suspected_empty`；后两者之外写归属行 `intake_status`；`suspected_empty` 另写 `data_quality_issues`，实际监控 = 开关打开且 `intake_status='normal'`，不关开关、不改账号状态。
+  - 一专员一平台一账号（D-69）：专员在抖音已占用名额时，提交另一个抖音账号进入阻塞终态 `staff_platform_slot_taken`，不建归属、不继续付费。
+  - **Offline acceptance:** 一次命令得到 target `HITACHI1`、1 个当前归属、1 个 finalized profile、20/20 processed entries、20 个预期账号级 discovery、无 `HITACHI2023` ExternalAccount、integer checkpoint、正确的 `content_kind` 与 `unsupported` 播放数、第 2 条封面引用、可查询的 entry outcome；ProviderCall 数符合任务 1 锁定策略，duplicate/resume 无重复业务事实；assignment-conflict fixture 保持旧 owner 且不会继续付费；疑似空账号 fixture 产生 issue、`intake_status='suspected_empty'`、不进入常规采集，账号 status 不变；同专员同平台第二个账号被阻塞且无新归属。
 
 - [ ] 5. 打通小红书多命名空间身份纵向切片
   - **Requirements:** R3, R4, R5, R6, R7, R8, R9, R10, R14, R18, R19
@@ -79,7 +83,7 @@
   - 覆盖既有 Assignment 冲突，与抖音执行同一不抢占/默认停止付费语义。
   - 小红书主页响应不返回头像与背景，不生成 avatar/background 引用；封面仍选第 2 条候选。
   - 处理已返回 21 entries，即使 `initial_content_limit <= 20`；建立 string cursor checkpoint，并计算 entry outcome（含 `suspected_empty` 路径）。
-  - **Offline acceptance:** 一个 ExternalAccount 同时拥有两个不同 namespace 的预期 ID、21/21 entries 被投影、没有 minority-author account、cursor 保持 string、无 avatar/background 引用、封面为第 2 条；TypeScript/Python/SQL fixture 对 v2 evidence exact JCS bytes 产生同一 SHA-256，覆盖 key 输入顺序、exact identifier、integer、candidate null 与 absent/unknown-field rejection，且成功 evidence 的 shape、列值和计数总和均可验证；tie/empty/唯一低占比 fixture 均无绑定且 rejected evidence/problem 可见；平台错配、非主页入口、三次失败和 assignment conflict 均无错误 owner 或后续付费副作用；fake clock 推进超过一年并清理 task/call/raw 后，成功 identifier 仍能仅凭长期 evidence 与 batch 解释 policy、candidate、exact counts、denominator 和 accepted reason。
+  - **Offline acceptance:** 一个 ExternalAccount 同时拥有两个不同 namespace 的预期 ID、21/21 entries 被投影、没有 minority-author account、cursor 保持 string、无 avatar/background 引用、封面为第 2 条；TypeScript 实现对 v2 evidence 固定向量的 exact JCS bytes 产生文档指定的 SHA-256，覆盖 key 输入顺序、exact identifier、integer、candidate null 与 absent/unknown-field rejection，且成功 evidence 的 shape、列值和计数总和均可验证；tie/empty/唯一低占比 fixture 均无绑定且 rejected evidence/problem 可见；平台错配、非主页入口、三次失败和 assignment conflict 均无错误 owner 或后续付费副作用；fake clock 推进超过一年并清理 task/call/raw 后，成功 identifier 仍能仅凭长期 evidence 与 batch 解释 policy、candidate、exact counts、denominator 和 accepted reason。
 
 - [ ] 6. 完成跨平台完整页、按账号内容与 typed checkpoint 契约
   - **Requirements:** R8, R9, R10, R11, R14, R18
@@ -105,12 +109,12 @@
   - 将 provider auth（400）、provider input/inaccessible（500）、间歇性 `RESULT_VALIDATION_FAILED`、quota/rate、transport、ODS、parse/schema、identity、assignment、projection、media、stale fence 分类到稳定 reason/retry policy；技术失败绝不映射为空 profile/list，也不改账号状态；`in_flight` 失联进入 ambiguous 且无 reconcile 证据时不自动重发。
   - 实现 stage lease heartbeat、monotonic fence、retry wait、deadline、cancel 和 crash resume；同账号同动作复用活动任务；已完成付费 effect 不重复，结果不明的远端 effect 不盲重试，迟到 worker 不回退 current/checkpoint。
   - 为 call/page/poll/media 设置硬上限和 cost counters；超限在下一次调用前停止。同步或异步生产 tuple 都必须达到 `smoke_verified + production approved`，不能由 fixture evidence 启用。
-  - **Offline acceptance:** fake async pending→success、pending→provider failure、timeout、rate limit、crash-before-send、crash-after-send-before-terminal-capture、crash-after-project、cancel-during-poll、lease takeover 全部可重复运行；provider idempotency/correlation 只能授权安全 retry 或 reconcile lookup，ambiguous 原调用只有引用同 logical effect 的 captured terminal reconcile call 且通过 versioned outcome mapping 才可终态化，并且全程无重复业务事实或 stale publication；`RESULT_VALIDATION_FAILED` 在有界重试内可恢复，重试耗尽才进入业务 `invalid_link`。
+  - **Offline acceptance:** fake async pending→success、pending→provider failure、timeout、rate limit、crash-before-send、crash-after-send-before-terminal-capture、crash-after-project、cancel-during-poll、lease takeover 全部可重复运行；crash-after-send-before-terminal-capture 的调用保持 ambiguous，最多再发一次新调用，全程无重复业务事实或 stale publication；`RESULT_VALIDATION_FAILED` 在有界重试内可恢复，重试耗尽才进入业务 `invalid_link`。
 
 - [ ] 9. 建立人工批准、预算受限的真实 smoke
   - **Requirements:** R2, R13, R14, R17
   - 提供独立于默认 tests/CI 的 smoke 入口；启动前强制 human approval、显式 runtime switch、locator/action/mode allowlist、secret provider、固定 call/cost budget 和 deadline。
-  - 首轮只验证最小 `media_user_info`/`user_video_list` tuple；异步 profile 必须作为独立 smoke，不因同步成功而启用；异步列表保持 disabled。
+  - 首轮只验证最小 `media_user_info`/`user_video_list` tuple；同时实测异步 profile 的 terminal schema、TTL 与合适的轮询间隔，写回 capability 证据；异步 profile 必须作为独立 smoke，不因同步成功而启用；异步列表保持 disabled。
   - 每个真实 submit/poll/retry 仍走 RawCaptureGateway、ProviderCall、cost guard 和 redacted audit；达到预算或 deadline 时在下一次调用前停止。
   - 使用 A v1.10 §6.2 点数表估算成本（抖音主页 10、列表 10/页；小红书主页 15、列表 15/页），单价 0.02 元/点（1 元 = 50 点，2026-11-04）；QPS 仍未知。
   - 输出 audit summary：实际 tuple、calls、polls、latency、bytes、estimated points、result category、schema/Adapter version 和 evidence refs，不含 secret/full payload。

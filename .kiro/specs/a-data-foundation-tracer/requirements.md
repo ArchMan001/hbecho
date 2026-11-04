@@ -12,7 +12,7 @@
 >
 > **最近核对**：2026-11-04（按 A v1.10 与 raw4/raw5/raw8 校准）
 >
-> **更新日期**：2026-11-04（需求正文由英文译为中文；语义与编号不变）
+> **更新日期**：2026-11-04（第二次：关闭 P0 默认值；一专员一平台一账号；只读查询有界重发；单一解析策略；CLI 调用；录入状态与实际监控）
 >
 > **语言约定**：正文中文；验收标准中的规范性关键词 `SHALL` / `SHALL NOT` / `MAY` 与技术标识保留英文（对齐 hbdam spec 的写法）。
 
@@ -35,9 +35,9 @@
 
 供应商文档与实测证据冲突时，不得静默猜测；应能力门控、记录差异并保留为未决合同。
 
-### 1.2 已知的基线冲突与范围区别（实现前必须显式处理）
+### 1.2 基线冲突（2026-11-04 已全部修订）与范围区别
 
-本 spec 与 v2 / A v1.10 存在以下冲突或范围区别。它们不是本 spec 的实现选择，而是必须显式记录、必要时回到 v2（或 CONTEXT）修订的基线缺口：
+下表第 1～6 项是本 spec 编写时与 v2 的冲突，**已于 2026-11-04 在 v2 修订**，保留为追溯；实现以 v2 修订稿为准。第 7 项是范围区别，仍然有效：
 
 | # | 冲突 / 区别 | 以谁为准 | 处理 |
 |---|---|---|---|
@@ -49,9 +49,7 @@
 | 6 | v2 `media_references.role` 没有封面标准化衍生图角色 | A v1.10 §10.2 | 需要新增独立资产与引用语义；tracer 至少保证衍生图有独立 SHA-256 且不替代原始字节 |
 | 7 | A v1.10 §11.2 的名单导入首次只调主页接口做账号核对，内容按周节奏；v2 §12.2 的单账号录入立即执行主页 + 首个完整返回列表页 | 本 spec 按 `prd-platform.md` §7.2 的 tracer 验收边界 | tracer 是单账号录入链路，不是名单导入；它的验收包含首个完整返回页。名单导入的“只调主页”留给后续导入 spec，不在此实现 |
 
-> **2026-11-04**：第 1～6 项已在 v2 修订（v2 文首「2026-11-04 修订」）。第 2 项的落点是把 `contents` 改为按被观察账号的内容根（唯一键含 `account_id`），快照唯一键 `(batch_id, content_id)` 因此不变，与本 spec design §146 的「快照按 `(batch, account, content)` 唯一」语义等价；实现以 v2 为准。第 5 项落在归属行的 `intake_status`。
-
-第 1～6 项中任何一项未修订时，对应能力保持 `disabled` 或只在离线 fixture 中验收，不得以实现默认值静默冻结。第 7 项是范围区别，不是需要修订 v2 的缺陷。
+第 1～6 项在 v2 的落点：① 归属行每账号一行（`UQ(account_id)`），无区间，带 `platform_id`；② `contents` 带 `account_id`，按被观察账号的内容根，快照键 `(batch_id, content_id)` 不变；③ `unsupported`；④ 去掉 `mixed`；⑤ 归属行 `intake_status`（`normal` / `suspected_empty`）；⑥ `*_normalized` 媒资角色。
 
 ## 2. 范围
 
@@ -81,8 +79,7 @@
 - 账号改绑、账号停用/删除处置和处置工作台；
 - 通用 AI Master 代理、管理后台或供应商能力市场；
 - 重建品牌、组织、门店、`MediaStaff`、`ExternalAccount` 或媒资的平行主档；
-- 冻结应用框架、ORM、迁移工具、队列或部署拓扑；
-- 解决 `User ↔ MediaStaff` 的最终产品映射；首个实现可由用途受限的内部主体调用。
+- 解决 `User ↔ MediaStaff` 的最终产品映射；本 spec 只由用途受限的服务身份通过 CLI 调用，不提供 HTTP 接口与页面。
 
 ## 3. 术语
 
@@ -135,7 +132,7 @@
 4. 当传输在完整响应 body 出现之前失败时，Tracer SHALL 在分类或重试该调用之前，持久化一份结构化的传输错误制品。
 5. 如果请求意图、响应/错误 ODS 持久化或完整性校验失败，则 Tracer SHALL NOT 解析或投影该供应商结果。
 6. 当载荷被解析时，Tracer SHALL 记录该次解释所用的 ODS 引用、字节 SHA-256 与 Adapter 版本。
-7. 当已发送的调用失去终态结果时，Tracer SHALL 将该结果标记为 ambiguous，且 SHALL NOT 在没有供应商幂等或对账证据的情况下盲目重试。
+7. 当已发送的调用失去终态结果时，Tracer SHALL 将该调用标记为 ambiguous 并永久保留该记录。由于 `media_user_info`、`user_video_list` 与任务查询都是只读查询（重发不产生供应商侧副作用，业务事实按幂等键去重），Tracer MAY 在有界重试策略内发起一次新的 ProviderCall，计入调用与成本预算；同一逻辑效果因 ambiguous 最多重发 1 次。本 spec 不实现 ambiguous 对账；有副作用的供应商调用不适用本条。
 8. Tracer SHALL 将 ProviderCall、任务与 ODS 载荷事实保留一年，并 SHALL 确保凭证与授权头不出现在保留的 body 和元数据中。
 9. Tracer SHALL 仅将现有 `raw3`/`raw4` JSON 文件视为已保存的证据，SHALL NOT 声称它们证明了本实现的 raw-before-parse 行为。
 10. 当一年保留期到期时，Tracer SHALL 按 payload → call → task 的顺序清理，SHALL 使清理幂等且可审计，且 SHALL NOT 级联删除长期快照、归属、发现、检查点或正式媒资。
@@ -155,7 +152,7 @@
 7. 当解析成功时，Tracer SHALL 在同一个短事务中，从同一条已捕获的终态载荷写入提交的 locator 与解析出的外部账号标识；SHALL NOT 将一次调用的 locator 与另一次调用的标识配对。
 8. 如果解析结果所属平台与命令不一致，则 Tracer SHALL 拒绝该结果，且 SHALL NOT 静默切换平台。
 9. 当同一 root 任务恢复时，Tracer SHALL 复用成功的解析证据，而不是重复付费或网络尝试。
-10. 如果 locator 解析已经为目标主页产生了已捕获的终态 `media_user_info` 载荷，则 Tracer SHALL 复用该载荷做主页投影，SHALL NOT 发出重复的主页请求；否则配置的策略 SHALL 允许该阶段恰好执行一次单独记录的 profile 拉取。
+10. 首版只有一种解析策略：最小清洗后直接调用 `media_user_info`。该调用成功返回的已捕获终态载荷同时作为主页投影来源，Tracer SHALL NOT 为主页再发一次请求。成功路径的供应商调用数因此固定为：主页 1 次 + 列表 1 页（不含有界重试）。
 
 ### 需求 4 · 解析未决时不产生业务身份
 
@@ -195,7 +192,7 @@
 3. 当同一页出现少数作者时，Tracer SHALL 将其保留在各自返回的内容事实上，但 SHALL NOT 为它们创建 `ExternalAccount` 记录。
 4. 给定已保存的日立小红书 fixture，当处理该页时，Tracer SHALL 将 profile ID `49328995493` 与主导列表作者 ID `5decba2300000000010007e1` 保留在不同 namespace 中，同时将两者绑定到同一个目标 `ExternalAccount`。
 5. 当主导作者决定被做出或被拒绝时，Tracer SHALL 在可追溯证据中保留策略版本、准确作者计数、分母与拒绝原因。
-6. 在主导作者阈值与策略版本仍未批准期间，Tracer SHALL 保持生产绑定 disabled；无歧义的 fixture（21/21 同一作者）仍可作为仅 fixture 的验收用例。
+6. 首版主导作者策略 `dominant-list-author.v1`（2026-11-04）：非空作者 ID 中出现次数**唯一最高**，且占非空作者条目 **≥ 80%** 时才绑定；否则拒绝并记质量问题。阈值是配置项，调整阈值必须升策略版本。
 
 ### 需求 7 · 当前归属且不抢占所有权
 
@@ -210,6 +207,7 @@
 5. Tracer SHALL NOT 创建平行的自然人员工 `Staff`、平台账号或账号-经销商绑定模型。
 6. 当投影内容与发现时，Tracer SHALL 记录采集当时观察到的归属快照值，以便后续受审计改绑不会改写历史发现。
 7. 当首次录入被接受时，Tracer SHALL 将提交的 locator 持久化为当前主页 locator，并将上一 locator 留空；入口变更不在本 spec 范围内。
+8. 如果提交的 `MediaStaff` 在同一平台已经占用一个账号名额（D-69：一专员一平台一账号），且解析出的账号不是该账号，则 Tracer SHALL 以稳定的 `staff_platform_slot_taken` 原因进入阻塞终态，SHALL NOT 创建归属，并 SHALL 默认停止后续付费阶段；已捕获的证据保留。
 
 ### 需求 8 · 终态主页快照
 
@@ -258,6 +256,8 @@
 7. 当建立首个检查点时，Tracer SHALL 确定性地选择锚点：当存在任何有效发布时间时，使用 `time`，取最大有效 `published_at` 与该时刻的内容 ID 集合；当没有有效发布时间但存在内容 ID 时，使用 `id_window`，取首页内容 ID 集合；当首页确实返回 0 条时，使用 `empty`。
 8. 当首页在完整处理之后达到有效 `initial_content_limit` 时，Tracer SHALL 停止并建立基线；在本 spec 中，供应商仍有更多历史 SHALL NOT 被归类为连续性缺口。
 9. 给定已保存的 fixture，Tracer SHALL 将抖音 `max_cursor` 保留为整数，将小红书 `max_cursor` 保留为字符串。
+10. Tracer SHALL NOT 请求第二页：首个完整返回页处理完即建立基线，后续翻页属于 `a-full-sync`。
+11. 当 `has_more=false` 时，空或 null 游标视为正常结束；当 `has_more=true` 但游标为空或 null 时，Tracer SHALL 记录一条质量问题并按已处理页建立基线（与 D-53 一致）。
 
 ### 需求 11 · 保留异作者内容但不创建账号
 
@@ -310,7 +310,7 @@
 
 1. 当失败发生时，Tracer SHALL 至少将其分类为：输入、非主页 locator、授权、不支持的 capability、供应商认证、配额/限流、传输、原始载荷持久化、schema/解析、身份歧义、归属冲突、结构化投影或媒资失败。
 2. Tracer SHALL NOT 将传输、原始载荷持久化、解析、schema、存储或超时失败转成空主页、空列表、业务级「未找到」或账号状态变更。
-3. 当失败可重试且先前远端结果已知时，Tracer SHALL 应用有界尝试与退避，同时为每次供应商尝试创建新的 ProviderCall；已发送但结果不明的调用在任何重试之前应要求供应商幂等或对账安全证据，仅凭 correlation ID SHALL NOT 将其终态化。当对账确定结果时，Tracer SHALL 为同一逻辑远端效果引用一条独立的已捕获终态 ProviderCall，并在改变原 ambiguous 调用之前校验其版本化成功/失败映射。
+3. 当失败可重试且先前远端结果已知时，Tracer SHALL 应用有界尝试与退避，同时为每次供应商尝试创建新的 ProviderCall；已发送但结果不明的只读查询按需求 2.7 处理：原调用保持 ambiguous，新尝试是独立 ProviderCall，不改写原调用。
 4. 当失败为终态时，Tracer SHALL 保留已完成的不可变事实，显式标记未完成阶段，并避免推进未获得的检查点。
 5. 当工作流在进程丢失后恢复时，Tracer SHALL 从持久阶段事实继续，且 SHALL NOT 重复已完成的付费效果。
 6. 当请求取消时，Tracer SHALL 阻止新的付费调用，并使用 fencing 拒绝迟到写入，同时保留审计与证据；如果持久 ProviderCall 意图尚未进入 `in_flight`，则 Tracer SHALL 将其关闭为 `terminal/not_sent`，而不是留下可发送的 prepared 意图。
@@ -381,9 +381,11 @@
 4. 当发生身份冲突、字段合同异常、连续性缺口或媒资失败时，Tracer SHALL 记录一条带可追溯证据的数据质量问题，而不是删除或改写业务数据。
 5. Tracer SHALL NOT 因质量问题将 `ExternalAccount.status` 改为 `unavailable` 或 `deleted`；人工处置与改绑不在本 spec 范围内。
 6. 当记录质量问题时，SHALL 可在适用保留窗口内按账号、批次与源 ProviderCall 查询。
+7. 当账号被接受时，Tracer SHALL 在归属行写入 `intake_status`：`normal` 或 `suspected_empty`；`invalid_link` 不建归属行，只出现在根任务结果中。
+8. `suspected_empty` 的账号 SHALL NOT 进入常规采集：实际监控 = 监控开关打开 **且** `intake_status='normal'`。Tracer SHALL NOT 为此关闭监控开关；人工确认入口属于 `a-activity-plan`。
 
 ## 5. 需求级完成边界
 
 只有当上文每一条规范性要求都有可执行的验收检查或显式批准的人工 smoke 检查时，本需求文档才算满足。仅有成功的 HTTP 响应不够：身份、归属、录入结果、完整页基数、游标类型与锚点模式、ODS 顺序、检查点安全、值状态（包括 `unsupported`）、按账号内容、媒资状态与「不产生额外账号」不变量都必须被观察到。
 
-§1.2 列出的六项基线冲突与范围区别不会被本 spec 静默解决。在 v2（以及适用时的 CONTEXT）修订之前，受影响的能力保持仅 fixture 或 disabled，且 SHALL NOT 根据冲突的 v2 定义构建生产 schema。
+§1.2 的六项基线冲突已在 v2 修订；第 7 项范围区别仍然有效，不得由实现静默改变。

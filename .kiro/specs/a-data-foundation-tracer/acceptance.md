@@ -64,6 +64,7 @@
 | C11 | R7.1 | 账号无冲突归属 | 同一短事务写当前归属与入口；无时间区间 |
 | C12 | R7.2 | 账号已属于同一 MediaStaff | 幂等复用，无第二条归属 |
 | C13 | R7.3–7.4 | 账号已属于他人 | 原 owner 不变；提交者不是 owner；冲突可处理；默认停止后续付费 |
+| C16 | R7.8 | 专员在同一平台已有另一个账号 | 根任务阻塞为 `staff_platform_slot_taken`；不建归属；不继续付费 |
 | C14 | R7.6 / R18.4 | 采集后管理员改绑 | 历史 discovery 的归属快照不变 |
 | C15 | R7.7 | 首次录入 | current 入口写入，previous 为空 |
 
@@ -95,6 +96,8 @@
 | E5 | R10.6 | stale fence worker 完成 | 迟到 cursor 可留证据，但不覆盖更高 version |
 | E6 | R10.7 | 有有效 `published_at` | `anchor_mode='time'`，最大时间 + 同刻 ID 集合 |
 | E7 | R10.7 | 无有效时间、有内容 ID | `anchor_mode='id_window'`，第一页全部 ID |
+| E10 | R10.10 | 首屏不足 limit 且 `has_more=true` | 不请求第二页；按首屏建立基线 |
+| E11 | R10.11 | `has_more=true` 但游标为空 / null | 记质量问题；按已处理页建立基线；不再请求 |
 | E8 | R10.7 | 首屏 0 条、`has_more=false` | `anchor_mode='empty'`，任务成功 |
 | E9 | R10.8 | 首屏完整处理达到 limit | 停止并建立基线；不把供应商仍有历史页记为缺口 |
 
@@ -136,7 +139,7 @@
 | H2 | R2.3 | 收到完整响应 | response bytes 先落 ODS 并验证，之后才 decode |
 | H3 | R2.5 | ODS 写失败 / 完整性失败 | decoder 与 projector 调用次数均为 0 |
 | H4 | R2.4 | 传输失败 | 结构化 transport-error artifact 已保存 |
-| H5 | R2.7 | 发送后远端结果不明 | 标 `ambiguous`；无 reconcile 证据不自动重发 |
+| H5 | R2.7 | 发送后远端结果不明 | 原调用标 `ambiguous` 并保留；最多再发一次新 ProviderCall，计入预算；业务事实不重复 |
 | H6 | R2.8 | 一年清理 | 只删 payload → call → task；snapshot/assignment/discovery/checkpoint/media 仍在 |
 | H7 | R2.10 | 清理重复执行 | 幂等；无重复删除或残留；可审计 |
 | H8 | R2.8 | ODS metadata / 日志 | 无 `X-Api-Key`、Bearer、Cookie、secret |
@@ -150,6 +153,7 @@
 | I3 | R19.4 | 身份冲突 / 字段异常 / 连续性缺口 / 媒资失败 | 各产生可查询 issue；不删改业务数据 |
 | I4 | R19.5 | 任意技术失败 | `ExternalAccount.status` 不变；不自动 `unavailable` / `deleted` |
 | I5 | R19.6 | 按 account / batch / ProviderCall 查询 issue | 保留期内可查 |
+| I6 | R19.7–19.8 | 正常账号与疑似空账号各一 | 归属行 `intake_status` 分别为 `normal` / `suspected_empty`；后者不进入常规采集，监控开关不被关闭 |
 
 ### J. 离线、安全与并发
 

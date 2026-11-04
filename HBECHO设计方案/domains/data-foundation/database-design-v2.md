@@ -290,7 +290,7 @@ SHA-256 = 7dcf255d17be6de663a23e92310bb0f835e00b6cb223d46a9a2c8abd0bf8ec36
 SHA-256 = 2ecbbeebd4d015bb5685d288c0230ab92646f1d0cba08a0937b2a5def673b36d
 ```
 
-TypeScript、Python、SQL migration fixture 与任何其他实现必须对上述 exact bytes 产生相同摘要；不一致时禁止写入幂等键或 binding evidence。
+当前只有 TypeScript 一种实现（ADR-0012：Python 不写库、不算幂等键），必须对上述 exact bytes 产生相同摘要；以后新增其他实现时同样用这两个向量验收。不一致时禁止写入幂等键或 binding evidence。
 
 ---
 
@@ -464,7 +464,7 @@ TypeScript、Python、SQL migration fixture 与任何其他实现必须对上述
 - `current_home_locator LONGTEXT NOT NULL`、`current_home_locator_sha256 BINARY(32) NOT NULL`；
 - `previous_home_locator LONGTEXT NULL`、`previous_home_locator_sha256 BINARY(32) NULL`；
 - `resolved_home_url LONGTEXT NOT NULL`、`resolved_home_url_sha256 BINARY(32) NOT NULL`；
-- `intake_status VARCHAR(32) NOT NULL`：录入状态 `normal/invalid_link/suspected_empty`（A §11.6）；
+- `intake_status VARCHAR(32) NOT NULL`：录入状态 `normal/suspected_empty`（A §11.6；`invalid_link` 不建归属行，只出现在根任务与导入行结果中）。**实际监控 = 本行 `monitoring_enabled` 且上级链有效 且 `intake_status='normal'`**；疑似空账号不关闭开关，人工确认后改为 `normal` 即开始采集；
 - `monitoring_closed_reason VARCHAR(32) NULL`：`manual/unreferenced_15d`；`monitoring_enabled = FALSE` 时必填（A §11.5：计划恢复时只重开 `unreferenced_15d`）；
 - `slot_released_at DATETIME(6) NULL`：账号被人工确认已删除时写入，释放该专员在该平台的名额（D-69）；改绑是更新本行的 `staff_id`，原专员的名额随之自然释放，不需要写这一列；
 - `active_staff_platform BIGINT GENERATED ALWAYS AS (CASE WHEN watch_type='staff' AND slot_released_at IS NULL THEN staff_id END) STORED`；
@@ -677,6 +677,8 @@ Tracer 提交映射为一个 `trigger_type='manual'` 的批次和一个根 `reso
 CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_provider_call_id` 非空且不等于自身 ID；`send_started_at >= prepared_at`；完整响应 `response_received_at >= send_started_at`；ambiguous `ambiguous_at >= send_started_at`；普通 sent terminal `finished_at >= send_started_at`；reconciled terminal `finished_at >= reconciled_at >= ambiguous_at`；所有 terminal 的 `terminal_captured_at >= finished_at`；非空 `elapsed_seconds >= 0`。跨行相关性与 outcome 映射由上述受限事务强制。`reconciled_by_provider_call_id` 是可空一年期自引用并使用 `ON DELETE SET NULL`；清理器先删除引用该 reconcile call 且同样到期的原调用，避免把自引用作为唯一证明的存续行置空后违反 CHECK。索引：`UQ(sync_task_id, attempt_no, call_sequence)`；`IDX(provider_task_id)`；`IDX(provider_request_id)`；`IDX(reconciled_by_provider_call_id)`；`IDX(prepared_at, provider_call_id)`；`IDX(call_status, prepared_at)`；`IDX(outcome, finished_at)`；`IDX(expires_at)`。
 
 每次提交、轮询、分页和重试都是独立调用。发送前必须先持久化 `prepared` call intent 及 exact request body；切到 `in_flight` 后才允许网络发送。若进程在发送后、终态落地前失去确定结果，该 call 进入 `ambiguous`：供应商幂等合同或 provider task/request ID 只能证明可以安全发起新 attempt/lookup，不能直接证明成功或失败；原调用的终态化必须遵守上述 captured reconcile-call 事务，否则停止盲目重发并进入人工/对账处理。调用元数据创建时写入一年期 `expires_at`，即使没有终态 payload 也可独立到期。API Key、Authorization、Cookie 等秘密不入库。
+
+**只读查询例外**（2026-11-04）：`media_user_info`、`user_video_list`、`media_stats_number`、评论列表与任务查询都是只读查询，重发不产生供应商侧副作用，业务事实按幂等键去重。这类调用进入 `ambiguous` 后可以在有界重试内发起一次新的 attempt（独立 ProviderCall，计入预算），原调用保持 `ambiguous`，不要求对账。有副作用的调用不适用。
 
 ### 9.6 `ods_payloads`
 
@@ -1236,7 +1238,7 @@ Pydantic 使用 `model_fields_set` 区分缺失与显式 null。外部 ID 即使
 20. 同一字节被多个快照引用时只有一个 media asset；
 21. 超过 JS 安全整数的外部 ID 往返不变；
 22. `0/null/missing/invalid` 在 MySQL、TS、Python 间不丢语义；
-23. TypeScript、Python 和 SQL fixture 对 §5.5 两个 exact RFC 8785 JCS bytes 产生文档指定的相同 SHA-256；Unicode/external ID/locator 不做 normalization，unknown/absent/null 按 closed schema 拒绝或保真；
+23. TypeScript 实现对 §5.5 两个 exact RFC 8785 JCS bytes 产生文档指定的 SHA-256；Unicode/external ID/locator 不做 normalization，unknown/absent/null 按 closed schema 拒绝或保真；
 24. fake clock 推进超过一年并清理 task/call/raw 后，成功 dominant-author identifier 仍能从长期 evidence、摘要和 batch 解释 policy、candidate、exact counts、denominator 与 accepted reason；拒绝路径仍由长期质量问题解释；
 25. 普通分页查询在目标体量下达到 1～3 秒，大量导出不走同步接口。
 

@@ -15,3 +15,4 @@ inclusion: always
 - 跨域消费的统一入口是**活动计划**：采集只有一份、由全局监控状态驱动；常态采集账号/主页快照/列表/封面，详情/视频源/音频/评论由监控判定计划按需触发。三层对象是 A 活动计划 → **监控判定计划**（监控段归 C、判定段归 D，1:1 共用一个版本号，一个活动计划下 1..n 份）→ E 计划看板。详见 `HBECHO设计方案/prd-platform.md` §6.11。
 - 代码与文档中的领域命名优先采用 `CONTEXT.md`：例如 `MediaStaff`、`ExternalAccount`、`AccountAssignment`、`ContentDiscovery`，不得退回平行的 `Staff` 或“Dealer 是 Branch 子节点”等旧模型。
 - 推翻或修订一条已编号决策（如 `D-18`、`B-D07`）时，同一次改动里必须：① 原决策行保留，加删除线并写「由 X 于某日修订」；② 全仓库搜索该编号，逐处更新或标注；③ 被改文档补版本记录；④ 跑 `./scripts/verify.sh`。
+- 带页面的 spec 必须在 design.md 写「界面」一节（页面清单、流程、线框链接、状态矩阵、字段可见性），按 `HBECHO设计方案/ui/ui-foundation.md` 的约定；规则复杂的页面先做可点击原型并请业务走一遍，再写 tasks.md。

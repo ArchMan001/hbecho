@@ -1204,12 +1204,14 @@ aliyun cms DescribeMetricRuleList --PageSize 30 --profile ${PROJ}-setup
 
 ### 7.3 数据库（E3）
 
-以 MySQL 8.0 为例，hbecho 实测走 Docker 部署，全程未落地明文密码文件到本机磁盘。
+以 MySQL 为例，hbecho 实测走 Docker 部署，全程未落地明文密码文件到本机磁盘。
+
+> **2026-11-04**：MySQL 8.0 已于 2026 年 4 月结束生命周期，新服务器一律用 `mysql:8.4`（LTS）。8.4 上时区参数写 `--default-time-zone`；`mysql_native_password` 默认禁用，应用驱动需支持 `caching_sha2_password`。hbecho 的 8.4 约束实测见其 runbook §13.11。下文的 8.0.46 记录是当时的实测，保留不改。
 
 #### 部署
 
 ```bash
-workbench exec -P $PROJ -i $INSTANCE -c 'docker pull mysql:8.0 && docker run --rm mysql:8.0 mysqld --version'
+workbench exec -P $PROJ -i $INSTANCE -c 'docker pull mysql:8.4 && docker run --rm mysql:8.4 mysqld --version'
 # 期望版本 >= 8.0.16（CHECK 约束的强制执行门槛）
 ```
 
@@ -1238,7 +1240,7 @@ unset ROOT_PW APP_PW
 ```yaml
 services:
   mysql:
-    image: mysql:8.0
+    image: mysql:8.4
     container_name: ${PROJ}-mysql
     restart: unless-stopped
     env_file:

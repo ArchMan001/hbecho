@@ -194,7 +194,7 @@
 |---|---|
 | 应用代码 | **无** |
 | 数据库 DDL / 迁移 | **无** |
-| 已部署 | 测试 ECS（MySQL 8.0.46、OSS 四桶）；生产 ECS 未购买 |
+| 已部署 | 测试 ECS（MySQL 8.0.46 容器，无业务表，首次部署时换 8.4；OSS 五桶）；生产 ECS 未购买 |
 | 可运行的验证 | `./scripts/verify.sh`：密钥、链接、文档登记与 spec 结构 |
 | 技术选型 | 应用栈已定（ADR-0005）；编排 Docker Compose + 宿主 Nginx（ADR-0006） |
 | Spec | 5 个：2 个四件套（tracer、g-learning-min）、3 个 design-only |
@@ -531,7 +531,7 @@ flowchart LR
 | D-54 | 数据质量问题 1.0 只记录；不可访问对象由运营人工删除或替换，不自动改状态 | 2026-10-28 | 刘学奎 | 未定的处置方式 |
 | D-55 | 三个平台共用一套每周同步计划 | 2026-10-28 | 刘学奎 | 未定的平台级调度 |
 | D-56 | A 保留原始字节并生成标准化衍生图（JPEG/WebP），衍生图是独立资产 | 2026-10-28 | 刘学奎 | 未定的媒资标准化责任 |
-| D-57 | 抖音 HEIC 用 sharp 解码；快手 KVIF 用 CDN `x-oss-process` 转 JPEG | 2026-10-28 | 刘学奎 | 未定的格式转换方案 |
+| D-57 | ~~抖音 HEIC 用 sharp 解码~~ —— **2026-11-04 修订**：抖音 HEIC 由 Python 能力服务的 ffmpeg 解码（ADR-0012）；快手 KVIF 用 CDN `x-oss-process` 转 JPEG | 2026-10-28（2026-11-04 修订） | 刘学奎 | 未定的格式转换方案；修订原因：实测抖音封面是 HEVC 编码的 HEIC，sharp 预编译包能读出尺寸但无法解码像素 |
 | D-58 | 音频抽成 m4a/AAC 原样；视频存原始 mp4，不转码 | 2026-10-28 | 刘学奎 | 未定的音视频归档格式 |
 | D-59 | 媒资设技术安全上限（单文件/批次总量可配置），不是业务上限 | 2026-10-28 | 刘学奎 | “完全不设上限” |
 | D-60 | 标准化衍生图统一 JPEG q80、540 宽 | 2026-10-28 | 刘学奎 | 未定的衍生图格式 |
@@ -741,11 +741,11 @@ A tracer → A 主数据导入 → A full sync → B 访问控制 → A 活动�
 
 | 项 | 决定 | 出处 |
 |---|---|---|
-| 数据库 | MySQL 8.0.16+，首版自建，不用 RDS | ADR-0002 |
+| 数据库 | MySQL 8.4 LTS，首版自建，不用 RDS | ADR-0002 |
 | 对象存储 | 阿里云 OSS，按保留期分四桶 | ADR-0001 |
 | 仓 | Docker 运行时；服务器只走 Workbench | runbook、steering |
 | 外部数据 | 商用供应商，不自研爬虫 | 本文 §1.3 |
-| 应用栈 | Node/TypeScript + Next.js + Drizzle + better-auth | ADR-0005 |
+| 应用栈 | Node 24 LTS / TypeScript + Next.js + Drizzle + better-auth | ADR-0005 |
 | 队列 | MySQL 任务表 + `SKIP LOCKED` + 租约/fencing，不引入 Redis | ADR-0005 |
 | 进程形态 | Web（Next.js）与 Worker（独立 Node 进程）同镜像两入口；Python 能力服务只在 compose 内网 | ADR-0005、ADR-0012 |
 | 报表导出 | exceljs 4.4.0，仅写入；导入只用 CSV | ADR-0011 |

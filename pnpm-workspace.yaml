@@ -1,0 +1,4 @@
+# pnpm 11：未审批的依赖构建脚本会让 install 失败，因此每一项都要明确决定。
+allowBuilds:
+  # esbuild 的 postinstall 只做二进制校验；平台预编译包已作为 optionalDependencies 装好，不需要运行。
+  esbuild: false

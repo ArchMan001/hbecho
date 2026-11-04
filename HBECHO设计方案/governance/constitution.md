@@ -18,7 +18,7 @@
 |---|---|
 | `.githooks/pre-commit` 密钥扫描（文件名 + 内容特征，四种拦截已实测） | 应用代码、DDL 与迁移脚本 |
 | `.gitignore` 凭证与本地文件忽略规则 | 测试套件、fixture |
-| MySQL 8.0.46 + `STRICT_TRANS_TABLES`（CHECK 约束已实测生效，但**尚无任何业务 CHECK 落地**） | CI 门禁、静态检查脚本 |
+| MySQL `STRICT_TRANS_TABLES`（8.0.46 与 8.4 的 CHECK 约束均已实测生效，但**尚无任何业务 CHECK 落地**） | CI 门禁、静态检查脚本 |
 | OSS 四桶 RAM 权限边界（media/backup 无删除权限，已实测） | 长事务告警、逻辑备份 |
 | OSS 生命周期规则（media 无过期规则，已实测） | 自动化的文档/规格一致性检查（本文件落地时新增 `scripts/verify.sh`） |
 
@@ -43,7 +43,7 @@
 | C11 | 评论只存最新态；部分分页不得判删除 | 只有完整获取全部一级评论并自然结束分页后，先前存在但本次未出现的评论才可标为疑似删除；部分分页、限流或失败绝不能作为删除证据；重新出现后恢复有效。 | `CONTEXT.md` SuspectedDeletedComment | 人工审查（tracer 首版不含评论） |
 | C12 | 临时 URL 不是媒资身份 | 正式媒资按完整下载字节的 SHA-256 判同，相同字节的多个引用共享同一资产；签名 URL 只作下载线索，不得写入长期业务事实；本轮下载失败可以续用旧资产，但必须记录本轮失败，不得表示为本轮归档成功。 | `CONTEXT.md` MediaAsset、MediaReference；v2 §11；tracer R12 | OSS RAM 权限（media/backup 无删除权限，已实测）；人工审查；tracer 任务 7（待实现） |
 | C13 | 保留期与清理边界不可混淆 | ODS 调用元数据与原始载荷一年后按 payload → call → task → 无引用 object 的顺序清理；结构化快照、历史归属、正式媒资不随之删除；`media` 桶不得配置任何过期规则。生命周期规则抢在应用清理之前，会造成「数据库说证据在、实际字节已删」。 | `CONTEXT.md` OdsRetention、FormalMediaRetention；v2 §12.7；runbook §7.4 | OSS 生命周期实配 + runbook §13.3 验收（已执行）；清理器 fake clock 测试（待实现） |
-| C14 | 幂等、租约与 fencing | 同一 idempotency key + canonical payload 在一年内必须返回同一 root；任务重试不得制造重复业务事实；陈旧 worker 不得提交 current、检查点、归属或媒资终态。重复重试可能造成重复付费调用。 | `CONTEXT.md` SyncTask；tracer R1、R18；v2 §9.3 | 人工审查；tracer 任务 2/8 的 fake clock 与 fence 测试（待实现） |
+| C14 | 幂等、租约与 fencing | 同一 idempotency key + canonical payload 在一年内必须返回同一 root；任务重试不得制造重复业务事实；陈旧 worker 不得提交 current、检查点、归属或媒资终态。重复重试可能造成重复付费调用。例外：只读的供应商查询结果不明（ambiguous）时，可在有界重试内新发一次调用，计入预算，原调用保留（v2 §9.5，2026-11-04）。 | `CONTEXT.md` SyncTask；tracer R1、R18；v2 §9.3 | 人工审查；tracer 任务 2/8 的 fake clock 与 fence 测试（待实现） |
 | C15 | 未验证的 capability 不得启用 | platform × action × mode × environment 必须有明确证据等级；`fixture_observed` 不得激活 production；`raw3` 只能证明 fixture 行为，不能外推为供应商长期合同。把未验证的异步模式当成生产可用会导致调用失败或计费失控。 | 总纲 §5.9、§8.2；tracer R13、R17 | 人工审查；tracer 任务 1/8/9（待实现） |
 | C16 | 默认测试离线；生产机不跑测试 | 默认测试使用 fixture、fake transport、fake clock、fake OSS，网络禁用，不需要 AI Master secret；CI 禁止任何真实付费调用；生产 ECS 永不运行测试、`verify`、`pytest` 或迁移演练。一次误跑就可能清空生产库。 | `.kiro/steering/tech.md`；tracer R16；runbook §8.2 | 人工纪律（当前）；CI 与测试机隔离（本文件落地时开始建立） |
 | C17 | 服务器只走 Workbench；生产写操作逐步确认 | 读状态、跑命令、传文件、部署、看日志一律用 Workbench CLI；禁止 `ssh`、`scp`、`sftp`、`rsync -e ssh` 与任何 SSH 端口转发。部署、迁移、改配置、删数据、改安全组必须先说明并得到明确同意，不批量执行。 | `.kiro/steering/server-access.md`（2026-10-14，明确适用于 hbecho）；runbook §3.4、§4 | 人工纪律；runbook 流程 |

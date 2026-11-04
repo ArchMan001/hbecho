@@ -1,7 +1,6 @@
 # ADR-0004 · 暂不冻结应用框架、ORM/迁移工具与队列
 
-- **状态**：accepted（延迟决定）
-- **部分关闭**：2026-10-27 —— 框架、ORM/迁移工具与队列已由 [ADR-0005](0005-application-stack-and-auth.md) 决定；本 ADR 仅保留"延迟决定"的历史背景与决策纪律
+- **状态**：superseded（2026-11-04）—— 框架、ORM/迁移工具与队列由 [ADR-0005](0005-application-stack-and-auth.md) 决定，目录约定由 [ADR-0013](0013-repository-layout.md) 决定；本 ADR 只保留延迟决定的历史背景，不再约束实现
 - **日期**：2026-09-02
 - **决策人**：刘学奎
 - **替代**：旧项目沉淀中的 NestJS / Prisma / BullMQ / Redis 选型

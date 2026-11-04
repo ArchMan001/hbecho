@@ -1632,6 +1632,7 @@ ossutil --endpoint oss-cn-beijing-internal.aliyuncs.com --region cn-beijing \
 | 密钥 | 类型 | 存放方式 |
 |---|---|---|
 | OSS 访问 | 临时凭证 | 实例 RAM 角色，**机器上不存**（§7.7） |
+| OSS 访问（本机 smoke） | 长期密钥（临时） | 仓库根 `.env`（权限 `600`、已被 `.gitignore` 忽略）。**2026-11-04 决策（liuxuekui）：** 先用 `hbecho-setup` 的 AccessKey 做本机 smoke，用完删除该 AK 并清空这两个变量；服务器侧仍只走实例角色，不受影响 |
 | AI Master API Key | 长期密钥（供应商只提供这一种） | `/data/app/.env`，权限 `600`，owner root，不进 git |
 | MySQL 应用账号密码 | 长期密钥 | 同上 |
 | SSH 私钥 | 长期密钥 | 只在本机 `~/.ssh/`，不进服务器、不进 git |
@@ -1669,13 +1670,32 @@ MYSQL_DATABASE=<待填写>
 MYSQL_USER=<待填写>
 MYSQL_PASSWORD=<从密码管理器取>
 
-# ── OSS（不含任何 AccessKey）───────────────────────
+# ── OSS（服务器：不含任何 AccessKey）────────────────
 OSS_REGION=<待填写>
 OSS_ENDPOINT=oss-<region>-internal.aliyuncs.com
 OSS_RAM_ROLE=<待填写>
 OSS_BUCKET_ODS=<待填写>
 OSS_BUCKET_MEDIA=<待填写>
 OSS_BUCKET_TEMP=<待填写>
+
+# ── OSS（仅仓库根 .env 的本机 smoke；服务器不放）──────
+# 2026-11-04 起：本机没有实例元数据，用不了 hbecho-ecs-role（信任策略只允许 ecs.aliyuncs.com）。
+# 先用 hbecho-setup 的 AK 临时顶替；smoke 跑完即删除该 AK 并清空这两行。键名由 src/modules/smoke/secrets.ts 读取，
+# 缺任何一个都在这构造 transport / OSS 之前失败，错误只报变量名。
+OSS_ACCESS_KEY_ID=<从密码管理器取>
+OSS_ACCESS_KEY_SECRET=<从密码管理器取>
+# 本机走公网 endpoint（内网 endpoint 只对 ECS 有效）
+OSS_ENDPOINT=oss-<region>.aliyuncs.com
+
+# ── 本机 smoke 的数据库（pnpm smoke run 必填）──────
+# 2026-11-04 决策（liuxuekui）：用本机专用持久库 hbecho_smoke，容器 hbecho-smoke-mysql（127.0.0.1:3307）。
+# 与 *_test 一次性库的区别：smoke 的批次、ProviderCall 与 ODS 引用要留到复查，所以不 --rm，也不在跑前 DROP。
+# 重建命令（MySQL 8.4；--skip-log-bin 是必需的——binlog 开启时非 SUPER 用户建不了迁移里的触发器）：
+#   docker run -d --name hbecho-smoke-mysql -e MYSQL_ROOT_PASSWORD=<随机> -e MYSQL_DATABASE=hbecho_smoke \
+#     -e MYSQL_USER=hbecho -e MYSQL_PASSWORD=<随机> -p 127.0.0.1:3307:3306 \
+#     mysql:8.4 --default-time-zone=+00:00 --skip-log-bin
+#   node --env-file=.env --import tsx src/db/migrate.ts
+HBECHO_DATABASE_URL=mysql://hbecho:<口令>@127.0.0.1:3307/hbecho_smoke
 ```
 
 `AIMASTER_ENABLED` 默认 `false` 是刻意的：默认测试必须离线、必须用 fixture/fake transport/fake OSS，**禁止 CI 或普通测试发起真实付费调用**。真实 smoke 需要人工批准、显式开关、固定预算和审计摘要。开关默认关，把"忘记关"变成"忘记开"。
@@ -2431,6 +2451,26 @@ git log --all --name-only --pretty=format: | sort -u | grep -E '(^|/)\.env$|sett
 **期望**：两条都输出 `clean`。第二条检查的是**历史**——工作区干净不代表历史干净。命中的话，补救手段是轮换密钥，改历史只是清理，不是补救。
 
 ---
+
+### 13.11 MySQL 8.4 LTS 约束实测（2026-11-04）
+
+ADR-0002 把版本基线改为 8.4 LTS 后，在测试 ECS 上用**一次性容器**验证 v2 依赖的数据库能力。容器 `m84probe` 挂独立网络 `m84probe_net`、不映射宿主端口、库名 `probe_test`、root 密码在服务器上随机生成且不落盘，跑完即删除容器与网络；没有碰现有的 `hbecho-mysql`。脚本与日志在 `/data/tmp/mysql84-check/`。
+
+启动参数注意：8.4 的时区参数是 `--default-time-zone=+00:00`，写成 `--time-zone` 会让 mysqld 直接退出。
+
+| 检查 | 期望 | 实测（`mysql:8.4` → 8.4.13） |
+|---|---|---|
+| 版本、严格模式、时区 | ≥ 8.0.16；含 `STRICT_TRANS_TABLES`；`+00:00` | ✅ 8.4.13；默认 sql_mode 含 `STRICT_TRANS_TABLES`；`+00:00` |
+| 生成列唯一键：外部账号（`staff_id` 为 NULL）多行并存 | 允许 | ✅ |
+| 同一专员同一平台第二个账号（D-69） | `ERROR 1062` | ✅ `Duplicate entry '100-10' for key 'uq_staff_platform'` |
+| 释放名额（`slot_released_at`）后再录入 | 允许 | ✅ |
+| `watch_type='staff'` 但 `staff_id` 为空 | `ERROR 3819` | ✅ |
+| 关闭监控但没有关闭原因 | `ERROR 3819` | ✅ |
+| 复合外键：账号与平台不匹配 | `ERROR 1452` | ✅ |
+| 严格模式越界写入 | `ERROR 1264` | ✅ |
+| `mysql_native_password` | 默认不可用 | ✅ 插件状态 `DISABLED`；`default_authentication_plugin` 变量在 8.4 已移除（`ERROR 1193`）。应用账号用默认的 `caching_sha2_password` |
+
+**结论**：v2 依赖的 CHECK、生成列唯一键、复合外键与严格模式在 8.4 上全部真实生效。现有 `hbecho-mysql`（8.0.46）没有业务表，首次部署应用时替换为 8.4。
 
 ## 14. 常用运维命令
 

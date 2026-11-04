@@ -1,40 +1,61 @@
 # hbecho CI
 #
-# 当前只有一个 verify job：跑 scripts/verify.sh（密钥、Markdown 链接、文档登记与 spec 结构）。
-# 它不碰数据库、不构建镜像、不发起任何付费调用。
+# 当前只有一个 verify job：跑 scripts/verify.sh（Node 版本、类型检查、单元测试、迁移一致、MySQL 8.4 上的数据库测试、
+# 密钥、Markdown 链接、文档登记与 spec 结构）。
+# 它不构建镜像、不发起任何付费调用；默认测试禁网（只放行回环，用来连下面的 MySQL 服务容器）。
 #
 # 刻意没有 continue-on-error：失败就是失败。CI 显示绿但实际没验，比没有 CI 更糟。
 #
-# 应用代码落地后按 HBECHO设计方案/runbooks/dev-test-deploy-workflow.md §5.2 增加：
-#   app-verify  —— MySQL 服务容器 → 空库迁移 → typecheck → 测试 → 静态门禁 → 生产构建
+# 应用代码继续落地后按 HBECHO设计方案/runbooks/dev-test-deploy-workflow.md §5.2 增加：
 #   image       —— 仅在应用/worker 路径变化或手动触发时构建并推 ACR
 #   deploy-test —— 手动触发，测试 ECS 拉同一标签验收
 #   deploy-prod —— 手动触发 + 环境审批
 # 在这些 job 真正可跑之前，不要创建空壳。
 name: ci
-
 on:
   push:
     branches: ["**"]
   pull_request:
     branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
-
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    services:
+      mysql:
+        # ADR-0002：MySQL 8.4 LTS。口令只用于这个随 job 销毁的一次性容器，不是密钥。
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-throwaway
+          MYSQL_DATABASE: hbecho_test
+          TZ: UTC
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-throwaway --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      HBECHO_TEST_DATABASE_URL: mysql://root:ci-throwaway@127.0.0.1:3306/hbecho_test
     steps:
       - uses: actions/checkout@v4
         with:
           # 历史密钥扫描需要完整历史；浅克隆会让「历史干净」变成假绿
           fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        # 版本取自 package.json 的 packageManager 字段
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: 安装依赖（锁文件冻结）
+        run: pnpm install --frozen-lockfile
       - name: 本机验证入口
         run: ./scripts/verify.sh

@@ -93,7 +93,7 @@
 ### 2.3 规模与现状
 
 - 当前只有**一台测试 ECS**（`i-2zef8qpi1d2mldntjgrv`，华北2，8 vCPU / 32 GiB）；**生产 ECS 未购买**（2026-10-25 确认）。
-- MySQL 8.0.46（Docker）；OSS 五桶：`hbecho-ods` / `media` / `temp` / `backup` / `course`。
+- MySQL 8.0.46（Docker，无业务表；基线已改为 8.4 LTS，首次部署时替换，ADR-0002）；OSS 五桶：`hbecho-ods` / `media` / `temp` / `backup` / `course`。
 - 快照策略 `hbecho-daily`（北京 03:00，保留 7 天）；四条基础告警；邮件告警仍 `PENDING`。
 - 应用代码与部署 compose 尚未落地；本文的 I1/I2 验收多数为 `[待部署]` / `[环境]`。
 

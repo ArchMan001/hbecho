@@ -17,9 +17,10 @@
 7. 配置 hbecho 的服务器、OSS、密钥、Git 与部署：[`server-operations-runbook.md`](runbooks/server-operations-runbook.md)
 8. 开发、验证、CI、测试 ECS 与生产发布：[`dev-test-deploy-workflow.md`](runbooks/dev-test-deploy-workflow.md)
 9. 从 0 配置一台新服务器（hbdam 或其他项目）：[`new-server-bootstrap-checklist.md`](runbooks/new-server-bootstrap-checklist.md)
-10. 查看难逆的技术决定与未决选型：[`adr/README.md`](architecture/adr/README.md)
-11. 查看自动注入但不独立裁决事实的精简规则：[`product.md`](../.kiro/steering/product.md)、[`tech.md`](../.kiro/steering/tech.md)、[`structure.md`](../.kiro/steering/structure.md)、[`data-discipline.md`](../.kiro/steering/data-discipline.md)、[`server-access.md`](../.kiro/steering/server-access.md)、[`no-reinventing-wheels.md`](../.kiro/steering/no-reinventing-wheels.md)、[`dev-ci-cadence.md`](../.kiro/steering/dev-ci-cadence.md)
-12. 复核待确认的子 PRD 素材：[`prd-drafts-子PRD草案/`](prd-drafts-子PRD草案/README.md)（`draft`，不是实现依据）
+10. 设计带页面的 spec 前先读 UI 全局基线：[`ui-foundation.md`](ui/ui-foundation.md)
+11. 查看难逆的技术决定与未决选型：[`adr/README.md`](architecture/adr/README.md)
+12. 查看自动注入但不独立裁决事实的精简规则：[`product.md`](../.kiro/steering/product.md)、[`tech.md`](../.kiro/steering/tech.md)、[`structure.md`](../.kiro/steering/structure.md)、[`data-discipline.md`](../.kiro/steering/data-discipline.md)、[`server-access.md`](../.kiro/steering/server-access.md)、[`no-reinventing-wheels.md`](../.kiro/steering/no-reinventing-wheels.md)、[`dev-ci-cadence.md`](../.kiro/steering/dev-ci-cadence.md)
+13. 复核待确认的子 PRD 素材：[`prd-drafts-子PRD草案/`](prd-drafts-子PRD草案/README.md)（`draft`，不是实现依据）
 
 ## 2. 文档状态
 
@@ -70,6 +71,7 @@
 | 架构与领域 | `CONTEXT.md`、`HBECHO设计方案/domains/`、`HBECHO设计方案/architecture/`、`HBECHO设计方案/governance/` | 领域语义、模块边界、实施基线、必要 ADR、不可协商条款索引 | 单次任务清单 |
 | Kiro Specs | `.kiro/specs/<code>-<slice>/` | 可验收需求、实现设计、执行任务 | 全项目巨型总设计 |
 | Runbook 与证据 | `HBECHO设计方案/runbooks/`、`aimaster接口文档/` | 运维步骤、供应商合同、fixture 与实测记录 | 未标状态的产品决策 |
+| 应用代码与测试 | `src/`（领域模块在 `src/modules/<模块>/`，schema 在 `src/db/`）、`drizzle/`（drizzle-kit 迁移与手写 SQL 迁移）、`tests/`（`tests/fixtures/` 登记证据而不复制，`tests/harness/` 为离线测试挂具）、`services/capability/`（Python 能力服务，ADR-0012；目前只有标准化衍生图的转换函数与 pytest 单测）；目录约定见 [ADR-0013](architecture/adr/0013-repository-layout.md) | 实现与其自动化验收 | 设计结论；与 CONTEXT / v2 冲突时以文档为准 |
 | 历史归档 | `HBECHO设计方案/archive/` | superseded 方案、旧稿、复盘、评审证据、legacy 输入 | 当前实现依据 |
 
 ### 4.1 命名规范（对齐 hbdam 的做法）
@@ -114,6 +116,7 @@
 | 域 G 产品需求 | [`prd-domain-g-learning.md`](prd-domain-g-learning.md) | draft（v1.0 定稿候选，第二轮盘问完成） | 学习平台：1.0 只做 G1 内容管理 + G2 学习中心 + 进度记录 + 总部总量；视频走 VOD、资料走 hbecho-course、可见性=品牌×人员级别；换店删旧建新不迁移进度 |
 | 域 H 产品需求 | [`prd-domain-h-ai.md`](prd-domain-h-ai.md) | draft（v0.2 初稿，1.0 收窄） | AI 能力：H1 网关、H2 Prompt、H5 单条脚本分析（仅超管/总部）；H8 规则辅助移 2.0；业务 AI 只保留 D 第三层 ASR + 大模型 |
 | 域 I 产品需求 | [`prd-domain-i-ops.md`](prd-domain-i-ops.md) | draft（v0.1 初稿，待盘问确认） | 运维与成本：部署、可观测、备份、安全、生命周期、环境变量配置、配额与硬上限；配置中心/OSS 分级/完整成本看板 2.0 |
+| UI 全局基线 | [`ui-foundation.md`](ui/ui-foundation.md) | draft | 角色导航、1.0 页面地图、页面骨架、通用状态、组件与文案、适配边界；各 spec 的 design.md「界面」一节按它写 |
 | PRD 修订清单 | [`prd-修订清单-2026-11-03.md`](prd-修订清单-2026-11-03.md) | draft（工作清单） | 2026-11-03 对总 PRD、A–G、CONTEXT、steering 与相关 ADR 的评审结论与逐条修订建议；修完后移入 `archive/`；不是实现依据 |
 | Kiro steering | [`product`](../.kiro/steering/product.md) · [`tech`](../.kiro/steering/tech.md) · [`structure`](../.kiro/steering/structure.md) | current（derived） | 从本索引、总纲、CONTEXT 与 v2 提炼的自动注入规则；无独立裁决权 |
 | 数据底座编码纪律 | [`data-discipline.md`](../.kiro/steering/data-discipline.md) | current（derived） | 从 CONTEXT 不变量与 tracer R2/R5/R9/R10/R13/R18 提炼的六条预防性纪律；当前无机器守护 |
@@ -121,12 +124,13 @@
 | 选型纪律 | [`no-reinventing-wheels.md`](../.kiro/steering/no-reinventing-wheels.md) | current | 成熟方案优先的判断阶梯与记录格式 |
 | 开发节奏 | [`dev-ci-cadence.md`](../.kiro/steering/dev-ci-cadence.md) | current | 分支、推送、等待 CI 与合并规则；应用代码落地后补实测条目 |
 | 不可协商条款 | [`constitution.md`](governance/constitution.md) | current（索引） | 18 条跨模块条款；索引，不新增事实、不裁决冲突 |
-| 架构决策 | [`adr/README.md`](architecture/adr/README.md) | current | 12 项已定决定（ADR-0001～0012）+ 10 项选型登记（全部关闭）；新决定必须单独写 ADR |
+| 架构决策 | [`adr/README.md`](architecture/adr/README.md) | current | 13 项已定决定（ADR-0001～0013）+ 10 项选型登记（全部关闭）；新决定必须单独写 ADR |
 | 开发测试部署流程 | [`dev-test-deploy-workflow.md`](runbooks/dev-test-deploy-workflow.md) | current | 当前唯一实例是**测试 ECS**，生产 ECS 未购买；只有本机 verify 与 CI 可用 |
-| 本机验证与 CI | [`verify.sh`](../scripts/verify.sh) · [`ci.yml`](../.github/workflows/ci.yml) · [`pre-commit`](../.githooks/pre-commit) | current | verify 当前仅覆盖密钥、文档链接、文档登记与 spec 结构；pre-commit 只扫暂存区 |
+| 本机验证与 CI | [`verify.sh`](../scripts/verify.sh) · [`ci.yml`](../.github/workflows/ci.yml) · [`pre-commit`](../.githooks/pre-commit) | current | verify 覆盖 Node 版本、类型检查、离线测试（禁网）、迁移一致、MySQL 8.4 数据库测试、密钥、文档链接、文档登记与 spec 结构，以及 Python 能力服务单测（环境满足 pytest 与 ffmpeg ≥ 7.1 时；CI 不验 Python 侧）；尚无静态门禁与真实数据库集成测试；pre-commit 只扫暂存区 |
 | 数据底座数据库 | [`database-design-v2.md`](domains/data-foundation/database-design-v2.md) | draft（待 A 域 PRD 逐表复核） | 30 表草案；v1 不参与新实现 |
 | 数据底座字段字典 | [`field-dictionary.md`](domains/data-foundation/field-dictionary.md) | draft | 主页/列表/详情/评论的规范字段、含义、值状态与 10 个未确认语义 |
 | 数据底座 tracer | [requirements](../.kiro/specs/a-data-foundation-tracer/requirements.md) · [design](../.kiro/specs/a-data-foundation-tracer/design.md) · [tasks](../.kiro/specs/a-data-foundation-tracer/tasks.md) · [acceptance](../.kiro/specs/a-data-foundation-tracer/acceptance.md) | draft | 首个 Design-First 纵向切片；已按 A v1.9 与 raw4/raw5/raw8 校准；AI Master 是内部适配器 |
+| 主数据导入 | [requirements](../.kiro/specs/a-master-data-import/requirements.md) · [design](../.kiro/specs/a-master-data-import/design.md) · [tasks](../.kiro/specs/a-master-data-import/tasks.md) · [acceptance](../.kiro/specs/a-master-data-import/acceptance.md) | draft | 路线图第 2 位；权威主档导出预检与确认写入，含超管结构命令与 `structure` 模式；提交三处 v2 修订与 ADR-0014 前置 |
 | 访问控制 | [`design.md`](../.kiro/specs/access-control/design.md) | draft | 认证、Capability、DataScope、异步任务撤权语义 |
 | 规则引擎 | [`design.md`](../.kiro/specs/rule-engine/design.md) | draft | 消费 v2 终态快照；规则、证据和重算归规则域所有 |
 | 指标与看板 | [`design.md`](../.kiro/specs/metrics-and-dashboard/design.md) | draft | 依赖规则 outcome；统一口径、投影、报表、看板与导出 |
@@ -179,11 +183,12 @@ flowchart LR
 | 9 | `g-learning-min` | 课程可上传、播放并记录进度 |
 | 10 | `h-ai-min` | AI 调用经网关计量审计；单条脚本分析可用（仅超管/总部） |
 
-### 7.1 现有 spec 目录登记（2026-11-03 核对）
+### 7.1 现有 spec 目录登记（2026-11-04 核对）
 
 | 目录 | 域 | 命名 | 文件齐全度 | 上游 PRD | 已知偏差 |
 |---|---|---|---|---|---|
 | `a-data-foundation-tracer` | A | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | A v1.10（定稿候选） | 已按 A v1.9 与 raw4/raw5/raw8 校准；v2 六项基线冲突已于 2026-11-04 修订，见 requirements §1.2 |
+| `a-master-data-import` | A | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | A v1.10（定稿候选） | 2026-11-04 初建；提交五项 v2 修订（`import_row_results.precheck_class`、`import_batches` 六类计数与 actor、`stores.store_code_match`、行结果 actor、v2 §12.1 同步）与 ADR-0014 前置，见 requirements §1.3 |
 | `access-control` | B | 旧名，应为 `b-access-control` | 仅 design | B v1.21（current） | design 待按 B v1.21 重写：Capability 清单、资源谓词、10 个出口、MediaStaff 自动停用均未同步 |
 | `rule-engine` | D | 旧名，应为 `d-rule-engine` | 仅 design（`requirements.md` 已移除） | D v1.0（定稿候选） | 已改：3 个评论刷量算子改「搁置」；requirements / tasks 仍缺；design 的 AssessmentItem 模型待与考核项模型对齐 |
 | `metrics-and-dashboard` | E | 旧名，应为 `e-metrics` | 仅 design | E v1.0（定稿候选） | 已改：`n_day` 降为 2.0、投影自动激活；design 待同步分项列与两层分母 |

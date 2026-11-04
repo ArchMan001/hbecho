@@ -133,7 +133,7 @@ Tracer workflow 不新增平行持久化模型，映射如下：
 | Tracer concept | v2 persistence |
 |---|---|
 | `TracerCommand` / `TracerRoot` | 一个 `trigger_type='manual'` 的 SyncBatch + 一个根 `requested_action='resolve_account'` 的 SyncTask；对外 `root_task_id = task_id`；根任务固定 platform、`subject_type='media_staff'`、`subject_id=media_staff_id` |
-| canonical command | 原始 locator 在 `subject_key`；effective limit 在两字段 `data-foundation-tracer-task-parameters.v1` persistence projection；完整五字段 aggregate 使用独立 `data-foundation-tracer-command.v1` closed schema，覆盖 platform/staff/locator/effective limit，并严格按 v2 §5.5 的 RFC 8785 JCS bytes 与跨实现向量计算 canonical hash |
+| canonical command | 原始 locator 在 `subject_key`；effective limit 在两字段 `data-foundation-tracer-task-parameters.v1` persistence projection；完整五字段 aggregate 使用独立 `data-foundation-tracer-command.v1` closed schema，覆盖 platform/staff/locator/effective limit，并严格按 v2 §5.5 的 RFC 8785 JCS bytes 计算 canonical hash；只有 TypeScript 一种实现，用 v2 §5.5 的两个固定向量锁住 |
 | caller idempotency | 根 SyncTask 的 `submitted_by_actor`、`caller_idempotency_key_sha256` 与 `canonical_command_sha256`；在一年任务保留窗口内，相同 actor/key 比较 payload hash |
 | original HomeLocator | 根任务 `subject_key` + `subject_key_sha256`；不作为账号身份 |
 | stage graph | profile/list/media 等子 SyncTask 通过 `parent_task_id` 指向根任务 |
@@ -141,15 +141,16 @@ Tracer workflow 不新增平行持久化模型，映射如下：
 | provider attempts | 每次 prepare/send/poll/page/retry 一个 ODS ProviderCall 及其 request/response/error payload |
 | dominant-author decision | 成功绑定长期写入 `external_account_identifiers.binding_policy_version/binding_evidence/binding_evidence_sha256/evidence_batch_id`；拒绝长期写入 `data_quality_issues.detail + batch_id`；两者共用 v2 `dominant-list-author-evidence.v1` |
 | root status | 在一年任务保留窗口内，从 batch/root/child tasks 与现有 identity/snapshot/checkpoint/media facts 投影；到期后不从长期业务事实反推旧 operational status |
-| entry outcome | 成功路径：`normal` 不落额外行；`suspected_empty` 写 `data_quality_issues`（`issue_code='suspected_empty_account'`，带 account/batch/call）；失败路径：`invalid_link` 由根任务终态与 `data_quality_issues` 表达，不建账号 |
+| entry outcome | 成功路径：归属行 `intake_status='normal'`；`suspected_empty` 写 `intake_status='suspected_empty'` 并写 `data_quality_issues`（`issue_code='suspected_empty_account'`）；失败路径：`invalid_link` 由根任务终态与 `data_quality_issues` 表达，不建账号与归属行。实际监控 = 开关打开且 `intake_status='normal'` |
 | quality signals | `data_quality_issues`，`issue_code` 至少覆盖 `suspected_empty_account`、`identity_conflict`、`field_contract_anomaly`、`continuity_gap`、`media_archive_failed` |
-| content grain | `content_snapshots` 应改为按 `(batch_id, account_id, content_id)` 唯一；同一平台作品在不同账号各一份。v2 当前是 `(batch_id, content_id)`，实施前必须修订（requirements §1.2 第 2 项） |
-| value states | `value/missing/explicit_null/invalid/unsupported`；v2 当前 CHECK 只有前四态，实施前必须扩展（requirements §1.2 第 3 项） |
-| normalized derivative | 作为独立 `media_assets` 行（独立 SHA-256），由 `media_references` 以独立 role 指向；v2 当前 role 枚举需扩展（requirements §1.2 第 6 项） |
+| content grain | `contents` 带 `account_id`，唯一键 `(platform_id, account_id, platform_content_id_sha256)`；快照唯一键 `(batch_id, content_id)` 因内容已按账号区分而等价于按 `(batch, account, content)` 唯一（v2 §10.1，2026-11-04） |
+| value states | `value/missing/explicit_null/invalid/unsupported`（v2 §5.2） |
+| normalized derivative | 独立 `media_assets` 行（独立 SHA-256），由 `media_references` 以 `cover_normalized` / `avatar_normalized` / `background_normalized` 角色指向（v2 §11.3） |
+| staff platform slot | 归属行 `platform_id` + `UQ(active_staff_platform, platform_id)`：一专员一平台一账号（D-69）；冲突时根任务阻塞为 `staff_platform_slot_taken` |
 
 `result_summary` 只能保存可重建展示摘要；关键幂等、状态和身份不得藏在无约束 JSON 中。账号 namespace 直接使用代码枚举中的 `douyin.user_id`、`douyin.sec_uid`、`xiaohongshu.profile.user_id`、`xiaohongshu.content.user_id` 等标识（D-25：命名空间是代码枚举，不是独立表）。
 
-内容与发现的持久化 grain 以 CONTEXT 与 A v1.10 §9.2 为准：同一平台作品出现在两个被观察账号时，各账号各一份快照与发现，不跨账号合并。tracer 只验收单账号，因此两种 grain 在本次验收数据上等价；但实现不得依赖 v2 当前的跨账号共享行，也不得把 `mixed` 作为 `content_kind` 输出。
+内容与发现的持久化 grain 以 CONTEXT 与 A v1.10 §9.2 为准：同一平台作品出现在两个被观察账号时，各账号各一份内容、快照与发现，不跨账号合并；`content_kind` 不输出 `mixed`。
 
 ## 5. Deep Module architecture
 
@@ -195,7 +196,7 @@ flowchart LR
 
 ### 5.2 Internal Interfaces
 
-以下 TypeScript 仅表达语言无关的 Interface；不冻结实现语言：
+以下是 TypeScript Interface（ADR-0005）；模块落在 `src/modules/`（ADR-0013）：
 
 ```ts
 interface AccountTracerCommandModule {
@@ -310,7 +311,7 @@ sequenceDiagram
 5. **Project profile**：写 immutable snapshot 和媒资引用；fencing 控制 current。抖音产生头像/背景引用；小红书主页响应不返回头像/背景，不产生这两类引用。
 6. **Fetch first page**：处理完整返回数组。`initial_content_limit` 只在页边界决定是否继续，本 Spec 的最低验收只要求完整首个返回页。
 7. **Bind list identity**：小红书在完整页上计算唯一主导作者；抖音保留同 payload 官方多标识；少数异作者只进内容事实。
-8. **Project list**：每个条目都形成/复用按账号粒度的 ContentSnapshot 和 ContentDiscovery，携带 target account、采集当时的归属快照、batch/page、returned author 和 call lineage；推断 `content_kind`；列表播放数记 `unsupported`；封面选择第 2 条候选。
+8. **Project list**：每个条目都形成/复用按账号粒度的 ContentSnapshot 和 ContentDiscovery，携带 target account、采集当时的归属快照、batch/page、returned author 和 call lineage；推断 `content_kind`；列表播放数记 `unsupported`；封面：数组选第 2 条（抖音），单值直接用（小红书）。
 9. **Advance checkpoint**：只有整页 required projection 完成后推进，保留 cursor 原值与类型，并按 `time` / `id_window` / `empty` 建立初始锚点。
 10. **Archive media**：structured result 可以先完成；头像、背景和封面按引用异步归档，封面同时生成 JPEG q80、540 宽的独立衍生资产，并在 status 中独立汇总。
 11. **Record entry outcome**：首次录入结果为 `normal`、`invalid_link` 或 `suspected_empty`；疑似空账号写质量问题，不自动纳入监控，也不改账号状态。
@@ -388,7 +389,7 @@ sequenceDiagram
   D-->>O: typed result + ValueState + lineage
 ```
 
-`prepared` 可安全恢复而不发送重复调用；若取消、预算或本地策略在发送前封口，持久化为 `terminal/not_sent`。进入 `in_flight` 后，只有有证据确认远端 effect 未完成的 transport failure 才进入 `terminal/transport_error`；若进程失联、timeout/reset 等导致远端结果不明，则进入 `ambiguous`。供应商幂等合同或 provider task/request ID 只能授权 bounded safe retry/reconciliation lookup，本身不能证明终态；没有这类安全依据时不得自动重发。原调用只有在 `reconciled_by_provider_call_id` 引用同 task/provider/platform、correlation 匹配且已 capture 完整终态响应的另一调用，并由版本化 reconciliation method 映射出明确结果后，才能按 v2 转为 `reconciled_succeeded/reconciled_failed`；否则保持 ambiguous。
+`prepared` 可安全恢复而不发送重复调用；若取消、预算或本地策略在发送前封口，持久化为 `terminal/not_sent`。进入 `in_flight` 后，有证据确认未送达的 transport failure 进入 `terminal/transport_error`；进程失联、timeout/reset 等导致远端结果不明时进入 `ambiguous`，并永久保持。本 spec 的三个 action 都是**只读查询**，重发不产生供应商侧副作用，业务事实按幂等键去重，所以 ambiguous 后允许在有界重试内发起**一次**新的 ProviderCall（计入预算），不实现对账（requirements 2.7，2026-11-04）。有副作用的供应商调用不适用这条例外，仍按 v2 §9.5 的对账规则。
 
 ### 8.4 Asynchronous sequence
 
@@ -469,7 +470,7 @@ ProviderCall、task 与 raw payload 保留一年；正式 profile/content snapsh
 (platform_id, namespace, exact_identifier_text)
 ```
 
-可用 SHA-256 加速检索，但 hash 命中后必须比较原文。外部 ID 不做数字运算、去前导零或 JavaScript number 转换。首版直接使用 v2 注册的 `douyin.user_id`、`douyin.sec_uid`、`xiaohongshu.profile.user_id` 和 `xiaohongshu.content.user_id`；新增 namespace 必须先修订 v2 注册表，不能由 Adapter 临时造名。
+可用 SHA-256 加速检索，但 hash 命中后必须比较原文。外部 ID 不做数字运算、去前导零或 JavaScript number 转换。首版使用代码枚举（D-25）中的 `douyin.user_id`、`douyin.sec_uid`、`xiaohongshu.profile.user_id` 和 `xiaohongshu.content.user_id`；新增 namespace 必须先改枚举并评审，不能由 Adapter 临时造名。
 
 ### 10.2 Approved binding evidence
 
@@ -484,7 +485,7 @@ ProviderCall、task 与 raw payload 保留一年；正式 profile/content snapsh
 
 已观察：profile `user_id="49328995493"`，同主页 21 条列表的主导作者为 `5decba2300000000010007e1`。二者放在不同 namespace，并通过同一 root/page 的 `dominant_list_author` 证据绑定到一个 ExternalAccount。
 
-小红书主页响应不返回头像与背景，因此本平台不产生 `avatar/background` media reference；封面仍按第 2 条候选归档。
+小红书主页响应不返回头像与背景，因此本平台不产生 `avatar/background` media reference；小红书列表 `cover` 是单个字符串（实测 21/21），直接作为封面引用。
 
 算法边界：
 
@@ -497,7 +498,7 @@ ProviderCall、task 与 raw payload 保留一年；正式 profile/content snapsh
 7. 一年期 task/call/raw 到期后，成功绑定和拒绝决定仍必须分别通过上述长期载体独立解释，不能依赖已删除 ODS；
 8. minority author 只保留在对应内容 snapshot/discovery，不创建账号。
 
-绝对多数/最低占比仍是实施前 P0，未冻结时该 capability 保持 disabled，而不是只按“唯一最高”生产绑定。首个 fixture 的 21 条均为同一作者，可作为无争议正例；还必须用唯一低占比、tie、空作者和异常分布负例锁定 policy。fake clock 必须覆盖一年期 operational lineage 清理后的成功证据可解释性。
+首版策略 `xhs-dominant-author.v1`：唯一最高，候选至少出现 3 次，且占非空作者条目 ≥ 80%（2026-11-04）；占比阈值与最少次数都是配置，改任一项必须升策略版本。首个 fixture 的 21 条均为同一作者，是无争议正例；还必须用唯一但低于 80%、tie、空作者和异常分布负例锁定 policy。fake clock 必须覆盖一年期 operational lineage 清理后的成功证据可解释性。
 
 ### 10.4 Douyin foreign author
 
@@ -505,7 +506,7 @@ ProviderCall、task 与 raw payload 保留一年；正式 profile/content snapsh
 
 ### 10.5 Current assignment
 
-归属是账号记录上的**当前单一事实**，不建独立归属表、不存时间区间（D-16、D-28）。没有冲突时，Tracer 在创建或复用账号的同一次短事务里写入 submitted `MediaStaff` 作为当前归属，并记录归属来源与时间；已有其他 owner 时 fail closed，不抢占，也不关闭或改写原归属。账号转移必须走独立、受审计的管理员改绑流程，不由采集结果隐式触发。内容与发现需要保留采集当时的归属时，记录**采集时的归属快照值**（D-67），不引用归属行。
+归属是账号上的**当前单一事实**：v2 的 `staff_account_assignments` 每个账号只有一行（`UQ(account_id)`），不存时间区间（D-16、D-28、ADR-0009）。同一专员在同一平台已占用名额时（D-69），不创建归属，根任务阻塞为 `staff_platform_slot_taken`。没有冲突时，Tracer 在创建或复用账号的同一次短事务里写入 submitted `MediaStaff` 作为当前归属，并记录归属来源与时间；已有其他 owner 时 fail closed，不抢占，也不关闭或改写原归属。账号转移必须走独立、受审计的管理员改绑流程，不由采集结果隐式触发。内容与发现需要保留采集当时的归属时，记录**采集时的归属快照值**（D-67），不引用归属行。
 
 首次录入的 locator 写入当前入口，previous 入口为空。`current_home_locator` 与解析出的账号标识必须在同一短事务中成对写入，且两者都来自同一条已 capture 的 terminal `media_user_info` payload；不得用一次调用的 locator 配另一次调用的账号 ID。
 
@@ -552,7 +553,7 @@ receive page N
 - returned author 与 target account 分列；
 - 少数异作者、共创或跨发不会改变 target list discovery，也不创建账号。
 
-v2 当前的 `(batch, content)` 共享快照 grain 与此冲突，已在 requirements §1.2 第 2 项登记；本 spec 不据 v2 的共享语义实现，只在单账号 tracer 数据上验收。
+v2 已于 2026-11-04 把 `contents` 改为按账号的内容根，与此一致。
 
 ### 11.4 Typed checkpoint
 
@@ -575,7 +576,7 @@ v2 当前的 `(batch, content)` 共享快照 grain 与此冲突，已在 require
   → 时间与 ID 集合都为空，任务成功
 ```
 
-首次采集没有旧锚点，`initial_content_limit<=20` 只是整页处理后的续页目标。首屏完整处理且累计条目达到目标时停止并建立基线；供应商仍有更多历史页不构成本 spec 的连续性缺口。若首屏不足目标且 `has_more=true`，是否请求第二页仍是实施前 P0（§18）。
+首次采集没有旧锚点，`initial_content_limit<=20` 只是整页处理后的续页目标。首屏完整处理且累计条目达到目标时停止并建立基线；供应商仍有更多历史页不构成本 spec 的连续性缺口。本 spec **不请求第二页**（2026-11-04）：首屏不足目标且 `has_more=true` 时也只按首屏建立基线，后续翻页属于 `a-full-sync`。`has_more=true` 但游标为空或 null 时记质量问题并停止（与 D-53 一致）。
 
 `has_more`、page/processed count、source task/ProviderCall 和 Adapter version 保存在一年期 SyncTask/ProviderCall lineage，并可用于当前 status 与保留期内重放；它们不复制进第二套 checkpoint，也不要求 ODS 到期后继续存在。Checkpoint 只在整页 required projection 完成后原子推进。任一 entry 失败、lease 失效或 root cancelled 时不推进；旧 worker 的 cursor 可以保留在调用证据，但 stale fence 不能覆盖更高 checkpoint version。
 
@@ -589,7 +590,7 @@ profile avatar、background 与 content cover 先成为绑定 snapshot 的 Media
 
 - 抖音主页头像与背景：生成 `avatar/background` 引用；
 - 小红书主页响应不返回头像与背景：不生成这两类引用，不得用空值或占位图补造；
-- 封面：全平台从列表条目的候选数组选第 2 条（540 宽）作为 `cover` 引用，其余候选作为观察证据保留。
+- 封面：候选是数组时（抖音）选第 2 条（540 宽）作为 `cover` 引用，其余候选作为观察证据保留；候选是单个字符串时（小红书）直接用它。
 
 ### 12.2 Archive flow
 
@@ -601,6 +602,7 @@ MediaReference
 → complete-byte SHA-256 + size/type verification
 → formal MediaAsset dedupe（原始字节）
 → normalized derivative: JPEG q80, 540 wide, own SHA-256 → separate MediaAsset
+   （抖音 HEVC HEIC 经 Python 能力服务 ffmpeg 解码，ADR-0012；WebP/JPEG 用 sharp）
 → verified reference binding（原始 + 衍生分别可追溯）
 ```
 
@@ -673,40 +675,21 @@ type TracerStatus = {
 
 字段名是候选；语义必须覆盖 structured/media 分离、entry outcome、冲突、retry wait 和 stable reason。status 不返回 raw body、secret、完整 ODS key、临时 URL 或越权业务 ID。
 
-## 14. Candidate internal transport
+## 14. Internal entry point（CLI）
 
-候选路径（**未冻结**）：
+B 域尚未实现，本 spec 的调用方只有用途受限的服务身份，因此**不提供 HTTP 接口**（2026-11-04）。入口是 Worker 镜像里的 CLI：
 
-```http
-POST /internal/data-foundation/account-tracers
-GET  /internal/data-foundation/account-tracers/{root_task_id}
+```text
+pnpm tracer submit --platform douyin --staff 9007199254740993 \
+                   --locator "https://…" --key <idempotency-key> [--limit 20]
+pnpm tracer status <root_task_id>
+pnpm tracer cancel <root_task_id>
 ```
 
-候选提交：
-
-```json
-{
-  "platform": "douyin",
-  "mediaStaffId": "9007199254740993",
-  "homeLocator": "https://example.invalid/home",
-  "idempotencyKey": "caller-generated-key",
-  "initialContentLimit": 20
-}
-```
-
-候选接受响应：
-
-```json
-{
-  "rootTaskId": "9223372036854770000",
-  "state": "accepted",
-  "statusLocation": "/internal/data-foundation/account-tracers/9223372036854770000"
-}
-```
-
-内部 BIGINT API 均输出十进制字符串。HTTP path、字段名、错误 envelope、是否立即 `202` 以及 command transport 都可在实施任务 2 冻结；不论 transport 如何，CommandModule 和 StatusQuery Interface 语义不变。
-
-首版调用方可以是用途受限 service principal。开放给真实用户前必须接入最小 Capability、DataScope 和审计闭环；不能用 `monitoring_enabled` 代替授权。
+- CLI 只调用 `AccountTracerCommandModule` / `TracerStatusQuery`，不直接写库；
+- 输出为 JSON，内部 BIGINT 输出十进制字符串；
+- 退出码区分：0 已接受或查询成功、2 校验或授权拒绝、3 幂等冲突、4 不存在或已过期；
+- 真实用户接入时（`b-access-control` 之后）再加 HTTP 接口，Module 语义不变。
 
 ## 15. Security, cost and observability
 
@@ -724,7 +707,7 @@ GET  /internal/data-foundation/account-tracers/{root_task_id}
 - 每个 submission/poll/page/retry 都单独计数；
 - platform/action/mode、最大调用数、最大 polling、最大 pages、media bytes 和 deadline 有硬上限；
 - 成本估算使用 A v1.10 §6.2 的 1.0 点数：抖音主页 10/次、列表 10/页；小红书主页 15/次、列表 15/页；失败、超时、429 与异步轮询不计点；
-- 单价与 QPS 仍未知，预算只按点数与调用上限控制，不声称已换算成货币金额；
+- 单价 0.02 元/点（2026-11-04 确认）；QPS 未知，并发由我方配置；预算按点数、调用数与金额三者控制；
 - 默认 fixture 路径网络禁用；
 - paid smoke 需要人工批准、显式 switch、allowlist 和固定预算；
 - 超预算先停止再记状态，不能先调用后告警；
@@ -768,7 +751,7 @@ GET  /internal/data-foundation/account-tracers/{root_task_id}
 | Douyin Hitachi profile/list | target `HITACHI1`；20/20 entries processed；integer `max_cursor`；`content_kind` 按条目推断；列表播放数 `unsupported` |
 | Douyin foreign author | `HITACHI2023` 保留在 content fact；不创建第二账号；不单凭差异报质量问题 |
 | Xiaohongshu Hitachi profile/list | profile `49328995493` + dominant author `5decba2300000000010007e1` 不同 namespace、同一账号 |
-| Xiaohongshu complete page | 21/21 entries processed，即使 local limit ≤ 20；string `max_cursor`；无 avatar/background 引用；封面选第 2 条 |
+| Xiaohongshu complete page | 21/21 entries processed，即使 local limit ≤ 20；string `max_cursor`；无 avatar/background 引用；封面取单值 `cover` |
 | Locator fail ×3 | no ExternalAccount/identifier/assignment/snapshot/discovery/checkpoint；entry outcome `invalid_link` |
 | Non-homepage locator | no account/assignment；不重试；entry outcome `invalid_link` |
 | ODS write failure | decoder/projector invocation count = 0 |
@@ -810,30 +793,31 @@ smoke 独立于 CI，必须先显示并确认 capability、locator allowlist、c
 9. default suite 无网络、无 secret、无付费；
 10. status query 不触发供应商调用；
 11. 没有创建 v2 之外的平行 Staff、账号、归属、内容或媒资主档；
-12. 六项基线冲突与第 7 项范围区别（requirements §1.2）仍被显式记录，而不是由示例代码静默冻结；
+12. 实现以 v2 修订稿为准；第 7 项范围区别（requirements §1.2）没有被静默改变；
 13. 首次录入结果与质量问题可观察，且没有因技术失败改写账号状态；
 14. 内容按账号保存，没有跨账号合并；`mixed` 没有被输出。
 
 ## 18. Open decisions
 
-### P0 before implementation
+### P0 before implementation（2026-11-04 已按默认值关闭）
 
-1. 生产认证启用：raw4 已证明 `X-Api-Key` 可用，但生产开关仍需一次批准式 smoke 复核；
-2. 异步 profile 的 terminal schema、TTL、polling 参数；列表异步已确认失败，保持 disabled；
-3. 供应商 QPS、并发与单价；点数表已由 A v1.10 §6.2 给出；
-4. Home locator 最小清洗的精确规则（截断边界、保留哪些字符），以及三次尝试的策略分配；
-5. 哪些 Home locator strategy 本身会产生 captured terminal `media_user_info` payload；已产生时必须复用，只有未产生的 strategy 才允许一次独立 profile fetch，并须锁定各策略 ProviderCall 数；
-6. 内部 command/status transport、错误 envelope 和最终 Capability 名称；
-7. 本 Feature 是否在首屏验收之外实际请求第二页；
-8. 小红书 dominant-author policy 的绝对多数/最低占比、版本和启用流程；
-9. Assignment conflict 后是否允许仅刷新既有 owner 的账号，以及人工解决 Interface；
-10. cursor null、空串、超长值和供应商复用 cursor 的精确语义；
-11. 媒资 origin allowlist、单文件/总 bytes、URL 过期恢复和 archive deadline；
-12. User↔MediaStaff、真实用户触发和查看状态的最小 DataScope；
-13. 供应商 request/response body 中可能出现的敏感字段分类与 ODS 读取审批；
-14. v2 修订：归属单一事实（§8.3）、内容按账号保存（§10.2/§10.3）、`unsupported` 值状态（§5.2）、录入结果载体、封面衍生图 role（§11.3）；
-15. “疑似空账号”在名单/监控流程中的确认入口；tracer 只产生 issue，不决定加入监控；
-16. 标准化衍生图与原图在 v2 中的资产关系（独立 asset + role，还是独立 lineage）。
+| # | 事项 | 决定 |
+|---|---|---|
+| 1 | 生产认证 | `X-Api-Key`；生产开关由任务 9 的批准式 smoke 复核 |
+| 2 | 异步 profile 的 terminal schema、TTL、轮询参数 | 由任务 9 的 smoke 实测后定；未实测前异步保持 disabled，首版走同步 |
+| 3 | 单价与 QPS | 单价 0.02 元/点；QPS 未知，并发由我方配置 |
+| 4、5 | 入口清洗与解析策略 | 单一策略：最小清洗（截掉路径之后的分享文案）后直接调 `media_user_info`；其返回即主页投影来源；成功路径调用数 = 主页 1 + 列表 1 |
+| 6 | 调用入口 | CLI（§14），不做 HTTP |
+| 7 | 是否请求第二页 | 不请求 |
+| 8 | 小红书主导作者 | 唯一最高、候选至少 3 次且 ≥ 80%，策略版本 `xhs-dominant-author.v1` |
+| 9 | 归属冲突后 | 停止后续付费阶段；人工改绑不在本 spec |
+| 10 | 空 / null 游标 | `has_more=false` 正常结束；`has_more=true` 时记质量问题并停止 |
+| 11 | 媒资 | 单张图片 20 MB；下载域名白名单取 fixture 中出现的 CDN 域名；URL 过期时重新取主页 / 列表拿新地址 |
+| 12 | 用户范围 | 只给服务身份；真实用户在 `b-access-control` 之后接入 |
+| 13 | 原始载荷读取 | 沿用 B 域 `data.raw_payload.read`（仅超管）与审计 |
+| 14、16 | v2 修订与衍生图资产关系 | 已在 v2 完成：独立 asset + `*_normalized` 角色 |
+| 15 | 疑似空账号确认入口 | 归 `a-activity-plan`；tracer 只写 `intake_status` |
+| 17 | ambiguous | 只读查询允许有界重发一次，不做对账（§8.3） |
 
 ### Can remain configurable
 
@@ -861,7 +845,7 @@ smoke 独立于 CI，必须先显示并确认 capability、locator allowlist、c
 | 5 | v2 §10.2 | 内容快照按 `(batch, content)` 共享，跨账号不合并；发现虽按 assignment 区分，但快照本身不区分账号 | v2 已修订（2026-11-04）：`contents` 增加 `account_id`，唯一键含 `account_id`；快照/发现挂在按账号内容上，§10.2 快照键不变；实现以 v2 为准 | CONTEXT §Content、D-23 |
 | 6 | v2 §5.2 | 值状态只有 `value/missing/explicit_null/invalid` | v2 已修订（2026-11-04）：§5.2 增加 `unsupported`；实现以 v2 为准 | A v1.10 §9.2 |
 | 7 | v2 §10.1 | `content_kind` 包含 `mixed` | v2 已修订（2026-11-04）：§10.1 去掉 `mixed`；tracer 仍按四类输出 | A v1.10 §9.2 |
-| 8 | v2 §8.3 | 没有录入状态字段；质量问题只表达异常 | v2 已修订（2026-11-04）：§8.3 归属行增加 `intake_status`；tracer 仍用根任务终态 + `data_quality_issues`，名单级留给导入 spec | A v1.10 §11.6 |
+| 8 | v2 §8.3 | 没有录入状态字段；质量问题只表达异常 | v2 已修订（2026-11-04）：归属行 `intake_status`（`normal` / `suspected_empty`），tracer 直接写入；`invalid_link` 只在根任务结果 | A v1.10 §11.6 |
 | 9 | v2 §11.3 | `media_references.role` 只有 avatar/background/cover/gallery_image/video/audio | v2 已修订（2026-11-04）：§11.3 增加 `cover_normalized/avatar_normalized/background_normalized`；衍生图独立 SHA-256 | A v1.10 §10.2 |
 | 10 | design §8.2 旧文 | 「raw3 只能标 fixture，异步未实测」 | 已按 raw4/raw5/raw8 更新：同步主页/列表与异步主页 `smoke_verified`；列表异步 provider-failed 保持 disabled | raw4、raw5、raw8 |
 | 11 | design §8.5 旧文 | 「文档 Bearer 与示例 `X-Api-Key` 冲突，方式未定」 | raw4 全部成功调用使用 `X-Api-Key`；文档 Bearer 记为矛盾；生产启用仍需批准式 smoke | raw4 |

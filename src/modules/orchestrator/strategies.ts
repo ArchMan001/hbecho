@@ -1,9 +1,19 @@
 // 平台策略：同一条流程里平台之间真正不同的部分。tracer 的流程本身与平台无关。
-import type { IdentifierRef } from "../identity";
+import {
+  XHS_DOMINANT_AUTHOR_V1,
+  buildEvidence,
+  decideDominantAuthor,
+  type DominantListAuthorEvidence,
+  type IdentifierRef,
+} from "../identity";
 import type { ListData, Platform } from "../provider-adapter";
 
+export type ListBinding =
+  | { method: "same_payload"; ref: IdentifierRef }
+  | { method: "dominant_list_author"; evidence: DominantListAuthorEvidence };
+
 export interface ListBindingIssue {
-  code: "identity_conflict" | "field_contract_anomaly";
+  code: "identity_conflict" | "field_contract_anomaly" | "dominant_author_rejected";
   severity: "warning";
   discriminator: string;
   detail: Record<string, unknown>;
@@ -12,10 +22,10 @@ export interface ListBindingIssue {
 export interface PlatformStrategy {
   platform: Platform;
   /**
-   * 完整页解码之后，计算要绑定到目标账号的第二标识（同一 payload 明确关联的官方标识），
-   * 以及需要留下的质量问题。不猜测：证据不足就不绑定。
+   * 完整页解码之后，计算要绑定到目标账号的第二标识，以及需要留下的质量问题。不猜测：证据不足就不绑定。
+   * batchId 是长期保留的 SyncBatch，主导作者 evidence 引用它。
    */
-  listBindings(ctx: { primary: IdentifierRef; page: ListData }): { bindings: IdentifierRef[]; issues: ListBindingIssue[] };
+  listBindings(ctx: { primary: IdentifierRef; page: ListData; batchId: bigint }): { bindings: ListBinding[]; issues: ListBindingIssue[] };
 }
 
 /**
@@ -45,8 +55,37 @@ export const douyinStrategy: PlatformStrategy = {
         ],
       };
     }
-    return { bindings: [{ namespace: "douyin.sec_uid", value: [...values][0]! }], issues: [] };
+    return { bindings: [{ method: "same_payload", ref: { namespace: "douyin.sec_uid", value: [...values][0]! } }], issues: [] };
   },
 };
 
-export const DEFAULT_STRATEGIES: Readonly<Record<string, PlatformStrategy>> = Object.freeze({ douyin: douyinStrategy });
+/**
+ * 小红书：profile 的 user_id 与列表作者 ID 是不同命名空间。只有版本化主导作者策略通过，才以 dominant_list_author
+ * 证据把列表作者 ID 绑定到同一账号；tie / 空 / 低占比 / 样本不足一律不绑定，拒绝决定用同一份 evidence schema 留下问题。
+ * 少数作者只进内容事实。不做字符串、昵称相似度猜测。
+ */
+export const xiaohongshuStrategy: PlatformStrategy = {
+  platform: "xiaohongshu",
+  listBindings({ page, batchId }) {
+    const authors = page.entries.map((e) => (e.author.id.state === "value" ? e.author.id.value : null));
+    const decision = decideDominantAuthor(authors, XHS_DOMINANT_AUTHOR_V1);
+    const evidence = buildEvidence(decision, { batchId, namespace: "xiaohongshu.content.user_id" });
+    if (evidence.decision === "accepted") return { bindings: [{ method: "dominant_list_author", evidence }], issues: [] };
+    return {
+      bindings: [],
+      issues: [
+        {
+          code: "dominant_author_rejected",
+          severity: "warning",
+          discriminator: `${evidence.policy_version}:${evidence.reason}`,
+          detail: evidence,
+        },
+      ],
+    };
+  },
+};
+
+export const DEFAULT_STRATEGIES: Readonly<Record<string, PlatformStrategy>> = Object.freeze({
+  douyin: douyinStrategy,
+  xiaohongshu: xiaohongshuStrategy,
+});

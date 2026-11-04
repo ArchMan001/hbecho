@@ -1,7 +1,7 @@
 # A Data Foundation Tracer Implementation Plan
 
 > **状态**：`draft`  
-> **执行状态**：任务 1–4 已完成（4/9）；任务 5 未开始  
+> **执行状态**：任务 1–5 已完成（5/9）；任务 6 未开始  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
 > **验收**：[`acceptance.md`](acceptance.md)  
@@ -172,7 +172,7 @@
   - **任务 4 未覆盖、已转交后续任务的验收项：** 同批次内重复 post_id、同内容跨账号各一份、`id_window` / `empty` 的入库、空 / null 游标 + `has_more=true` 的质量问题、整页内单条投影失败 → 任务 6；异步主页、心跳、重试退避、崩溃恢复策略（`ambiguous` 的有界重发已由网关支持，编排层的接手策略在任务 8；当前编排器把 `ambiguous` / `in_progress` / 传输错误一律映射为稳定失败码，不盲重发）→ 任务 8；媒资归档 → 任务 7；小红书 → 任务 5。
   - **实现留下的取舍（供复核）：** ① 列表条目新增解码 `publish_location / tag_text / share_url / related_search_terms / video.duration`，主页新增 `location`：这些是快照列，ODS 一年后消失，不解码就永久丢失；时长只在有视频素材时读取（没有视频的条目 `video.duration` 是 0 占位，记 `missing`，不当作真实 0 秒），单位记 `seconds`；`Adapter` 版本号未升（尚无已落库的解释）。② 抖音 `douyin.sec_uid` 以 `same_payload` 绑定：只取目标账号自己条目里的 `sec_uid`，唯一才绑，多个不同值记 `identity_conflict`；异作者的 `sec_uid` 不绑。③ 归属冲突时**不写**主页快照：快照要挂在账号当前归属上，而那是别人的归属；证据留在 ODS、标识观察时间更新、记 `assignment_conflict` 问题，root 的 `account_id` 指向目标账号以便 status 显示 owner。④ 名额已满时**不创建账号**（避免留下无人归属的孤儿账号），只记 `staff_platform_slot_taken` 问题；问题的 `assignment_id` 指向占用名额的那条归属。⑤ 疑似空账号**不发列表调用**、不建检查点（「不进入常规采集」按首次采集也不进入解读）；已有 `suspected_empty` 归属的账号重新提交同样停在主页。⑥ `has_more` 为真也只建立基线，`stop_reason='first_page_baseline'`。⑦ 检查点只建立、不推进：已存在则不改写，`result_summary.checkpoint='exists'`；内容 ID 集合用平台内容 ID 原文；`version` 从 1 起；`cursor_sha256` 是游标信封 JCS 的 SHA-256。⑧ 平台错配只能在发送前按入口主机名判断（响应里没有 platform 字段），已记入 capability `knownGaps: response_platform_unobservable`；错配的录入结果记为 `invalid_link`，错误码 `platform_mismatch`。⑨ `invalid_link` 的 root 终态是 `failed` + `stop_reason='invalid_link'`；`blocked_*` 状态是 `failed` + `stop_reason`。⑩ 内容快照直接以 `finalized` 插入（单列表任务、无详情依赖），`merge_policy_version='list-merge.v1'`；封面只存被选中的第 2 条引用，`source_json_path` 指向它在响应里的原始下标，其余候选保留在 ODS（一年）。⑪ 子任务 `fetch_content_list` 的 `task_parameters` 是 `data-foundation-tracer-list-task.v1`（v2 只定义了 root 的 schema，此处是实现补充）。⑫ 编排器的异步配置（任一 action 为 `asynchronous`）直接以 `execution_mode_unavailable` 失败，不悄悄走同步。⑬ 本任务没有给 CLI 增加 `run`：真实 OSS 与真实 transport 都不在默认环境里，worker 入口随任务 8 一起落地。
 
-- [ ] 5. 打通小红书多命名空间身份纵向切片
+- [x] 5. 打通小红书多命名空间身份纵向切片
   - **Requirements:** R3, R4, R5, R6, R7, R8, R9, R10, R14, R18, R19
   - 实现小红书 Home locator 的平台校验、入口类型识别、最多三次解析和成功证据复用；覆盖平台错配、非主页入口与三次失败，三者都不得创建 account/identifier/assignment/snapshot/discovery/checkpoint。
   - 投影 profile ID `49328995493` 到 v2 `xiaohongshu.profile.user_id` namespace，不把它与列表作者 ID 做字符串或昵称猜测。
@@ -184,6 +184,25 @@
   - 处理已返回 21 entries，即使 `initial_content_limit <= 20`；建立 string cursor checkpoint，并计算 entry outcome（含 `suspected_empty` 路径）。
   - **Offline acceptance:** 一个 ExternalAccount 同时拥有两个不同 namespace 的预期 ID、21/21 entries 被投影、没有 minority-author account、cursor 保持 string、无 avatar/background 引用、封面取单值 `cover`；TypeScript 实现对 v2 evidence 固定向量的 exact JCS bytes 产生文档指定的 SHA-256，覆盖 key 输入顺序、exact identifier、integer、candidate null 与 absent/unknown-field rejection，且成功 evidence 的 shape、列值和计数总和均可验证；tie/empty/唯一低占比 fixture 均无绑定且 rejected evidence/problem 可见；平台错配、非主页入口、三次失败和 assignment conflict 均无错误 owner 或后续付费副作用；fake clock 推进超过一年并清理 task/call/raw 后，成功 identifier 仍能仅凭长期 evidence 与 batch 解释 policy、candidate、exact counts、denominator 和 accepted reason。
 
+  - **完成记录（2026-11-04）：** `./scripts/verify.sh` 通过（unit 16 个文件 208 条；db 8 个文件 167 条，其中小红书切片 23 条）。对 6 处关键逻辑做了变异检查：主导作者拒绝后仍绑定、写入前的批次一致性校验、重放覆盖首次 evidence、告警缺失、只看前 20 条算作者分布，5 个被杀；幸存 1 个是等价变异（`p.batchId + 0n`）。
+  - **Requirements → 覆盖测试**（只列任务 5 新增的部分；与抖音相同的入口 / 归属 / 投影语义由同一条流程承担，在 `tracer-flow.xiaohongshu.db.test.ts` 里对小红书再断言一遍）：
+
+    | Requirement | 任务 5 覆盖的部分 | 测试 |
+    |---|---|---|
+    | R3.1 / R3.2 / R3.8 | 小红书命令 + 抖音链接：平台错配，调用 0；笔记链接（`explore` / `discovery/item`）：非主页入口，调用 0；三次 `RESULT_VALIDATION_FAILED`：`invalid_link`，三条独立调用；三者都无任何业务身份 | `tracer-flow.xiaohongshu.db.test.ts` |
+    | R5.2 / R5.4 | profile ID `49328995493` 在 `xiaohongshu.profile.user_id`（`same_payload`），主导作者 `5decba2300000000010007e1` 在 `xiaohongshu.content.user_id`（`dominant_list_author`），两者绑定到同一个账号，没有任何字符串 / 昵称猜测 | 同上 |
+    | R6.1 / R6.3 / R6.4 | 21/21 同一作者通过；20 条同一作者 + 1 条少数作者仍通过（20/21），少数作者只进内容快照，不建账号、不绑标识 | 同上 |
+    | R6.2 / R6.5 / R6.6 | tie、全部为空、唯一但低于 80%、样本不足：不绑定、不创建猜测标识；rejected evidence（策略版本、精确计数、分母、原因、长期批次）写入 `data_quality_issues.detail`，同一份 closed schema；问题可按账号 / 批次 / 来源调用查询；根任务带 `dominant_author_rejected` 警告；内容与检查点照常投影 | 同上 |
+    | R6.5（长期可解释） | fake clock 推进 366 天并清理 task / call / raw 后：成功绑定的标识行里 evidence、策略版本、批次引用、JCS 摘要仍完整可验证；拒绝决定的问题行 detail 仍是完整 rejected evidence，来源调用引用被置空 | 同上 |
+    | v2 §8.2 受限身份写入 | 写入前校验：closed schema 的形状 / 计数 / 排序 / 候选一致、必须 accepted、批次与参数一致；method / policy / evidence / 摘要 / 批次全部由 evidence 推出；重放只更新观察时间，不覆盖首次证据；已绑定到另一账号则不改绑 | 同上 |
+    | v2 §5.5 向量 2 | 任务 2 已用 21 条 fixture 的决定生成 evidence 并对上文档摘要；任务 5 复核成功行里存的摘要等于重新计算的 JCS 摘要 | `identity/evidence.test.ts`、同上 |
+    | R7.3 / R7.4 / R7.8 | 账号已归属他人：原 owner 不变、只调主页 1 次、没有内容 / 检查点 / 内容作者标识；同专员在小红书已占名额：无新账号 / 归属 / 标识 | 同上 |
+    | R9.2 / R9.8 / R9.11 | `initial_content_limit=5` 时仍处理 21/21 条，且没有多请求；封面取单值 `cover`（21 条，role=cover，下标路径 `…result[i].cover`）；主页无头像 / 背景引用 | 同上 |
+    | R10.4 / R10.9 | 游标保持字符串 `6a5098aa000000001603fb07`（`cursor_sha256` = 信封的 JCS 摘要）；请求首页游标是整数 0 | 同上 |
+    | R19.2 / R19.7 | 小红书疑似空账号：问题、`intake_status`、不发列表、无检查点 | 同上 |
+
+  - **任务 5 未覆盖、已转交后续任务的验收项：** 同批次重复内容、空 / null 游标、`id_window` / `empty` 入库 → 任务 6；小红书封面 WebP 的下载与衍生图 → 任务 7；异步与恢复策略 → 任务 8。
+  - **实现留下的取舍（供复核）：** ① 拒绝决定的问题码是 `dominant_author_rejected`（design 只列了「至少覆盖」的五个码，这是新增的）；`discriminator` = 策略版本 + 拒绝原因，所以同一批次同一原因重放不重复。② 拒绝决定**不让 root 失败**：账号、主页快照、内容和检查点照常建立，root 为 `succeeded` 并带 `dominant_author_rejected` 警告；因为 R6.2 只要求「不猜测绑定并创建质量问题」。③ 主导作者绑定的 `confidence` 记 `observed`（不是 `verified`），后续人工裁决可升级。④ 抖音与小红书共用同一条流程，平台差异只在 `PlatformStrategy.listBindings`（抖音：`sec_uid`；小红书：主导作者）；`DEFAULT_STRATEGIES` 现在包含小红书。⑤ 小红书列表条目还有 `red_id`（小红书号），不在 D-25 的命名空间枚举里，没有处理。
 - [ ] 6. 完成跨平台完整页、按账号内容与 typed checkpoint 契约
   - **Requirements:** R8, R9, R10, R11, R14, R18
   - 抽取 `ContentListProjector` 和 `CheckpointModule` 的平台无关 Interface；停止判断只能发生在完整页提交之后。

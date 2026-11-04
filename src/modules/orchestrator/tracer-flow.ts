@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
 import type { Db } from "../../db/client";
 import { odsProviderCalls, platforms, syncSettings, syncTasks } from "../../db/schema";
 import { jcsSha256 } from "../canonical-json";
-import { bindSecondaryIdentifier, intakeAccount, loadOwnerSnapshot, type IdentifierRef, type IntakeResult } from "../identity";
+import { bindDominantListAuthor, bindSecondaryIdentifier, intakeAccount, loadOwnerSnapshot, type IdentifierRef, type IntakeResult } from "../identity";
 import {
   MAX_RESOLVE_ATTEMPTS,
   afterProfileAttempt,
@@ -354,24 +354,31 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
         now,
       });
 
-      const { bindings, issues } = strategy.listBindings({ primary, page: page!.data });
+      const { bindings, issues } = strategy.listBindings({ primary, page: page!.data, batchId: root.batchId });
+      const warnings: Array<{ code: string; stage: string }> = [];
       for (const b of bindings) {
-        const bound = await bindSecondaryIdentifier(tx, { accountId: intake.accountId, ref: b, now });
+        const bound =
+          b.method === "same_payload"
+            ? await bindSecondaryIdentifier(tx, { accountId: intake.accountId, ref: b.ref, now })
+            : await bindDominantListAuthor(tx, { accountId: intake.accountId, evidence: b.evidence, batchId: root.batchId, now });
         if (bound.kind === "bound_to_other_account") {
+          const namespace = b.method === "same_payload" ? b.ref.namespace : b.evidence.candidate_identifier!.namespace;
           await recordIssue(tx, {
             code: "identity_conflict",
             severity: "warning",
             batchId: root.batchId,
             accountId: intake.accountId,
             providerCallId: page!.captured.providerCallId,
-            discriminator: `${b.namespace}.bound_elsewhere`,
-            detail: { namespace: b.namespace, other_account_id: bound.otherAccountId.toString() },
+            discriminator: `${namespace}.bound_elsewhere`,
+            detail: { namespace, other_account_id: bound.otherAccountId.toString() },
             now,
           });
+          warnings.push({ code: "identity_conflict", stage: "identity" });
         }
       }
       for (const i of issues) {
         await recordIssue(tx, { code: i.code, severity: i.severity, batchId: root.batchId, accountId: intake.accountId, providerCallId: page!.captured.providerCallId, discriminator: i.discriminator, detail: i.detail, now });
+        warnings.push({ code: i.code, stage: "identity" });
       }
       if (res.unprojectable.length > 0) {
         await recordIssue(tx, {
@@ -423,7 +430,7 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
         },
         now,
       );
-      await finishRoot(tx, tasks.get(rootId)!, { status: "succeeded", entryOutcome: "normal", summary, accountId: intake.accountId, assignmentId: intake.assignmentId }, now);
+      await finishRoot(tx, tasks.get(rootId)!, { status: "succeeded", entryOutcome: "normal", summary, warnings, accountId: intake.accountId, assignmentId: intake.assignmentId }, now);
     }),
   );
   return projected.ok ? result("succeeded") : staleResult(projected);

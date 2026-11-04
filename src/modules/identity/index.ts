@@ -2,6 +2,7 @@ export * from "./dominant-author";
 export * from "./evidence";
 export {
   IdentityError,
+  bindDominantListAuthor,
   bindSecondaryIdentifier,
   intakeAccount,
   loadOwnerSnapshot,

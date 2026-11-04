@@ -4,6 +4,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { DbTx } from "../../db/client";
 import { externalAccountIdentifiers, externalAccounts, mediaStaff, staffAccountAssignments, stores } from "../../db/schema";
 import { sha256Utf8 } from "../canonical-json";
+import { evidenceDigest, parseEvidence } from "./evidence";
 
 export class IdentityError extends Error {
   constructor(
@@ -181,4 +182,41 @@ export async function loadOwnerSnapshot(tx: DbTx, assignmentId: bigint): Promise
     .innerJoin(stores, eq(stores.storeId, mediaStaff.storeId))
     .where(eq(staffAccountAssignments.assignmentId, assignmentId));
   return row && row.watchType === "staff" ? { staffId: row.staffId, storeId: row.storeId, brandId: row.brandId } : null;
+}
+
+/**
+ * 小红书主导作者绑定（受限身份写入）：evidence 必须通过 closed schema 的全部校验（形状、计数、排序、候选一致），
+ * 且必须是 accepted、属于给定的长期批次；标识行的 method / policy / evidence / 摘要 / 批次全部由 evidence 推出，
+ * 所以列值与 evidence 不可能不一致。首次绑定后不可改写：重放只更新观察时间。
+ */
+export async function bindDominantListAuthor(
+  tx: DbTx,
+  p: { accountId: bigint; evidence: unknown; batchId: bigint; now: Date },
+): Promise<SecondaryBinding> {
+  const e = parseEvidence(p.evidence); // 不合法直接抛 EvidenceError
+  if (e.decision !== "accepted" || e.candidate_identifier === null) throw new Error("只有 accepted 的 evidence 才能绑定标识");
+  if (e.evidence_batch_id !== p.batchId.toString()) throw new Error("evidence 的 batch 与写入的长期批次不一致");
+  const ref: IdentifierRef = { namespace: e.candidate_identifier.namespace, value: e.candidate_identifier.value };
+  const found = await findIdentifier(tx, ref);
+  if (found) {
+    if (found.accountId !== p.accountId) return { kind: "bound_to_other_account", otherAccountId: found.accountId };
+    await tx.update(externalAccountIdentifiers).set({ lastSeenAt: p.now }).where(eq(externalAccountIdentifiers.accountIdentifierId, found.accountIdentifierId));
+    return { kind: "already_bound" };
+  }
+  await tx.insert(externalAccountIdentifiers).values({
+    accountId: p.accountId,
+    namespaceCode: ref.namespace,
+    identifierValue: ref.value,
+    identifierSha256: sha256Utf8(ref.value),
+    bindingMethod: "dominant_list_author",
+    confidence: "observed",
+    bindingPolicyVersion: e.policy_version,
+    bindingEvidence: e,
+    bindingEvidenceSha256: evidenceDigest(e),
+    evidenceBatchId: p.batchId,
+    firstSeenAt: p.now,
+    lastSeenAt: p.now,
+    createdAt: p.now,
+  });
+  return { kind: "bound" };
 }

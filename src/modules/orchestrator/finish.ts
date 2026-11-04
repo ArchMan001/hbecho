@@ -11,6 +11,7 @@ export type RootTerminal =
       entryOutcome: EntryOutcome;
       stopReason?: string;
       summary?: Record<string, unknown>;
+      warnings?: Array<{ code: string; stage: string }>;
       accountId?: bigint;
       assignmentId?: bigint;
     }
@@ -27,7 +28,11 @@ export type RootTerminal =
     };
 
 export async function finishRoot(tx: DbTx, root: TaskRow, t: RootTerminal, now: Date): Promise<void> {
-  const summary = { ...(t.summary ?? {}), ...(t.entryOutcome ? { entry_outcome: t.entryOutcome } : {}), warnings: [] };
+  const summary = {
+    ...(t.summary ?? {}),
+    ...(t.entryOutcome ? { entry_outcome: t.entryOutcome } : {}),
+    warnings: t.status === "succeeded" ? (t.warnings ?? []) : [],
+  };
   await tx
     .update(syncTasks)
     .set({

@@ -30,7 +30,7 @@
   - 入口识别（2026-11-04 定）：本地只按 URL 路径特征识别**明确**的视频/笔记链接（如 `douyin.com/video/`、`xiaohongshu.com/explore/`、`/discovery/item/`），直接拒绝、不发请求；短链与分享口令记 `unknown` 照常调 `media_user_info`。目前没有「把非主页链接传给 `media_user_info`」的供应商样本，因此「供应商返回非主页账号 → 终止」这条在任务 9 smoke 拿到样本后再补；缺口记入 capability 证据。最小清洗只截掉第一个 URL 路径之后的字符，前缀分享文案保留（raw3 实测整段发送成功）。
   - fixture 不复制：`tests/fixtures/aimaster/manifest.json` 登记来源路径、SHA-256 与 evidence label，loader 直接读 `aimaster接口文档/测试结果/` 并校验哈希。
   - 单一解析策略：清洗后直接调 `media_user_info`，其返回即主页投影来源；「最多三次」是对 `RESULT_VALIDATION_FAILED` 的有界重试；成功路径调用数固定为主页 1 + 列表 1。
-  - 实现 Xiaohongshu dominant-author policy `xhs-dominant-author.v1`：唯一最高且占非空作者条目 ≥ 80%；阈值为配置。
+  - 实现 Xiaohongshu dominant-author policy `xhs-dominant-author.v1`：唯一最高、候选至少出现 3 次且占非空作者条目 ≥ 80%；两项阈值均为配置。
   - 定义 platform × action × mode × environment capability registry，显式区分 `supplier_declared/fixture_observed/smoke_verified` 与 `production approved`；按 raw4/raw5/raw8 固化“同步主页/列表、异步主页可用；异步列表 provider-failed”的 tuple 结论；所有 production activation 保持 `disabled`。
   - 固定测试 harness 的 network-denied、fixture transport、fake clock/fake OSS seam，并确保 fixture 与日志不含 secret。
   - **Offline acceptance:**
@@ -50,7 +50,7 @@
     | R4.1 / R4.2 | 三次耗尽的终态决定与被拒入口的结果里没有任何账号/归属/快照字段（类型与键集合断言）；真正「库里无新增」由任务 4/5 验证 | `strategy.test.ts`、`locator.test.ts` |
     | R5.1 / R5.5 / R5.6 / R5.7 | 外部 ID 与整数游标按文本/原文保留（含 > 2^53）；真实 0 / 缺失 / null / 非法 / `unsupported` 五态；列表播放数恒为 `unsupported`；缺 `text` 等按条目容错 | `lossless-json.test.ts`、`value-state.test.ts`、`decode-video-list.test.ts`、`decode-profile.test.ts` |
     | R5.2 / R5.3 / R5.4 | 解码阶段为每个 ID 标注 namespace（`douyin.user_id` / `douyin.sec_uid` / `xiaohongshu.profile.user_id` / `xiaohongshu.content.user_id`）；查找、哈希复核、绑定在任务 4/5 | `decode-profile.test.ts`、`decode-video-list.test.ts` |
-    | R6.1 / R6.2 / R6.5 / R6.6 | `xhs-dominant-author.v1`：唯一最高且 ≥ 80%（含边界）；tie / 空作者 / 低占比拒绝；证据含精确计数、分母、policy 版本；21/21 正例；绑定到同一账号与 JCS 证据在任务 5 | `src/modules/identity/dominant-author.test.ts` |
+    | R6.1 / R6.2 / R6.5 / R6.6 | `xhs-dominant-author.v1`：唯一最高、候选 ≥ 3 次且 ≥ 80%（含边界）；tie / 空作者 / 样本不足 / 低占比拒绝；证据含精确计数、分母、policy 版本；21/21 正例；绑定到同一账号与 JCS 证据在任务 5 | `src/modules/identity/dominant-author.test.ts` |
     | R9.2 / R9.4 / R9.6–R9.9 / R9.11 | 解码不截断：抖音 20、小红书 21 条全部返回；重复 post_id 不去重；`content_kind` 推断表且不输出 `mixed`；抖音封面取数组第 2 条、小红书取单值 `cover`；0 条 + `has_more=false` 是真实空列表，`result` 非数组是 `schema_drift` | `decode-video-list.test.ts` |
     | R10.4 / R10.9 | 抖音 `max_cursor` 为 integer（`1782701295000`），小红书为 string；请求回发保持类型，超大整数不丢精度 | `decode-video-list.test.ts`、`request.test.ts` |
     | R11.4（解码部分） | 抖音 19 条 `HITACHI1` + 1 条 `HITACHI2023`，异作者保留；不创建账号在任务 4 | `decode-video-list.test.ts`、`dominant-author.test.ts` |
@@ -60,7 +60,7 @@
 
   - **任务 1 未覆盖、已转交后续任务的验收项：** 「重复提交不增加调用」需要幂等存储 → 任务 2（acceptance A2）；「三次失败/非主页入口后库里无账号与归属」需要数据库 → 任务 4/5；fixture 经过真实 ODS 捕获再解码的顺序与故障注入 → 任务 3。
   - **仍开放的证据缺口（记入 capability `knownGaps`）：** 供应商对「视频/笔记链接传给 `media_user_info`」的真实响应没有样本，因此 `unknown`（短链、口令）照常发送，「返回非主页账号则终止」待任务 9 smoke 补；文档 Bearer 与实测 `X-Api-Key` 矛盾，保存的样本请求头里不含认证头。
-  - **实现留下的取舍（供复核）：** ① 外部 ID 字段为空串记 `invalid`，不当作 `missing`；② 主导作者策略的分母是非空作者条目（与 v2 evidence 的 `non_empty_author_entry_count` 一致），因此「1 条非空 + 20 条空」会通过，这是 spec 字面行为，未另加最小样本量；③ 拒绝原因枚举（`no_non_empty_author` / `tie_for_highest` / `below_threshold`）为本任务暂定，任务 5 做 evidence schema 时需与 v2 核对；④ 回环地址不受禁网限制（后续任务要连本机一次性 MySQL）。
+  - **实现留下的取舍（供复核）：** ① 外部 ID 字段为空串记 `invalid`，不当作 `missing`；② 主导作者策略的分母是非空作者条目（与 v2 evidence 的 `non_empty_author_entry_count` 一致）；复核后补充「候选至少 3 次」，「1 条非空 + 20 条空」因此以 `insufficient_samples` 拒绝；③ 拒绝原因枚举（`no_non_empty_author` / `tie_for_highest` / `insufficient_samples` / `below_threshold`）为本任务暂定，任务 5 做 evidence schema 时需与 v2 核对；④ 回环地址不受禁网限制（后续任务要连本机一次性 MySQL）。
 
 - [ ] 2. 建立 tracer 命令、幂等根任务与本地状态纵向骨架
   - **Requirements:** R1, R15, R18

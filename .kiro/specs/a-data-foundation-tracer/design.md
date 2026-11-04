@@ -498,7 +498,7 @@ ProviderCall、task 与 raw payload 保留一年；正式 profile/content snapsh
 7. 一年期 task/call/raw 到期后，成功绑定和拒绝决定仍必须分别通过上述长期载体独立解释，不能依赖已删除 ODS；
 8. minority author 只保留在对应内容 snapshot/discovery，不创建账号。
 
-首版策略 `xhs-dominant-author.v1`：唯一最高，且占非空作者条目 ≥ 80%（2026-11-04）；阈值是配置，改阈值必须升策略版本。首个 fixture 的 21 条均为同一作者，是无争议正例；还必须用唯一但低于 80%、tie、空作者和异常分布负例锁定 policy。fake clock 必须覆盖一年期 operational lineage 清理后的成功证据可解释性。
+首版策略 `xhs-dominant-author.v1`：唯一最高，候选至少出现 3 次，且占非空作者条目 ≥ 80%（2026-11-04）；占比阈值与最少次数都是配置，改任一项必须升策略版本。首个 fixture 的 21 条均为同一作者，是无争议正例；还必须用唯一但低于 80%、tie、空作者和异常分布负例锁定 policy。fake clock 必须覆盖一年期 operational lineage 清理后的成功证据可解释性。
 
 ### 10.4 Douyin foreign author
 
@@ -809,7 +809,7 @@ smoke 独立于 CI，必须先显示并确认 capability、locator allowlist、c
 | 4、5 | 入口清洗与解析策略 | 单一策略：最小清洗（截掉路径之后的分享文案）后直接调 `media_user_info`；其返回即主页投影来源；成功路径调用数 = 主页 1 + 列表 1 |
 | 6 | 调用入口 | CLI（§14），不做 HTTP |
 | 7 | 是否请求第二页 | 不请求 |
-| 8 | 小红书主导作者 | 唯一最高且 ≥ 80%，策略版本 `xhs-dominant-author.v1` |
+| 8 | 小红书主导作者 | 唯一最高、候选至少 3 次且 ≥ 80%，策略版本 `xhs-dominant-author.v1` |
 | 9 | 归属冲突后 | 停止后续付费阶段；人工改绑不在本 spec |
 | 10 | 空 / null 游标 | `has_more=false` 正常结束；`has_more=true` 时记质量问题并停止 |
 | 11 | 媒资 | 单张图片 20 MB；下载域名白名单取 fixture 中出现的 CDN 域名；URL 过期时重新取主页 / 列表拿新地址 |

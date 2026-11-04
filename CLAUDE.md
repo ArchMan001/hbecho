@@ -1,6 +1,6 @@
 # hbecho · 新媒体运营平台
 
-把组织、门店、新媒体专员、平台账号、内容与媒资采集为可追溯的事实，再用版本化规则、统一指标与受控访问串成业务链路。当前处于**阶段 1 之前的实现起点**：领域与数据底座基线已完成，基础设施已就绪，**应用代码尚未开始**。
+把组织、门店、新媒体专员、平台账号、内容与媒资采集为可追溯的事实，再用版本化规则、统一指标与受控访问串成业务链路。当前处于**阶段 1 之前的实现起点**：领域与数据底座基线已完成，基础设施已就绪，**应用代码已开始**（`a-data-foundation-tracer` 逐任务实施中，进度以其 `tasks.md` 勾选为准）。
 
 ## 必读（每次会话）
 
@@ -27,14 +27,14 @@
 
 ## 代码地图
 
-**当前仓库没有应用代码。** 已有的是设计基线、探针脚本与门禁脚本：
+应用代码从 `a-data-foundation-tracer` 开始落地（TypeScript / Node 24 / vitest / Drizzle，pnpm）。目录按 ADR-0013：`src/modules/<模块>/` 领域逻辑，`src/db/` schema，`src/worker/` Worker 与 CLI，`drizzle/` 迁移，`tests/fixtures/` 登记证据（不复制），`tests/harness/` 离线测试挂具。其余是设计基线、探针脚本与门禁脚本：
 
 - `CONTEXT.md`：领域语言
 - `HBECHO设计方案/`：唯一设计文档根 —— `INDEX.md`、总 PRD `prd-platform.md`、子 PRD `prd-domain-<代号>-<slug>.md`、数据底座基线、运维手册、开发部署流程、宪法、ADR、统一归档 `archive/`
 - `.kiro/specs/`：spec 集；当前纵向切片是 `a-data-foundation-tracer`
 - `.kiro/steering/`：自动加载的精简规则
 - `aimaster接口文档/`：供应商合同、探针脚本与 raw3 证据
-- `scripts/`：`verify.sh` 与文档/密钥门禁
+- `scripts/`：`verify.sh`（唯一验证入口）与文档/密钥门禁
 - `.github/workflows/ci.yml`：CI
 - `.githooks/pre-commit`：提交前密钥扫描
 
@@ -47,7 +47,7 @@
 gh run watch <run-id> --exit-status   # 合并前等 CI
 ```
 
-`verify.sh` 当前覆盖密钥扫描、Markdown 链接、文档登记与 spec 结构。**在应用代码与测试落地前，不要声称「测试通过」。**
+`verify.sh` 覆盖 Node 版本（`.node-version`，须为 24）、类型检查、离线测试（禁网）、密钥扫描、Markdown 链接、文档登记与 spec 结构。数据库集成测试只在本机一次性 docker MySQL 容器或 CI 的 MySQL 服务容器里跑；没有对应环境时不要声称「数据库测试通过」。
 
 服务器操作一律走 Workbench，见 `.kiro/steering/server-access.md`。
 
@@ -69,7 +69,7 @@ gh run watch <run-id> --exit-status   # 合并前等 CI
 
 - 产品主线：`HBECHO设计方案/prd-platform.md`（总 PRD）；子 PRD 为 `HBECHO设计方案/prd-domain-<代号>-<slug>.md`
 - 完整 spec：`.kiro/specs/<name>/`（`requirements.md` / `design.md` / `tasks.md`；`acceptance.md` 在需要时增加）
-- 当前实施切片：`.kiro/specs/a-data-foundation-tracer/`（status: draft，0/9 任务）
+- 当前实施切片：`.kiro/specs/a-data-foundation-tracer/`（status: draft；进度看 `tasks.md` 勾选状态）
 - 宪法：`HBECHO设计方案/governance/constitution.md`（v0，待逐条确认）
 - ADR：`HBECHO设计方案/architecture/adr/README.md`
 - 开发与部署流程：`HBECHO设计方案/runbooks/dev-test-deploy-workflow.md`

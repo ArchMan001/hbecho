@@ -7,8 +7,12 @@ import { XHS_DOMINANT_AUTHOR_V1, decideDominantAuthor } from "./dominant-author"
 const rep = (id: string | null, n: number) => Array<string | null>(n).fill(id);
 
 describe("xhs-dominant-author.v1 策略定义", () => {
-  it("版本名以 v2 §5.5 向量 2 为准，阈值 80%，对象冻结（改阈值必须升版本）", () => {
-    expect(XHS_DOMINANT_AUTHOR_V1).toEqual({ version: "xhs-dominant-author.v1", thresholdPercent: 80 });
+  it("版本名以 v2 §5.5 向量 2 为准，阈值 80%、候选最少 3 条，对象冻结（改阈值必须升版本）", () => {
+    expect(XHS_DOMINANT_AUTHOR_V1).toEqual({
+      version: "xhs-dominant-author.v1",
+      thresholdPercent: 80,
+      minCandidateCount: 3,
+    });
     expect(Object.isFrozen(XHS_DOMINANT_AUTHOR_V1)).toBe(true);
   });
 });
@@ -67,6 +71,42 @@ describe("decideDominantAuthor（R6.1/R6.2/R6.5/R6.6）", () => {
     expect(d).toMatchObject({ decision: "accepted", totalEntryCount: 10, nonEmptyAuthorEntryCount: 8, emptyAuthorEntryCount: 2 });
   });
 
+  it("最小样本：候选作者至少出现 3 次；1 条非空 + 20 条空 → 拒绝 insufficient_samples", () => {
+    const d = decide([...rep("A", 1), ...rep(null, 20)]);
+    expect(d).toMatchObject({
+      decision: "rejected",
+      reason: "insufficient_samples",
+      candidate: null,
+      totalEntryCount: 21,
+      nonEmptyAuthorEntryCount: 1,
+      emptyAuthorEntryCount: 20,
+    });
+  });
+
+  it("3 条同一作者 + 18 条空 → 绑定（恰好达到下限）", () => {
+    expect(decide([...rep("A", 3), ...rep(null, 18)])).toMatchObject({
+      decision: "accepted",
+      candidate: { value: "A", count: 3 },
+    });
+  });
+
+  it("2 条同一作者（占比 100%）仍不足下限；样本不足先于占比判断", () => {
+    expect(decide([...rep("A", 2)]).reason).toBe("insufficient_samples");
+    expect(decide([...rep("A", 2), ...rep("B", 1)]).reason).toBe("insufficient_samples");
+  });
+
+  it("并列最高仍优先报 tie_for_highest（即使两者都不足下限）", () => {
+    expect(decide([...rep("A", 1), ...rep("B", 1)]).reason).toBe("tie_for_highest");
+  });
+
+  it("下限是策略参数：minCandidateCount 非法时抛出", () => {
+    for (const bad of [0, -1, 1.5]) {
+      expect(() =>
+        decideDominantAuthor(["A"], Object.freeze({ version: "x", thresholdPercent: 80, minCandidateCount: bad })),
+      ).toThrow(RangeError);
+    }
+  });
+
   it("按 exact 文本计数：大小写、前导零都是不同作者；不做 trim 之外的归一", () => {
     const d = decide([...rep("abc", 3), ...rep("ABC", 3), ...rep("007", 1), ...rep("7", 1)]);
     expect(d.reason).toBe("tie_for_highest");
@@ -81,7 +121,11 @@ describe("decideDominantAuthor（R6.1/R6.2/R6.5/R6.6）", () => {
   });
 
   it("阈值是策略参数：同一分布在更严格的策略下被拒绝", () => {
-    const strict = Object.freeze({ version: "xhs-dominant-author.v2-test", thresholdPercent: 95 });
+    const strict = Object.freeze({
+      version: "xhs-dominant-author.v2-test",
+      thresholdPercent: 95,
+      minCandidateCount: 3,
+    });
     expect(decideDominantAuthor([...rep("A", 9), ...rep("B", 1)], strict)).toMatchObject({
       policyVersion: "xhs-dominant-author.v2-test",
       reason: "below_threshold",

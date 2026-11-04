@@ -6,3 +6,5 @@ export { classifyLocator, type LocatorDecision } from "./locator";
 export { buildRequest, type BuildRequestInput } from "./request";
 export * from "./strategy";
 export type { CountState, ValueState } from "./value-state";
+export { classifyResponse, decideRetry, profileAttemptOutcomeOf, type CallOutcome, type FailureCategory, type FailureClassification, type RetryDecision } from "./failure";
+export { peekResponseMeta, type ResponseMeta } from "./peek";

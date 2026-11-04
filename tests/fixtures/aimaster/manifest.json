@@ -301,6 +301,46 @@
         "action": "user_video_list",
         "errorCode": "RESULT_VALIDATION_FAILED"
       }
+    },
+    {
+      "id": "raw7.C19.http400",
+      "platform": "douyin",
+      "action": "media_user_info",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw7-2026-10-28/C19-douyin-media_user_info-sync-attempt1.json",
+      "sourceSha256": "42365150a2405069d8dfb96a6e5b69fce96fe97038b4a3bfbfd4af4b7934ccd0",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "failure_sample",
+      "observed": {
+        "httpStatus": 400,
+        "taskStatus": null,
+        "action": null,
+        "errorCode": "INVALID_REQUEST"
+      }
+    },
+    {
+      "id": "raw7.C20.http500",
+      "platform": "douyin",
+      "action": "media_user_info",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw7-2026-10-28/C20-douyin-media_user_info-sync-invalid-link.json",
+      "sourceSha256": "99c4b4441306fecd9da1822c3967a7ebe4f8b5e022d5aab35ddc5a58b78f7752",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "failure_sample",
+      "observed": {
+        "httpStatus": 500,
+        "taskStatus": null,
+        "action": null,
+        "errorCode": "RESULT_VALIDATION_FAILED"
+      }
     }
   ]
 }

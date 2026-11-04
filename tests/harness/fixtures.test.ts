@@ -19,7 +19,7 @@ describe("manifest", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const e of manifest.entries) {
       expect(["fixture_observed", "smoke_verified", "provider_failed"]).toContain(e.evidenceLabel);
-      expect(["decoder_input", "capability_evidence"]).toContain(e.use);
+      expect(["decoder_input", "capability_evidence", "failure_sample"]).toContain(e.use);
     }
   });
 
@@ -57,7 +57,7 @@ describe("manifest", () => {
         httpStatus: http,
         taskStatus: body?.data?.status ?? null,
         action: body?.data?.action ?? null,
-        errorCode: body?.data?.error?.code ?? null,
+        errorCode: body?.data?.error?.code ?? (typeof body?.code === "string" ? body.code : null),
       }).toEqual(e.observed);
     }
   });

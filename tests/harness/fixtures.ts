@@ -15,7 +15,7 @@ export interface ManifestEntry {
   sourceSha256: string;
   envelope: { responseKey: "response_body" | "body" };
   evidenceLabel: EvidenceLabel;
-  use: "decoder_input" | "capability_evidence";
+  use: "decoder_input" | "capability_evidence" | "failure_sample";
   observed: { httpStatus: number | null; taskStatus: string | null; action: string | null; errorCode: string | null };
 }
 

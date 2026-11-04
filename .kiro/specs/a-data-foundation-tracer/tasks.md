@@ -1,7 +1,7 @@
 # A Data Foundation Tracer Implementation Plan
 
 > **状态**：`draft`  
-> **执行状态**：任务 1–2 已完成（2/9）；任务 3 未开始  
+> **执行状态**：任务 1–3 已完成（3/9）；任务 4 未开始  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
 > **验收**：[`acceptance.md`](acceptance.md)  
@@ -100,7 +100,7 @@
   - **任务 2 未覆盖、已转交后续任务的验收项：** 「陈旧 worker 提交可变状态被拒」「prepared 取消得到 not_sent」归任务 3 / 8；「非主页入口（视频/笔记）」的拒绝与 `invalid_link` 终态由编排器在任务 4 落地（提交阶段不预判入口类型，避免两处各写一份）。
   - **实现留下的取舍（供复核）：** ① 审计是一个端口，默认实现写 pino 结构化日志，**没有新建审计表**（B 域审计流水尚不存在）；② Capability 沿用 B 域 PRD 的 `data.sync.trigger`，状态查询与取消也要求它，没有另造名称；③ 状态查询对「未知」与「越权」都返回 `not_found`，只有范围内的调用方才可能看到 `expired`；④ 活动任务复用以 canonical command 摘要为键，因此后到的 key 不会被记录到被复用的 root 上；⑤ 窗口到期后同 key 重提：旧 root 的 actor / key / 摘要三列被置空以释放唯一键，旧 root 本身保留到 ODS 清理；⑥ `sync_settings` 不由迁移种入（`list_safety_page_limit` 等 v2 未定，不静默冻结），未配置时提交返回 `sync_settings_missing`；⑦ 迁移种入四个平台与 `aimaster` 供应商（`base_endpoint` 取自 raw 证据中的主机名）；⑧ 新增 `idx_sync_tasks_canonical_command`（v2 未列，查询所需）；⑨ `stores.source_batch_id` 暂不挂 FK（`import_batches` 属于 a-master-data-import）；⑩ CLI 的 `HBECHO_ENV` 缺省为 `production`，而 production 没有任何已批准的 capability，所以忘记设置时命令会被拒绝（fail closed）；⑪ 三项 v2 文字与 MySQL 不一致（`reconciled_by` 的 SET NULL 与 CHECK、CHECK 不能引用自增列、`oss_objects` 唯一键超长）已按 ADR-0005 记录的方式处理，**v2 §9.5、§11.1 需要同步修订**。
 
-- [ ] 3. 打通 raw-before-parse ProviderCall 纵向链路
+- [x] 3. 打通 raw-before-parse ProviderCall 纵向链路
   - **Requirements:** R2, R13, R14, R16, R18
   - 实现 `RawCaptureGateway` 与 `CapturedProviderResult` seam：发送前 request bytes + prepared ProviderCall intent 先进入私有 ODS/数据库；完整 response bytes 或 transfer error 也先落 ODS，再允许 versioned Adapter decode。
   - 每个 submit/poll/retry 使用独立 ProviderCall，分列记录 requested action、immutable expected response action 与 captured actual response action，并记录 `prepared/in_flight/terminal/ambiguous`、mode、attempt、timing、bytes、hash、safe metadata、root/task correlation 和 Adapter version；排除认证 header/secret。
@@ -110,6 +110,31 @@
   - 将 HTTP 400 `INVALID_REQUEST`、HTTP 500 `RESULT_VALIDATION_FAILED`、间歇性 `result: null` 分类到不同的 retry policy；`RESULT_VALIDATION_FAILED` 有界重试，重试耗尽后由业务层决定 `invalid_link`，不得在首次响应时断言账号不存在。
   - 成功解析后，locator 与账号 ID 必须在同一条 captured terminal payload 的同一短事务中成对写入；不得跨调用拼接。
   - **Offline acceptance:** request intent 未提交时 network send=0；prepared 后取消得到 `terminal/not_sent` 且 send=0；终态 ODS write/integrity failure 时 decoder/projector=0；expected/actual action mismatch 同时保留两值并进入 `invalid_response`；完整响应、known non-delivery transport error、timeout/process-loss ambiguous 都满足 v2 字段/nullability/payload 矩阵；ambiguous 后最多再发一次新 ProviderCall，原调用不被改写，业务事实不重复；resume 不重复已完成的付费 effect；stale worker 不能提交可变状态；fake clock 推进一年清理后长期业务事实仍存在；locator/account ID 跨调用拼接的负例被拒绝。
+
+  - **完成记录（2026-11-04）：** `./scripts/verify.sh` 通过（unit 15 个文件 192 条；db 6 个文件 117 条，其中本任务新增 41 条）。对 9 处关键逻辑做了变异检查，8 个被杀；幸存的 1 个（去掉 `put` 返回摘要的校验）是等价变异——其后的读回校验同样会拦住损坏与截断，属于有意的双重校验。
+  - **Requirements → 覆盖测试**（只列任务 3 实际覆盖的部分）：
+
+    | Requirement | 任务 3 覆盖的部分 | 测试 |
+    |---|---|---|
+    | R2.1 / R2.2 | 发送前请求字节已在私有 ODS 且读回校验、prepared→in_flight 已提交；每次提交/重试/续发都是独立 ProviderCall；requested / expected / actual action 分列 | `gateway.db.test.ts`（H1/H2 组、H5 组） |
+    | R2.3 / R2.5 | 完整响应字节先落 ODS 并读回校验，才提交终态并允许解析；ODS 写失败 / 哈希不一致 / 截断 → decoder 与 projector 调用数为 0、调用进入 ambiguous 且无响应 payload；请求意图落地失败 → 发送次数 0、无调用行 | `gateway.db.test.ts` |
+    | R2.4 | 传输失败先落结构化 artifact（含响应中断时的部分字节）再分类：已知未送达 → `terminal/transport_error`；超时/重置/未知异常 → `ambiguous`；artifact 写失败 → ambiguous 且不分类 | `gateway.db.test.ts`（H4 组） |
+    | R2.6 | 解析后 payload 行记录首次解释的 Adapter 版本与状态；新版本重放得到新的 lineage（调用 ID、payload ID、SHA-256、版本），不改写 payload 行、不新增 ODS 对象；`loadCaptured` 重读 ODS 并校验，被篡改 → `integrity_mismatch` | `gateway.db.test.ts`（解释组） |
+    | R2.7 | in_flight 失联 → 恢复扫描标 ambiguous（幂等）；之后允许一次新的 ProviderCall（attempt_no+1），原调用不被改写；第二次又 ambiguous 后拒绝；非只读 action、非 ambiguous 调用拒绝；不实现对账 | `gateway.db.test.ts`（H5/H6 组） |
+    | R2.8 | 认证头、Cookie、Bearer、形似密钥的 token 不出现在 ODS、调用元数据与错误 artifact | `gateway.db.test.ts`（H8） |
+    | R2.9 | manifest 声明 raw3/raw4 只是样本证据，不证明 raw-before-parse | `tests/harness/fixtures.test.ts`（任务 1） |
+    | R2.10 | payload → call → task 清理；多 payload 调用按整体判断；只有 request payload 的调用按自身截止时间；非终态到期任务不删；reconcile 引用顺序；远端删除失败可重试；幂等重跑；长期快照/归属/发现/检查点/质量问题/正式媒资保留且来源引用被置空；orphan sweeper 只扫 `ods/` | `retention.db.test.ts` |
+    | R3.7 | locator 与账号 ID 来自同一条 captured terminal payload：同调用配对成功，跨调用拼接、账号 ID 缺失/非法都被拒绝 | `gateway.db.test.ts`（配对组） |
+    | R13.9 | HTTP 400 `INVALID_REQUEST`（不重试、不断言输入或认证）、HTTP 500 `RESULT_VALIDATION_FAILED`（有界重试，首次不断言账号不存在）、间歇性 `result:null`、429、其他 5xx、异步任务失败各自分类；重试耗尽才进入业务 `invalid_link`（衔接任务 1 的 `afterProfileAttempt`） | `failure.test.ts`、`peek.test.ts`、`gateway.db.test.ts` |
+    | R14.1–R14.3（响应层） | 传输、授权、限流、schema/解析、供应商校验失败的稳定类别；技术失败不会变成空主页或空列表（decode 为 `schema_drift` / 调用为 ambiguous） | `failure.test.ts`、`gateway.db.test.ts` |
+    | R14.6 | 发送前取消 / fence 被取代 / 本地策略（预算）封口 → `terminal/not_sent`，发送次数 0，只有 request payload | `gateway.db.test.ts`（A6 组） |
+    | R16.5（部分） | ODS-before-parse 顺序、恢复、陈旧 fencing、非主页之外的故障注入 | 同上 |
+    | R18.1 / R18.2 | 租约有效 + fencing token 一致才能创建 intent 或切 in_flight；陈旧或过期 → `StaleFenceError` / not_sent；发送后被取代 → 证据仍落地但 `fenceValid=false`，project 不执行 | `gateway.db.test.ts` |
+    | R18.3 | 两个 worker 重放同一 logical effect：唯一键 + 条件更新保证只发送一次，另一个得到 `in_progress` 或已捕获的结果 | `gateway.db.test.ts`（J4） |
+    | R18.5 | 网络 IO 期间没有打开的数据库事务（用事务计数代理断言） | `gateway.db.test.ts`（J2） |
+
+  - **任务 3 未覆盖、已转交后续任务的验收项：** 真实 OSS（`ali-oss`）的 `ObjectStore` 实现与桶权限验证（ENV4，批准的 smoke 之后）；异步提交与每次轮询（GET `/tasks/{id}`）的 ProviderCall 编排与 deadline 在任务 8；预算 / 调用上限的计数器在任务 8（本任务只提供 `SendPolicy` 封口接口）；`ambiguous` 的对账不实现（只读查询例外）。
+  - **实现留下的取舍（供复核）：** ① 响应字节落 ODS 并校验**之后**，用 `peekResponseMeta` 提取 `response_action / provider_code / provider_task_id / provider_request_id / provider_task_status` 写入调用元数据——这是元数据提取，不是业务解释；② 陈旧 worker 在发送之后到达的终态证据**照常记录**（不可变观察，R18.4），只是结果标 `fenceValid=false`，由调用方决定不投影；这比「陈旧就拒绝写证据」更安全，因为拒绝会把已经付费的调用丢成 ambiguous；③ 响应已收到但 ODS 写入或校验失败时，调用标 `ambiguous`（远端已执行，但没有可靠证据），不分类、不解析；④ `oss_objects` 里 `storage_class=Standard`、`encryption_mode=SSE-OSS`、`content_type=application/octet-stream` 是占位值，真实 OSS 适配器落地时按桶配置核对；⑤ ODS 对象键布局 `ods/<yyyymmdd>/<role>/<sha256>-<uuid>`（ASCII，含角色与摘要）；⑥ `task_lookup` 被列入只读 action 集合（任务 8 的轮询用）；⑦ 清理中，被未入选调用 reconcile 引用的调用本次保留（`blockedByReference`），下次运行再处理；⑧ 恢复扫描 `recoverInFlightCalls` 的阈值由调用方传入，未硬编码。
 
 - [ ] 4. 打通抖音账号 tracer 纵向切片
   - **Requirements:** R3, R4, R5, R7, R8, R9, R10, R11, R14, R18, R19

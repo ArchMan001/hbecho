@@ -1,7 +1,7 @@
 # A Data Foundation Tracer Implementation Plan
 
 > **状态**：`draft`  
-> **执行状态**：任务 1–8 已完成（8/9）；任务 9 未开始  
+> **执行状态**：任务 1–9 的**实现范围**已完成（9/9）；任务 9 的**真实 smoke 尚未执行**，等待人工批准（见任务 9 完成记录）  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
 > **验收**：[`acceptance.md`](acceptance.md)  
@@ -290,7 +290,7 @@
 
   - **任务 8 未覆盖、已转交后续任务的验收项：** 真实 worker 入口 / 任务领取循环（`SKIP LOCKED`、死信）与 CLI `run`：需要真实 OSS 与真实 transport，不在默认环境 → 部署阶段；`download_media` 子任务的取消协作；异步任务的供应商 TTL 与合适轮询间隔 → 任务 9 smoke。
   - **实现留下的取舍（供复核）：** ① 退避是确定性的指数（无抖动）：重放时可重新算出同一个等待时间；`ponytail` 上限：多个 worker 同时限流时会同步重试，升级路径是按调用 ID 加确定性抖动。② 校验类失败（含异步任务校验失败、`result:null`）**立即**重试，不退避；限流 / 5xx / 已知未送达才退避。③ 同一个逻辑请求的 `attempt_no` 在校验重试、限流重试、ambiguous 重发之间共享，总数上限 3；所以「ambiguous 重发一次」也消耗这 3 次里的一次。④ ambiguous 的判定不依赖超时阈值：持有 root 租约的 worker 接手时，把该 root 家族里停在 `in_flight` 的调用一律标 `ambiguous`（旧 worker 的 fencing token 已失效，它之后写不进终态）。⑤ 异步轮询里某次轮询失联（ambiguous / 传输失败）不重发，下一次轮询就是新调用（GET 幂等）；总等待用「间隔 × 次数」估算，不读时钟。⑥ 异步提交 202 也计一次点数（`outcome=succeeded` 的 `media_user_info`），轮询不计；供应商对异步提交是否计费未知，按保守估计。⑦ 默认值：退避 5s 起、封顶 300s；轮询间隔 2s、最多 30 次、最长 120s；总截止 24h——全部是配置（`TracerConfig`），**不是产品合同**，任务 9 smoke 后再定。⑧ 预算策略 `createBudgetPolicy` 由调用方装进网关，编排器本身不内置默认上限；任务 9 的 smoke 入口会强制装配。⑨ 重试耗尽后失败的 root 没有自动「重新提交」入口（需要新的幂等 key 或到期后重提），属于运维动作。
-- [ ] 9. 建立人工批准、预算受限的真实 smoke
+- [x] 9. 建立人工批准、预算受限的真实 smoke（本轮只实现入口与门槛，未发任何真实调用）
   - **Requirements:** R2, R13, R14, R17
   - 提供独立于默认 tests/CI 的 smoke 入口；启动前强制 human approval、显式 runtime switch、locator/action/mode allowlist、secret provider、固定 call/cost budget 和 deadline。
   - 首轮只验证最小 `media_user_info`/`user_video_list` tuple；同时实测异步 profile 的 terminal schema、TTL 与合适的轮询间隔，写回 capability 证据；异步 profile 必须作为独立 smoke，不因同步成功而启用；异步列表保持 disabled。
@@ -299,6 +299,30 @@
   - 输出 audit summary：实际 tuple、calls、polls、latency、bytes、estimated points、result category、schema/Adapter version 和 evidence refs，不含 secret/full payload。
   - 将实测结果更新为对应 capability 的 evidence；认证 header（raw4 为 `X-Api-Key`）、QPS、task TTL 或 schema 差异继续显式记录，不能自动外推；单价已确认 0.02 元/点。
   - **Manual acceptance:** 审批记录、预算预览、停止行为、raw-before-parse evidence 和审计摘要均由操作人确认；没有批准时命令必须在任何网络调用前失败。
+
+  - **完成记录（2026-11-04）：** 本轮范围按约定只做 smoke **入口、审批开关、allowlist、预算与停止逻辑**，**没有发任何真实 AI Master 调用，没有读取任何 secret**。`./scripts/verify.sh` 通过（unit 21 个文件 253 条；db 13 个文件 250 条；Python 7 条）。对 11 处关键逻辑做了变异检查（开关、审批过期、审批有效期上限、审批绑定计划摘要、已知失败 tuple、预算放不下、出站请求核对、deadline、轮询上限、异步条目才允许轮询、未接线时停止），全部被杀。
+  - **覆盖测试：**
+
+    | 要求 | 覆盖 | 测试 |
+    |---|---|---|
+    | R17.1 排除在默认测试 / CI 之外；需要人工批准与显式运行时开关 | 入口是独立的 `pnpm smoke`（不在 `pnpm test` / verify 的执行路径里）；开关 `HBECHO_SMOKE=approved-paid-calls`（`1` / `true` 不行）；审批记录必须有批准人、原因、有效期（≤ 24 小时、未过期、未来时间不行），且**绑定到计划的 JCS SHA-256**——改任何一处（locator、预算、allowlist、deadline）审批作废 | `preflight.test.ts`、`smoke-cli.test.ts` |
+    | R17.2 allowlist + 固定预算 + secret 在源码之外 | allowlist 只允许有实测证据且无已知供应商失败的 tuple（异步列表被拒）、不允许重复；预算 `max_calls / max_polls / max_points` 与 `deadline_ms` 必须有限且在硬上限内，且放得下名义用量；secret 通过 `secrets.apiKey()` 注入，**只在全部门槛通过之后才读取**，只交给 transport 工厂 | 同上、`smoke.db.test.ts` |
+    | R17.2 / M1 没有批准 → 任何网络调用之前失败 | 6 类拒绝（开关、无审批、审批过期、计划不符、异步列表、预算不足）：transport 0 次（含 `rejected` 0 次）、secret 读取 0 次、transport 工厂 0 次、批次 / ProviderCall / ODS 对象 / 日志 0 行；CLI 在开关缺失时连审批文件都不读，`execute` 永远不被调用 | 同上 |
+    | R17.3 / M1 上限在下一次调用前停止 | deadline 超过后下一条在发送前被封口（`terminal/not_sent`，transport 只有 1 次）；`max_polls` 到达后第 3 次轮询在发送前封口（`stoppedBy=poll_budget`）；调用 / 点数上限由 `createBudgetPolicy` 在每次调用前检查（任务 8） | `smoke.db.test.ts` |
+    | design §16.3 / 每个调用仍走 RawCaptureGateway | smoke 的每个 submit / poll 都经网关：请求字节先落 ODS → prepared → in_flight → 响应字节落 ODS → 才解码；响应不是合法信封时先落 ODS 再报告 `decoded=false`；**不写任何业务事实**（账号 / 归属 / 快照 / 内容 / 检查点均为 0 行）；`AllowlistTransport` 在出站前再核对一次路径、`async`、`url`，即使执行器有缺陷也不会向 allowlist 之外发请求 | 同上 |
+    | R17.4 / M2 审计摘要 | `SmokeSummary`：实际 tuple、调用数、轮询数、延迟、字节数、估算点数与金额（0.02 元/点）、结果类别、Adapter 版本、证据引用（ProviderCall ID + 响应字节 SHA-256 前缀）、`stoppedBy`；**不含 secret、完整载荷、locator 原文**（只有 SHA-256 前缀），ODS 证据字节里也没有 secret | 同上 |
+    | R17.5 不自动启用 capability | smoke 不写任何 capability；成功只在摘要里列出实际 exercise 的 tuple，capability 表仍全部 production `disabled`，更新证据需要人工 | 设计约束，无自动路径 |
+    | R17.6 点数表与单价 | 抖音 10 / 10、小红书 15 / 15、异步提交计点、轮询与失败不计点、0.02 元/点；预览显示逐项与合计金额 | `preflight.test.ts`、`cost-guard.test.ts` |
+
+  - **真实 smoke 需要你批准的内容（建议首轮，均为最小 tuple，不自动重试）：**
+    1. **同步轮（抖音）**：`douyin / media_user_info / synchronous` ×1 + `douyin / user_video_list / synchronous` ×1，locator 用 raw3 的 `HITACHI1` 分享文本；调用数上限 2、轮询 0、**预算 20 点（0.4 元）**，deadline 120 秒。
+    2. **同步轮（小红书）**（可选）：`xiaohongshu / media_user_info / synchronous` ×1 + `xiaohongshu / user_video_list / synchronous` ×1，日立中央空调分享文本；调用数上限 2、**预算 30 点（0.6 元）**。
+    3. **异步主页独立一轮**（单独批准，不因同步成功而启用）：`douyin / media_user_info / asynchronous` ×1 提交 + 最多 5 次轮询；调用数上限 1、`max_polls=5`、**预算 10 点（0.2 元）**，轮询间隔 2 秒，deadline 120 秒。用来实测终态 schema、任务 TTL 与合适轮询间隔（任务 8 的默认值全部待此定）。
+    4. 异步列表保持 disabled，不 smoke。
+    5. 审批记录由你签发（`approved_by`、`reason`、`expires_at` ≤ 24 小时），并绑定计划摘要：先 `pnpm smoke preview --plan plan.json` 取得 `plan_sha256`。
+    6. 合计首轮最多约 **60 点 ≈ 1.2 元**。QPS 仍未知，并发为 1。
+  - **接线缺口（执行前必须先做，需要你批准的依赖 / 工作）：** ① 真实 `ProviderTransport`（HTTP + `X-Api-Key` 认证头注入）；② 真实私有 ODS 的 `ObjectStore`（`ali-oss`，ADR-0005 已登记但**未批准安装**）；③ secret provider（从环境 / 密钥库读取，不进仓库）。三者没有接线之前，`pnpm smoke run` 通过门槛后以**退出码 5**（`executor_not_wired`）停止，不会发出任何调用——这是刻意的。
+  - **实现留下的取舍（供复核）：** ① 开关值是一个不会被随手设成 `1` 的字符串。② 审批绑定计划摘要，所以「批准之后改 locator / 预算」不可能；审批有效期最长 24 小时。③ smoke 创建的批次 / 任务只用于挂 ProviderCall 与成本累计（`subject_type='smoke'`），结束后标记 `succeeded` 以便一年清理回收；预算是**全局**的（所有条目挂在同一个 smoke 根任务下）。④ smoke **不重试**（包括校验失败与 429）：失败如实进摘要，由操作人决定；ambiguous 同样不重发。⑤ smoke 里 locator 原样发送（不做最小清洗），因为 allowlist 按原文核对；`AllowlistTransport` 对轮询只检查路径形态与「计划里存在异步条目」，任务 ID 的归属由执行器保证。⑥ CLI 的 `preview` 不需要审批与开关：它只校验计划和算预算，没有副作用。⑦ 「将实测结果更新为对应 capability 的 evidence」没有自动化：真实 smoke 之后由人把摘要里的证据引用写回 `capability.ts` / manifest，并记录认证头、QPS、TTL、schema 差异——避免自动外推。
 
 ## 实施前必须关闭的文档冲突（2026-11-04 已关闭）
 

@@ -38,7 +38,7 @@
 - `.github/workflows/ci.yml`：CI
 - `.githooks/pre-commit`：提交前密钥扫描
 
-应用代码落地后，目录约定必须由第一份 ADR 决定，不要凭习惯先建 `src/`。
+目录约定见 [ADR-0013](HBECHO设计方案/architecture/adr/0013-repository-layout.md)；新增一级目录要先改该 ADR。
 
 ## 命令
 

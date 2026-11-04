@@ -28,6 +28,7 @@
 | [0010](0010-scope-brand-intersection.md) | 组织范围与品牌集合求交：品牌必须显式授予，不从组织推导 | accepted | 2026-11-02 | 刘学奎 |
 | [0011](0011-report-export-exceljs-write-only.md) | 报表导出用 exceljs 4.4.0，仅写入；导入仍只用 CSV | accepted | 2026-11-04 | 刘学奎 |
 | [0012](0012-python-capability-service.md) | Python 能力服务：FastAPI + OpenCV + ffmpeg，compose 内网、无数据库凭证 | accepted | 2026-11-04 | 刘学奎 |
+| [0013](0013-repository-layout.md) | 仓库目录：单应用，TypeScript 全在 `src/`，Python 服务在 `services/capability/` | accepted | 2026-11-04 | 刘学奎 |
 
 ## 未决选型登记
 

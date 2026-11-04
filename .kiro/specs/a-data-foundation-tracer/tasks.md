@@ -1,7 +1,7 @@
 # A Data Foundation Tracer Implementation Plan
 
 > **状态**：`draft`  
-> **执行状态**：任务 1 起进入实施；当前尚未开始代码  
+> **执行状态**：任务 1 已完成（离线合同层，1/9）；任务 2 未开始  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
 > **验收**：[`acceptance.md`](acceptance.md)  
@@ -18,11 +18,11 @@
 - 应用栈已由 ADR-0005 冻结（Next.js + Drizzle + better-auth + MySQL 任务表）；任务中不重新选型。目录约定按 [ADR-0013](../../../HBECHO设计方案/architecture/adr/0013-repository-layout.md)：领域代码在 `src/modules/`，离线 fixture 在 `tests/fixtures/`。
 - 所有内部 BIGINT transport 值输出十进制字符串；外部 ID 始终保留原始文本。
 - requirements §1.2 的六项基线冲突已于 2026-11-04 在 v2 修订；实现以 v2 修订稿为准，见 requirements §1.2 的注。第 7 项是 tracer 与名单导入的范围区别，不阻塞本 spec。
-- 任务边界跑 `./scripts/verify.sh`；在应用代码与测试落地前，不声称“测试通过”。
+- 任务边界跑 `./scripts/verify.sh`；它已含 Node 版本、类型检查与离线测试，真实 MySQL 集成测试从任务 2 起才有，在此之前不声称“数据库测试通过”。
 
 ## Tasks
 
-- [ ] 1. 锁定离线 fixture、供应商合同与值状态边界
+- [x] 1. 锁定离线 fixture、供应商合同与值状态边界
   - **Requirements:** R2, R5, R6, R9, R10, R11, R13, R16, R19
   - 建立抖音/小红书 `media_user_info` 与 `user_video_list` fixture 清单、来源、checksum 和 evidence label；明确 raw3 是解析后包络，raw4/raw5/raw8 是保存的请求/响应样本，都不替代实现层 raw-before-parse 故障注入。
   - 定义 versioned Adapter 输入/输出合同：requested action、expected response action、captured actual response action、五态值状态（`value/missing/explicit_null/invalid/unsupported`）、外部 ID text、identifier namespace、`content_kind`、完整 entries 和 typed cursor；expected/actual 必须分列，mismatch 保留两值并分类。
@@ -40,6 +40,27 @@
     - 主导作者：21/21 绑定；唯一最高但低于 80%、tie、空作者均拒绝；
     - 非主页入口、`unknown` 入口类型和三次失败都不产生账号/归属；
     - fixture-observed tuple 不能在 production environment 激活；尝试真实 socket 或未注册 platform/action/mode 时测试立即失败，且没有付费调用。
+  - **完成记录（2026-11-04）：** 本任务只在**合同层**证明，没有数据库、没有 ProviderCall 持久化。`./scripts/verify.sh` 通过（Node 24.22.2；typecheck；11 个测试文件 134 条用例，离线、禁网）。
+  - **Requirements → 覆盖测试**（只列任务 1 实际覆盖的条款；其余条款由后续任务覆盖）：
+
+    | Requirement | 任务 1 覆盖的部分 | 测试 |
+    |---|---|---|
+    | R2.6 / R2.8 / R2.9 | 解码结果记录 Adapter 版本；fixture 与请求不含认证头与云凭证特征；manifest 声明 raw3 是解析后包络、不替代 raw-before-parse | `decode-profile.test.ts`、`tests/harness/fixtures.test.ts` |
+    | R3.1–R3.5 / R3.10 | 入口类型 `home/video/note/unknown`；最小清洗读法（前缀保留、截掉第一个 URL 之后）；非主页入口拒绝且不可重试；最多三次 = 对 `RESULT_VALIDATION_FAILED` 的有界重试；成功路径 = 主页 1 + 列表 1 | `locator.test.ts`、`strategy.test.ts` |
+    | R4.1 / R4.2 | 三次耗尽的终态决定与被拒入口的结果里没有任何账号/归属/快照字段（类型与键集合断言）；真正「库里无新增」由任务 4/5 验证 | `strategy.test.ts`、`locator.test.ts` |
+    | R5.1 / R5.5 / R5.6 / R5.7 | 外部 ID 与整数游标按文本/原文保留（含 > 2^53）；真实 0 / 缺失 / null / 非法 / `unsupported` 五态；列表播放数恒为 `unsupported`；缺 `text` 等按条目容错 | `lossless-json.test.ts`、`value-state.test.ts`、`decode-video-list.test.ts`、`decode-profile.test.ts` |
+    | R5.2 / R5.3 / R5.4 | 解码阶段为每个 ID 标注 namespace（`douyin.user_id` / `douyin.sec_uid` / `xiaohongshu.profile.user_id` / `xiaohongshu.content.user_id`）；查找、哈希复核、绑定在任务 4/5 | `decode-profile.test.ts`、`decode-video-list.test.ts` |
+    | R6.1 / R6.2 / R6.5 / R6.6 | `xhs-dominant-author.v1`：唯一最高且 ≥ 80%（含边界）；tie / 空作者 / 低占比拒绝；证据含精确计数、分母、policy 版本；21/21 正例；绑定到同一账号与 JCS 证据在任务 5 | `src/modules/identity/dominant-author.test.ts` |
+    | R9.2 / R9.4 / R9.6–R9.9 / R9.11 | 解码不截断：抖音 20、小红书 21 条全部返回；重复 post_id 不去重；`content_kind` 推断表且不输出 `mixed`；抖音封面取数组第 2 条、小红书取单值 `cover`；0 条 + `has_more=false` 是真实空列表，`result` 非数组是 `schema_drift` | `decode-video-list.test.ts` |
+    | R10.4 / R10.9 | 抖音 `max_cursor` 为 integer（`1782701295000`），小红书为 string；请求回发保持类型，超大整数不丢精度 | `decode-video-list.test.ts`、`request.test.ts` |
+    | R11.4（解码部分） | 抖音 19 条 `HITACHI1` + 1 条 `HITACHI2023`，异作者保留；不创建账号在任务 4 | `decode-video-list.test.ts`、`dominant-author.test.ts` |
+    | R13.1 / R13.4–R13.8 | 仅两个 action 的路径；`async` 取自 mode 不写死；production 8 个 tuple 全部拒绝；fixture_observed 不能激活 production；异步列表两平台 `provider_failed`；证据引用与 manifest 文件内容互相核对；认证头矛盾与非主页链接响应缺口记入 `knownGaps` | `request.test.ts`、`capability.test.ts` |
+    | R16.1 / R16.2 / R16.3 / R16.4 | 禁网（外部 fetch / net.connect / http.get 立即失败，且测试期间任何被拒尝试都会使测试失败）；fixture transport 未登记请求立即失败；抖音/小红书 fixture 断言（HITACHI1、20/21 条、异作者、游标类型、`content_kind`、`unsupported`、封面规则、无头像/背景候选） | `tests/harness/harness.test.ts`、`decode-*.test.ts` |
+    | R19.2（取值部分） | 粉丝 0 且作品 0（均为真实 0）才是疑似空账号；缺失 / null / 非法不是；写 issue 与 `intake_status` 在任务 4 | `decode-profile.test.ts` |
+
+  - **任务 1 未覆盖、已转交后续任务的验收项：** 「重复提交不增加调用」需要幂等存储 → 任务 2（acceptance A2）；「三次失败/非主页入口后库里无账号与归属」需要数据库 → 任务 4/5；fixture 经过真实 ODS 捕获再解码的顺序与故障注入 → 任务 3。
+  - **仍开放的证据缺口（记入 capability `knownGaps`）：** 供应商对「视频/笔记链接传给 `media_user_info`」的真实响应没有样本，因此 `unknown`（短链、口令）照常发送，「返回非主页账号则终止」待任务 9 smoke 补；文档 Bearer 与实测 `X-Api-Key` 矛盾，保存的样本请求头里不含认证头。
+  - **实现留下的取舍（供复核）：** ① 外部 ID 字段为空串记 `invalid`，不当作 `missing`；② 主导作者策略的分母是非空作者条目（与 v2 evidence 的 `non_empty_author_entry_count` 一致），因此「1 条非空 + 20 条空」会通过，这是 spec 字面行为，未另加最小样本量；③ 拒绝原因枚举（`no_non_empty_author` / `tie_for_highest` / `below_threshold`）为本任务暂定，任务 5 做 evidence schema 时需与 v2 核对；④ 回环地址不受禁网限制（后续任务要连本机一次性 MySQL）。
 
 - [ ] 2. 建立 tracer 命令、幂等根任务与本地状态纵向骨架
   - **Requirements:** R1, R15, R18

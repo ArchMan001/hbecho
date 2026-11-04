@@ -1,0 +1,306 @@
+{
+  "schema": "hbecho-fixture-manifest.v1",
+  "note": "fixture 不复制：loader 直接读 source 并校验 sourceSha256。raw3 是解析后包络，raw4/raw5/raw8 是保存的请求/响应样本，都不是供应商原始字节，也不替代 raw-before-parse 故障注入。",
+  "entries": [
+    {
+      "id": "raw3.douyin.media_user_info",
+      "platform": "douyin",
+      "action": "media_user_info",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_抖音主页_MPOAlEqWpec_media_user_info.json",
+      "sourceSha256": "782288a0bc266d67ddf3149608b19d7867daf6a5218189127617954fb90d3d7c",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_user_info",
+        "errorCode": null
+      }
+    },
+    {
+      "id": "raw3.douyin.user_video_list",
+      "platform": "douyin",
+      "action": "user_video_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_抖音主页_MPOAlEqWpec_user_video_list.json",
+      "sourceSha256": "19a1ba58200d02dc0056cd4c5a0d2efd140501fbb01a5264694507965d10f504",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "user_video_list",
+        "errorCode": null
+      }
+    },
+    {
+      "id": "raw3.xiaohongshu.media_user_info",
+      "platform": "xiaohongshu",
+      "action": "media_user_info",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_日立中央空调_media_user_info.json",
+      "sourceSha256": "bd3fe8b854b31f038dfc9dd6c8022365e9db564ec8d328ece14fb68baed2a87d",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_user_info",
+        "errorCode": null
+      }
+    },
+    {
+      "id": "raw3.xiaohongshu.user_video_list",
+      "platform": "xiaohongshu",
+      "action": "user_video_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_日立中央空调_user_video_list.json",
+      "sourceSha256": "6b4495e84b80853590efd664fb6a2e98716e3b477a047aa603c72d8dec37a246",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "user_video_list",
+        "errorCode": null
+      }
+    },
+    {
+      "id": "raw4.C01",
+      "platform": "douyin",
+      "action": "media_user_info",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw4-2026-10-28/C01-douyin-media_user_info-sync-attempt1.json",
+      "sourceSha256": "dd84d382ad27df99d2ce4e662443babe3ce78971e862e9abceda3674e095047f",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_user_info",
+        "errorCode": null
+      }
+    },
+    {
+      "id": "raw4.C02",
+      "platform": "xiaohongshu",
+      "action": "media_user_info",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw4-2026-10-28/C02-xiaohongshu-media_user_info-sync-attempt1.json",
+      "sourceSha256": "d7e746d2f38220896cabf942a6dabe68de37813affbef02741a8dd24e8c95d41",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_user_info",
+        "errorCode": null
+      }
+    },
+    {
+      "id": "raw4.C03",
+      "platform": "douyin",
+      "action": "user_video_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw4-2026-10-28/C03-douyin-user_video_list-sync-attempt1.json",
+      "sourceSha256": "bd6551e7b3b8e74bf9f1e9dbab77147e274dc1f86be1307826c9a419cf1ac9fd",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "user_video_list",
+        "errorCode": null
+      }
+    },
+    {
+      "id": "raw4.C04",
+      "platform": "xiaohongshu",
+      "action": "user_video_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw4-2026-10-28/C04-xiaohongshu-user_video_list-sync-attempt1.json",
+      "sourceSha256": "c214a9decac0d893116d404c4b16571ae69005e77d060d85fee09af5e4ce94d0",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "user_video_list",
+        "errorCode": null
+      }
+    },
+    {
+      "id": "raw4.C09.submit",
+      "platform": "douyin",
+      "action": "media_user_info",
+      "mode": "async",
+      "role": "submit",
+      "source": "aimaster接口文档/测试结果/raw4-2026-10-28/C09-douyin-media_user_info-async-attempt1.json",
+      "sourceSha256": "efb92eda363fa46de9df185dce94a458e02d263a457c6da2ea1c45f75699f703",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 202,
+        "taskStatus": "running",
+        "action": "media_user_info",
+        "errorCode": null
+      }
+    },
+    {
+      "id": "raw4.C09.poll1",
+      "platform": "douyin",
+      "action": "media_user_info",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw4-2026-10-28/C09-douyin-poll1.json",
+      "sourceSha256": "44af9b980226ba95a20ae444765075edb1a43302634d03ce13f596cf3a5ff917",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_user_info",
+        "errorCode": null
+      }
+    },
+    {
+      "id": "raw5.C02.submit",
+      "platform": "xiaohongshu",
+      "action": "media_user_info",
+      "mode": "async",
+      "role": "submit",
+      "source": "aimaster接口文档/测试结果/raw5-2026-10-28/C02-xiaohongshu-media_user_info-async-attempt1.json",
+      "sourceSha256": "4ed655122a732bd6a040d92b85522a002e65de7bd1de49e2cf4a332096dd44ce",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 202,
+        "taskStatus": "running",
+        "action": "media_user_info",
+        "errorCode": null
+      }
+    },
+    {
+      "id": "raw5.C02.poll1",
+      "platform": "xiaohongshu",
+      "action": "media_user_info",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw5-2026-10-28/C02-xiaohongshu-poll1.json",
+      "sourceSha256": "0dd752ea53d504a5eb94a59280fa1e5e954b6d6197a40117f2ca64e25f07c797",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_user_info",
+        "errorCode": null
+      }
+    },
+    {
+      "id": "raw4.C10.poll1",
+      "platform": "xiaohongshu",
+      "action": "user_video_list",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw4-2026-10-28/C10-xiaohongshu-poll1.json",
+      "sourceSha256": "a90aab4e3cb458723dd50e17efec72702f2c6389d825b3d4925b60ab78a58d84",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "provider_failed",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "failed",
+        "action": "user_video_list",
+        "errorCode": "RESULT_VALIDATION_FAILED"
+      }
+    },
+    {
+      "id": "raw5.C04.poll1",
+      "platform": "xiaohongshu",
+      "action": "user_video_list",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw5-2026-10-28/C04-xiaohongshu-poll1.json",
+      "sourceSha256": "e4bf040dfe9cd880105435b13cb9504d7d4431f52e1aac0440581769fd2c976d",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "provider_failed",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "failed",
+        "action": "user_video_list",
+        "errorCode": "RESULT_VALIDATION_FAILED"
+      }
+    },
+    {
+      "id": "raw8.A2.poll1",
+      "platform": "douyin",
+      "action": "user_video_list",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw8-2026-10-28/A2-dy-list-async-poll1.json",
+      "sourceSha256": "8f3d651f9d54f170403652a738ffd14f64351e1de11d50660080eb84dc1ac6a3",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "provider_failed",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "failed",
+        "action": "user_video_list",
+        "errorCode": "RESULT_VALIDATION_FAILED"
+      }
+    }
+  ]
+}

@@ -1688,7 +1688,14 @@ OSS_ACCESS_KEY_SECRET=<从密码管理器取>
 OSS_ENDPOINT=oss-<region>.aliyuncs.com
 
 # ── 本机 smoke 的数据库（pnpm smoke run 必填）──────
-HBECHO_DATABASE_URL=<待定：用哪一个库跑 smoke>
+# 2026-11-04 决策（liuxuekui）：用本机专用持久库 hbecho_smoke，容器 hbecho-smoke-mysql（127.0.0.1:3307）。
+# 与 *_test 一次性库的区别：smoke 的批次、ProviderCall 与 ODS 引用要留到复查，所以不 --rm，也不在跑前 DROP。
+# 重建命令（MySQL 8.4；--skip-log-bin 是必需的——binlog 开启时非 SUPER 用户建不了迁移里的触发器）：
+#   docker run -d --name hbecho-smoke-mysql -e MYSQL_ROOT_PASSWORD=<随机> -e MYSQL_DATABASE=hbecho_smoke \
+#     -e MYSQL_USER=hbecho -e MYSQL_PASSWORD=<随机> -p 127.0.0.1:3307:3306 \
+#     mysql:8.4 --default-time-zone=+00:00 --skip-log-bin
+#   node --env-file=.env --import tsx src/db/migrate.ts
+HBECHO_DATABASE_URL=mysql://hbecho:<口令>@127.0.0.1:3307/hbecho_smoke
 ```
 
 `AIMASTER_ENABLED` 默认 `false` 是刻意的：默认测试必须离线、必须用 fixture/fake transport/fake OSS，**禁止 CI 或普通测试发起真实付费调用**。真实 smoke 需要人工批准、显式开关、固定预算和审计摘要。开关默认关，把"忘记关"变成"忘记开"。

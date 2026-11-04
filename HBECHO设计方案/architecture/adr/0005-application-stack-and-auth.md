@@ -127,9 +127,9 @@ hbdam 已在生产前验证了一套 Node / TypeScript 栈，其中认证、ORM�
 
 在这个过程里发现并处理的 MySQL / drizzle 限制（其中 3 项是 v2 文字与 MySQL 实际不一致，已在 schema 注释中标明）：
 
-1. **CHECK 不能引用带 `ON DELETE SET NULL` 的列**（错误 3823）。v2 §9.5 同时要求 `reconciled_by_provider_call_id` 自引用 `SET NULL` 与引用它的 CHECK，二者不能共存。处理：该 FK 用 `RESTRICT`——§12.7 规定的清理顺序（先删引用方、再删被引用方）本来就满足；**v2 §9.5 的 `ON DELETE SET NULL` 与随后的清理说明需要修订。**
-2. **CHECK 不能引用自增列**（错误 3818）。v2 §9.5 的「reconciled_by 不等于自身 ID」改由 `BEFORE UPDATE` 触发器保证（`trg_calls_reconciled_not_self`）。
-3. **`oss_objects` 唯一键超过 InnoDB 3072 字节索引上限**：`(provider_code, region, bucket, object_key, object_version)` 合计 1887 字符，按 utf8mb4 是 7548 字节（实测错误 1071）。处理：这五列用 `ascii_bin`（1887 字节）；对象 key 与版本由我们生成，约束为 ASCII。**v2 §11.1 需要补这条。**
+1. **CHECK 不能引用带 `ON DELETE SET NULL` 的列**（错误 3823）。v2 §9.5 同时要求 `reconciled_by_provider_call_id` 自引用 `SET NULL` 与引用它的 CHECK，二者不能共存。处理：该 FK 用 `RESTRICT`——§12.7 规定的清理顺序（先删引用方、再删被引用方）本来就满足；v2 §9.5 已于 2026-11-04 同步修订（改 `RESTRICT`）。
+2. **CHECK 不能引用自增列**（错误 3818）。v2 §9.5 的「reconciled_by 不等于自身 ID」改由 `BEFORE UPDATE` 触发器保证（`trg_calls_reconciled_not_self`）。v2 §9.5 已同步。
+3. **`oss_objects` 唯一键超过 InnoDB 3072 字节索引上限**：`(provider_code, region, bucket, object_key, object_version)` 合计 1887 字符，按 utf8mb4 是 7548 字节（实测错误 1071）。处理：这五列用 `ascii_bin`（1887 字节）；对象 key 与版本由我们生成，约束为 ASCII。v2 §11.1 已于 2026-11-04 同步补上。
 4. drizzle-kit 不能序列化 BigInt 默认值：`.default(0n)` 会让 `generate` 崩溃，改用 ``.default(sql`0`)``。
 5. 自动生成的外键名超过 MySQL 64 字符上限的有 18 个，列级 `.references()` 不能命名，改为表级 `foreignKey({ name })`。
 6. pnpm 11 把未审批的依赖构建脚本当成 `install` 错误：`pnpm-workspace.yaml` 里 `allowBuilds.esbuild: false`（esbuild 的 postinstall 只校验二进制，预编译包已随依赖安装）。

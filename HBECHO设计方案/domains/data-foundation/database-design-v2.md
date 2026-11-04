@@ -19,6 +19,11 @@
   8. §9.2 批次状态增加 `queued` 与 `expired`（D-33）；
   9. 上面待修订列表第 ② 项（取消 `content_discoveries`）**撤回**：CONTEXT 的 ContentDiscovery 与不变量 19 仍要求保留「列表出现 + 当时归属快照」，tracer 也在用；
   10. 活动计划、参与关系、负责人名额、名单、监控判定计划的表**不在本文**，由 `a-activity-plan` 与 `d-rule-engine` 的 design 定义，引用本文的账号与组织主档。
+- **2026-11-04 修订（tracer 任务 2–4 实施中发现，已在正文改完）**：
+  11. §10.3 `content_discoveries` 新增 `owner_staff_id/owner_store_id/owner_brand_id` 三列与同空同非空 CHECK（采集当时的归属快照）；
+  12. §9.5 `reconciled_by_provider_call_id` 的外键由 `ON DELETE SET NULL` 改为 `RESTRICT`（MySQL 禁止 CHECK 引用 SET NULL 列，错误 3823），「不等于自身」由触发器 `trg_calls_reconciled_not_self` 保证（CHECK 不能引用自增列，错误 3818）；
+  13. §11.1 `oss_objects` 唯一键五列用 `ascii_bin`（utf8mb4 下 7548 字节超过 3072 字节索引上限，错误 1071）；
+  14. §8.3 `resolved_home_url` 注明当前存清洗后的入口，不是供应商确认的主页 URL。
 
 ---
 
@@ -463,7 +468,7 @@ SHA-256 = 2ecbbeebd4d015bb5685d288c0230ab92646f1d0cba08a0937b2a5def673b36d
 - `monitoring_enabled BOOLEAN NOT NULL DEFAULT TRUE`；
 - `current_home_locator LONGTEXT NOT NULL`、`current_home_locator_sha256 BINARY(32) NOT NULL`；
 - `previous_home_locator LONGTEXT NULL`、`previous_home_locator_sha256 BINARY(32) NULL`；
-- `resolved_home_url LONGTEXT NOT NULL`、`resolved_home_url_sha256 BINARY(32) NOT NULL`；
+- `resolved_home_url LONGTEXT NOT NULL`、`resolved_home_url_sha256 BINARY(32) NOT NULL`：**当前存的是清洗后的入口，不是供应商确认的主页 URL**（2026-11-04）。raw3 保存的 `media_user_info` 响应（抖音、小红书）里没有主页 URL 字段（URL 只出现在请求里），所以 tracer 写入「最小清洗后的入口」（与 `current_home_locator` 的清洗值一致，区别是后者另存原文）。供应商以后返回可确认的主页 URL 时，由新的 Adapter 版本改写这一列并在本说明中去掉这条限定；在此之前下游不得把它当成已确认的主页地址；
 - `intake_status VARCHAR(32) NOT NULL`：录入状态 `normal/suspected_empty`（A §11.6；`invalid_link` 不建归属行，只出现在根任务与导入行结果中）。**实际监控 = 本行 `monitoring_enabled` 且上级链有效 且 `intake_status='normal'`**；疑似空账号不关闭开关，人工确认后改为 `normal` 即开始采集；
 - `monitoring_closed_reason VARCHAR(32) NULL`：`manual/unreferenced_15d`；`monitoring_enabled = FALSE` 时必填（A §11.5：计划恢复时只重开 `unreferenced_15d`）；
 - `slot_released_at DATETIME(6) NULL`：账号被人工确认已删除时写入，释放该专员在该平台的名额（D-69）；改绑是更新本行的 `staff_id`，原专员的名额随之自然释放，不需要写这一列；
@@ -674,7 +679,7 @@ Tracer 提交映射为一个 `trigger_type='manual'` 的批次和一个根 `reso
 
 `ambiguous → reconciled terminal` 只能由受限 reconciliation 写入事务完成：事务同时锁定原调用和 `reconciled_by_provider_call_id` 指向的非自身调用；要求两者 `sync_task_id/provider_id/platform_id` 一致、至少一个 provider task/request ID exact 匹配；目标调用必须已经是 terminal、`terminal_captured_at` 非空且拥有完整、完整性校验通过的 response payload；版本化 `reconciliation_method` 必须从该 captured payload 解码出同一 remote effect 的明确 terminal success 或 terminal failure，并分别唯一映射到 `reconciled_succeeded` 或 `reconciled_failed`。pending、invalid、correlation-only、自引用、其他 logical effect 或没有完整终态 payload 的调用都不能终态化原调用，原调用保持 `ambiguous`。
 
-CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_provider_call_id` 非空且不等于自身 ID；`send_started_at >= prepared_at`；完整响应 `response_received_at >= send_started_at`；ambiguous `ambiguous_at >= send_started_at`；普通 sent terminal `finished_at >= send_started_at`；reconciled terminal `finished_at >= reconciled_at >= ambiguous_at`；所有 terminal 的 `terminal_captured_at >= finished_at`；非空 `elapsed_seconds >= 0`。跨行相关性与 outcome 映射由上述受限事务强制。`reconciled_by_provider_call_id` 是可空一年期自引用并使用 `ON DELETE SET NULL`；清理器先删除引用该 reconcile call 且同样到期的原调用，避免把自引用作为唯一证明的存续行置空后违反 CHECK。索引：`UQ(sync_task_id, attempt_no, call_sequence)`；`IDX(provider_task_id)`；`IDX(provider_request_id)`；`IDX(reconciled_by_provider_call_id)`；`IDX(prepared_at, provider_call_id)`；`IDX(call_status, prepared_at)`；`IDX(outcome, finished_at)`；`IDX(expires_at)`。
+CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_provider_call_id` 非空；「不等于自身 ID」不能写成 CHECK（MySQL 禁止 CHECK 引用自增列，错误 3818），由 `BEFORE UPDATE` 触发器 `trg_calls_reconciled_not_self` 保证（2026-11-04）；`send_started_at >= prepared_at`；完整响应 `response_received_at >= send_started_at`；ambiguous `ambiguous_at >= send_started_at`；普通 sent terminal `finished_at >= send_started_at`；reconciled terminal `finished_at >= reconciled_at >= ambiguous_at`；所有 terminal 的 `terminal_captured_at >= finished_at`；非空 `elapsed_seconds >= 0`。跨行相关性与 outcome 映射由上述受限事务强制。`reconciled_by_provider_call_id` 是可空一年期自引用，外键用 `ON DELETE RESTRICT`（NO ACTION）：MySQL 禁止 CHECK 引用带 `ON DELETE SET NULL` 的列（错误 3823），而 reconciled 终态的 CHECK 必须引用本列（2026-11-04 修订，原写 `SET NULL`）；§12.7 的清理顺序本来就要求先删除引用该 reconcile call 且同样到期的原调用，再删被引用的调用，因此 RESTRICT 不阻塞清理，且不会把自引用作为唯一证明的存续行置空后违反 CHECK。索引：`UQ(sync_task_id, attempt_no, call_sequence)`；`IDX(provider_task_id)`；`IDX(provider_request_id)`；`IDX(reconciled_by_provider_call_id)`；`IDX(prepared_at, provider_call_id)`；`IDX(call_status, prepared_at)`；`IDX(outcome, finished_at)`；`IDX(expires_at)`。
 
 每次提交、轮询、分页和重试都是独立调用。发送前必须先持久化 `prepared` call intent 及 exact request body；切到 `in_flight` 后才允许网络发送。若进程在发送后、终态落地前失去确定结果，该 call 进入 `ambiguous`：供应商幂等合同或 provider task/request ID 只能证明可以安全发起新 attempt/lookup，不能直接证明成功或失败；原调用的终态化必须遵守上述 captured reconcile-call 事务，否则停止盲目重发并进入人工/对账处理。调用元数据创建时写入一年期 `expires_at`，即使没有终态 payload 也可独立到期。API Key、Authorization、Cookie 等秘密不入库。
 
@@ -816,9 +821,9 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 
 ### 10.3 `content_discoveries`
 
-字段：`discovery_id BIGINT PK`；`batch_id/assignment_id/content_id BIGINT NOT NULL FK`；`page_no INT NOT NULL`；`position_in_page INT NOT NULL`；`absolute_position INT NOT NULL`；`is_potentially_pinned BOOLEAN NOT NULL`；`discovered_at DATETIME(6) NOT NULL`；`source_provider_call_id BIGINT NULL`；`created_at DATETIME(6) NOT NULL`。
+字段：`discovery_id BIGINT PK`；`batch_id/assignment_id/content_id BIGINT NOT NULL FK`；`page_no INT NOT NULL`；`position_in_page INT NOT NULL`；`absolute_position INT NOT NULL`；`is_potentially_pinned BOOLEAN NOT NULL`；`discovered_at DATETIME(6) NOT NULL`；`source_provider_call_id BIGINT NULL`；`owner_staff_id/owner_store_id/owner_brand_id BIGINT NULL`：采集当时的归属快照（CONTEXT 不变量 19、D-67，2026-11-04 新增），分别指向 `media_staff`、`stores`、`brands`，外键 `ON DELETE RESTRICT`（NO ACTION），所以被历史发现引用的专员、门店、品牌不能物理删除；`created_at DATETIME(6) NOT NULL`。
 
-约束/索引：`UQ(batch_id, assignment_id, content_id)`；页码和位置非负；`IDX(assignment_id, batch_id, absolute_position)`；`IDX(content_id, batch_id)`；`IDX(batch_id, is_potentially_pinned)`。
+约束/索引：`UQ(batch_id, assignment_id, content_id)`；`CHECK` 三个 owner 列要么全空要么全非空（`watch_type='external'` 的账号没有专员、门店和品牌，三列为空）；改绑只更新归属行，不改写这三列；页码和位置非负；`IDX(assignment_id, batch_id, absolute_position)`；`IDX(content_id, batch_id)`；`IDX(batch_id, is_potentially_pinned)`。
 
 同一作品出现在两个被监控账号列表时，属于两条按账号的内容，各有自己的快照与 discovery。返回作者不同默认共创，不创建作者账号。
 
@@ -862,7 +867,7 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 - `expires_at DATETIME(6) NULL`；`verified_at/deleted_at DATETIME(6) NULL`；
 - `created_at/updated_at DATETIME(6) NOT NULL`。
 
-约束/索引：`UQ(provider_code, region, bucket, object_key, object_version)`；`UQ(oss_object_id, object_category)` 供子表用复合 FK 强制用途隔离；available 对象要求长度、SHA 和验证时间；`IDX(status, expires_at)`；`IDX(sha256)`。Bucket 私有，启用服务端加密；数据库不保存长期可访问 URL。
+约束/索引：`UQ(provider_code, region, bucket, object_key, object_version)`，这五列使用 `ascii` 字符集与 `ascii_bin` 排序规则（2026-11-04 修订）：五列长度合计 1887 字符，按 utf8mb4 是 7548 字节，超过 InnoDB 索引 3072 字节上限（MySQL 8.4 实测错误 1071），ASCII 是 1887 字节；对象 key 与版本由我们生成，约束为 ASCII，供应商返回的非 ASCII 对象名不进入这张表；`UQ(oss_object_id, object_category)` 供子表用复合 FK 强制用途隔离；available 对象要求长度、SHA 和验证时间；`IDX(status, expires_at)`；`IDX(sha256)`。Bucket 私有，启用服务端加密；数据库不保存长期可访问 URL。
 
 ### 11.2 `media_assets`
 

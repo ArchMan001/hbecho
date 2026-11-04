@@ -1,0 +1,7 @@
+ALTER TABLE `content_discoveries` ADD `owner_staff_id` bigint;--> statement-breakpoint
+ALTER TABLE `content_discoveries` ADD `owner_store_id` bigint;--> statement-breakpoint
+ALTER TABLE `content_discoveries` ADD `owner_brand_id` bigint;--> statement-breakpoint
+ALTER TABLE `content_discoveries` ADD CONSTRAINT `ck_discoveries_owner_snapshot` CHECK ((`content_discoveries`.`owner_staff_id` IS NULL AND `content_discoveries`.`owner_store_id` IS NULL AND `content_discoveries`.`owner_brand_id` IS NULL) OR (`content_discoveries`.`owner_staff_id` IS NOT NULL AND `content_discoveries`.`owner_store_id` IS NOT NULL AND `content_discoveries`.`owner_brand_id` IS NOT NULL));--> statement-breakpoint
+ALTER TABLE `content_discoveries` ADD CONSTRAINT `fk_discoveries_owner_staff` FOREIGN KEY (`owner_staff_id`) REFERENCES `media_staff`(`staff_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `content_discoveries` ADD CONSTRAINT `fk_discoveries_owner_store` FOREIGN KEY (`owner_store_id`) REFERENCES `stores`(`store_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `content_discoveries` ADD CONSTRAINT `fk_discoveries_owner_brand` FOREIGN KEY (`owner_brand_id`) REFERENCES `brands`(`brand_id`) ON DELETE no action ON UPDATE no action;

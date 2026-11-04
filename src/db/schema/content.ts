@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { type AnyMySqlColumn, boolean, check, decimal, foreignKey, index, int, json, longtext, mysqlTable, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { binText, id, inList, sha256, utc, valueStateCheck } from "../columns";
 import { externalAccounts, staffAccountAssignments } from "./accounts";
+import { brands, mediaStaff, stores } from "./org";
 import { platforms } from "./reference";
 import { odsProviderCalls, syncBatches } from "./sync";
 
@@ -147,10 +148,23 @@ export const contentDiscoveries = mysqlTable(
     isPotentiallyPinned: boolean("is_potentially_pinned").notNull(),
     discoveredAt: utc("discovered_at").notNull(),
     sourceProviderCallId: id("source_provider_call_id"),
+    // 采集当时的归属快照（CONTEXT 不变量 19、D-67）：改绑只更新归属行，不改写这三列。
+    // external 型账号没有专员 / 门店 / 品牌，三列同为空。
+    ownerStaffId: id("owner_staff_id"),
+    ownerStoreId: id("owner_store_id"),
+    ownerBrandId: id("owner_brand_id"),
     createdAt: utc("created_at").notNull(),
   },
   (t) => [
     foreignKey({ name: "fk_discoveries_assignment", columns: [t.assignmentId], foreignColumns: [staffAccountAssignments.assignmentId] }),
+    // RESTRICT：被历史发现引用的专员 / 门店 / 品牌不能物理删除
+    foreignKey({ name: "fk_discoveries_owner_staff", columns: [t.ownerStaffId], foreignColumns: [mediaStaff.staffId] }),
+    foreignKey({ name: "fk_discoveries_owner_store", columns: [t.ownerStoreId], foreignColumns: [stores.storeId] }),
+    foreignKey({ name: "fk_discoveries_owner_brand", columns: [t.ownerBrandId], foreignColumns: [brands.brandId] }),
+    check(
+      "ck_discoveries_owner_snapshot",
+      sql`(${t.ownerStaffId} IS NULL AND ${t.ownerStoreId} IS NULL AND ${t.ownerBrandId} IS NULL) OR (${t.ownerStaffId} IS NOT NULL AND ${t.ownerStoreId} IS NOT NULL AND ${t.ownerBrandId} IS NOT NULL)`,
+    ),
     foreignKey({ name: "fk_discoveries_call", columns: [t.sourceProviderCallId], foreignColumns: [odsProviderCalls.providerCallId] }).onDelete("set null"),
     uniqueIndex("uq_discoveries_batch_assignment_content").on(t.batchId, t.assignmentId, t.contentId),
     index("idx_discoveries_assignment_batch_pos").on(t.assignmentId, t.batchId, t.absolutePosition),

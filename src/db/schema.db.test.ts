@@ -21,6 +21,7 @@ import {
 import { BIG_STAFF_ID, platformIdOf, providerIdOf, seedOrg } from "../../tests/harness/seed";
 import {
   accountProfileSnapshots,
+  contentDiscoveries,
   contents,
   externalAccountIdentifiers,
   externalAccounts,
@@ -324,6 +325,75 @@ describe("内容按被观察账号保存（2026-11-04 修订）", () => {
       t.db.update(contents).set({ contentKind: "mixed" }).where(eq(contents.accountId, a1)),
       "ck_contents_kind",
     );
+  });
+});
+
+describe("content_discoveries：采集当时的归属快照（CONTEXT 不变量 19、D-67）", () => {
+  type DiscoveryInsert = typeof contentDiscoveries.$inferInsert;
+  const discovery = (over: Pick<DiscoveryInsert, "batchId" | "assignmentId" | "contentId"> & Partial<DiscoveryInsert>): DiscoveryInsert => ({
+    pageNo: 0,
+    positionInPage: 0,
+    absolutePosition: 0,
+    isPotentiallyPinned: false,
+    discoveredAt: NOW,
+    createdAt: NOW,
+    ...over,
+  });
+
+  it("三列要么全空要么全有；有值时必须指向真实的专员 / 门店 / 品牌", async () => {
+    const org = await seedOrg(t.db, NOW);
+    const batchId = await insertBatch(t.db, NOW);
+    const accountId = await insertAccount(t.db, "douyin", NOW);
+    const assignmentId = await insertAssignment(t.db, { accountId, platform: "douyin", staffId: org.staffA, now: NOW });
+    const c1 = await insertContent(t.db, { platform: "douyin", accountId, platformContentId: "p1", now: NOW });
+    const c2 = await insertContent(t.db, { platform: "douyin", accountId, platformContentId: "p2", now: NOW });
+    const c3 = await insertContent(t.db, { platform: "douyin", accountId, platformContentId: "p3", now: NOW });
+    const base = { batchId, assignmentId };
+    const full = { ownerStaffId: org.staffA, ownerStoreId: org.storeId, ownerBrandId: org.hitachiBrandId };
+
+    await expectRejected(
+      t.db.insert(contentDiscoveries).values(discovery({ ...base, contentId: c1, ownerStaffId: org.staffA })),
+      "ck_discoveries_owner_snapshot",
+    );
+    await expectRejected(
+      t.db.insert(contentDiscoveries).values(discovery({ ...base, contentId: c1, ...full, ownerStoreId: 424242n })),
+      "fk_discoveries_owner_store",
+    );
+    await t.db.insert(contentDiscoveries).values(discovery({ ...base, contentId: c2, ...full }));
+    await t.db.insert(contentDiscoveries).values(discovery({ ...base, contentId: c3 })); // external 型账号没有归属快照
+  });
+
+  it("改绑（归属行的 staff_id 被更新）之后，已发生的 discovery 的三列不变", async () => {
+    const org = await seedOrg(t.db, NOW);
+    const batchId = await insertBatch(t.db, NOW);
+    const accountId = await insertAccount(t.db, "douyin", NOW);
+    const assignmentId = await insertAssignment(t.db, { accountId, platform: "douyin", staffId: org.staffA, now: NOW });
+    const contentId = await insertContent(t.db, { platform: "douyin", accountId, platformContentId: "p1", now: NOW });
+    await t.db.insert(contentDiscoveries).values(
+      discovery({ batchId, assignmentId, contentId, ownerStaffId: org.staffA, ownerStoreId: org.storeId, ownerBrandId: org.hitachiBrandId }),
+    );
+
+    // 受审计的管理员改绑：归属行改给另一门店的专员
+    await t.db.update(staffAccountAssignments).set({ staffId: org.staffC }).where(eq(staffAccountAssignments.assignmentId, assignmentId));
+
+    const [row] = await t.db.select().from(contentDiscoveries);
+    expect(row).toMatchObject({ ownerStaffId: org.staffA, ownerStoreId: org.storeId, ownerBrandId: org.hitachiBrandId });
+    const [a] = await t.db.select().from(staffAccountAssignments);
+    expect(a!.staffId).toBe(org.staffC); // 当前归属已经变了，历史发现没有
+  });
+
+  it("被发现记录引用的专员 / 门店 / 品牌不能被物理删除（RESTRICT）", async () => {
+    const org = await seedOrg(t.db, NOW);
+    const batchId = await insertBatch(t.db, NOW);
+    const accountId = await insertAccount(t.db, "douyin", NOW);
+    const assignmentId = await insertAssignment(t.db, { accountId, platform: "douyin", staffId: org.staffA, now: NOW });
+    const contentId = await insertContent(t.db, { platform: "douyin", accountId, platformContentId: "p1", now: NOW });
+    await t.db.insert(contentDiscoveries).values(
+      discovery({ batchId, assignmentId, contentId, ownerStaffId: org.staffA, ownerStoreId: org.storeId, ownerBrandId: org.hitachiBrandId }),
+    );
+    // 先改绑，让当前归属行不再引用 staffA；这样挡住删除的只剩 discovery 的快照外键
+    await t.db.update(staffAccountAssignments).set({ staffId: org.staffC }).where(eq(staffAccountAssignments.assignmentId, assignmentId));
+    await expectRejected(t.db.delete(mediaStaff).where(eq(mediaStaff.staffId, org.staffA)), "fk_discoveries_owner_staff");
   });
 });
 

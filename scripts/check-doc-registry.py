@@ -28,9 +28,10 @@ REQUIRED = [
     "HBECHO设计方案/runbooks/server-operations-runbook.md",
     "HBECHO设计方案/runbooks/dev-test-deploy-workflow.md",
     "HBECHO设计方案/runbooks/new-server-bootstrap-checklist.md",
-    ".kiro/specs/data-foundation-tracer/requirements.md",
-    ".kiro/specs/data-foundation-tracer/design.md",
-    ".kiro/specs/data-foundation-tracer/tasks.md",
+    ".kiro/specs/a-data-foundation-tracer/requirements.md",
+    ".kiro/specs/a-data-foundation-tracer/design.md",
+    ".kiro/specs/a-data-foundation-tracer/tasks.md",
+    ".kiro/specs/a-data-foundation-tracer/acceptance.md",
 ]
 
 # 只有 design.md 的 spec，必须在 HBECHO设计方案/INDEX.md 明确登记。新增条目要单独评审，不要在这里顺手放宽。

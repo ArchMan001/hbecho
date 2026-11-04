@@ -22,14 +22,13 @@ inclusion: always
 
 - GitHub ⭐ 5,000+（优先 10,000+）
 - 近 6 个月有活跃维护（commit / release）
-- 与项目技术栈兼容（当前只冻结了 MySQL / OSS / Docker，语言与框架未冻结——见 ADR-0004）
+- 与项目技术栈兼容（见 ADR-0005：Node/TypeScript + Next.js + Drizzle + better-auth；MySQL / OSS / Docker）
 - 是**库**优于**独立服务**（不增加部署和运维负担）
 
 触发场景：认证/鉴权、文件解析、全文检索、任务队列、数据校验、日志/审计、前端 UI 组件。
 
 ## 本项目的特殊约束
 
-- **框架与 ORM 未冻结**：在 ADR-0004 关闭之前，不得以"某个库需要它"为理由反向锁定框架。
 - **供应商调用不能靠通用 HTTP 客户端库解决**：raw-before-parse、ProviderCall 分段、ambiguous 语义、capability gate 都是本项目自己的合同，任何现成 SDK 都不认识。这里属于第 7/8 级自建，但**HTTP 传输、JSON 解析、OSS SDK、MySQL 驱动必须用成熟实现**。
 - **云服务官方 SDK 不受星标限制**：阿里云 OSS / 短信等走官方 SDK 或平台原生能力。
 - **不要为了用开源而引入独立服务**：例如为了一个队列引入 Redis，会新增一整套基础设施，并与 v2 的 MySQL 租约/fencing 设计冲突。

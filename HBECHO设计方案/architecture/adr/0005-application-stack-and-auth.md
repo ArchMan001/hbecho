@@ -94,7 +94,9 @@ hbdam 已在生产前验证了一套 Node / TypeScript 栈，其中认证、ORM�
 - 迁移单一来源（drizzle-kit）；`db:push` 禁用，只走 `db:migrate`。
 - 类型系统可在编译期拦住"查询层缺少身份上下文"的调用。
 - 认证表由 better-auth 拥有，授权表由本项目拥有；两者不得各建一套 `User`。
-- 部署拓扑与反代形态仍开放（ADR README #4）。
+- 部署拓扑与反代形态已由 ADR-0006 关闭（Docker Compose + 宿主 Nginx）。
+- **进程形态**（2026-11-04 补）：同一仓库、同一镜像、两个启动命令——Web（Next.js）与 Worker（独立 Node 进程，领取 MySQL 任务表）。Worker 不在 Next.js 进程内运行；同步、媒资下载、判定执行、投影构建、报表导出都在 Worker 里跑。两者共用 Drizzle schema 与迁移。Python 能力服务见 ADR-0012。
+- **报表导出**用 exceljs 仅写入，见 ADR-0011；本 ADR「备选与不选原因」对 exceljs 的否决只针对**导入**（解析外部 xlsx）。
 
 ## 已知坑（来自 hbdam 的实测，实施时必须处理）
 
@@ -106,6 +108,7 @@ hbdam 已在生产前验证了一套 Node / TypeScript 栈，其中认证、ORM�
 | 4 | `/phone-number/reset-password` 在无 credential account 时会自动建行 | 激活与忘记密码是同一条库路径，激活无需额外端点 |
 | 5 | 登录失败限流不由 better-auth 承担 | 自建限流（IP + 账号双维度） |
 | 6 | 多租户组织插件不适用于本项目 | 组织归属用业务表，不用租户模型 |
+| 7 | drizzle-kit 能否生成 v2 需要的 CHECK、复合外键、生成列与受限写入过程（未核实） | tracer 第一个建表任务里验证；不支持的部分写手写 SQL 迁移，并回来补本行 |
 
 ## 现在谁在守
 

@@ -3,11 +3,22 @@
 - **目标数据库**：MySQL 8.0.16+（InnoDB）
 - **对象存储**：私有 OSS
 - **开发语言**：TypeScript、Python
-- **文档状态**：`draft`（2026-10-27 起，待 A 域 PRD 逐表复核；复核前不作为建表依据）
+- **文档状态**：`draft`（2026-10-27 起，待 A 域 PRD 逐表复核；2026-11-04 已按修订清单完成归属、内容粒度、值状态等十项修订，见下方「2026-11-04 修订」）
 - **设计日期**：2026-09-02
 - **表数量**：28
 - **前版关系**：v1 的历史正文保留并已标 archived；本文件是依据新业务口径重新设计的唯一当前 v2
 - **待修订（2026-10-27 起）**：① §8.3 归属表去掉有效区间，改为账号上的当前归属；② §10.3 取消独立 `content_discoveries`，位置信息并入内容快照；③ §12.5–§12.6 去掉跨账号 fan-in；④ §20 验收项 3 改为“一个账号只有一条当前归属”；⑤ §9.2 批次状态增加 `queued`（串行排队）
+- **2026-11-04 修订（按 PRD 修订清单 R6-05 / D-69 / D-70）**：以下各项已在本文正文改完，实现以正文为准：
+  1. §8.3 归属表：去掉 `valid_from/valid_to`，一个账号一行当前记录；新增 `platform_id`（与账号复合外键）、名额释放、录入状态、监控关闭原因；同一专员同一平台最多一个占用名额的账号（D-69）；
+  2. §10.1 `contents` 改为**按被观察账号**的内容根：新增 `account_id`，唯一键 `(platform_id, account_id, platform_content_id_sha256)`；同一作品在两个账号下是两条内容（D-23）。快照、发现、评论都挂在这条按账号的内容上，因此 §10.2 的唯一键 `(batch_id, content_id)` 不变；跨账号 fan-in 规则删除；
+  3. §5.2 值状态增加 `unsupported`（接口或平台不提供该指标，例如列表播放数）；
+  4. §10.1 `content_kind` 去掉 `mixed`，只有 `video/image/text/unknown`；
+  5. §11.3 媒资引用增加标准化衍生图角色 `cover_normalized/avatar_normalized/background_normalized`；衍生图是独立资产（独立 SHA-256，D-56）；
+  6. §7.7 专员手机号只在有效专员中唯一（D-70）；
+  7. §6.3 命名空间改为代码枚举（D-25）：不建 `identifier_namespaces` 表，所有 `*_namespace_id` 外键改为 `*_namespace_code VARCHAR(128)` + CHECK；
+  8. §9.2 批次状态增加 `queued` 与 `expired`（D-33）；
+  9. 上面待修订列表第 ② 项（取消 `content_discoveries`）**撤回**：CONTEXT 的 ContentDiscovery 与不变量 19 仍要求保留「列表出现 + 当时归属快照」，tracer 也在用；
+  10. 活动计划、参与关系、负责人名额、名单、监控判定计划的表**不在本文**，由 `a-activity-plan` 与 `d-rule-engine` 的 design 定义，引用本文的账号与组织主档。
 
 ---
 
@@ -209,7 +220,7 @@ CREATE DATABASE media_platform
 指标状态统一为：
 
 ```text
-value | missing | explicit_null | invalid
+value | missing | explicit_null | invalid | unsupported
 ```
 
 约束：
@@ -218,11 +229,11 @@ value | missing | explicit_null | invalid
 CHECK (
   (state = 'value' AND value IS NOT NULL AND value >= 0)
   OR
-  (state IN ('missing','explicit_null','invalid') AND value IS NULL)
+  (state IN ('missing','explicit_null','invalid','unsupported') AND value IS NULL)
 )
 ```
 
-`0` 属于有效值；禁止 `COALESCE(value, 0)` 把未知变成零。
+`0` 属于有效值；禁止 `COALESCE(value, 0)` 把未知变成零。`unsupported` 表示接口或平台不提供该指标（例如列表接口的播放数：抖音返回 0、小红书无字段，都记 `unsupported`），与 `missing`（本该有但这次没返回）不同。
 
 ### 5.3 外键与删除
 
@@ -303,6 +314,8 @@ TypeScript、Python、SQL migration fixture 与任何其他实现必须对上述
 
 ### 6.3 `identifier_namespaces`
 
+> **2026-11-04（D-25）**：本表不建，命名空间改为代码枚举；下列首批命名空间作为枚举值，引用处用 `namespace_code VARCHAR(128)` + CHECK。下文保留原定义供追溯。
+
 **作用**：定义账号外部标识的语义和比较边界。
 
 字段：`namespace_id BIGINT PK`；`namespace_code VARCHAR(128) NOT NULL`；`platform_id BIGINT NOT NULL FK`；`provider_id BIGINT NULL FK`；`description VARCHAR(512) NOT NULL`；`status VARCHAR(32) NOT NULL`；`created_at/updated_at DATETIME(6) NOT NULL`。
@@ -369,7 +382,7 @@ TypeScript、Python、SQL migration fixture 与任何其他实现必须对上述
 
 字段：`staff_id BIGINT PK`；`store_id BIGINT NOT NULL FK`；`staff_name VARCHAR(100) NOT NULL`；`phone VARCHAR(32) NOT NULL`；`status VARCHAR(32) NOT NULL`；`monitoring_enabled BOOLEAN NOT NULL DEFAULT TRUE`；`created_at/updated_at DATETIME(6) NOT NULL`。
 
-约束/索引：`UQ(phone)`；`IDX(store_id, status, monitoring_enabled)`。手机号先规范化再比较，明文保存；姓名不唯一。该记录代表门店/品牌业务身份。
+约束/索引：`active_phone VARCHAR(32) GENERATED ALWAYS AS (CASE WHEN status='active' THEN phone END) STORED` + `UQ(active_phone)`：手机号只在有效专员中唯一，停用专员保留原号但不占号（D-70）；`IDX(phone)`；`IDX(store_id, status, monitoring_enabled)`。手机号先规范化再比较，明文保存；姓名不唯一。该记录代表门店/品牌业务身份。
 
 ---
 
@@ -446,18 +459,18 @@ TypeScript、Python、SQL migration fixture 与任何其他实现必须对上述
 
 - `assignment_id BIGINT PK`；
 - `watch_type VARCHAR(16) NOT NULL DEFAULT 'staff'`：`staff` / `external`；
-- `staff_id BIGINT NULL FK`；`account_id BIGINT NOT NULL FK`；
+- `staff_id BIGINT NULL FK`；`account_id BIGINT NOT NULL`；`platform_id BIGINT NOT NULL`：`FK(account_id, platform_id) → external_accounts(account_id, platform_id)`（`external_accounts` 补 `UQ(account_id, platform_id)`）；
 - `monitoring_enabled BOOLEAN NOT NULL DEFAULT TRUE`；
 - `current_home_locator LONGTEXT NOT NULL`、`current_home_locator_sha256 BINARY(32) NOT NULL`；
 - `previous_home_locator LONGTEXT NULL`、`previous_home_locator_sha256 BINARY(32) NULL`；
 - `resolved_home_url LONGTEXT NOT NULL`、`resolved_home_url_sha256 BINARY(32) NOT NULL`；
-- `valid_from DATETIME(6) NOT NULL`；
-- `valid_to DATETIME(6) NULL`；
-- `ended_reason VARCHAR(128) NULL`；
-- `active_account_guard BIGINT GENERATED`：有效记录时等于 `account_id`，否则 null；
+- `intake_status VARCHAR(32) NOT NULL`：录入状态 `normal/invalid_link/suspected_empty`（A §11.6）；
+- `monitoring_closed_reason VARCHAR(32) NULL`：`manual/unreferenced_15d`；`monitoring_enabled = FALSE` 时必填（A §11.5：计划恢复时只重开 `unreferenced_15d`）；
+- `slot_released_at DATETIME(6) NULL`：账号被人工确认已删除时写入，释放该专员在该平台的名额（D-69）；改绑是更新本行的 `staff_id`，原专员的名额随之自然释放，不需要写这一列；
+- `active_staff_platform BIGINT GENERATED ALWAYS AS (CASE WHEN watch_type='staff' AND slot_released_at IS NULL THEN staff_id END) STORED`；
 - `created_at/updated_at DATETIME(6) NOT NULL`。
 
-约束/索引：`CHECK ((watch_type='staff' AND staff_id IS NOT NULL) OR (watch_type='external' AND staff_id IS NULL))`；`UQ(active_account_guard)` 保证一个账号在当前只有一条记录，两种类型都适用；`valid_to > valid_from`；上一入口值与摘要同空同非空；`IDX(staff_id, valid_from, valid_to)`；`IDX(account_id, valid_from)`；`IDX(watch_type, monitoring_enabled)`。
+约束/索引：`CHECK ((watch_type='staff' AND staff_id IS NOT NULL) OR (watch_type='external' AND staff_id IS NULL))`；`UQ(account_id)` 保证一个账号只有一条当前记录，两种类型都适用（D-16 / D-28：改绑是更新这一行并记审计，不建区间历史）；`UQ(active_staff_platform, platform_id)` 保证一个专员在同一平台最多一个占用名额的账号（D-69，外部型与已释放的行该列为 NULL，不受约束）；上一入口值与摘要同空同非空；`CHECK(monitoring_enabled OR monitoring_closed_reason IS NOT NULL)`；`IDX(staff_id, platform_id)`；`IDX(watch_type, monitoring_enabled)`。
 
 **两种类型的行为差异**：
 
@@ -521,7 +534,7 @@ TypeScript、Python、SQL migration fixture 与任何其他实现必须对上述
 - `batch_id BIGINT PK`；`batch_key BINARY(32) NOT NULL`；
 - `trigger_type VARCHAR(32) NOT NULL`：`scheduled/manual`；
 - `logical_at DATETIME(6) NOT NULL`：跨批次新旧排序基准；
-- `status VARCHAR(32) NOT NULL`：`planned/running/succeeded/partial_succeeded/failed/cancelled/skipped`；
+- `status VARCHAR(32) NOT NULL`：`planned/queued/running/succeeded/partial_succeeded/failed/cancelled/skipped/expired`；
 - `settings_version BIGINT NOT NULL`；`settings_snapshot JSON NOT NULL`；
 - `detail_rule_version/comment_rule_version VARCHAR(128) NULL`；
 - `planned_task_count/succeeded_task_count/failed_task_count/skipped_task_count/gap_task_count BIGINT NOT NULL DEFAULT 0`；
@@ -529,7 +542,7 @@ TypeScript、Python、SQL migration fixture 与任何其他实现必须对上述
 - `started_at/finished_at DATETIME(6) NULL`；
 - `created_at/updated_at DATETIME(6) NOT NULL`。
 
-约束/索引：`UQ(batch_key)`；计数非负；`IDX(status, logical_at)`。错过计划不补跑；前一全量批次未完成时创建 `skipped` 摘要，不创建任务。批次长期保留。
+约束/索引：`UQ(batch_key)`；计数非负；`IDX(status, logical_at)`。错过计划不补跑；前一全量批次未完成时新批次 `queued`（队列最多 1 个），队列已满时创建 `skipped` 摘要、不创建任务；排队到下一个计划时点仍未开始则 `expired`（D-33、A §7.1）。批次长期保留。
 
 ### 9.3 `sync_tasks`
 
@@ -745,7 +758,7 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 
 字段：
 
-- `content_id BIGINT PK`；`platform_id BIGINT NOT NULL FK`；
+- `content_id BIGINT PK`；`platform_id BIGINT NOT NULL FK`；`account_id BIGINT NOT NULL FK`：被观察账号（2026-11-04，D-23）；
 - `platform_content_id VARCHAR(2048) NOT NULL`；`platform_content_id_sha256 BINARY(32) NOT NULL`；
 - `content_kind VARCHAR(32) NOT NULL DEFAULT 'unknown'`；
 - `status VARCHAR(32) NOT NULL DEFAULT 'active'`；
@@ -754,13 +767,13 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 - `first_seen_at/last_seen_at DATETIME(6) NOT NULL`；
 - `created_at/updated_at DATETIME(6) NOT NULL`。
 
-约束/索引：`UQ(platform_id, platform_content_id_sha256)`，命中后复核原文；kind 为 `unknown/video/image/text/mixed`；status 为 `active/unavailable/deleted`；`IDX(platform_id, status, last_seen_at)`；`IDX(current_snapshot_id)`。
+约束/索引：`UQ(platform_id, account_id, platform_content_id_sha256)`，命中后复核原文；同一作品在两个被观察账号下是两条内容；`IDX(platform_id, platform_content_id_sha256)` 供跨账号对账；kind 为 `unknown/video/image/text`（推断规则见 A §9.2，不输出 `mixed`）；status 为 `active/unavailable/deleted`；`IDX(platform_id, status, last_seen_at)`；`IDX(current_snapshot_id)`。
 
 内容未出现在后续增量列表不改变状态。详情明确暂不可访问时设 `unavailable`，明确删除时设 `deleted`，再次成功获取恢复 `active`。
 
 ### 10.2 `content_snapshots`
 
-**作用**：内容描述和互动指标的每批次最终合并快照。
+**作用**：某个被观察账号下一条内容在一个批次中的最终快照（内容根已按账号区分）。
 
 字段：
 
@@ -787,16 +800,16 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 
 合并与终态规则：
 
-1. 批次运行中允许多个列表或详情任务对同一 `building` 行幂等合并；同一内容在多个账号列表出现时共享此行，但分别保留 discovery；
+1. 批次运行中允许该账号的列表或详情任务对同一 `building` 行幂等合并；同一作品在其他账号下是另一条内容、另一行快照；
 2. 所有 worker 只能通过受限写入过程提交业务候选：过程在同一事务中锁定任务，校验 `status`、`fencing_token`、`batch_id` 和目标实体，再执行带 `snapshot_status='building'` 条件的更新并检查受影响行数；worker 账号没有快照/root 基础表的直接 UPDATE 权限；
 3. `finalized` 后结构化业务字段不可修改；唯一允许的行内变化是 ODS 删除触发的来源调用 FK 置空，媒资归档状态保存在独立引用行；
 4. 同批次后收到的有效字段和真实零覆盖；null/缺失/非法值不擦除；调用先后以 `response_received_at`、相同时以尚在保留期内的 `provider_call_id` 判定，但该顺序只影响本行构建，不参与跨批次 current 选择；
 5. 同时收到 `*_count`、`*_number` 时适配器按属性存在性与平台映射选择有效候选；每个列表返回的旧内容也创建本批次快照；
 6. 同一内容的快照不能由首个列表任务独立终态化。批次中所有可能产生内容的列表任务都进入终态后，列表阶段才封口；失败、取消或重试耗尽的列表任务也必须先终止写权限；
-7. 列表阶段封口后，汇总该内容全部 discovery 的组织上下文和规则决定。详情任务可提前启动，但只有所有去重后的详情任务成功或重试耗尽/取消后，该内容才能终态化；不需要详情时在列表阶段封口后终态化；
+7. 该账号的列表任务终态后，按该内容的 discovery 与规则决定是否需要详情。详情任务可提前启动，但只有所有去重后的详情任务成功或重试耗尽/取消后，该内容才能终态化；不需要详情时在列表阶段封口后终态化；
 8. 批次取消时先通过任务状态与 fencing 终止列表/详情写入，再封口并终态化已有可靠事实；没有可靠业务事实的残留 building 行由恢复过程清除。进程崩溃后同样先恢复或终止关联任务，再处理 building 行；
 9. 评论和媒资下载不写内容结构化字段，不阻塞快照终态；媒资引用拥有独立可变的归档状态；
-10. current 只能选择 `finalized` 快照。每个内容满足 fan-in 和详情依赖后即可独立切换 current，不等待评论、媒资或整个批次结束；后续人工重抓使用新批次；
+10. current 只能选择 `finalized` 快照。每个内容满足详情依赖后即可独立切换 current，不等待评论、媒资或整个批次结束；后续人工重抓使用新批次；
 11. ODS 到期后来源调用 ID 通过 `ON DELETE SET NULL` 置空，快照本身长期保留。
 
 ### 10.3 `content_discoveries`
@@ -805,7 +818,7 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 
 约束/索引：`UQ(batch_id, assignment_id, content_id)`；页码和位置非负；`IDX(assignment_id, batch_id, absolute_position)`；`IDX(content_id, batch_id)`；`IDX(batch_id, is_potentially_pinned)`。
 
-同一内容出现在两个被监控账号列表时保留两条记录，共享同一内容和批次快照。返回作者不同默认共创，不创建作者账号。
+同一作品出现在两个被监控账号列表时，属于两条按账号的内容，各有自己的快照与 discovery。返回作者不同默认共创，不创建作者账号。
 
 ### 10.4 `comments`
 
@@ -875,7 +888,7 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 
 约束：profile/content 快照恰有一个非空；`slot_index>=0`；地址与摘要同空同非空；`UQ(profile_snapshot_id, role, slot_index)`；`UQ(content_snapshot_id, role, slot_index)`；`IDX(media_asset_id)`；`IDX(archive_status, updated_at)`。`source_provider_call_id` 使用 `ON DELETE SET NULL`。
 
-角色：账号 `avatar/background`；内容 `cover/gallery_image/video/audio`。
+角色：账号 `avatar/background/avatar_normalized/background_normalized`；内容 `cover/cover_normalized/gallery_image/video/audio`。`*_normalized` 指向 A 生成的标准化衍生图（JPEG q80、540 宽，D-56 / D-60），衍生图是独立 `media_assets` 行，不替代原始字节。
 
 归档状态：
 
@@ -968,13 +981,13 @@ ODS 对象上传成功而数据库短事务失败时，由用途限定的 orphan
 
 1. 列表每页所有内容均更新稳定身份、批次快照候选和列表出现记录；
 2. 检查点仅在整页处理后决定是否继续；
-3. 同批次全部列表任务终止后封口列表阶段，确保跨账号重复发现已完成 fan-in；
+3. 每个账号的列表任务终止后，该账号的内容进入详情判断；不做跨账号 fan-in；
 4. 本轮全部返回内容都按其所有 discovery 的组织上下文重新进入规则引擎评估；
 5. 账号长期范围、内容标题/时间/话题规则与平台指标门槛按规则引擎定义执行；
 6. 详情和评论拥有独立规则版本与独立任务；
 7. 同一内容同时命中时，两任务可在列表处理中提前并行；评论不依赖详情，但内容终态仍等待列表阶段封口及全部详情任务终止；
 8. 详情有效字段合并进同一批次内容快照；
-9. 内容满足 fan-in 与详情依赖后终态化；评论和媒资归档不阻塞结构化快照终态。
+9. 内容满足详情依赖后终态化；评论和媒资归档不阻塞结构化快照终态。
 
 ### 12.6 账号/内容 current 更新
 
@@ -1193,7 +1206,7 @@ Pydantic 使用 `model_fields_set` 区分缺失与显式 null。外部 ID 即使
 7. 建内容、快照、发现和评论，再补内容 current 复合外键；
 8. 建媒资资产和引用；
 9. 按最小权限拆分采集 worker、业务写入、媒资 worker 与查询账号；
-10. 先完成 `data-foundation-tracer` 纵向切片：一个抖音账号和一个小红书账号，从解析、主页、完整首个返回列表页、初始检查点到头像/背景/封面媒资进度；内容详情、评论和后续完整增量同步由后续独立 Spec 验收；
+10. 先完成 `a-data-foundation-tracer` 纵向切片：一个抖音账号和一个小红书账号，从解析、主页、完整首个返回列表页、初始检查点到头像/背景/封面媒资进度；内容详情、评论和后续完整增量同步由后续独立 Spec 验收；
 11. 演练任务重复领取、旧批次迟到、窗口溢出重设基线、ODS 到期清理和账号归属转移；
 12. 再开启全局每周调度。
 
@@ -1210,7 +1223,7 @@ Pydantic 使用 `model_fields_set` 区分缺失与显式 null。外部 ID 即使
 7. 首次与后续列表都完整处理供应商已返回页面；小红书 21 条首屏在 `initial_content_limit<=20` 时仍处理 21 条，命中旧检查点后也处理完当前页；
 8. 前三条可能置顶不会作为单独边界证据导致错误停止；
 9. 安全页数溢出或自然结束仍未命中旧边界时，不自动续跑；有可用内容时重设锚点，空窗口不得覆盖旧锚点；
-10. 同一内容被多个账号在同批次发现时，全部 discovery 保留且共享快照在列表阶段封口前不得 finalized；
+10. 同一作品被多个账号在同批次发现时，每个账号各一条内容、各一份快照，互不等待；
 11. 本周列表里的历史内容形成新快照并更新指标；同批次详情有效值覆盖列表，null/缺失不擦除；
 12. 过期 fencing token 不能写任务控制或业务事实；worker 无快照/root 基础表直接 UPDATE 权限；
 13. current 复合 FK 阻止指向其他实体快照，受限仓储事务拒绝 building 候选；旧批次迟到不能覆盖新 current；
@@ -1234,7 +1247,7 @@ Pydantic 使用 `model_fields_set` 区分缺失与显式 null。外部 ID 即使
 - v2 为 30 张表；v1 保留，不覆盖。
 - 单企业、无 tenant、无旧库迁移。
 - 组织、专员、账号和归属分离；业务状态与监控开关分离。
-- 全局北京时间每周一或两次；错过不补跑；全量批次不重叠。
+- 全局北京时间，当前每周一次，支持每周最多两个时点；错过不补跑；全量批次不重叠，新批次排队最多一个。
 - 检查点只决定翻页，所有已返回内容完整更新。
 - 每批次一份账号/内容最终快照；current 指针合入稳定根实体。
 - 同批次后来有效值优先；真实零有效；null/缺失不擦除。

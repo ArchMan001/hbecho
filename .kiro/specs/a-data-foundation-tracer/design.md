@@ -1,16 +1,18 @@
-# Data Foundation Tracer Design
+# A Data Foundation Tracer Design
 
 > **状态**：`draft`  
 > **模式**：Design-First  
 > **需求**：[`requirements.md`](requirements.md)  
 > **实施计划**：[`tasks.md`](tasks.md)（仅规划，尚未执行）  
-> **所属域**：A 数据底座 · **目录命名**：旧名 `data-foundation-tracer`，按域代号应为 `a-data-foundation-tracer`  
-> **最近核对**：2026-10-29（偏差见文末附录）  
-> **更新日期**：2026-09-02
+> **验收**：[`acceptance.md`](acceptance.md)  
+> **所属域**：A 数据底座 · **目录命名**：`a-data-foundation-tracer`，符合 `<代号>-<切片>`  
+> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.9（2026-11-03，定稿候选）  
+> **最近核对**：2026-11-03（按 A v1.9 与 raw4/raw5/raw8 校准；偏差见文末附录）  
+> **更新日期**：2026-11-03
 
 ## 1. Overview
 
-`data-foundation-tracer` 的最小纵向结果是：
+`a-data-foundation-tracer` 的最小纵向结果是：
 
 ```text
 已授权内部主体 + Platform + MediaStaff + 主页入口
@@ -34,12 +36,13 @@
 ### 2.1 Decision order
 
 1. [`CONTEXT.md`](../../../CONTEXT.md)：领域语义和不可违反的不变量；
-2. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座实体、历史事实、任务、ODS、快照、检查点和媒资基线；
-3. [AI Master V1.2 文档](<../../../aimaster接口文档/FieldShortcut A Master API 开发文档 V1.2.md>) 与已保存的 [`raw3` 结果](../../../aimaster接口文档/测试结果/raw3/)：供应商声明与已观察证据；二者冲突时必须显式记录，样本行为不能外推为长期合同；
-4. 本 Spec：tracer 的需求、Interface、流程和验收边界，不得静默改写前 3 项事实；
-5. [`data-supply-mvp.md`](../../../HBECHO设计方案/archive/data-foundation/data-supply-mvp.md)、[`data-supply-and-assets.md`](../../../HBECHO设计方案/archive/data-foundation/data-supply-and-assets.md) 及其他 archive：仅可选择性吸收经验。
+2. [`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.9：A 域产品语义的唯一真相源；它决定做什么、首次录入给什么反馈、明确不做什么；
+3. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座实体、历史事实、任务、ODS、快照、检查点和媒资基线。与第 1、2 项冲突时按前两项修订，不在 design 或局部 SQL 里暗中选择；
+4. [AI Master V1.2 文档](<../../../aimaster接口文档/FieldShortcut A Master API 开发文档 V1.2.md>) 与已保存的 [`raw3`](../../../aimaster接口文档/测试结果/raw3/)、[`raw4`](../../../aimaster接口文档/测试结果/raw4-2026-10-28/)、[`raw5`](../../../aimaster接口文档/测试结果/raw5-2026-10-28/)、[`raw8`](../../../aimaster接口文档/测试结果/raw8-2026-10-28/) 证据：供应商声明与实测；二者冲突时必须显式记录，样本行为不能外推为长期合同；
+5. 本 Spec：tracer 的需求、Interface、流程和验收边界，不得静默改写前 4 项事实；
+6. [`data-supply-mvp.md`](../../../HBECHO设计方案/archive/data-foundation/data-supply-mvp.md)、[`data-supply-and-assets.md`](../../../HBECHO设计方案/archive/data-foundation/data-supply-and-assets.md) 及其他 archive：仅可选择性吸收经验。
 
-历史稿、供应商示例或脚本不能覆盖 `CONTEXT.md` 与 v2。供应商声明和实测不一致时必须保留差异，不能靠实现猜测。
+历史稿、供应商示例或脚本不能覆盖 `CONTEXT.md`、A 域 PRD 与 v2。供应商声明和实测不一致时必须保留差异，不能靠实现猜测。
 
 ### 2.2 Evidence labels
 
@@ -47,12 +50,12 @@
 |---|---|---|
 | `invariant` | 当前领域必须遵守 | 外部 ID 按文本；历史归属不回写；临时 URL 不是媒资身份 |
 | `baseline` | 当前实施基线 | v2 的 ExternalAccount、账号当前归属、Snapshot、Discovery、ProviderCall、Checkpoint、Media 语义 |
-| `observed` | 已在保存证据中看到 | 抖音列表 20 条且有异作者；小红书列表 21 条；两平台 cursor 类型不同 |
-| `declared` | 供应商文档声称，但仍需能力验证 | 认证方式、异步任务模式、字段及 action 支持范围 |
-| `candidate` | 本设计建议，尚可在 requirements/tasks 前调整 | 内部 HTTP 路径、默认 limit、轮询参数和阈值 |
-| `unknown` | 没有足够证据 | 生产 QPS、计费、任务 TTL、完整异步链和部分认证合同 |
+| `observed` | 已在保存证据中看到 | 抖音列表 20 条且有异作者；小红书列表 21 条；两平台 cursor 类型不同；raw4 的 `X-Api-Key` 与 `RESULT_VALIDATION_FAILED` 可重试 |
+| `declared` | 供应商文档声称，但仍需能力验证 | Bearer 认证描述、字段及 action 支持范围 |
+| `candidate` | 本设计建议，尚可在 requirements/tasks 前调整 | 内部 HTTP 路径、轮询参数和阈值 |
+| `unknown` | 没有足够证据 | 生产 QPS、单价、任务 TTL、部分异步 tuple 和媒体 URL 有效期 |
 
-现有 `raw3` 是测试脚本解析后保存的 JSON 包络，不是原始 HTTP bytes；它只能验证 Adapter 输入/输出形态，不能验证 raw-before-parse。所有保存 probe 都使用 `async=false`，不能证明异步能力。
+现有 `raw3` 是测试脚本解析后保存的 JSON 包络；`raw4`/`raw5`/`raw8` 是逐次请求与响应的保存样本。它们能证明已观察到的响应形态与 capability 结论，但不能替代本实现层的 raw-before-parse 故障注入验收。异步能力已由 raw4/raw5/raw8 按 tuple 验证，不再使用“所有 probe 都是 async=false”的旧结论。
 
 ## 3. Goals and Non-goals
 
@@ -60,14 +63,18 @@
 
 - 一条命令可幂等、可恢复地生成根任务；
 - 入口三次失败不污染业务主档；
+- 只接受主页入口；视频、笔记与作品分享文本不建账号、不重试；
 - 每次供应商 IO 先保存原始证据，再运行版本化 Adapter；
 - 平台 + namespace + 原始文本共同决定账号标识；
 - 小红书 profile ID 与列表作者 ID 通过主导作者证据绑定而非字符串猜测；
 - 已返回首屏全部处理，本地 limit 只控制是否继续请求；
+- 内容按被观察账号保存，不跨账号合并；
 - profile/list/content/discovery/assignment/checkpoint 均可追溯到 call、payload 和 Adapter；
-- cursor 的值与类型保真；
+- cursor 的值与类型保真；初始锚点按 `time` / `id_window` / `empty` 确定；
+- 五态值状态（含 `unsupported`）与 `content_kind` 在投影中保真；
 - 少数异作者形成内容事实但不触发账号创建；
-- 正式媒资异步归档，结构化成功不依赖所有下载成功；
+- 正式媒资异步归档，结构化成功不依赖所有下载成功；封面取第 2 条候选，原始字节与标准化衍生图分别保留；
+- 首次录入结果（正常 / 链接无效 / 疑似空账号）与质量问题可观察，但不自动改账号状态；
 - 同步/异步按已验证 capability 选择，所有提交、轮询和重试分别计量；
 - 默认验证完全离线，真实 smoke 人工批准且有固定预算；
 - 状态查询只读本地事实，不产生隐性供应商成本。
@@ -76,13 +83,16 @@
 
 - 不建设通用 AI Master Gateway、供应商管理产品或任意 action 转发；
 - 不在本 Spec 交付完整后续分页、周期调度、详情、评论或历史回填；
+- 不交付快手、外部监控账号、活动计划、监控判定计划或名单导入；
 - 不重建 `MediaStaff`、`ExternalAccount`、组织、归属、内容、任务或媒资平行主档；
 - 不创建自然人 `Staff`，不恢复旧 `platform_accounts/staff_accounts/account_dealer_bindings`；
 - 不解决规则、指标、看板、导出或完整用户 RBAC；
 - 不把 `monitoring_enabled` 解释为用户查看权限；
-- 不复制 v2 的 30 表 DDL或整份供应商文档；
+- 不做账号改绑、停用/删除处置或数据质量问题处置工作台；
+- 不复制 v2 的 30 表 DDL 或整份供应商文档；
 - 不冻结 Web 框架、ORM、迁移工具、队列、缓存或部署拓扑；
-- 不把成功 fixture 外推为所有平台能力。
+- 不把成功 fixture 外推为所有平台能力；
+- 不在本 Spec 修改 v2 表结构；与 v2 的基线冲突只登记在 requirements §1.2，由对应修订关闭。
 
 ## 4. Ownership and stable vocabulary
 
@@ -91,14 +101,15 @@
 本 Feature 使用并遵守 v2 所拥有的事实：
 
 - `MediaStaff`、`ExternalAccount`、namespaced account identifier；
-- `AccountAssignment` 当前归属（账号记录上的单一事实，不建独立表）；
+- 账号记录上的当前归属（单一事实，不建独立表、不存时间区间）；
 - profile/content immutable snapshot 与 current pointer；
-- `ContentDiscovery` 列表出现事实；
+- 按账号保存的 content 事实与 `ContentDiscovery`；
 - sync root/task/batch、`ProviderCall`、ODS payload 与 continuity/data-quality issue；
-- typed checkpoint；
-- media reference、formal asset 和下载任务。
+- 五态值状态（含 `unsupported`）与 `content_kind`；
+- typed checkpoint 与初始锚点；
+- media reference、formal asset、normalized derivative 和下载任务。
 
-本 Feature 只定义这些事实如何在 tracer 纵向链中协作，不创建第二套 owner。
+本 Feature 只定义这些事实如何在 tracer 纵向链中协作，不创建第二套 owner。§1.2 所列与 v2 的冲突不在本设计里另造平行模型，而是在对应字段上显式标注“待 v2 修订”。
 
 ### 4.2 Tracer-owned workflow concepts
 
@@ -110,6 +121,8 @@
 | `CapabilityProfile` | platform × action × execution mode 的已验证能力，不由枚举自动生成 |
 | `StageLease` | Worker 对某一可变阶段的限时占有和 fencing token |
 | `TracerStatus` | 从本地事实组装的只读、脱敏进度视图 |
+| `EntryOutcome` | 首次录入结果：`normal` / `invalid_link` / `suspected_empty`；不是账号主档状态 |
+| `QualitySignal` | 可观察的质量问题（身份冲突、字段异常、疑似空账号、媒资失败），不直接改账号状态 |
 
 `ProviderCall`、快照、账号与当前归属、Checkpoint 和 MediaAsset 仍由数据底座拥有；TracerRoot 不复制其业务字段。
 
@@ -128,8 +141,15 @@ Tracer workflow 不新增平行持久化模型，映射如下：
 | provider attempts | 每次 prepare/send/poll/page/retry 一个 ODS ProviderCall 及其 request/response/error payload |
 | dominant-author decision | 成功绑定长期写入 `external_account_identifiers.binding_policy_version/binding_evidence/binding_evidence_sha256/evidence_batch_id`；拒绝长期写入 `data_quality_issues.detail + batch_id`；两者共用 v2 `dominant-list-author-evidence.v1` |
 | root status | 在一年任务保留窗口内，从 batch/root/child tasks 与现有 identity/snapshot/checkpoint/media facts 投影；到期后不从长期业务事实反推旧 operational status |
+| entry outcome | 成功路径：`normal` 不落额外行；`suspected_empty` 写 `data_quality_issues`（`issue_code='suspected_empty_account'`，带 account/batch/call）；失败路径：`invalid_link` 由根任务终态与 `data_quality_issues` 表达，不建账号 |
+| quality signals | `data_quality_issues`，`issue_code` 至少覆盖 `suspected_empty_account`、`identity_conflict`、`field_contract_anomaly`、`continuity_gap`、`media_archive_failed` |
+| content grain | `content_snapshots` 应改为按 `(batch_id, account_id, content_id)` 唯一；同一平台作品在不同账号各一份。v2 当前是 `(batch_id, content_id)`，实施前必须修订（requirements §1.2 第 2 项） |
+| value states | `value/missing/explicit_null/invalid/unsupported`；v2 当前 CHECK 只有前四态，实施前必须扩展（requirements §1.2 第 3 项） |
+| normalized derivative | 作为独立 `media_assets` 行（独立 SHA-256），由 `media_references` 以独立 role 指向；v2 当前 role 枚举需扩展（requirements §1.2 第 6 项） |
 
 `result_summary` 只能保存可重建展示摘要；关键幂等、状态和身份不得藏在无约束 JSON 中。账号 namespace 直接使用代码枚举中的 `douyin.user_id`、`douyin.sec_uid`、`xiaohongshu.profile.user_id`、`xiaohongshu.content.user_id` 等标识（D-25：命名空间是代码枚举，不是独立表）。
+
+内容与发现的持久化 grain 以 CONTEXT 与 A v1.9 §9.2 为准：同一平台作品出现在两个被观察账号时，各账号各一份快照与发现，不跨账号合并。tracer 只验收单账号，因此两种 grain 在本次验收数据上等价；但实现不得依赖 v2 当前的跨账号共享行，也不得把 `mixed` 作为 `content_kind` 输出。
 
 ## 5. Deep Module architecture
 
@@ -228,7 +248,8 @@ accepted
 - 可重试技术失败与终态失败；
 - assignment conflict 与供应商失败；
 - 成功、带 warning 成功和 cancellation；
-- root 状态与每个 ProviderCall、page entry、media reference 的细粒度状态。
+- root 状态与每个 ProviderCall、page entry、media reference 的细粒度状态；
+- entry outcome（`normal` / `invalid_link` / `suspected_empty`）与账号状态（`active` / `unavailable` / `deleted`）是两套语义：tracer 只产生前者，不自动设置后者。
 
 ### 6.2 Idempotency, leases and fencing
 
@@ -282,16 +303,17 @@ sequenceDiagram
 
 ### 7.2 Stage rules
 
-1. **Authorize and deduplicate**：在任何网络/付费行为前校验用途受限 Capability、目标范围、platform/action capability 和 command idempotency。
-2. **Resolve locator**：保留原文；最多三次。三次失败后只保留运维证据，不创建任何业务身份或快照。
-3. **Fetch profile**：每次调用必须先 capture；成功 envelope 不等于业务成功，Adapter 仍需验证 supplier status、response action 和 payload schema。
+1. **Authorize and deduplicate**：在任何网络/付费行为前校验用途受限 Capability、目标范围、platform/action capability 和 command idempotency；同账号同动作已有活动任务时复用。
+2. **Resolve locator**：保留原文并记录入口类型；只接受主页入口。短视频、笔记和作品分享文本直接拒绝，不建账号、不重试。短链跳转由 AI Master 的 `media_user_info` 处理，我方不跟跳转、不解析平台 HTML；发送前只做 PRD §11.2.1 的最小清洗。最多三次；三次失败后只保留运维证据，不创建任何业务身份或快照。
+3. **Fetch profile**：每次调用必须先 capture；成功 envelope 不等于业务成功，Adapter 仍需验证 supplier status、response action 和 payload schema。解析成功时，locator 与账号 ID 必须在这一条 captured payload 的同一短事务里成对写入。
 4. **Resolve identity and assignment**：先按 namespace 解析/复用账号，再在同一账号记录上写入或复用当前归属；冲突不抢占。
-5. **Project profile**：写 immutable snapshot 和媒资引用；fencing 控制 current。
+5. **Project profile**：写 immutable snapshot 和媒资引用；fencing 控制 current。抖音产生头像/背景引用；小红书主页响应不返回头像/背景，不产生这两类引用。
 6. **Fetch first page**：处理完整返回数组。`initial_content_limit` 只在页边界决定是否继续，本 Spec 的最低验收只要求完整首个返回页。
 7. **Bind list identity**：小红书在完整页上计算唯一主导作者；抖音保留同 payload 官方多标识；少数异作者只进内容事实。
-8. **Project list**：每个条目都形成/复用 ContentSnapshot 和 ContentDiscovery，携带 target account、采集当时的归属快照、batch/page、returned author 和 call lineage。
-9. **Advance checkpoint**：只有整页 required projection 完成后推进，保留 cursor 原值与类型。
-10. **Archive media**：structured result 可以先完成；头像、背景和封面按引用异步归档，并在 status 中独立汇总。
+8. **Project list**：每个条目都形成/复用按账号粒度的 ContentSnapshot 和 ContentDiscovery，携带 target account、采集当时的归属快照、batch/page、returned author 和 call lineage；推断 `content_kind`；列表播放数记 `unsupported`；封面选择第 2 条候选。
+9. **Advance checkpoint**：只有整页 required projection 完成后推进，保留 cursor 原值与类型，并按 `time` / `id_window` / `empty` 建立初始锚点。
+10. **Archive media**：structured result 可以先完成；头像、背景和封面按引用异步归档，封面同时生成 JPEG q80、540 宽的独立衍生资产，并在 status 中独立汇总。
+11. **Record entry outcome**：首次录入结果为 `normal`、`invalid_link` 或 `suspected_empty`；疑似空账号写质量问题，不自动纳入监控，也不改账号状态。
 
 ### 7.3 Assignment conflict
 
@@ -332,7 +354,17 @@ type CapabilityProfile = {
 };
 ```
 
-生产策略不写死 `async=false` 或 `async=true`。raw3 只能把对应同步 tuple 标成 `fixture_observed`，不能触发生产启用；生产调用同时要求 `smoke_verified + environment='production' + activation='approved'`。异步必须在批准式 smoke 或供应商沙箱中独立证明，测试环境也只能启用其明确允许的 evidence level。
+生产策略不写死 `async=false` 或 `async=true`。证据按 A v1.9 §6.3 与已保存 raw 结果分层：
+
+| platform × action × mode | 证据 | tracer 策略 |
+|---|---|---|
+| 抖音 / 小红书 × `media_user_info` × synchronous | `smoke_verified`（raw4） | 可进入 production approval 评审 |
+| 抖音 / 小红书 × `user_video_list` × synchronous | `smoke_verified`（raw4） | 可进入 production approval 评审 |
+| 抖音 / 小红书 × `media_user_info` × asynchronous | `smoke_verified`（raw4 / raw5） | 可进入 production approval 评审 |
+| 抖音 / 小红书 × `user_video_list` × asynchronous | provider-failed（raw4 / raw5 / raw8） | 保持 `disabled` |
+| 其他 tuple | `unknown` / `supplier_declared` | 拒绝 |
+
+`fixture_observed` 只证明离线样本形态；`smoke_verified` 只证明被实际 exercise 的 tuple；两者都不能自动激活 production。生产调用同时要求 `smoke_verified + environment='production' + activation='approved'`。
 
 ### 8.3 Synchronous sequence
 
@@ -389,9 +421,11 @@ sequenceDiagram
 
 提交、每次轮询、重试和后续分页分别创建 ProviderCall。轮询 deadline、间隔、jitter、供应商 task TTL 和计费均未冻结。
 
+异步只用于已通过 smoke 的 action × mode。当前 tracer 只允许 `media_user_info` 异步；`user_video_list` 异步在三平台均失败，保持 `disabled`，因此首屏列表默认走同步路径。
+
 ### 8.5 Authentication seam
 
-供应商文档描述 Bearer，而示例及成功脚本使用 `X-Api-Key`。认证方式必须由 secret-backed Adapter 配置并在批准式 smoke 中验证；设计不把任一方式写死。日志、ODS metadata、审计和 status 都不能保存认证 header 或 secret。
+供应商文档描述 Bearer，而 raw4 的所有成功调用只使用 `X-Api-Key`；两者冲突以实测为准，但仍须由一次批准式 smoke 在生产配置上复核。认证方式必须由 secret-backed Adapter 配置；设计不把任一方式写死。日志、ODS metadata、审计和 status 都不能保存认证 header 或 secret。
 
 ## 9. RawCaptureGateway and versioned decoding
 
@@ -450,6 +484,8 @@ ProviderCall、task 与 raw payload 保留一年；正式 profile/content snapsh
 
 已观察：profile `user_id="49328995493"`，同主页 21 条列表的主导作者为 `5decba2300000000010007e1`。二者放在不同 namespace，并通过同一 root/page 的 `dominant_list_author` 证据绑定到一个 ExternalAccount。
 
+小红书主页响应不返回头像与背景，因此本平台不产生 `avatar/background` media reference；封面仍按第 2 条候选归档。
+
 算法边界：
 
 1. 先完整解码和验证整个返回页；
@@ -471,12 +507,15 @@ ProviderCall、task 与 raw payload 保留一年；正式 profile/content snapsh
 
 归属是账号记录上的**当前单一事实**，不建独立归属表、不存时间区间（D-16、D-28）。没有冲突时，Tracer 在创建或复用账号的同一次短事务里写入 submitted `MediaStaff` 作为当前归属，并记录归属来源与时间；已有其他 owner 时 fail closed，不抢占，也不关闭或改写原归属。账号转移必须走独立、受审计的管理员改绑流程，不由采集结果隐式触发。内容与发现需要保留采集当时的归属时，记录**采集时的归属快照值**（D-67），不引用归属行。
 
+首次录入的 locator 写入当前入口，previous 入口为空。`current_home_locator` 与解析出的账号标识必须在同一短事务中成对写入，且两者都来自同一条已 capture 的 terminal `media_user_info` payload；不得用一次调用的 locator 配另一次调用的账号 ID。
+
 ## 11. Snapshot, complete-page and checkpoint semantics
 
 ### 11.1 Profile projection
 
 - snapshot 绑定 account、ProviderCall、ODS hash、Adapter version 和 observation time；
-- `0`、missing、explicit null、invalid 分开；
+- 每个账号每个批次最多一份主页快照，创建成功即不可变终态；
+- `0`、missing、explicit null、invalid、unsupported 分开；
 - profile media 只形成 MediaReference；
 - current pointer 只在候选 finalized、时间/批次排序允许且 fence 有效时前进；
 - 旧 observation 可保留历史，但不得覆盖 newer current。
@@ -500,17 +539,43 @@ receive page N
 
 ### 11.3 Content grain
 
-- Content identity 按 platform + external content identifier；
-- Snapshot 是一次版本化观察；
-- Discovery 保存“哪个 target account、采集当时的归属快照、哪个 batch 看到该 content”；
-- 同一 content 经不同归属/主页发现时保留多个 Discovery，不因 content dedupe 丢归属；
-- 同一 batch + 账号的列表若重复返回同一 content ID，每个 entry 都必须经过验证和计数，但按 v2 只形成一个 Discovery；重复位置/count 留在一年期 page/ProviderCall evidence，并生成可观察质量摘要；
+内容事实按**被观察账号**保存，不跨账号合并（CONTEXT §Content、A v1.9 §9.2、D-23）：
+
+- 内容身份仍由 platform + external content identifier 判定，但快照与发现的业务 grain 是 `(batch, account, content)`；
+- 同一作品出现在两个被监控账号列表时，各账号各有一份最终快照与一条 discovery；重复计数是已知且可接受的代价；
+- Snapshot 是一次版本化观察；Discovery 保存“哪个 target account、采集当时的归属快照、哪个 batch 看到该 content”；
+- 同一 batch + account 的列表若重复返回同一 content ID，每个 entry 都必须经过验证和计数，但只形成一个发现；重复位置/count 留在一年期 page/ProviderCall evidence，并生成可观察质量摘要；
+- 同批次后到的有效值（含真实 `0`）覆盖先前值；后到的 `missing`、`explicit_null`、`invalid`、`unsupported` 不擦除先前有效值；
+- `content_kind` 由 A 推断：有视频 → `video`；无视频有图片 → `image`；只有文本 → `text`；缺失或矛盾 → `unknown`。`mixed` 不输出；
+- 列表接口的播放数按 `unsupported` 记录；抖音返回的 0 与小红书的缺字段都不是有效观测；
+- 封面候选保留全部，归档引用固定选第 2 条（540 宽）；第 1 条可能是视频首帧，第 3 条尺寸不稳定；
 - returned author 与 target account 分列；
-- 少数异作者、共创或跨发不会改变 target list discovery。
+- 少数异作者、共创或跨发不会改变 target list discovery，也不创建账号。
+
+v2 当前的 `(batch, content)` 共享快照 grain 与此冲突，已在 requirements §1.2 第 2 项登记；本 spec 不据 v2 的共享语义实现，只在单账号 tracer 数据上验收。
 
 ### 11.4 Typed checkpoint
 
 长期 Checkpoint 直接使用 v2：固定 account/provider/action/scope、类型保真的 `cursor_envelope` 与 hash、anchor/high-watermark、长期 batch 引用、continuity state、单调 `version` 和 `updated_at`。抖音 fixture 的 `max_cursor` 是 integer，小红书是 string；持久化与后续请求都不得互转。
+
+初始锚点按 v2 §9.4 确定性建立：
+
+```text
+本轮存在有效 published_at
+  → anchor_mode='time'
+  → high_watermark_published_at = 全部返回内容的最大发布时间
+  → high_watermark_content_ids = 同一时刻的内容 ID 集合
+
+无有效发布时间、但有内容 ID
+  → anchor_mode='id_window'
+  → high_watermark_content_ids = 第一页全部内容 ID
+
+首屏真实返回 0 条且 has_more=false
+  → anchor_mode='empty'
+  → 时间与 ID 集合都为空，任务成功
+```
+
+首次采集没有旧锚点，`initial_content_limit<=20` 只是整页处理后的续页目标。首屏完整处理且累计条目达到目标时停止并建立基线；供应商仍有更多历史页不构成本 spec 的连续性缺口。若首屏不足目标且 `has_more=true`，是否请求第二页仍是实施前 P0（§18）。
 
 `has_more`、page/processed count、source task/ProviderCall 和 Adapter version 保存在一年期 SyncTask/ProviderCall lineage，并可用于当前 status 与保留期内重放；它们不复制进第二套 checkpoint，也不要求 ODS 到期后继续存在。Checkpoint 只在整页 required projection 完成后原子推进。任一 entry 失败、lease 失效或 root cancelled 时不推进；旧 worker 的 cursor 可以保留在调用证据，但 stale fence 不能覆盖更高 checkpoint version。
 
@@ -520,6 +585,12 @@ receive page N
 
 profile avatar、background 与 content cover 先成为绑定 snapshot 的 MediaReference，包含原始候选 URL、role/slot、观察时间和 source lineage。URL 可过期且可变化，不是 asset identity。
 
+平台差异：
+
+- 抖音主页头像与背景：生成 `avatar/background` 引用；
+- 小红书主页响应不返回头像与背景：不生成这两类引用，不得用空值或占位图补造；
+- 封面：全平台从列表条目的候选数组选第 2 条（540 宽）作为 `cover` 引用，其余候选作为观察证据保留。
+
 ### 12.2 Archive flow
 
 ```text
@@ -528,19 +599,25 @@ MediaReference
 → bounded download outside DB transaction
 → private temporary object
 → complete-byte SHA-256 + size/type verification
-→ formal MediaAsset dedupe
-→ verified reference binding
+→ formal MediaAsset dedupe（原始字节）
+→ normalized derivative: JPEG q80, 540 wide, own SHA-256 → separate MediaAsset
+→ verified reference binding（原始 + 衍生分别可追溯）
 ```
 
-结构化 snapshot/checkpoint 不等待全部媒资成功。状态至少区分 pending/running/archived/retryable_failed/terminal_failed/expired_source/cancelled；具体名称可在 v2 基线上实现。失败保留 warning 和重试依据，不回滚 structured facts。
+原始字节与标准化衍生图互不替代，都长期保留。衍生图有自己的 SHA-256 与资产行，不以“同一 URL 的转换结果”当作原始资产的别名。
+
+结构化 snapshot/checkpoint 不等待全部媒资成功。状态至少区分 pending/running/archived/carried_forward/retryable_failed/terminal_failed/expired_source/cancelled。下载失败时，若上一快照有已验证资产，可以续用并标记 `carried_forward`，同时保留本轮失败错误；不得把“用旧图”表示成“本轮归档成功”。失败不回滚 structured facts。
 
 ### 12.3 Safety
 
 - 默认使用 fake media transport 和 fake OSS；
 - 对 URL 执行 scheme、host、redirect、size、content type、timeout 和 SSRF 防护；
-- 正式对象私有，短期签名 URL按授权临时生成；
+- 正式对象私有，短期签名 URL 按授权临时生成；
 - 日志不写完整临时 URL；
-- 完整 bytes SHA-256 相同才判同，不按 URL、文件名或缩略图参数判同。
+- 完整 bytes SHA-256 相同才判同，不按 URL、文件名或缩略图参数判同；
+- 供应商 URL 有效期未确认（可能 7–15 天）；重试必须重新获取有效地址，不能复用已过期地址；
+- 单文件与单批次字节上限可配置，只防异常，不限制正常内容；
+- tracer 不调用任何 OCR、ASR 或视觉识别能力；标准化衍生图只是格式转换，不是内容识别。平台 1.0 的音频 ASR 由 C 域承担，不属于本 spec。
 
 ## 13. Failure, retry and status semantics
 
@@ -549,8 +626,11 @@ MediaReference
 | Category | Retry default | Business effect |
 |---|---|---|
 | invalid input / unauthorized / unsupported capability | no | 网络调用前终止，不创建业务事实 |
-| locator unresolved after 3 | no | 保留尝试证据，不创建账号/快照 |
-| provider auth | no until configuration fixed | 不解释为空数据，告警且审计 |
+| non-homepage locator（视频/笔记/分享文本） | no | 标 `invalid_link`，不建账号、不建归属、不重试 |
+| locator unresolved after 3 | no | 保留尝试证据，不创建账号/快照，标 `invalid_link` |
+| provider auth / invalid request（HTTP 400 `INVALID_REQUEST`） | no until configuration fixed | 不解释为空数据，告警且审计 |
+| provider input / inaccessible（HTTP 500 `RESULT_VALIDATION_FAILED`） | bounded retry first | 重试耗尽后首次录入标 `invalid_link`；已存在账号不改状态 |
+| provider intermittent `RESULT_VALIDATION_FAILED` | bounded retry（raw4 结论） | 新 ProviderCall；不重复已完成业务投影 |
 | quota/rate limit | bounded delayed retry | 新 ProviderCall，不重复已完成业务投影 |
 | transport/timeout with known non-delivery | bounded retry | 先保存错误证据；无 checkpoint 前进 |
 | sent call with unknown remote outcome | no blind retry | 标 `ambiguous`；仅凭供应商幂等或 reconcile 证据恢复 |
@@ -558,11 +638,11 @@ MediaReference
 | schema/parse drift | no automatic blind retry | 保留 raw，标 Adapter drift，可版本化重放 |
 | identity ambiguity | manual/config resolution | 不猜绑定，不创建可疑账号 |
 | assignment conflict | authorized business resolution | 不抢占 owner；默认停止后续付费阶段 |
-| projection/storage | bounded idempotent retry | raw 和已完成 immutable facts保留 |
-| media failure | independent bounded retry | structured result 可成功并带 warning |
+| projection/storage | bounded idempotent retry | raw 和已完成 immutable facts 保留 |
+| media failure | independent bounded retry | structured result 可成功并带 warning；可 carried forward |
 | stale fence / cancellation | no | 拒绝迟到写和新付费调用 |
 
-重试次数、backoff、deadline 是配置，不是表默认。技术失败不能转成“账号不存在”“列表为空”或 `0`。
+重试次数、backoff、deadline 是配置，不是表默认。技术失败不能转成“账号不存在”“列表为空”或 `0`，也不能改写账号状态。HTTP 500 `RESULT_VALIDATION_FAILED` 既可能表示无效/私密/已删除主页，也可能是供应商间歇失败；不能在首次响应时只凭状态码或错误码断言业务含义。HTTP 400 `INVALID_REQUEST` 与认证配置错误也不能只按状态码互相替代。
 
 ### 13.2 Local status projection
 
@@ -582,14 +662,16 @@ type TracerStatus = {
     checkpointEstablished: boolean;
     cursorType?: 'string' | 'integer' | 'null';
   };
-  media: { total: number; pending: number; archived: number; failed: number };
+  media: { total: number; pending: number; archived: number; failed: number; carriedForward: number };
+  entryOutcome?: 'normal' | 'invalid_link' | 'suspected_empty';
   warnings: Array<{ code: string; stage: string }>;
+  qualityIssues: Array<{ code: string; status: string }>;
   failure?: { category: string; code: string; retryable: boolean };
   timestamps: { acceptedAt: string; updatedAt: string; completedAt?: string };
 };
 ```
 
-字段名是候选；语义必须覆盖 structured/media 分离、冲突、retry wait 和 stable reason。status 不返回 raw body、secret、完整 ODS key、临时 URL或越权业务 ID。
+字段名是候选；语义必须覆盖 structured/media 分离、entry outcome、冲突、retry wait 和 stable reason。status 不返回 raw body、secret、完整 ODS key、临时 URL 或越权业务 ID。
 
 ## 14. Candidate internal transport
 
@@ -641,6 +723,8 @@ GET  /internal/data-foundation/account-tracers/{root_task_id}
 
 - 每个 submission/poll/page/retry 都单独计数；
 - platform/action/mode、最大调用数、最大 polling、最大 pages、media bytes 和 deadline 有硬上限；
+- 成本估算使用 A v1.9 §6.2 的 1.0 点数：抖音主页 10/次、列表 10/页；小红书主页 15/次、列表 15/页；失败、超时、429 与异步轮询不计点；
+- 单价与 QPS 仍未知，预算只按点数与调用上限控制，不声称已换算成货币金额；
 - 默认 fixture 路径网络禁用；
 - paid smoke 需要人工批准、显式 switch、allowlist 和固定预算；
 - 超预算先停止再记状态，不能先调用后告警；
@@ -681,17 +765,21 @@ GET  /internal/data-foundation/account-tracers/{root_task_id}
 
 | Case | Expected invariant |
 |---|---|
-| Douyin Hitachi profile/list | target `HITACHI1`；20/20 entries processed；integer `max_cursor` |
+| Douyin Hitachi profile/list | target `HITACHI1`；20/20 entries processed；integer `max_cursor`；`content_kind` 按条目推断；列表播放数 `unsupported` |
 | Douyin foreign author | `HITACHI2023` 保留在 content fact；不创建第二账号；不单凭差异报质量问题 |
 | Xiaohongshu Hitachi profile/list | profile `49328995493` + dominant author `5decba2300000000010007e1` 不同 namespace、同一账号 |
-| Xiaohongshu complete page | 21/21 entries processed，即使 local limit ≤ 20；string `max_cursor` |
-| Locator fail ×3 | no ExternalAccount/identifier/assignment/snapshot/discovery/checkpoint |
+| Xiaohongshu complete page | 21/21 entries processed，即使 local limit ≤ 20；string `max_cursor`；无 avatar/background 引用；封面选第 2 条 |
+| Locator fail ×3 | no ExternalAccount/identifier/assignment/snapshot/discovery/checkpoint；entry outcome `invalid_link` |
+| Non-homepage locator | no account/assignment；不重试；entry outcome `invalid_link` |
 | ODS write failure | decoder/projector invocation count = 0 |
 | Duplicate command | same root，no duplicate call/effect |
+| Active same-account/action task | 复用原任务，不并发 |
 | Assignment conflict | old owner unchanged，submitted staff not represented as owner |
 | Dominant-author tie | no binding，data-quality issue |
+| Suspected empty account | follower=0 且 post=0 → `suspected_empty` + issue；不自动纳入监控；账号 status 不变 |
 | Stale worker | immutable history may remain，current/checkpoint unchanged |
-| Media failure | structured checkpoint retained，media warning visible |
+| Media failure | structured checkpoint retained，media warning visible；旧资产续用标 `carried_forward` |
+| Normalized derivative | 衍生图有独立 SHA-256；原始与衍生都存在；不互相替代 |
 | Status query | no ProviderTransport invocation |
 
 具体 fixture：
@@ -712,26 +800,28 @@ smoke 独立于 CI，必须先显示并确认 capability、locator allowlist、c
 实现进入可验收状态必须同时满足：
 
 1. [`requirements.md`](requirements.md) 的每个 SHALL 有自动化离线检查或明确的批准式 smoke 检查；
-2. 入口三次失败可证明没有业务主档副作用；
+2. 入口三次失败可证明没有业务主档副作用，且入口结果可观察为 `invalid_link`；
 3. 每次 supplier submit/poll/retry 可证明先 capture 后 decode；
-4. 抖音与小红书 fixture 的账号、条目数、foreign/dominant author 和 cursor 类型全部匹配；
+4. 抖音与小红书 fixture 的账号、条目数、foreign/dominant author、`content_kind`、列表播放数 `unsupported` 和 cursor 类型全部匹配；
 5. `initial_content_limit` 不截断 21 条已返回页；
 6. Assignment conflict 不发生所有权抢占；
-7. checkpoint 只在完整页后推进，stale fence 无法回退；
-8. structured success 与 media progress 可独立观察；
+7. checkpoint 只在完整页后推进，初始锚点为 `time` / `id_window` / `empty` 之一，stale fence 无法回退；
+8. structured success 与 media progress 可独立观察；封面衍生图有独立资产与 SHA-256；
 9. default suite 无网络、无 secret、无付费；
 10. status query 不触发供应商调用；
 11. 没有创建 v2 之外的平行 Staff、账号、归属、内容或媒资主档；
-12. 未决合同仍被标为 unknown/candidate，而不是由示例代码静默冻结。
+12. 六项基线冲突与第 7 项范围区别（requirements §1.2）仍被显式记录，而不是由示例代码静默冻结；
+13. 首次录入结果与质量问题可观察，且没有因技术失败改写账号状态；
+14. 内容按账号保存，没有跨账号合并；`mixed` 没有被输出。
 
 ## 18. Open decisions
 
 ### P0 before implementation
 
-1. AI Master 生产认证到底是 Bearer、`X-Api-Key` 还是按环境协商；
-2. 抖音/小红书两个 action 各自支持的同步/异步 capability；异步 task terminal schema、TTL 和 polling 约束；
-3. 供应商 QPS、并发、计费单位、quota header 和预算换算；
-4. 支持哪些 Home locator 形态，三次尝试分别允许哪些网络解析；
+1. 生产认证启用：raw4 已证明 `X-Api-Key` 可用，但生产开关仍需一次批准式 smoke 复核；
+2. 异步 profile 的 terminal schema、TTL、polling 参数；列表异步已确认失败，保持 disabled；
+3. 供应商 QPS、并发与单价；点数表已由 A v1.9 §6.2 给出；
+4. Home locator 最小清洗的精确规则（截断边界、保留哪些字符），以及三次尝试的策略分配；
 5. 哪些 Home locator strategy 本身会产生 captured terminal `media_user_info` payload；已产生时必须复用，只有未产生的 strategy 才允许一次独立 profile fetch，并须锁定各策略 ProviderCall 数；
 6. 内部 command/status transport、错误 envelope 和最终 Capability 名称；
 7. 本 Feature 是否在首屏验收之外实际请求第二页；
@@ -740,7 +830,10 @@ smoke 独立于 CI，必须先显示并确认 capability、locator allowlist、c
 10. cursor null、空串、超长值和供应商复用 cursor 的精确语义；
 11. 媒资 origin allowlist、单文件/总 bytes、URL 过期恢复和 archive deadline；
 12. User↔MediaStaff、真实用户触发和查看状态的最小 DataScope；
-13. 供应商 request/response body 中可能出现的敏感字段分类与 ODS 读取审批。
+13. 供应商 request/response body 中可能出现的敏感字段分类与 ODS 读取审批；
+14. v2 修订：归属单一事实（§8.3）、内容按账号保存（§10.2/§10.3）、`unsupported` 值状态（§5.2）、录入结果载体、封面衍生图 role（§11.3）；
+15. “疑似空账号”在名单/监控流程中的确认入口；tracer 只产生 issue，不决定加入监控；
+16. 标准化衍生图与原图在 v2 中的资产关系（独立 asset + role，还是独立 lineage）。
 
 ### Can remain configurable
 
@@ -755,9 +848,9 @@ smoke 独立于 CI，必须先显示并确认 capability、locator allowlist、c
 
 ---
 
-## 附录：已知过时内容（2026-10-29 核对）
+## 附录：已知过时内容（2026-11-03 核对）
 
-> 本节只记录偏差，不修改正文。偏差的根在 [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：它仍是 2026-09 草案，尚未按 D-25 / D-28 复核。
+> 本节只记录偏差，不修改正文。偏差的根多数在 [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：它仍是 2026-09 草案，尚未按 A v1.9、D-25 / D-28 逐条复核。requirements §1.2 是这些冲突的权威清单。
 
 | # | 位置 | 原写法 | 现处理 | 来源 |
 |---|---|---|---|---|
@@ -765,5 +858,12 @@ smoke 独立于 CI，必须先显示并确认 capability、locator allowlist、c
 | 2 | design §10.1 与 §6 | 写「使用 v2 注册的 namespace 代码」 | 已改为代码枚举（命名空间不是表）；新增 namespace 须改 CONTEXT 与枚举 | D-25 |
 | 3 | v2 §6.3 / §8.3 | `identifier_namespaces`、`staff_account_assignments` 两张表仍在 v2 | **v2 未改**；v2 复核前不得据此建表，实施时以本节与 D-25 / D-28 为准 | D-25、D-28 |
 | 4 | design 日志字段 | 原写「日志不输出……完整手机号」 | 已按 2026-10-30 决定改为手机号明文可记录；secret、raw body、临时 URL 仍不写 | D-42、B 域 PRD v1.9 |
+| 5 | v2 §10.2 | 内容快照按 `(batch, content)` 共享，跨账号不合并；发现虽按 assignment 区分，但快照本身不区分账号 | **v2 未改**；CONTEXT 与 A v1.9 §9.2 要求按被观察账号分别保存；tracer 只在单账号场景验收，不实现跨账号共享快照 | CONTEXT §Content、D-23 |
+| 6 | v2 §5.2 | 值状态只有 `value/missing/explicit_null/invalid` | **v2 未改**；A v1.9 §9.2 要求列表播放数记 `unsupported`，需新增第五态并扩展 CHECK | A v1.9 §9.2 |
+| 7 | v2 §10.1 | `content_kind` 包含 `mixed` | A v1.9 §9.2 只定义 `video/image/text/unknown` 推断；tracer 不输出 `mixed` | A v1.9 §9.2 |
+| 8 | v2 §8.1 / §9.7 | 没有录入状态字段；质量问题只表达异常 | tracer 用根任务终态 + `data_quality_issues` 表达 `normal/invalid_link/suspected_empty`，不新增账号状态列；名单级录入状态留给导入 spec | A v1.9 §11.6 |
+| 9 | v2 §11.3 | `media_references.role` 只有 avatar/background/cover/gallery_image/video/audio | 需为标准化衍生图增加独立 asset 与 role/lineage；tracer 至少保证独立 SHA-256 与不替代原始字节 | A v1.9 §10.2 |
+| 10 | design §8.2 旧文 | 「raw3 只能标 fixture，异步未实测」 | 已按 raw4/raw5/raw8 更新：同步主页/列表与异步主页 `smoke_verified`；列表异步 provider-failed 保持 disabled | raw4、raw5、raw8 |
+| 11 | design §8.5 旧文 | 「文档 Bearer 与示例 `X-Api-Key` 冲突，方式未定」 | raw4 全部成功调用使用 `X-Api-Key`；文档 Bearer 记为矛盾；生产启用仍需批准式 smoke | raw4 |
 
-**核对为一致的部分**（不需改动）：首版验收平台为抖音与小红书（快手在 `a-full-sync`，D-47）；不写死 `async=false/true`，异步未实测即门控；20 / 21 条是实测证据而非业务上限（D-12）；ODS 一年、快照与媒资长期保留（D-10）。
+**核对为一致的部分**（不需改动）：首版验收平台为抖音与小红书（快手在 `a-full-sync`，D-47）；不写死 `async=false/true`，按 tuple 门控；20 / 21 条是实测证据而非业务上限（D-12）；ODS 一年、快照与媒资长期保留（D-10）；封面取第 2 条候选（A v1.9 §9.2）；链接与账号 ID 成对写入（A v1.9 §11.2.1）。

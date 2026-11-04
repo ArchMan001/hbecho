@@ -31,7 +31,7 @@
 
 - `CONTEXT.md`：领域语言
 - `HBECHO设计方案/`：唯一设计文档根 —— `INDEX.md`、总 PRD `prd-platform.md`、子 PRD `prd-domain-<代号>-<slug>.md`、数据底座基线、运维手册、开发部署流程、宪法、ADR、统一归档 `archive/`
-- `.kiro/specs/`：spec 集；当前纵向切片是 `data-foundation-tracer`
+- `.kiro/specs/`：spec 集；当前纵向切片是 `a-data-foundation-tracer`
 - `.kiro/steering/`：自动加载的精简规则
 - `aimaster接口文档/`：供应商合同、探针脚本与 raw3 证据
 - `scripts/`：`verify.sh` 与文档/密钥门禁
@@ -69,7 +69,7 @@ gh run watch <run-id> --exit-status   # 合并前等 CI
 
 - 产品主线：`HBECHO设计方案/prd-platform.md`（总 PRD）；子 PRD 为 `HBECHO设计方案/prd-domain-<代号>-<slug>.md`
 - 完整 spec：`.kiro/specs/<name>/`（`requirements.md` / `design.md` / `tasks.md`；`acceptance.md` 在需要时增加）
-- 当前实施切片：`.kiro/specs/data-foundation-tracer/`（status: draft，0/9 任务）
+- 当前实施切片：`.kiro/specs/a-data-foundation-tracer/`（status: draft，0/9 任务）
 - 宪法：`HBECHO设计方案/governance/constitution.md`（v0，待逐条确认）
 - ADR：`HBECHO设计方案/architecture/adr/README.md`
 - 开发与部署流程：`HBECHO设计方案/runbooks/dev-test-deploy-workflow.md`

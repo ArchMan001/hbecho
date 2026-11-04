@@ -1,7 +1,7 @@
 # media-platform 3.0：数据供给 MVP 设计
 
 > **状态：`superseded`（2026-09-02）**  
-> **替代文档**：[`database-design-v2.md`](../../domains/data-foundation/database-design-v2.md) 与 [`data-foundation-tracer`](../../../.kiro/specs/data-foundation-tracer/)  
+> **替代文档**：[`database-design-v2.md`](../../domains/data-foundation/database-design-v2.md) 与 [`a-data-foundation-tracer`](../../../.kiro/specs/a-data-foundation-tracer/)  
 > **保留原因**：追溯 MVP 阶段关于本地 fixture、失败分类、反腐层和 raw-before-parse 的早期思路。  
 > **禁止用途**：本文件不是当前实现依据；其中的表名、同步模式、LONGBLOB ODS、组织模型和供应商合同假设均不得直接实施。冲突时以 [`HBECHO设计方案/INDEX.md`](../../INDEX.md) 的权威顺序为准。
 

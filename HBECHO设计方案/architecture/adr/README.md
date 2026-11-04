@@ -26,6 +26,8 @@
 | [0008](0008-store-identity-and-code.md) | 门店身份与编码分离：内部 `store_id` 为身份，唯一键 `(brand_id, store_code)`，消失不自动停用 | accepted | 2026-11-02 | 刘学奎 |
 | [0009](0009-account-watch-and-external-monitoring.md) | 账号监控对象分两型：`staff` 归属与 `external` 外部监控；外部账号复用采集链路 | accepted | 2026-11-02 | 刘学奎 |
 | [0010](0010-scope-brand-intersection.md) | 组织范围与品牌集合求交：品牌必须显式授予，不从组织推导 | accepted | 2026-11-02 | 刘学奎 |
+| [0011](0011-report-export-exceljs-write-only.md) | 报表导出用 exceljs 4.4.0，仅写入；导入仍只用 CSV | accepted | 2026-11-04 | 刘学奎 |
+| [0012](0012-python-capability-service.md) | Python 能力服务：FastAPI + OpenCV + ffmpeg，compose 内网、无数据库凭证 | accepted | 2026-11-04 | 刘学奎 |
 
 ## 未决选型登记
 
@@ -41,7 +43,7 @@
 | 6 | ~~`User ↔ MediaStaff` 首版是否严格一对一~~ —— 已由 B 域 PRD §8.3 关闭：一对一，绑不上拒绝本人范围 | — | prd-domain-b §8.3 |
 | 7 | ~~Branch 范围是否需与显式品牌 grant 求交~~ —— 已由 ADR-0010 关闭：求交，品牌必须显式授予 | — | ADR-0010 |
 | 8 | ~~登录手机号：明文 or `ciphertext + lookup HMAC`~~ —— 已由 D-42 关闭：明文保存 | — | prd-platform §5.1 |
-| 9 | ~~AI Master 正式 QPS / 并发 / 计费 / SLA / 轮询失败合同~~ —— 已关闭：认证、同步/异步、计费口径已实测；SLA 由业务接受为风险 | — | prd-platform §11.1 |
+| 9 | ~~AI Master 正式 QPS / 并发 / 计费 / SLA / 轮询失败合同~~ —— 已关闭：认证、同步/异步、计费口径已实测；单价 0.02 元/点（1 元 = 50 点，2026-11-04 刘学奎提供）；SLA 由业务接受为风险 | — | prd-platform §11.1 |
 | 10 | ~~视频/音频归档范围~~ —— 已由 D-29 关闭：按规则圈定范围归档 | — | prd-platform §5.1 |
 
 > 2026-10-28 同步：关闭 4、5、6、8、9、10 六项，均只标来源、不新增判断。

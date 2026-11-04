@@ -1383,7 +1383,7 @@ INSERT INTO _strict_probe (n) VALUES (99999);
 | 备份账号 | `SELECT, LOCK TABLES, RELOAD, REPLICATION CLIENT, SHOW VIEW, EVENT, TRIGGER` | 只读 |
 | 迁移账号 | DDL 权限 | 只在执行迁移时使用 |
 
-应用账号与 worker 账号是否拆分、受限过程如何授权，取决于最终选定的 ORM/迁移工具（未决），实施时在此补充实际授权语句。
+应用账号与 worker 账号是否拆分、受限过程如何授权，取决于 tracer 中受限写入过程的实现（ORM 已由 ADR-0005 选定为 Drizzle），实施时在此补充实际授权语句。
 
 #### 2026-09-04 现状
 

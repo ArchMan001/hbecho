@@ -1,7 +1,7 @@
 # media-platform 3.0 模块详细设计：B. 数据供给与资产层
 
 > **状态：`superseded`（2026-09-02）**  
-> **替代文档**：[`database-design-v2.md`](../../domains/data-foundation/database-design-v2.md) 与 [`data-foundation-tracer`](../../../.kiro/specs/data-foundation-tracer/)  
+> **替代文档**：[`database-design-v2.md`](../../domains/data-foundation/database-design-v2.md) 与 [`a-data-foundation-tracer`](../../../.kiro/specs/a-data-foundation-tracer/)  
 > **保留原因**：追溯供应商 capability、反腐层、限流/熔断、成本治理、原始事实和资产归档的早期设计。  
 > **禁止用途**：本文件不是当前实现依据；其中的候选 schema、固定同步执行模式、旧身份模型和技术选型均未被自动继承。冲突时以 [`HBECHO设计方案/INDEX.md`](../../INDEX.md) 的权威顺序为准。
 

@@ -4,8 +4,8 @@
 > **模式**：Design-First；当前只有设计草案，不代表实现已冻结  
 > **适用范围**：平台用户、会话认证、Capability、DataScope、用户与授权管理、异步任务及最终出口授权  
 > **所属域**：B 访问控制 · **目录命名**：旧名 `access-control`，按域代号应为 `b-access-control`（重命名在 B 域 spec 开工前执行）  
-> **最近核对**：2026-11-02（与 B 域 PRD v1.16 的偏差见文末附录）  
-> **更新日期**：2026-09-02
+> **最近核对**：2026-11-04（与 B 域 PRD v1.21 的偏差见文末附录；`b-access-control` 开工前必须按 v1.21 重写，不得直接作为实现依据）  
+> **更新日期**：2026-11-04
 
 ## 1. Overview
 
@@ -446,9 +446,9 @@ EffectiveTaskScope = SubmittedScope ∩ CurrentSubjectScopeAtExecution
 
 ---
 
-## 附录：已知过时内容（2026-10-29 核对）
+## 附录：已知过时内容（2026-11-04 核对）
 
-> 本节只记录偏差，不修改正文。正文仍是本 spec 的技术草案；凡与 B 域 PRD v1.16 冲突处，以 PRD 为准。
+> 本节只记录偏差，不修改正文。正文仍是本 spec 的技术草案；凡与 B 域 PRD v1.21 冲突处，以 PRD 为准。`b-access-control` 开工前必须按 v1.21 重写，不得直接执行本设计。
 
 | # | 位置 | 本设计的写法 | 当前事实 | 来源 |
 |---|---|---|---|---|
@@ -463,4 +463,14 @@ EffectiveTaskScope = SubmittedScope ∩ CurrentSubjectScopeAtExecution
 | 9 | 日志与审计字段 | 原写「日志不保存……完整手机号」 | 已按 B 域 v1.9 改为手机号明文可记录；密码、Token、API key、Cookie 仍不记录 | D-42、B 域 PRD v1.9 |
 | 10 | §12 Failure Semantics | 主数据状态失效或 ID 无法映射 → 空 DataScope 或拒绝 | 已按 B 域 v1.16 区分：品牌/组织停用不影响读范围；不存在或无法映射返回 403，不返回空列表 | B-D25、B-D26 |
 
-**未同步但不算冲突**：B 域 v1.16 的 10 个数据出口与审计可见性（仅 `platform_admin` 可读审计，D-41）在本文中没有展开；本设计只给出口授权语义，不列出口清单。
+**未同步但不算冲突**：B 域 v1.21 的 10 个数据出口与审计可见性（仅 `platform_admin` 可读审计，D-41）在本文中没有展开；本设计只给出口授权语义，不列出口清单。
+
+**2026-11-04 新增已知偏差（B v1.17–v1.21）**：
+
+| # | 位置 | 本设计的写法 | 当前事实 | 来源 |
+|---|---|---|---|---|
+| 11 | §7.1 Naming | Capability 仍是 10 个示例 | B v1.21 已登记 30+ 项，含 `data.master_data.import/correct/structure`、`monitor.external.manage`、`activity_plan.create/join`、`ai.content.assist`、`learning.report.read/tag.manage` | B 域 PRD §7.2 |
+| 12 | §7 / §8 | 只写 Capability，未展开资源谓词 | B-D17 引入计划创建者、所属分公司、对象状态等资源谓词；B-D18/B-D19 明确负责人不是权限 | B 域 PRD §7.1、B-D17–B-D19 |
+| 13 | §10 出口 | 未列 10 个数据出口与交付前复查 | B v1.21 §10 已列 10 个出口；导出/下载/通知/AI 都要求提交、执行、交付三次复查 | B 域 PRD §10 |
+| 14 | §6 生命周期 | 未写 `MediaStaff` 停用/恢复自动停用 `User` | B-D10/B-D11 已定：懒执行 + 定时补偿；恢复只恢复因该专员停用的 User | B 域 PRD §6.2 |
+| 15 | §12 Failure Semantics | 主数据状态失效或 ID 无法映射 → 空 DataScope 或拒绝 | B-D25/B-D26 已区分：停用不影响读范围；无法映射返回 403 | B 域 PRD §8.5 |

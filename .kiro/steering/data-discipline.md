@@ -5,7 +5,7 @@ inclusion: always
 
 # 数据底座六条编码纪律
 
-> 来源：`CONTEXT.md` 不变量、`database-design-v2.md` §5/§12、`data-foundation-tracer` R2/R5/R9/R10/R13/R18。完整条款见 `HBECHO设计方案/governance/constitution.md` C6–C15。
+> 来源：`CONTEXT.md` 不变量、`database-design-v2.md` §5/§12、`a-data-foundation-tracer` R2/R5/R9/R10/R13/R18。完整条款见 `HBECHO设计方案/governance/constitution.md` C6–C15。
 
 ## 这份文件是预防，不是验证
 

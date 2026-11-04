@@ -12,4 +12,4 @@ inclusion: always
 - 任务必须幂等并使用租约与 fencing；旧批次迟到不得让 current 指针倒退；业务主档和历史事实不使用 `ON DELETE CASCADE`。
 - 默认测试必须离线并使用 fixture/fake transport/fake OSS；禁止 CI 或普通测试发起真实、付费 AI Master 调用。真实 smoke 需要人工批准、显式开关、固定预算和审计摘要。
 - 不把 `async=false` 或 `async=true` 写死为生产总策略。同步/异步按已验证 capability 配置，提交、轮询、分页和重试分别记录 ProviderCall。
-- 应用框架、ORM/迁移工具和队列尚未冻结；未有决策前不要在设计文档中宣称已选型。
+- 应用栈已由 ADR-0005（2026-10-27）冻结：Node/TypeScript + Next.js + Drizzle + better-auth；队列为 MySQL 任务表。新增依赖必须先在 ADR 登记；未登记的不得宣称已选型。

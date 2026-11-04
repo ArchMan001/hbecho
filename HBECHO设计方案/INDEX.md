@@ -2,17 +2,17 @@
 
 > 状态：Current  
 > 作用：项目文档的唯一导航页；定义权威顺序、状态和新旧边界。  
-> 更新日期：2026-10-29
+> 更新日期：2026-11-03
 
 ## 1. 从这里开始
 
 按任务选择入口：
 
 1. 理解领域词汇与不可违反的事实：[`CONTEXT.md`](../CONTEXT.md)
-2. 查看不可协商的跨模块条款：[`constitution.md`](governance/constitution.md)（v0，待逐条确认）
-3. 理解产品目标、模块地图和阶段：[`prd-platform.md`](prd-platform.md)；已开写的子 PRD：[A 数据底座](prd-domain-a-data-foundation.md)、[B 访问控制](prd-domain-b-access-control.md)、[C 识别能力](prd-domain-c-signals.md)、[D 规则与考核](prd-domain-d-rule-engine.md)、[E 指标与看板](prd-domain-e-metrics.md)、[F 业务应用](prd-domain-f-business-apps.md)、[G 学习平台](prd-domain-g-learning.md)
+2. 查看不可协商的跨模块条款：[`constitution.md`](governance/constitution.md)（索引，不要求逐条确认）
+3. 理解产品目标、模块地图和阶段：[`prd-platform.md`](prd-platform.md)；已开写的子 PRD：[A 数据底座](prd-domain-a-data-foundation.md)、[B 访问控制](prd-domain-b-access-control.md)、[C 识别能力](prd-domain-c-signals.md)、[D 规则与考核](prd-domain-d-rule-engine.md)、[E 指标与看板](prd-domain-e-metrics.md)、[F 业务应用](prd-domain-f-business-apps.md)、[G 学习平台](prd-domain-g-learning.md)、[H AI 能力](prd-domain-h-ai.md)、[I 运维与成本](prd-domain-i-ops.md)
 4. 实现数据获取与资产域：[`database-design-v2.md`](domains/data-foundation/database-design-v2.md)
-5. 实现当前纵向切片：[`data-foundation-tracer`](../.kiro/specs/data-foundation-tracer/)
+5. 实现当前纵向切片：[`a-data-foundation-tracer`](../.kiro/specs/a-data-foundation-tracer/)
 6. 评审后续模块设计：[`access-control`](../.kiro/specs/access-control/design.md)、[`rule-engine`](../.kiro/specs/rule-engine/design.md)、[`metrics-and-dashboard`](../.kiro/specs/metrics-and-dashboard/design.md)
 7. 配置 hbecho 的服务器、OSS、密钥、Git 与部署：[`server-operations-runbook.md`](runbooks/server-operations-runbook.md)
 8. 开发、验证、CI、测试 ECS 与生产发布：[`dev-test-deploy-workflow.md`](runbooks/dev-test-deploy-workflow.md)
@@ -35,8 +35,8 @@
 ## 3. 冲突时的权威顺序
 
 1. [`CONTEXT.md`](../CONTEXT.md)：已确认领域词汇、语义边界和不变量。
-2. [`database-design-v2.md`](domains/data-foundation/database-design-v2.md)：数据获取与资产域的当前实施基线。
-3. [AI Master API V1.2](../aimaster接口文档/FieldShortcut%20A%20Master%20API%20开发文档%20V1.2.md) 与 [`raw3`](../aimaster接口文档/测试结果/raw3/)：外部合同与实测证据。文档与实测冲突时，raw3 只证明“样本中观察到的行为”，不能外推为供应商长期合同。
+2. [`database-design-v2.md`](domains/data-foundation/database-design-v2.md)：数据获取与资产域的当前实施基线。它与子 PRD `prd-domain-<代号>-<slug>.md` 的产品语义冲突时，以子 PRD 为准并回来修订本项；子 PRD 不得覆盖第 1 项。
+3. [AI Master API V1.2](../aimaster接口文档/FieldShortcut%20A%20Master%20API%20开发文档%20V1.2.md) 与 [`raw3`](../aimaster接口文档/测试结果/raw3/) 等实测证据：外部合同与证据。文档与实测冲突时，raw 证据只证明“样本中观察到的行为”，不能外推为供应商长期合同。
 4. `.kiro/specs/*`：各模块的当前需求、设计和任务；不得静默改写前 3 项事实。
 5. [`prd-platform.md`](prd-platform.md)：产品方向、模块边界和路线图，不承载表级实现。
 6. `superseded` 与 `archived` 文档：只用于追溯，不参与当前实现裁决。
@@ -45,7 +45,22 @@
 
 若当前 Spec 与领域不变量或 v2 基线冲突，先停止实现并显式修订文档；不得通过代码或局部 SQL 暗中选择一方。
 
-**宪法与 ADR 的位置**：`HBECHO设计方案/governance/constitution.md` 是前四项的**跨模块索引**，不新增事实。v0 尚未逐条确认，此时只作检查清单；确认后升级为「规则的有无与边界以宪法为准，细节与论证以原文为准」，冲突时必须在同一次变更里修改两处。`HBECHO设计方案/architecture/adr/` 记录难以逆转且存在真实取舍的决定；ADR 不得改写 `CONTEXT.md` 或 v2 的领域语义。
+**宪法与 ADR 的位置**：`HBECHO设计方案/governance/constitution.md` 是前四项的**跨模块索引**，不新增事实，也不裁决冲突；冲突时以 INDEX §3 的权威顺序与原文为准。`HBECHO设计方案/architecture/adr/` 记录难以逆转且存在真实取舍的决定；ADR 不得改写 `CONTEXT.md` 或 v2 的领域语义。
+
+### 3.1 跨域约定去哪找（2026-11-04）
+
+`conventions-platform.md` 不单独编写（D-73）。跨域约定按主题回原文：
+
+| 主题 | 权威位置 |
+|---|---|
+| 编号 | `prd-platform.md` §0.5（P-R / 域 R / spec R）、§5.1（D-xx） |
+| 权限谓词 | B 域 PRD §7.1、B-D17–B-D19 |
+| 日志与审计 | B 域 PRD §11、I 域 §5.1 |
+| 成本与配额 | I 域 §3.3、§10 |
+| 配置 | I 域 §3.2、§9 |
+| 容量 | `prd-platform.md` §2.3、I 域 §10.2 |
+| 文档规则 | `.kiro/steering/structure.md` |
+| 难逆取舍 | `architecture/adr/` |
 
 ## 4. 五类项目文档
 
@@ -69,15 +84,15 @@
 
 | 代号 | 域 | 对应现状 |
 |---|---|---|
-| A | 数据底座（组织、账号、同步、ODS、内容、媒资） | `prd-domain-a-data-foundation.md` + `database-design-v2` + `data-foundation-tracer` |
+| A | 数据底座（组织、账号、同步、ODS、内容、媒资） | `prd-domain-a-data-foundation.md` + `database-design-v2` + `a-data-foundation-tracer` |
 | B | 访问控制（User、Session、Capability、DataScope） | `prd-domain-b-access-control.md` + `access-control` design |
 | C | 识别能力（文本信号、视觉模板匹配、特征存储） | `prd-domain-c-signals.md`（草稿） |
 | D | 规则与考核 | `prd-domain-d-rule-engine.md` + `rule-engine` design |
 | E | 指标、报表与看板 | `prd-domain-e-metrics.md`（定稿候选） + `metrics-and-dashboard` design |
 | F | 业务应用（点检、账号档案、内容库、任务闭环） | `prd-domain-f-business-apps.md`（草稿） |
 | G | 学习平台 | `prd-domain-g-learning.md`（草稿） |
-| H | AI 能力 | 未立项 |
-| I | 运维与成本 | 未立项 |
+| H | AI 能力 | PRD 初稿（v0.2，1.0 收窄） |
+| I | 运维与成本 | PRD 初稿（v0.1，待盘问确认） |
 
 **旧编号已作废**：此前本表把 C 记为规则、D 记为指标、G 记为成本与治理、H 记为学习与 AI，且缺 I。该写法与 `prd-platform.md` §4.1 冲突，已于 2026-10-28 按 D-01 修正。现有 `.kiro/specs/*` 目录名在对应域 PRD 开工前保持不变，之后按 `<代号>-<切片>` 一次性重命名并修复链接。
 
@@ -89,26 +104,29 @@
 |---|---|---|---|
 | 数据底座领域语言 | [`CONTEXT.md`](../CONTEXT.md) | current | 只含词汇、语义和不变量，不加入表名、框架或接口决策 |
 | 产品总纲 | [`prd-platform.md`](prd-platform.md) | draft（逐章复核中） | v1.0 重构：定位、基线、域划分 A–I、跨域决策、1.0 范围、需求编号与追踪矩阵 |
-| 域 A 产品需求 | [`prd-domain-a-data-foundation.md`](prd-domain-a-data-foundation.md) | draft（v1.9 定稿候选，盘问完成） | 数据底座：组织主数据、账号与归属、AI Master 客户端、同步编排、原始证据、明细层、媒资；批量导入与 `structure` 精确分层 |
-| 域 B 产品需求 | [`prd-domain-b-access-control.md`](prd-domain-b-access-control.md) | current（v1.18 定稿） | 访问控制：开户与激活、登录会话、生命周期、Capability、DataScope、管理范围、10 个出口、审计 |
+| 域 A 产品需求 | [`prd-domain-a-data-foundation.md`](prd-domain-a-data-foundation.md) | draft（v1.10 定稿候选，盘问完成） | 数据底座：组织主数据、账号与归属、AI Master 客户端、同步编排、原始证据、明细层、媒资；批量导入与 `structure` 精确分层 |
+| 域 B 产品需求 | [`prd-domain-b-access-control.md`](prd-domain-b-access-control.md) | current（v1.20 定稿） | 访问控制：开户与激活、登录会话、生命周期、Capability、DataScope、管理范围、10 个出口、审计 |
 | 域 A → C 供数说明 | [`domain-a-handoff-to-c.md`](domain-a-handoff-to-c.md) | draft | A 能给 C 的事实、粒度、质量限制与待对齐项 |
-| 域 C 产品需求 | [`prd-domain-c-signals.md`](prd-domain-c-signals.md) | draft（v1.1 定稿候选，第三轮 ASR 前移） | 识别能力：文本信号、素材比对（图片一致 / 元素 / 文字）、音频 ASR + 大模型判定（1.0）、图片/视频理解（2.0）、特征存储、信号五态；拥有监控判定计划的监控段 |
+| 域 C 产品需求 | [`prd-domain-c-signals.md`](prd-domain-c-signals.md) | draft（v1.2 定稿候选，第三轮 ASR 前移） | 识别能力：文本信号、素材比对（图片一致 / 元素 / 文字）、音频 ASR + 大模型判定（1.0）、图片/视频理解（2.0）、特征存储、信号五态；拥有监控判定计划的监控段 |
 | 域 D 产品需求 | [`prd-domain-d-rule-engine.md`](prd-domain-d-rule-engine.md) | draft（v1.0 定稿候选，第二轮盘问完成） | 规则与考核：计划/考核项模型、专员级达标、三层漏斗、三值逻辑、版本与执行、监控判定计划的判定段与生命周期 |
 | 域 E 产品需求 | [`prd-domain-e-metrics.md`](prd-domain-e-metrics.md) | draft（v1.0 定稿候选，第二轮盘问完成） | 指标、报表与看板：唯一口径、投影与原子切换、三张视图、一张计划看板、唯一导出出口；计划级四列 + 分项率（分母=到达人数）；1.0 不做全量内容明细、自助分析、个人视图与 n_day |
 | 域 F 产品需求 | [`prd-domain-f-business-apps.md`](prd-domain-f-business-apps.md) | draft（v1.0 定稿候选，第二轮盘问完成） | 业务应用：F 域边界（只编排不复制）、1.0 只做 F5 导入中心（平台级主数据 + 分公司活动名单），F1–F4／F6–F9 仅简版场景；路径 1 upsert、路径 2 只新增；批量导入与 structure 精确分层 |
 | 域 G 产品需求 | [`prd-domain-g-learning.md`](prd-domain-g-learning.md) | draft（v1.0 定稿候选，第二轮盘问完成） | 学习平台：1.0 只做 G1 内容管理 + G2 学习中心 + 进度记录 + 总部总量；视频走 VOD、资料走 hbecho-course、可见性=品牌×人员级别；换店删旧建新不迁移进度 |
+| 域 H 产品需求 | [`prd-domain-h-ai.md`](prd-domain-h-ai.md) | draft（v0.2 初稿，1.0 收窄） | AI 能力：H1 网关、H2 Prompt、H5 单条脚本分析（仅超管/总部）；H8 规则辅助移 2.0；业务 AI 只保留 D 第三层 ASR + 大模型 |
+| 域 I 产品需求 | [`prd-domain-i-ops.md`](prd-domain-i-ops.md) | draft（v0.1 初稿，待盘问确认） | 运维与成本：部署、可观测、备份、安全、生命周期、环境变量配置、配额与硬上限；配置中心/OSS 分级/完整成本看板 2.0 |
+| PRD 修订清单 | [`prd-修订清单-2026-11-03.md`](prd-修订清单-2026-11-03.md) | draft（工作清单） | 2026-11-03 对总 PRD、A–G、CONTEXT、steering 与相关 ADR 的评审结论与逐条修订建议；修完后移入 `archive/`；不是实现依据 |
 | Kiro steering | [`product`](../.kiro/steering/product.md) · [`tech`](../.kiro/steering/tech.md) · [`structure`](../.kiro/steering/structure.md) | current（derived） | 从本索引、总纲、CONTEXT 与 v2 提炼的自动注入规则；无独立裁决权 |
 | 数据底座编码纪律 | [`data-discipline.md`](../.kiro/steering/data-discipline.md) | current（derived） | 从 CONTEXT 不变量与 tracer R2/R5/R9/R10/R13/R18 提炼的六条预防性纪律；当前无机器守护 |
 | 服务器访问 | [`server-access.md`](../.kiro/steering/server-access.md) | current | 2026-10-14 用户决定：只走 Workbench；同时适用于 hbecho 与 hbdam |
 | 选型纪律 | [`no-reinventing-wheels.md`](../.kiro/steering/no-reinventing-wheels.md) | current | 成熟方案优先的判断阶梯与记录格式 |
 | 开发节奏 | [`dev-ci-cadence.md`](../.kiro/steering/dev-ci-cadence.md) | current | 分支、推送、等待 CI 与合并规则；应用代码落地后补实测条目 |
-| 不可协商条款 | [`constitution.md`](governance/constitution.md) | draft（待逐条确认） | 18 条跨模块条款；确认前是索引，不具裁判权 |
-| 架构决策 | [`adr/README.md`](architecture/adr/README.md) | current | 10 项已定决定（ADR-0001～0010）+ 10 项选型登记（全部关闭）；新决定必须单独写 ADR |
+| 不可协商条款 | [`constitution.md`](governance/constitution.md) | current（索引） | 18 条跨模块条款；索引，不新增事实、不裁决冲突 |
+| 架构决策 | [`adr/README.md`](architecture/adr/README.md) | current | 12 项已定决定（ADR-0001～0012）+ 10 项选型登记（全部关闭）；新决定必须单独写 ADR |
 | 开发测试部署流程 | [`dev-test-deploy-workflow.md`](runbooks/dev-test-deploy-workflow.md) | current | 当前唯一实例是**测试 ECS**，生产 ECS 未购买；只有本机 verify 与 CI 可用 |
 | 本机验证与 CI | [`verify.sh`](../scripts/verify.sh) · [`ci.yml`](../.github/workflows/ci.yml) · [`pre-commit`](../.githooks/pre-commit) | current | verify 当前仅覆盖密钥、文档链接、文档登记与 spec 结构；pre-commit 只扫暂存区 |
 | 数据底座数据库 | [`database-design-v2.md`](domains/data-foundation/database-design-v2.md) | draft（待 A 域 PRD 逐表复核） | 30 表草案；v1 不参与新实现 |
 | 数据底座字段字典 | [`field-dictionary.md`](domains/data-foundation/field-dictionary.md) | draft | 主页/列表/详情/评论的规范字段、含义、值状态与 10 个未确认语义 |
-| 数据底座 tracer | [requirements](../.kiro/specs/data-foundation-tracer/requirements.md) · [design](../.kiro/specs/data-foundation-tracer/design.md) · [tasks](../.kiro/specs/data-foundation-tracer/tasks.md) | draft | 首个 Design-First 纵向切片；AI Master 是内部适配器 |
+| 数据底座 tracer | [requirements](../.kiro/specs/a-data-foundation-tracer/requirements.md) · [design](../.kiro/specs/a-data-foundation-tracer/design.md) · [tasks](../.kiro/specs/a-data-foundation-tracer/tasks.md) · [acceptance](../.kiro/specs/a-data-foundation-tracer/acceptance.md) | draft | 首个 Design-First 纵向切片；已按 A v1.9 与 raw4/raw5/raw8 校准；AI Master 是内部适配器 |
 | 访问控制 | [`design.md`](../.kiro/specs/access-control/design.md) | draft | 认证、Capability、DataScope、异步任务撤权语义 |
 | 规则引擎 | [`design.md`](../.kiro/specs/rule-engine/design.md) | draft | 消费 v2 终态快照；规则、证据和重算归规则域所有 |
 | 指标与看板 | [`design.md`](../.kiro/specs/metrics-and-dashboard/design.md) | draft | 依赖规则 outcome；统一口径、投影、报表、看板与导出 |
@@ -146,31 +164,32 @@ flowchart LR
 
 ## 7. 当前 Spec 路线图
 
-1.0 共 9 个 spec，定义见 [`prd-platform.md` §7.2](prd-platform.md)。
+1.0 共 10 个 spec，定义见 [`prd-platform.md` §7.2](prd-platform.md)。
 
 | 顺序 | Spec | 验收结果 |
 |---:|---|---|
 | 1 | `a-data-foundation-tracer` | 抖音、小红书各一个账号从入口解析到主页、首屏、检查点和媒资进度可查询 |
-| 2 | `a-full-sync` | 抖音、小红书、快手各若干账号完成一轮周期同步，含详情与按规则圈定的评论 |
-| 3 | `a-master-data-import` | 导入权威主档导出：预检差异、确认写入，失败行落库可重试 |
+| 2 | `a-master-data-import` | 导入权威主档导出（F5 路径 1）：预检差异、确认写入，失败行落库可重试 |
+| 3 | `a-full-sync` | 抖音、小红书、快手各若干账号完成一轮周期同步，含详情与按规则圈定的评论；外部监控账号复用同一链路 |
 | 4 | `b-access-control` | 真实用户可登录，Capability 与 DataScope 生效，无授权旁路 |
-| 5 | `c-signals` | 文本信号与模板匹配落入特征表，可被规则引用 |
-| 6 | `d-rule-engine` | 业务能配 0/1 档规则与音频 ASR 判定、试运行、看证据、发布 |
-| 7 | `e-metrics` | 点检表、看板与导出共享唯一口径，比率可上卷 |
-| 8 | `g-learning-min` | 课程可上传、播放并记录进度 |
-| 9 | `h-ai-min` | AI 调用经网关计量审计；单条脚本分析可用；规则辅助只产出草稿 |
+| 5 | `a-activity-plan` | 活动计划、分公司参与、名单导入（F5 路径 2，含自动新建专员）、监控联动与 15 天停采 |
+| 6 | `c-signals` | 文本信号、模板匹配与音频 ASR 判定结果落入特征表，可被规则引用 |
+| 7 | `d-rule-engine` | 业务能配 0/1 档规则与音频 ASR 判定、试运行、看证据、发布 |
+| 8 | `e-metrics` | 点检表、看板与导出共享唯一口径，比率可上卷 |
+| 9 | `g-learning-min` | 课程可上传、播放并记录进度 |
+| 10 | `h-ai-min` | AI 调用经网关计量审计；单条脚本分析可用（仅超管/总部） |
 
-### 7.1 现有 spec 目录登记（2026-10-29 核对）
+### 7.1 现有 spec 目录登记（2026-11-03 核对）
 
 | 目录 | 域 | 命名 | 文件齐全度 | 上游 PRD | 已知偏差 |
 |---|---|---|---|---|---|
-| `data-foundation-tracer` | A | 旧名，应为 `a-data-foundation-tracer` | requirements / design / tasks | A v1.0（定稿候选） | 已按 D-28 / D-25 修正归属与命名空间；v2 两表待复核 |
-| `access-control` | B | 旧名，应为 `b-access-control` | 仅 design | B v1.16（current） | design 附录：8 项开放决策中 6 项已关闭（#7 由 ADR-0010 关闭），Capability 清单未同步 |
+| `a-data-foundation-tracer` | A | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | A v1.10（定稿候选） | 已按 A v1.9 与 raw4/raw5/raw8 校准；v2 六项基线冲突已于 2026-11-04 修订，见 requirements §1.2 |
+| `access-control` | B | 旧名，应为 `b-access-control` | 仅 design | B v1.21（current） | design 待按 B v1.21 重写：Capability 清单、资源谓词、10 个出口、MediaStaff 自动停用均未同步 |
 | `rule-engine` | D | 旧名，应为 `d-rule-engine` | 仅 design（`requirements.md` 已移除） | D v1.0（定稿候选） | 已改：3 个评论刷量算子改「搁置」；requirements / tasks 仍缺；design 的 AssessmentItem 模型待与考核项模型对齐 |
 | `metrics-and-dashboard` | E | 旧名，应为 `e-metrics` | 仅 design | E v1.0（定稿候选） | 已改：`n_day` 降为 2.0、投影自动激活；design 待同步分项列与两层分母 |
 | `g-learning-min` | G | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | G v1.0（定稿候选） | 已按 ADR-0007 去掉自动截图；spec 设计仍写 G v0.4，待同步 |
 
-> 旧名目录在对应域 spec 开工前按 `<代号>-<切片>` 一次性重命名，并修复全部链接。各文件头已标注所属域与命名状态；偏差只记录在各文件的「已知过时内容」附录，不修改正文。
+> `a-data-foundation-tracer` 已于 2026-11-03 完成重命名并补齐四件套；其余旧名目录（`access-control`、`rule-engine`、`metrics-and-dashboard`）在对应域 spec 开工前按 `<代号>-<切片>` 一次性重命名，并修复全部链接。各文件头已标注所属域与命名状态；偏差只记录在各文件的「已知过时内容」附录，不修改正文。
 
 不创建覆盖全项目的巨型 Spec。每个 Spec 必须有独立可验收边界；跨域只通过明确契约连接。
 
@@ -181,8 +200,8 @@ flowchart LR
 | 文档 | 状态 | 当前替代 |
 |---|---|---|
 | [`database-design-v1.md`](archive/data-foundation/database-design-v1.md) | archived | [`database-design-v2.md`](domains/data-foundation/database-design-v2.md) |
-| [`data-supply-mvp.md`](archive/data-foundation/data-supply-mvp.md) | superseded | v2 + `data-foundation-tracer` |
-| [`data-supply-and-assets.md`](archive/data-foundation/data-supply-and-assets.md) | superseded | v2 + `data-foundation-tracer` |
+| [`data-supply-mvp.md`](archive/data-foundation/data-supply-mvp.md) | superseded | v2 + `a-data-foundation-tracer` |
+| [`data-supply-and-assets.md`](archive/data-foundation/data-supply-and-assets.md) | superseded | v2 + `a-data-foundation-tracer` |
 
 两份 superseded 数据供给稿仍可用于追溯 parser fixture、错误分类、反腐层、限流/熔断和 raw-before-parse 的早期思路，但其中的旧表名、旧状态、旧组织模型和 API 假设均不得直接实现。
 
@@ -241,11 +260,9 @@ flowchart LR
 
 完整清单、卡住的范围与决策人见 [`prd-platform.md` §11](prd-platform.md)。本节只保留最容易被误当成已决定、且当前确实仍未关闭的几条：
 
-- Python 能力的运行形态（T-01）：常驻小服务方向已定（D-35），部署形态待 ADR；阻塞 `c-signals`；
-- 评论采集的具体参数：排名范围（全平台 / 本分公司 / 本活动）、排名依据、阈值、Top N、观察窗口、每账号页数与条数上限——A 域已把定义推给 D 域活动规则，D 域 PRD 尚未承接；
 - 互动总数中 share / forward / collect 的跨平台口径：1.0 搁置，未定前 `interactions_total` 不上线；
 - VOD 播放域名与 ICP 备案（G 10.1，外部阻塞；ADR-0007 其余已实测，备案前用 OSS 签名 URL 联调）；
 
-以下各项**已关闭**，不要再当作未决项：`RoleCode`（D-22）、`User ↔ MediaStaff` 严格一对一（B 域 PRD §8.3）、被监控账号数（D-30，6,000 全部监控）、部署拓扑与反代形态（ADR-0006）、门店的经销商 / 板块可变性与历史归属快照（ADR-0008，2026-11-02 修订 D-18 的「不可变」部分）、登录手机号存储方式（D-42，明文）、标准图的存储与版本化（存 OSS，按「计划 ID + 计划版本 + 图片 SHA-256」定位）。
+以下各项**已关闭**，不要再当作未决项：`RoleCode`（D-22）、`User ↔ MediaStaff` 严格一对一（B 域 PRD §8.3）、被监控账号数（D-30，6,000 全部监控）、部署拓扑与反代形态（ADR-0006）、门店的经销商 / 板块可变性与历史归属快照（ADR-0008，2026-11-02 修订 D-18 的「不可变」部分）、登录手机号存储方式（D-42，明文）、Python 能力服务形态（ADR-0012）、报表导出库（ADR-0011，exceljs 仅写入）、评论采集范围（D-D12：只对通过前两层的内容采集，替代 D-27 的排名参数）、标准图的存储与版本化（存 OSS，按「计划 ID + 计划版本 + 图片 SHA-256」定位）。
 
 未决项必须保持可见，不得在代码或文档示例中被悄悄“默认确认”。

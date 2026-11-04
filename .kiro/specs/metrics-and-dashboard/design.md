@@ -3,6 +3,9 @@
 > **状态**：`draft`  
 > **模式**：Design-First；本轮重构历史技术设计，不包含 requirements/tasks  
 > **适用范围**：指标目录、观察策略、活动投影、三张表、看板、DataScope 与异步导出  
+> **所属域**：E 指标与看板 · **目录命名**：旧名 `metrics-and-dashboard`，按域代号应为 `e-metrics`  
+> **最近核对**：2026-10-29（与 E 域 PRD v0.1.6 存在偏差，见文末附录）  
+> **2026-11-04 已知过时**（以 E 域 PRD v1.1 为准，正文未改）：不设分项完成率与「考核项」sheet；专员明细展示内容 / 评论 / 账号三项结果与 C1 / C2 / C3 各层通过条数；命中内容 = 通过全部内容层的内容；报表导出用 exceljs 仅写入，在 Worker 进程生成（ADR-0011）。
 > **更新日期**：2026-09-02
 
 ## 1. Overview
@@ -30,11 +33,11 @@ flowchart LR
 优先级：
 
 1. [`CONTEXT.md`](../../../CONTEXT.md)：稳定身份、历史归属、ContentDiscovery、快照、ValueState 和时间语义；
-2. [`database-design-v2.md`](../../../docs/domains/data-foundation/database-design-v2.md)：数据底座当前事实与约束；
+2. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座当前事实与约束；
 3. [`rule-engine/design.md`](../rule-engine/design.md)：OutcomeSet、ParticipantFact、ItemOutcomeFact 和 AttributionSnapshot 契约；
 4. [`access-control/design.md`](../access-control/design.md)：Capability、DataScope 和异步撤权语义；
 5. 本设计：指标、投影、报表、看板和导出；
-6. 历史输入：[`media-platform-3.0-模块设计-指标与看板.md`](../../../项目历史文档/media-platform-3.0-模块设计-指标与看板.md)。
+6. 历史输入：[`hbecho-模块设计-指标与看板.md`](../../../HBECHO设计方案/prd-drafts-子PRD草案/hbecho-模块设计-指标与看板.md)。
 
 ## 3. Goals and Non-goals
 
@@ -209,15 +212,9 @@ region rate = region numerator / region denominator
 
 `last_observed(asOf)` 选择 asOf 之前逻辑上最新的 finalized 快照，把实际 snapshot ID、观察时间和选择 policy revision 固定进 projection。发布后不再沿 `current_snapshot_id` 漂移。
 
-### 7.2 N-day matured
+### 7.2 N-day matured（2.0，1.0 不启用）
 
-`n_day_matured(n, selectionPolicy, tolerance)` 围绕 `publishedAt + n days` 选择符合策略的 finalized 快照。必须显式决定：
-
-- 首次不早于目标时点；
-- 目标时点前最近；或
-- 容差内最近。
-
-没有合格快照时返回 no_data，不插值、不取 0。N、方向和容差仍待业务确认。
+1.0 只用 `last_observed`；`n_day_matured` 及其 N、选择方向、容差与缺失显示都放 2.0（D-66、E 域 PRD §11）。2.0 启用时需另行定义：首次不早于目标时点 / 目标时点前最近 / 容差内最近；没有合格快照时返回 `no_data`，不插值、不取 0。
 
 ### 7.3 Profile boundary observations
 
@@ -300,18 +297,17 @@ sequenceDiagram
   P->>V: validate invariants and coverage
   V-->>P: valid / rejected
   P->>S: write candidate idempotently
-  P->>S: mark ready_to_activate
-  P-->>E: candidate ref + validation report
-  A->>P: activate(candidate, reason)
+  P->>S: auto-activate valid candidate
   P->>S: atomic active pointer switch
+  P-->>E: active projection ref + validation report
 ```
 
-幂等键至少包含 outcomeSetId、metric revision set 和 observation policy revisions。重复 build event 返回同一 candidate，不创建不同事实，也不自动切换 active。只有通过验证且处于 `ready_to_activate` 的 candidate 可由具备 Capability 的 actor 显式激活；激活保存 actor、reason 和审计。build/validate/activate 任一步失败时旧 active projection 继续服务并标注 stale，无旧版时返回 not_ready。
+幂等键至少包含 outcomeSetId、metric revision set 和 observation policy revisions。重复 build event 返回同一 candidate，不创建不同事实。通过验证的 candidate 由系统**自动激活**，业务刷新即见新数（E-D11）；激活记录触发事件、版本与时间，供审计追溯，不需要人工动作。build/validate/activate 任一步失败时旧 active projection 继续服务并标注 stale，无旧版时返回 not_ready。
 
 候选生命周期为：
 
 ```text
-planned → building → validating → ready_to_activate → active → superseded
+planned → building → validating → active → superseded
                          ↘ rejected | failed | cancelled
 ```
 
@@ -482,11 +478,11 @@ Trace 关联 `campaignId`、`outcomeSetId`、`projectionId`、`metricRevision`�
 3. achieved 始终是 participant 子集，多账号不重复计算同一 MediaStaff；
 4. 跨层级比率由组件重算，不平均下级百分比；
 5. `0/missing/explicit_null/invalid/denominator=0/waiting/not_applicable` 有不同结果；
-6. last_observed 和 n_day_matured 固定实际 snapshot，并在 UI/导出显示；
+6. last_observed 固定实际 snapshot，并在 UI/导出显示；
 7. 账号转移、组织调整和旧批次迟到后，旧 projection 数值与归属不变；
 8. 多 discovery/共创按已确认 grain 计数，不丢归属或重复分母；
 9. 当前 DataScope 收缩后在线结果立即收缩，异步导出不会交付旧超范围文件；
-10. projection build/rebuild 只产生 candidate；未授权或未带理由的 activate 不切换；显式激活原子完成，并发事件、重复消费和失败均不产生空窗或混合版本；
+10. projection build/rebuild 通过验证后自动激活；原子切换，并发事件、重复消费和失败均不产生空窗或混合版本；
 11. 三张表使用同一 token 完成点检 → 命中内容 → 专员全量内容下钻；
 12. 大导出不阻塞 HTTP，内存、图片并发和文件可见性有界；
 13. 正式报表显示数据截止、规则/指标版本、观察策略、pending 与数据质量；
@@ -520,8 +516,7 @@ Trace 关联 `campaignId`、`outcomeSetId`、`projectionId`、`metricRevision`�
 4. AttributionSnapshot owner、schema、冻结时点和保留期；
 5. User/DataScope 组织 ID 与 v2 稳定 ID 的映射，“本人”如何绑定 MediaStaff；
 6. 指标、模板、看板、分享和导出的最终 Capability；
-7. n_day 的 N、选择方向、容差和缺失显示；
-8. interactions_total 对 share/forward/collect 的跨平台口径。
+7. interactions_total 对 share/forward/collect 的跨平台口径。
 
 ### Product/configuration decisions
 
@@ -534,3 +529,20 @@ Trace 关联 `campaignId`、`outcomeSetId`、`projectionId`、`metricRevision`�
 - partial 数据能否用于正式通报；
 - 最佳内容并列、缺值和 URL 失效策略；
 - Artifact 默认保留期和撤权后的删除/重建策略。
+
+---
+
+## 附录：已知过时内容（2026-10-29 核对）
+
+> 本节只记录偏差，不修改正文。凡与 E 域 PRD v0.1.6 冲突处，以 PRD 为准。
+
+| # | 位置 | 原设计 | 当前事实或处理 | 来源 |
+|---|---|---|---|---|
+| 1 | 观察策略 · `n_day_matured` | 原把 `n_day_matured` 作为 1.0 可选策略，N / 方向 / 容差列为待定 | 已改为 2.0；1.0 只做 `last_observed` | D-66、E 域 PRD §11 |
+| 2 | 投影激活语义 | 原要求具备 Capability 的 actor 显式激活 | 已改为通过验证后自动激活；生命周期去掉 `ready_to_activate` | E-D11 |
+| 3 | 授权判断示例 | 对照 `hq_user` / `branch_user` / `dealer_staff` 角色 | 角色码已定四类，`dealer_staff` 不保留 | D-22 |
+| 4 | 指标目录 · `interactions_total` | 跨平台字段映射作为开放口径 | 1.0 不展示 `interactions_total`，口径未定前不上线 | E 域 PRD §11.1 |
+| 5 | `ReportTemplateRevision` | 保存汇总维度、指标、动态 item group、阈值着色与导出样式 | 1.0 只用系统内置模板，不做业务自建模板 | E-D10 |
+| 6 | 文末开放项 | Artifact 默认保留期待定 | 已关闭：导出件保留 7 天，可配置 | E-D13 |
+
+**核对为一致的部分**（不需改动）：唯一 `projectionId` / `outcomeSetId` 口径、三张表共用冻结投影、比率按组件上卷、异步导出与交付前范围复查、点检表固定「大区 → 分公司」两级（E-D12）。

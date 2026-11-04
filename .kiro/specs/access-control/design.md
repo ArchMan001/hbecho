@@ -3,7 +3,9 @@
 > **状态**：`draft`  
 > **模式**：Design-First；当前只有设计草案，不代表实现已冻结  
 > **适用范围**：平台用户、会话认证、Capability、DataScope、用户与授权管理、异步任务及最终出口授权  
-> **更新日期**：2026-09-02
+> **所属域**：B 访问控制 · **目录命名**：旧名 `access-control`，按域代号应为 `b-access-control`（重命名在 B 域 spec 开工前执行）  
+> **最近核对**：2026-11-04（与 B 域 PRD v1.21 的偏差见文末附录；`b-access-control` 开工前必须按 v1.21 重写，不得直接作为实现依据）  
+> **更新日期**：2026-11-04
 
 ## 1. Overview
 
@@ -35,13 +37,13 @@ flowchart LR
 冲突时按以下顺序裁决：
 
 1. [`CONTEXT.md`](../../../CONTEXT.md)：`MediaStaff`、`ExternalAccount`、组织、历史归属与监控语义；
-2. [`database-design-v2.md`](../../../docs/domains/data-foundation/database-design-v2.md)：数据底座当前主档和引用路径；
+2. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座当前主档和引用路径；
 3. 本设计：访问控制域的 User、Session、Capability、Grant 与 DataScope；
 4. 历史输入：
-   - [`域E-用户与权限详细设计.md`](../../../域E-用户与权限详细设计.md)
-   - [`域E-用户与权限详细设计-评审意见.md`](../../../域E-用户与权限详细设计-评审意见.md)
-   - [`media-platform-3.0-模块设计-权限中心.md`](../../../项目历史文档/media-platform-3.0-模块设计-权限中心.md)
-   - [`平台底座首版产品设计`](../../../项目历史文档/media-platform-3.0-平台底座首版产品设计.md)
+   - [`HBECHO设计方案/archive/legacy/域E-用户与权限详细设计.md`](../../../HBECHO设计方案/archive/legacy/域E-用户与权限详细设计.md)
+   - [`HBECHO设计方案/archive/legacy/域E-用户与权限详细设计-评审意见.md`](../../../HBECHO设计方案/archive/legacy/域E-用户与权限详细设计-评审意见.md)
+   - [`hbecho-模块设计-权限中心.md`](../../../HBECHO设计方案/prd-drafts-子PRD草案/hbecho-模块设计-权限中心.md)
+   - [`平台底座首版产品设计`](../../../HBECHO设计方案/prd-drafts-子PRD草案/hbecho-平台底座首版产品设计.md)
 
 历史文档只提供候选经验；与前两项冲突的角色、组织或账号模型不被继承。
 
@@ -373,7 +375,7 @@ EffectiveTaskScope = SubmittedScope ∩ CurrentSubjectScopeAtExecution
 - 导出提交、执行、取消、交付与下载 URL 签发；
 - 高成本操作的授权与拒绝。
 
-事件包含 actor、subject、action、resource、decision、policy/grant version、范围 fingerprint、before/after 安全摘要、reason、trace/request/job ID 和 UTC 时间。日志不保存密码、Token、API key、Cookie、完整手机号或大范围明细。
+事件包含 actor、subject、action、resource、decision、policy/grant version、范围 fingerprint、before/after 安全摘要、reason、trace/request/job ID 和 UTC 时间。日志不保存密码、Token、API key、Cookie 或大范围明细；手机号按明文记录（B 域 PRD v1.9）。
 
 ### 11.2 Sensitive data
 
@@ -427,7 +429,7 @@ EffectiveTaskScope = SubmittedScope ∩ CurrentSubjectScopeAtExecution
 
 1. 最终 RoleProfile/RoleCode，尤其 `dealer_staff` 是否重命名；
 2. User 与 MediaStaff 首版是否严格一对一，以及跨品牌/门店现实人员如何映射；
-3. Branch 范围是否还必须与显式品牌 Grant 求交；
+3. ~~Branch 范围是否还必须与显式品牌 Grant 求交~~ —— 已关闭：求交，品牌必须显式授予（ADR-0010、B 域 PRD v1.16 §8.1）；
 4. Store 的 dealer/brand/sector 是否不可变；若可变，历史 AttributionSnapshot 由哪个域拥有；
 5. User 登录手机号采用明文还是 `ciphertext + lookup HMAC`；
 6. 登录标识、密码策略、Access/Refresh 有效期和 Session 并发上限；
@@ -441,3 +443,34 @@ EffectiveTaskScope = SubmittedScope ∩ CurrentSubjectScopeAtExecution
 - 高风险审计写入失败时各动作的 fail-closed 等级；
 - 只读范围缓存 TTL 与授权版本失效机制；
 - 经销商/门店用户默认“仅本人”还是“本门店”，最终以 User↔MediaStaff 决策为前提。
+
+---
+
+## 附录：已知过时内容（2026-11-04 核对）
+
+> 本节只记录偏差，不修改正文。正文仍是本 spec 的技术草案；凡与 B 域 PRD v1.21 冲突处，以 PRD 为准。`b-access-control` 开工前必须按 v1.21 重写，不得直接执行本设计。
+
+| # | 位置 | 本设计的写法 | 当前事实 | 来源 |
+|---|---|---|---|---|
+| 1 | §7.1 Naming | 10 个 Capability 只是“命名示例，不是已冻结清单” | B 域 §7 已冻结角色 × Capability 矩阵 | B 域 PRD v1.2 |
+| 2 | §7.1 Naming | 无 `activity_plan.create`、`activity_plan.join`、`learning.report.read`、`learning.tag.manage` | 四项已登记（前两项 v1.1，后两项 v1.2） | B 域 PRD v1.1、v1.2 |
+| 3 | §14 Open Decisions 1 | 最终 RoleProfile / RoleCode 待定，尤其 `dealer_staff` 是否重命名 | 已关闭：`platform_admin` / `hq_manager` / `branch_manager` / `store_staff`，不保留 `dealer_staff` | D-22 |
+| 4 | §14 Open Decisions 2 | User ↔ MediaStaff 是否严格一对一带开 | 已关闭：`store_staff` 与一个 `MediaStaff` 一对一，绑不上拒绝本人范围 | B 域 PRD §8.3 |
+| 5 | §14 Open Decisions 4 | Store 的 dealer / brand / sector 是否可变带开 | 已关闭：视为不可变，不做组织历史归属快照 | D-18 |
+| 6 | §14 Open Decisions 5 | 手机号明文还是 `ciphertext + lookup HMAC` 带开 | 已关闭：明文保存 | D-42 |
+| 7 | §14 Open Decisions 6 | 登录标识、密码策略、会话有效期带开 | 已关闭：15 天滑动会话；密码只保留最短 8 位 | D-40、D-45 |
+| 8 | §14 Open Decisions 3 | Branch 范围是否与品牌 Grant 求交 | 已关闭，保持不变：求交，品牌必须显式授予，见 ADR-0010 与 B 域 PRD v1.16 §8.1 | ADR-0010 |
+| 9 | 日志与审计字段 | 原写「日志不保存……完整手机号」 | 已按 B 域 v1.9 改为手机号明文可记录；密码、Token、API key、Cookie 仍不记录 | D-42、B 域 PRD v1.9 |
+| 10 | §12 Failure Semantics | 主数据状态失效或 ID 无法映射 → 空 DataScope 或拒绝 | 已按 B 域 v1.16 区分：品牌/组织停用不影响读范围；不存在或无法映射返回 403，不返回空列表 | B-D25、B-D26 |
+
+**未同步但不算冲突**：B 域 v1.21 的 10 个数据出口与审计可见性（仅 `platform_admin` 可读审计，D-41）在本文中没有展开；本设计只给出口授权语义，不列出口清单。
+
+**2026-11-04 新增已知偏差（B v1.17–v1.21）**：
+
+| # | 位置 | 本设计的写法 | 当前事实 | 来源 |
+|---|---|---|---|---|
+| 11 | §7.1 Naming | Capability 仍是 10 个示例 | B v1.21 已登记 30+ 项，含 `data.master_data.import/correct/structure`、`monitor.external.manage`、`activity_plan.create/join`、`ai.content.assist`、`learning.report.read/tag.manage` | B 域 PRD §7.2 |
+| 12 | §7 / §8 | 只写 Capability，未展开资源谓词 | B-D17 引入计划创建者、所属分公司、对象状态等资源谓词；B-D18/B-D19 明确负责人不是权限 | B 域 PRD §7.1、B-D17–B-D19 |
+| 13 | §10 出口 | 未列 10 个数据出口与交付前复查 | B v1.21 §10 已列 10 个出口；导出/下载/通知/AI 都要求提交、执行、交付三次复查 | B 域 PRD §10 |
+| 14 | §6 生命周期 | 未写 `MediaStaff` 停用/恢复自动停用 `User` | B-D10/B-D11 已定：懒执行 + 定时补偿；恢复只恢复因该专员停用的 User | B 域 PRD §6.2 |
+| 15 | §12 Failure Semantics | 主数据状态失效或 ID 无法映射 → 空 DataScope 或拒绝 | B-D25/B-D26 已区分：停用不影响读范围；无法映射返回 403 | B 域 PRD §8.5 |

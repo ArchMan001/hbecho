@@ -1,0 +1,432 @@
+{
+  "case": "C07",
+  "platform": "douyin",
+  "action": "post_comments_list",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "8.79 复制打开抖音，看看【日立中央空调的作品】中国人能飞｜装日立，居家感受舒适到起飞！ https://v.douyin.com/f2BYSAk82l8/",
+      "max_cursor": 0,
+      "reply_pages": -1
+    }
+  },
+  "started_at": "2026-10-28T03:14:43.108716+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae168a925f71e0001dd6040",
+      "task_url": "https://fieldshortcut.com/tasks/6ae168a925f71e0001dd6040",
+      "action": "post_comments_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "id": "7692933835680744229",
+            "post_id": "7676403385372904742",
+            "content": "@[赞][赞][赞][赞][赞][赞][赞][赞][赞][赞][爱心][爱心][爱心][爱心][爱心][爱心][爱心][爱心][爱心][发怒][发怒][发怒][发怒][发怒][发怒][发怒][发怒][发怒][发怒][舔屏][舔屏][舔屏][舔屏][舔屏][舔屏][舔屏][舔屏][舔屏][舔屏]",
+            "author": {
+              "id": "1905907340420250",
+              "name": "用户3984367135378",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/aweme_default_avatar.png~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1791150742000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7701164809220752185",
+            "post_id": "7676403385372904742",
+            "content": "日立中央空调[666][666][666][666][赞][赞][赞]",
+            "author": {
+              "id": "301746154122800",
+              "name": "维c",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c000-ce_osh1MRGm5sAABI9vCjPAaTAUPiMBaiAEonZK7~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1793067162000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7692870249126019840",
+            "post_id": "7676403385372904742",
+            "content": "我听到了《圣诞快乐劳伦斯先生》",
+            "author": {
+              "id": "109575096218",
+              "name": "孬康不孬⌯^⦁֊⦁^⌯",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813_oALAnSPxiIRtAU3APVDtiAz0gTRMAIHEgaBA5~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1791135938000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7687738584149623610",
+            "post_id": "7676403385372904742",
+            "content": "[玫瑰][玫瑰][玫瑰][玫瑰][赞][赞][赞][爱心][爱心][爱心][鼓掌][鼓掌][鼓掌][666][666][666][666]",
+            "author": {
+              "id": "2322582696112231",
+              "name": "平安喜乐～",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c000-ce_oA0CeowIEnDAgndFkHC2CqTx9A5E9AAAECGmf4~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1789941129000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7692909747813253928",
+            "post_id": "7676403385372904742",
+            "content": "1，到处扣1，忙到飞也涨不了几个粉[捂脸]，还要坚持吗？",
+            "author": {
+              "id": "93460946188",
+              "name": "汗水是脂肪的眼泪；",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813_owrZEyHSAuAiP8JAmPArqhDgBaImExIQqAmij~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1791145141000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7681002222104380211",
+            "post_id": "7676403385372904742",
+            "content": "日立空調舒服到你飛、帶你起飛！中國人能飛，未來能科技帶你飛！[爱心][玫瑰]",
+            "author": {
+              "id": "2047706549457386",
+              "name": "圣",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c001_ocfOZ0OAAACiAvgV2hBlC1IZbEAzcGe3Ii5ADQ~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 1,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1788372697000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7680823467721949986",
+            "post_id": "7676403385372904742",
+            "content": "，[666][666][666][666]",
+            "author": {
+              "id": "951532096860506",
+              "name": "新光",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/aweme_default_avatar.png~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1788331073000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7678055765316698929",
+            "post_id": "7676403385372904742",
+            "content": "[赞][赞][赞][比心][比心][比心]",
+            "author": {
+              "id": "66942005919",
+              "name": "楊宗國",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c000-ce_oITFAkffCYqVFJAqEXve7moDgEvBQ8AlglMqIA~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 2,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787686675000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7679510566695863089",
+            "post_id": "7676403385372904742",
+            "content": "@还有栗子吗 @荔枝荔枝 这个评论区[钱]",
+            "author": {
+              "id": "3842133150144332",
+              "name": "我的世界皓宸（冲万粉）（反鸣潮）",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-avt-0015_36fba8e2238635fb2d74f375ea11ec1f~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 1,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1788025391000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7679878834989237050",
+            "post_id": "7676403385372904742",
+            "content": "[赞][赞][赞][玫瑰][玫瑰][玫瑰][鼓掌][鼓掌][鼓掌][666][666][666]",
+            "author": {
+              "id": "3883927186179776",
+              "name": "用户7098169157079",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/aweme_default_avatar.png~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1788111137000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7677490656704611107",
+            "post_id": "7676403385372904742",
+            "content": "[比心]",
+            "author": {
+              "id": "67776144733",
+              "name": "may",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-avt-0015_ffbab7c67dcbe130b016eff8e7b60fd1~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 1,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787555222000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7683767796035306297",
+            "post_id": "7676403385372904742",
+            "content": "]祝大家事业腾飞，财源广进！",
+            "author": {
+              "id": "3071372830184823",
+              "name": "隔音舱工厂店品崇",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c000-ce_oMBUPy7ykBixAAA9bcA3PuEAiAXiaIJEpMcBx~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1789016602000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7683767914004972325",
+            "post_id": "7676403385372904742",
+            "content": "[赞][赞][赞][赞][赞][赞][赞][赞][玫瑰]🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹",
+            "author": {
+              "id": "2761625032476285",
+              "name": "红太阳☀️红姐xxx。",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c000-ce_okbEAbPeCJsULJAeIBES7s6GgI1B8fAqpbiEQA~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1789016630000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7681011399682130728",
+            "post_id": "7676403385372904742",
+            "content": "[赞][赞][赞][赞][赞][赞][爱心][爱心][爱心][爱心][爱心][爱心][玫瑰][玫瑰][玫瑰][玫瑰][玫瑰][玫瑰]",
+            "author": {
+              "id": "135927664743165",
+              "name": "用户105565897",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813_o4wAICALbEAzC2AAe9DAeWISm7SfGeiIIWOqRA~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1788374834000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7680618272748897066",
+            "post_id": "7676403385372904742",
+            "content": "天天有期待，事事有回响，永远被幸运眷顾！",
+            "author": {
+              "id": "327024376027091",
+              "name": "看看a",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c000-ce_owehAzfHfpvdQAIBeN6LbDSGKxAE7g2vvOgAAT~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1788283302000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7677662815284511540",
+            "post_id": "7676403385372904742",
+            "content": "广告做的真漂亮",
+            "author": {
+              "id": "7540928646744785980",
+              "name": "回关免米分享食谱（小助理）",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813_o44AMfzOpgi9DVAQAOiEAECCcAxFIZeVqHnXAG~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 3,
+              "reply_count": 2
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787595181000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7685959943241958202",
+            "post_id": "7676403385372904742",
+            "content": "[赞][玫瑰]🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹🌹",
+            "author": {
+              "id": "3839117265218140",
+              "name": "都看到见到你",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c000-ce_owUBIyDBADE6wgAAyufFfFXslJOZfQNk7rcK2A~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1789527002000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7679174656025559845",
+            "post_id": "7676403385372904742",
+            "content": "空调对手太强",
+            "author": {
+              "id": "60306805627",
+              "name": "7️⃣、7️⃣😘😍🥰",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-avt-0015_b75f90c17bf0ffa1442a1b11158d8fd4~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1787947185000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7692605519958426414",
+            "post_id": "7676403385372904742",
+            "content": "",
+            "author": {
+              "id": "101679094777",
+              "name": "泪",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c001_ocATAnPCwOIiAri9LpIA5OANQ5gf7R55ADfECB~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1791074299000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          },
+          {
+            "id": "7692922406675956506",
+            "post_id": "7676403385372904742",
+            "content": "[赞][赞][赞][赞][赞][赞][赞][赞][赞][赞][赞][赞][赞][玫瑰][玫瑰][玫瑰][玫瑰][玫瑰][玫瑰][玫瑰][玫瑰][玫瑰][玫瑰][玫瑰][玫瑰]",
+            "author": {
+              "id": "77095508719",
+              "name": "完美国度",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813_okIzy3AHbSKGACoHZVSAqcAAhCNR4NAEdgtfey~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1791148082000,
+            "download_urls_str": "",
+            "updated": 1793157290465
+          }
+        ],
+        "max_cursor": "20",
+        "has_more": 1,
+        "total": 125,
+        "post_id": "7676403385372904742",
+        "reply_page_count": 0
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae168a925f71e0001dd6040"
+  },
+  "response_bytes": 10614,
+  "response_sha256": "e9fc724de63c2ff33e111f05ff894b9b3171facb326ae0f1d873a7f0f2556f26",
+  "transport_error": null,
+  "elapsed_seconds": 8.96,
+  "classification": "success"
+}

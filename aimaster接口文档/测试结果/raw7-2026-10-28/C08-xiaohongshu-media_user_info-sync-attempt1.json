@@ -1,0 +1,55 @@
+{
+  "case": "C08",
+  "platform": "xiaohongshu",
+  "action": "media_user_info",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media_user_info",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_user_info",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "@郭四火- 在小红书已经有20万个粉丝，点击链接或复制口令查看Ta的主页>> https://xhslink.cn/o/80LXppCuBYY"
+    }
+  },
+  "started_at": "2026-10-28T06:04:13.117452+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1906325f71e0001dd6746",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1906325f71e0001dd6746",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "430803230",
+        "nickname": "郭四火-",
+        "signature": "🔥分享日常生活\n📮：guoyanyyu@163.com",
+        "follower_count": "200105",
+        "following_count": "81",
+        "like_count": "991593",
+        "post_count": "507",
+        "follower_number": 200105,
+        "following_number": 81,
+        "like_number": 991593,
+        "post_number": 507,
+        "updated": 1793167460958
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae1906325f71e0001dd6746"
+  },
+  "response_bytes": 583,
+  "response_sha256": "8ae7358a6262ddce46a36f5a1b8e5f25372792b587c2e21b82aac5d28f611dcf",
+  "transport_error": null,
+  "elapsed_seconds": 9.07,
+  "classification": "success"
+}

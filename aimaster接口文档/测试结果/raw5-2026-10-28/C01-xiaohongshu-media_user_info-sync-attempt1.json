@@ -1,0 +1,55 @@
+{
+  "case": "C01",
+  "platform": "xiaohongshu",
+  "action": "media_user_info",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media_user_info",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_user_info",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "我在小红书收获了3397次赞与收藏，点击链接或复制口令来看我的主页>> https://xhslink.cn/o/2zMPN8P7pyN"
+    }
+  },
+  "started_at": "2026-10-28T05:20:58.692680+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae186402bcec60001462db5",
+      "task_url": "https://fieldshortcut.com/tasks/6ae186402bcec60001462db5",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "606119070",
+        "nickname": "整点薯片",
+        "signature": "momo",
+        "follower_count": "559",
+        "following_count": "252",
+        "like_count": "3397",
+        "post_count": "24",
+        "follower_number": 559,
+        "following_number": 252,
+        "like_number": 3397,
+        "post_number": 24,
+        "updated": 1793164868928
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae186402bcec60001462db5"
+  },
+  "response_bytes": 531,
+  "response_sha256": "765106193932e7119b85cd14aba1c8bc05793a3206cbd47c1932c285ba636bd3",
+  "transport_error": null,
+  "elapsed_seconds": 12.09,
+  "classification": "success"
+}

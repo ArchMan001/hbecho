@@ -1,0 +1,33 @@
+{
+  "case": "C20",
+  "platform": "douyin",
+  "action": "media_user_info",
+  "mode": "sync",
+  "attempt": 1,
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_user_info",
+    "params": {
+      "async": "false"
+    },
+    "body": {
+      "url": "https://v.douyin.com/AAAAAAAAAA/"
+    }
+  },
+  "http_status": 500,
+  "response_body": {
+    "code": "RESULT_VALIDATION_FAILED",
+    "message": "1 validation error for MediaUserInfoOpenAPIResult\n  Input should be a valid dictionary or instance of MediaUserInfoOpenAPIResult [type=model_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.11/v/model_type",
+    "details": [
+      {
+        "type": "model_type",
+        "loc": [],
+        "msg": "Input should be a valid dictionary or instance of MediaUserInfoOpenAPIResult",
+        "ctx": {
+          "class_name": "MediaUserInfoOpenAPIResult"
+        }
+      }
+    ],
+    "request_id": "6ae191382bcec60001463106"
+  },
+  "elapsed_seconds": 15.01
+}

@@ -1,0 +1,44 @@
+{
+  "case": "C18",
+  "platform": "douyin",
+  "action": "post_comments_list",
+  "mode": "async",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list",
+    "params": {
+      "async": "true"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "1.58 :6pm 09/06 D@H.ip FHI:/ 盛夏抗暑 # 日立硬核抗暑# 极速降温挑战# 三伏天续命神器# 日立硬核抗暑 # 一人一境舒爽一夏 # 日立中央空调品牌月# 日立中央空调  https://v.douyin.com/a3Y63kFd6cI/",
+      "max_cursor": 0,
+      "reply_pages": -1
+    }
+  },
+  "started_at": "2026-10-28T06:06:31.356747+00:00",
+  "http_status": 202,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae190ed6089b10001e8a333",
+      "task_url": "https://fieldshortcut.com/tasks/6ae190ed6089b10001e8a333",
+      "action": "post_comments_list",
+      "status": "running",
+      "result": null,
+      "error": null,
+      "created_at": "2026-10-28T14:06:37",
+      "updated_at": "2026-10-28T14:06:37"
+    },
+    "request_id": "6ae190ed6089b10001e8a333"
+  },
+  "response_bytes": 312,
+  "response_sha256": "4f1af500189c4b62c216d7213d83500782ef639930e191f0baaf3c271ccae710",
+  "transport_error": null,
+  "elapsed_seconds": 5.97,
+  "classification": "pending"
+}

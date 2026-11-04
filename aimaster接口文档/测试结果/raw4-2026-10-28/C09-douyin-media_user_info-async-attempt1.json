@@ -1,0 +1,42 @@
+{
+  "case": "C09",
+  "platform": "douyin",
+  "action": "media_user_info",
+  "mode": "async",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media_user_info",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_user_info",
+    "params": {
+      "async": "true"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "9- 长按复制此条消息，打开抖音搜索，查看TA的更多作品。 https://v.douyin.com/MPOAlEqWpec/ 1@3.com :1pm"
+    }
+  },
+  "started_at": "2026-10-28T03:15:21.136140+00:00",
+  "http_status": 202,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae168cf2bcec600014629bf",
+      "task_url": "https://fieldshortcut.com/tasks/6ae168cf2bcec600014629bf",
+      "action": "media_user_info",
+      "status": "running",
+      "result": null,
+      "error": null,
+      "created_at": "2026-10-28T11:15:27",
+      "updated_at": "2026-10-28T11:15:27"
+    },
+    "request_id": "6ae168cf2bcec600014629bf"
+  },
+  "response_bytes": 309,
+  "response_sha256": "8f7bb860d49070171fcceaca28ee33c1dd6fc5ed724e920d107408ee71c47e51",
+  "transport_error": null,
+  "elapsed_seconds": 6.01,
+  "classification": "pending"
+}

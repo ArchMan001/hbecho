@@ -1,0 +1,20 @@
+{
+  "http": 202,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1c38b2bcec600014642f3",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1c38b2bcec600014642f3",
+      "action": "media_user_info",
+      "status": "running",
+      "result": null,
+      "error": null,
+      "created_at": "2026-10-28T17:42:35",
+      "updated_at": "2026-10-28T17:42:35"
+    },
+    "request_id": "6ae1c38b2bcec600014642f3"
+  },
+  "error": null,
+  "elapsed": 6.03,
+  "case": "A1-kuaishou-profile-async"
+}

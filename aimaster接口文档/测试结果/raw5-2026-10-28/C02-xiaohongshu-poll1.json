@@ -1,0 +1,48 @@
+{
+  "case": "C02",
+  "platform": "xiaohongshu",
+  "action": "tasks.get",
+  "mode": "async-poll",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/tasks/6ae1864cd57ee40001cd0dc2",
+  "request": {
+    "method": "GET",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "started_at": "2026-10-28T05:21:26.715856+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1864cd57ee40001cd0dc2",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1864cd57ee40001cd0dc2",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "606119070",
+        "nickname": "整点薯片",
+        "signature": "momo",
+        "follower_count": "559",
+        "following_count": "252",
+        "like_count": "3397",
+        "post_count": "24",
+        "follower_number": 559,
+        "following_number": 252,
+        "like_number": 3397,
+        "post_number": 24,
+        "updated": 1793164879380
+      },
+      "error": null,
+      "created_at": "2026-10-28T13:21:16",
+      "updated_at": "2026-10-28T13:21:19"
+    },
+    "request_id": "6ae1864cd57ee40001cd0dc2"
+  },
+  "response_bytes": 565,
+  "response_sha256": "1e7b23e3e19dd5548651a05dbbe9f049f8e7992929013b070e6d6b1ddc0e10a7",
+  "transport_error": null,
+  "elapsed_seconds": 6.1,
+  "classification": "success"
+}

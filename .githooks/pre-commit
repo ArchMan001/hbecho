@@ -33,7 +33,7 @@ fi
 # 粘进真密钥的地方，把它排除等于在最需要扫的地方关掉扫描。
 # 靠"匹配后必须跟足够长的实际值"来避免误报，而不是靠排除路径。
 hits=$(git diff --cached -U0 -- . ':!*.example' ':!*.example.*' \
-  | grep -nE 'sk-[A-Za-z0-9_-]{16,}|LTAI[A-Za-z0-9]{12,}|BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY|AccessKeySecret["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9/+]{16,}' \
+  | grep -nE '(^|[^A-Za-z0-9])sk-[A-Za-z0-9_-]{16,}|LTAI[A-Za-z0-9]{12,}|BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY|AccessKeySecret["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9/+]{16,}' \
   | grep -vE 'sk-x{8,}|LTAIx{6,}|<[A-Za-z_]+>|LTAI\.\.\.|sk-\.\.\.|FAKE' || true)
 if [ -n "$hits" ]; then
   echo "✗ 暂存内容命中密钥特征：" >&2

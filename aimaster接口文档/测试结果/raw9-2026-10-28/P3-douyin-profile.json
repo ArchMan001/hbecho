@@ -1,0 +1,37 @@
+{
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae197b1d57ee40001cd1418",
+      "task_url": "https://fieldshortcut.com/tasks/6ae197b1d57ee40001cd1418",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "39737789940",
+        "nickname": "😄😄",
+        "signature": "天气真好",
+        "location": "",
+        "avatar": "https://p3-pc.douyinpic.com/aweme/1080x1080/aweme-avatar/tos-cn-i-0813c000-ce_oY5B43AXEiZpYbAEeu1AXBACSIOGnFAvwAliCe.jpeg?from=2956013662",
+        "cover": "https://p3-pc-sign.douyinpic.com/obj/tos-cn-i-0813c000-ce/o0e1CXvAiaGiHCuASwHESKjAe4WNBEA8APiIdn?lk3s=93de098e&x-expires=1793340000&x-signature=XGCpB0rV7q6mzl4VmVeL0fZ2wz0%3D&from=2480802190",
+        "follower_count": "146",
+        "following_count": "316",
+        "like_count": "1192",
+        "post_count": "",
+        "follower_number": 146,
+        "following_number": 316,
+        "like_number": 1192,
+        "post_number": 0,
+        "updated": 1793169331242
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae197b1d57ee40001cd1418"
+  },
+  "error": null,
+  "elapsed": 9.16,
+  "case": "P3",
+  "url": "https://www.douyin.com/user/MS4wLjABAAAANEkUeg_sOtqWVuy9Bh2VB1ax9cEAkYweKuVmkcQtpDTM1vL24eyIn0dKNU24FIpt"
+}

@@ -1,0 +1,43 @@
+{
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae19595d57ee40001cd1324",
+      "task_url": "https://fieldshortcut.com/tasks/6ae19595d57ee40001cd1324",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "632d16c70000000018018b47",
+        "platform": "xiaohongshu",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": null,
+        "like_number": 359,
+        "comment_number": 28,
+        "collect_number": 232,
+        "share_number": 22,
+        "duration_number": 0,
+        "author_homepage": "https://www.xiaohongshu.com/user/profile/5b7025b12ef20900013f05f2",
+        "user_id": "5b7025b12ef20900013f05f2",
+        "created": 1663899335000,
+        "author_name": "整点薯片",
+        "title": "## 标题\n大二菜鸟如何第一次做竞赛就获奖\n\n## 正文\n第一次做竞赛是亚洲低碳设计竞赛（AILCD），最后拿了个荣誉提名奖[doge][doge][doge]\n1、时间\n这是我第一次和两个同年级的女生（一个保研哈工，一个AA留学）做竞赛，前后历时三个月，准确的说前期构思概念、讨论方案用了整整两个半月，想一个毙一个，想一个毙一个。最后剩了8天的时间三天确定最后的方案，然后开始建模，用了整整一周的出图时间，每天只睡四五个小时，最终完成！\n2、打破困局\n我觉得每个人都会有第一次的尴尬窘境，想做但是无从下手，如何安排时间，如何把握方向，如何合理分工，最终把图出出来。这一切都在我未开始之前，是个“自我能力阉割”的困惑状态。我相信每个想要开始做竞赛的学弟学妹，都有这个困局。\n3、建议\nJust do it！Just do it！Just do it！不要做行动的矮子，语言的巨人。想做就不要质疑自己的能力，坚持信心从头到尾做下去。\n4、tips\n最好找有经验的学长学姐把握一下、点拨一下会事半功倍！",
+        "tag_text": "#建筑设计竞赛 #建筑学 #分享 #保研 #大二 #建筑竞赛 #日本建筑",
+        "cover": "https://sns-i11.rednotecdn.com/03029n016mexyyij10y010lzmfhcuw8717?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=e867c9b7a39067cdb27caf3068e13772&t=6ae19598",
+        "download_urls": "https://sns-i11.rednotecdn.com/03029n016mexyyij10y010lzmfhcuw8717?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=e867c9b7a39067cdb27caf3068e13772&t=6ae19598\n\nhttps://sns-i11.rednotecdn.com/03029n016mexyyij10y010lzmfhbvzb1h6?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=1d16cd8bce603fe6b56ddf71facdd4dc&t=6ae19598\n\nhttps://sns-i11.rednotecdn.com/03029n016mexyyij10y010lzmfhdgtv18r?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=41cd852dec121f32d847d66127a1cfb4&t=6ae19598\n\nhttps://sns-i11.rednotecdn.com/03029n016mexyyij10y010lzmfha5posoq?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=cb31d8450884281431288094e506b20c&t=6ae19598",
+        "updated": 1793168794210
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae19595d57ee40001cd1324"
+  },
+  "error": null,
+  "elapsed": 11.98
+}

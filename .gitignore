@@ -69,6 +69,8 @@ coverage/
 *.xlsx
 *.csv
 !aimaster接口文档/**/*.csv
+!aimaster接口文档/*.xlsx
+!HBECHO设计方案/domains/data-foundation/seed/**/*.csv
 
 # ── 编辑器与系统 ────────────────────────────────────────
 .DS_Store

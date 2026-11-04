@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-28",
+  "base_url": "https://openapi.fieldshortcut.com",
+  "budget": 60,
+  "calls_used": 11,
+  "results": [
+    {
+      "case": "C01",
+      "platform": "xiaohongshu",
+      "action": "media_user_info",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C02",
+      "platform": "xiaohongshu",
+      "action": "media_user_info",
+      "mode": "async",
+      "classification": "success"
+    },
+    {
+      "case": "C03",
+      "platform": "xiaohongshu",
+      "action": "user_video_list",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C04",
+      "platform": "xiaohongshu",
+      "action": "user_video_list",
+      "mode": "async",
+      "classification": "provider_failed"
+    },
+    {
+      "case": "C05",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C06",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "async",
+      "classification": "success"
+    },
+    {
+      "case": "C07",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "classification": "success"
+    },
+    {
+      "case": "C08",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "classification": "success"
+    }
+  ]
+}

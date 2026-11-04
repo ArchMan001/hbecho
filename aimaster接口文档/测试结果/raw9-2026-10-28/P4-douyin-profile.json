@@ -1,0 +1,37 @@
+{
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae197ba25f71e0001dd6a8b",
+      "task_url": "https://fieldshortcut.com/tasks/6ae197ba25f71e0001dd6a8b",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "74725892700",
+        "nickname": "日立中央空调.北仑明和店",
+        "signature": "定义空气，定义舒适，日立中央空调\n专注暖通、教您空调选择不迷路\n销售、设计、安装、售后于一体\n免费方案设计",
+        "location": "",
+        "avatar": "https://p3-pc.douyinpic.com/aweme/1080x1080/aweme-avatar/tos-cn-avt-0015_f04a69f43c4a75121fae53eba182d7a0.jpeg?from=2956013662",
+        "cover": "https://p3-pc-sign.douyinpic.com/obj/douyin-user-image-file/009895ce41f42816aab38aa54fa7c7aa?lk3s=93de098e&x-expires=1793340000&x-signature=mzgpLmEQsw1zvef09CCw6awsA7k%3D&from=2480802190",
+        "follower_count": "1",
+        "following_count": "47",
+        "like_count": "",
+        "post_count": "",
+        "follower_number": 1,
+        "following_number": 47,
+        "like_number": 0,
+        "post_number": 0,
+        "updated": 1793169340321
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae197ba25f71e0001dd6a8b"
+  },
+  "error": null,
+  "elapsed": 9.59,
+  "case": "P4",
+  "url": "https://www.douyin.com/user/MS4wLjABAAAAqhIrq6xrwm1QDSSrFgm9BOFaifAmRAVCIDeQqDiyaMAhHuAHCNlLawSQXwGAk6mi"
+}

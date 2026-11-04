@@ -1,0 +1,20 @@
+{
+  "http": 202,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1c3b12bcec600014642fc",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1c3b12bcec600014642fc",
+      "action": "user_video_list",
+      "status": "running",
+      "result": null,
+      "error": null,
+      "created_at": "2026-10-28T17:43:13",
+      "updated_at": "2026-10-28T17:43:13"
+    },
+    "request_id": "6ae1c3b12bcec600014642fc"
+  },
+  "error": null,
+  "elapsed": 5.94,
+  "case": "A2-kuaishou-list-async"
+}

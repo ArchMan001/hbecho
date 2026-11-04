@@ -1,0 +1,24 @@
+{
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae195b925f71e0001dd699d",
+      "task_url": "https://fieldshortcut.com/tasks/6ae195b925f71e0001dd699d",
+      "action": "user_video_list",
+      "status": "failed",
+      "result": null,
+      "error": {
+        "code": "ACTION_EXECUTION_FAILED",
+        "message": "获取失败（可能为视频权限/视频已失效的原因），请稍后重试！（您的帐户不会因此请求而被收费）"
+      },
+      "created_at": "2026-10-28T14:27:05",
+      "updated_at": "2026-10-28T14:27:11"
+    },
+    "request_id": "6ae195b925f71e0001dd699d"
+  },
+  "error": null,
+  "elapsed": 5.95,
+  "case": "A1-xhs-list-async",
+  "poll": 1
+}

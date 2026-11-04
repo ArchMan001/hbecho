@@ -1,0 +1,66 @@
+{
+  "case": "C06",
+  "platform": "xiaohongshu",
+  "action": "media_stats_number",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media_stats_number",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_stats_number",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "出伏倒计时｜换季空调这样开，舒服又省电！ https://xhslink.cn/o/3FgtGUlhO8s"
+    }
+  },
+  "started_at": "2026-10-28T03:14:28.175928+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1689a25f71e0001dd603b",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1689a25f71e0001dd603b",
+      "action": "media_stats",
+      "status": "succeeded",
+      "result": {
+        "post_id": "6a869a5c0000000014028682",
+        "platform": "xiaohongshu",
+        "play_count": null,
+        "like_count": null,
+        "comment_count": null,
+        "collect_count": null,
+        "share_count": null,
+        "duration": null,
+        "play_number": null,
+        "like_number": 71,
+        "comment_number": 2,
+        "collect_number": 1,
+        "share_number": 740,
+        "duration_number": 0,
+        "author_homepage": "https://www.xiaohongshu.com/user/profile/5f8693e3000000000100748c",
+        "user_id": "5f8693e3000000000100748c",
+        "created": 1787216430000,
+        "author_name": "海信中央空调",
+        "title": "## 标题\n出伏倒计时｜换季空调这样开，舒服又省电！\n\n## 正文\n好消息，8月24日就要出伏了。\n但别高兴太早——“秋后一伏热死人”，白天秋老虎照样发威，能冲到35-38℃；夜里凉意已经上来，能掉到24-25℃。一天里冷热反复，温差能拉开10℃以上。所以空调还得继续用，但用法得跟着换季了👇\n\t\n🌡️换季空调操作指南\n✅ 白天26℃，晚上调高1-2℃\n白天高温时段设26℃；夜间睡觉调到27-28℃，避免半夜冻醒\n\t\n✅ 白天制冷，夜间切换睡眠模式\n睡眠模式会自动调温降风速，防感冒又省电。可配合定时功能，凌晨3-4点自动关。\n\t\n✅ 短时离家不用关，可暂时调高温度\n外出1小时内不用关空调，可以把温度调高1-2℃，回家后再适当调降温度。\n\t\n💡懒得记这么多？让Ai家II自己管\n✅海信Ai家II空气管家自主学习你的使用习惯，空气自动感知，无感调节。\n✅人感智慧风精准识别位置，有人区域轻柔送风，无人区域自动降负荷。\n✅ APF最高达6.35，超国标一级能效——该省电的时候它自己会省，不用你操心。\n\t\n夏秋交替，让海信Ai家II帮你管好每一度温差",
+        "tag_text": "#出伏 #秋老虎 #换季 #海信Ai家II #省电小技巧",
+        "cover": "https://sns-i11.rednotecdn.com/spectrum/1040g34o32434drjt6u305ns6ifhg8t4cn5iado0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=0cbb80bbe0f8c5ff7cf305a8af98deb9&t=6ae168a0",
+        "download_urls": "https://sns-i11.rednotecdn.com/spectrum/1040g34o32434drjt6u305ns6ifhg8t4cn5iado0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=0cbb80bbe0f8c5ff7cf305a8af98deb9&t=6ae168a0\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g34o32434drjt6u3g5ns6ifhg8t4c5a603j8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=c7c83fdbd63fd0dd3a8d45af41ad4329&t=6ae168a0\n\nhttps://sns-i11.rednotecdn.com/spectrum/1040g34o32434drjt6u405ns6ifhg8t4cvfv98o8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=1&sc=PREVIEW&sign=1ce467bd45e65b64df4cef22e292cbd5&t=6ae168a0",
+        "updated": 1793157281041
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae1689a25f71e0001dd603b"
+  },
+  "response_bytes": 3028,
+  "response_sha256": "d45af3f805d9cdb4402a5b444e02d9da3e358b15682ea508e5ba7394c74e3266",
+  "transport_error": null,
+  "elapsed_seconds": 14.93,
+  "classification": "success"
+}

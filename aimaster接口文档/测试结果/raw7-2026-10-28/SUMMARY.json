@@ -1,0 +1,253 @@
+{
+  "date": "2026-10-28",
+  "calls": 21,
+  "results": {
+    "C01": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "media_user_info",
+        "status": "succeeded",
+        "task_id": "6ae1901725f71e0001dd6724",
+        "keys": 15,
+        "like_number": 0
+      }
+    },
+    "C02": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "media_user_info",
+        "status": "succeeded",
+        "task_id": "6ae19024eb420f000190f684",
+        "keys": 15,
+        "like_number": 0
+      }
+    },
+    "C03": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "user_video_list",
+        "status": "succeeded",
+        "task_id": "6ae1902fd57ee40001cd10f0",
+        "keys": 4,
+        "items": 0,
+        "has_more": false,
+        "max_cursor": 0,
+        "cursor": ""
+      }
+    },
+    "C04": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "media_stats",
+        "status": "succeeded",
+        "task_id": "6ae190382bcec6000146309d",
+        "keys": 23,
+        "play_number": null,
+        "duration_number": 195,
+        "share_number": 212,
+        "like_number": 1255,
+        "comment_number": 52,
+        "collect_number": 1178
+      }
+    },
+    "C05": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "post_comments_list",
+        "status": "succeeded",
+        "task_id": "6ae190456089b10001e8a2eb",
+        "keys": 6,
+        "items": 4,
+        "has_more": 0,
+        "max_cursor": "",
+        "total": 31,
+        "reply_page_count": 0
+      }
+    },
+    "C06": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "post_comments_list",
+        "status": "succeeded",
+        "task_id": "6ae1904ed57ee40001cd1100",
+        "keys": 6,
+        "items": 4,
+        "has_more": 0,
+        "max_cursor": "",
+        "total": 31,
+        "reply_page_count": 0
+      }
+    },
+    "C07": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "post_comments_list",
+        "status": "succeeded",
+        "task_id": "6ae19057eb420f000190f696",
+        "keys": 7,
+        "items": 5,
+        "has_more": 0,
+        "max_cursor": "",
+        "total": 31,
+        "reply_page_count": 1
+      }
+    },
+    "C08": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "media_user_info",
+        "status": "succeeded",
+        "task_id": "6ae1906325f71e0001dd6746",
+        "keys": 12,
+        "like_number": 991593
+      }
+    },
+    "C09": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "user_video_list",
+        "status": "succeeded",
+        "task_id": "6ae1906cd57ee40001cd110b",
+        "keys": 4,
+        "items": 19,
+        "has_more": true,
+        "max_cursor": "69fd62690000000023006ed0",
+        "cursor": ""
+      }
+    },
+    "C10": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "user_video_list",
+        "status": "succeeded",
+        "task_id": "6ae190782bcec600014630be",
+        "keys": 4,
+        "items": 15,
+        "has_more": true,
+        "max_cursor": "6954e94e000000001e023338",
+        "cursor": ""
+      }
+    },
+    "C11": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "post_comments_list",
+        "status": "succeeded",
+        "task_id": "6ae1908625f71e0001dd6754",
+        "keys": 6,
+        "items": 20,
+        "has_more": 1,
+        "max_cursor": "20",
+        "total": 98,
+        "reply_page_count": 0
+      }
+    },
+    "C12": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "post_comments_list",
+        "status": "succeeded",
+        "task_id": "6ae19091eb420f000190f6b1",
+        "keys": 6,
+        "items": 20,
+        "has_more": 1,
+        "max_cursor": "40",
+        "total": 98,
+        "reply_page_count": 0
+      }
+    },
+    "C13": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "post_comments_list",
+        "status": "succeeded",
+        "task_id": "6ae1909dd57ee40001cd1124",
+        "keys": 7,
+        "items": 44,
+        "has_more": 1,
+        "max_cursor": "20",
+        "total": 98,
+        "reply_page_count": 11
+      }
+    },
+    "C14": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "media_user_info",
+        "status": "succeeded",
+        "task_id": "6ae190b2eb420f000190f6bf",
+        "keys": 15,
+        "like_number": 21049
+      }
+    },
+    "C15": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "user_video_list",
+        "status": "succeeded",
+        "task_id": "6ae190bbd57ee40001cd1130",
+        "keys": 4,
+        "items": 22,
+        "has_more": true,
+        "max_cursor": 1789088235000,
+        "cursor": ""
+      }
+    },
+    "C16": {
+      "classification": "success",
+      "brief": {
+        "code": 0,
+        "action": "user_video_list",
+        "status": "succeeded",
+        "task_id": "6ae190c96089b10001e8a326",
+        "keys": 4,
+        "items": 20,
+        "has_more": true,
+        "max_cursor": 1782906748000,
+        "cursor": ""
+      }
+    },
+    "C17": {
+      "classification": "provider_failed",
+      "brief": {
+        "code": 0,
+        "action": "user_video_list",
+        "status": "failed",
+        "task_id": "6ae190d7d57ee40001cd113b",
+        "error": "{'code': 'RESULT_VALIDATION_FAILED', 'message': '1 validation error for UserVideoListOpenAPIResult\\n  Input should be a valid dictionary or instance of UserVideoListOpenAPIResult [type=model_type, input_value=\\'{\"result\":[{\"post_id\":\"7...0af008&cdn_type=1&cquer\\', input_type=str]\\n    For further in"
+      }
+    },
+    "C18": {
+      "classification": "provider_failed",
+      "brief": {
+        "code": 0,
+        "action": "post_comments_list",
+        "status": "failed",
+        "task_id": "6ae190ed6089b10001e8a333",
+        "error": "{'code': 'RESULT_VALIDATION_FAILED', 'message': '1 validation error for MediaCommentsListOpenAPIResult\\n  Input should be a valid dictionary or instance of MediaCommentsListOpenAPIResult [type=model_type, input_value=\\'{\"result\":[{\"id\":\"766703...心][比心][比心]\",\"\\', input_type=str]\\n    For further info"
+      }
+    },
+    "C19": {
+      "classification": "input_error",
+      "brief": {
+        "code": "INVALID_REQUEST",
+        "message": "Expecting value: line 1 column 1 (char 0)"
+      }
+    }
+  }
+}

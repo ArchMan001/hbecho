@@ -1,0 +1,20 @@
+{
+  "http": 202,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae197fdeb420f000190f9f4",
+      "task_url": "https://fieldshortcut.com/tasks/6ae197fdeb420f000190f9f4",
+      "action": "media_stats",
+      "status": "running",
+      "result": null,
+      "error": null,
+      "created_at": "2026-10-28T14:36:45",
+      "updated_at": "2026-10-28T14:36:45"
+    },
+    "request_id": "6ae197fdeb420f000190f9f4"
+  },
+  "error": null,
+  "elapsed": 6.07,
+  "case": "A5-dy-detail-async"
+}

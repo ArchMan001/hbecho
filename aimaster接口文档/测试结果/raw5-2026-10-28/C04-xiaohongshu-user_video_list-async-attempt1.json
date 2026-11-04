@@ -1,0 +1,43 @@
+{
+  "case": "C04",
+  "platform": "xiaohongshu",
+  "action": "user_video_list",
+  "mode": "async",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/user_video_list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/user_video_list",
+    "params": {
+      "async": "true"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "我在小红书收获了3397次赞与收藏，点击链接或复制口令来看我的主页>> https://xhslink.cn/o/2zMPN8P7pyN",
+      "max_cursor": 0
+    }
+  },
+  "started_at": "2026-10-28T05:21:44.984494+00:00",
+  "http_status": 202,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1866f2bcec60001462dbf",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1866f2bcec60001462dbf",
+      "action": "user_video_list",
+      "status": "running",
+      "result": null,
+      "error": null,
+      "created_at": "2026-10-28T13:21:51",
+      "updated_at": "2026-10-28T13:21:51"
+    },
+    "request_id": "6ae1866f2bcec60001462dbf"
+  },
+  "response_bytes": 309,
+  "response_sha256": "d5ecbd3b6e6d37daa0978967f8147c990ba7c908247110ee07238a56d209d8dc",
+  "transport_error": null,
+  "elapsed_seconds": 6.05,
+  "classification": "pending"
+}

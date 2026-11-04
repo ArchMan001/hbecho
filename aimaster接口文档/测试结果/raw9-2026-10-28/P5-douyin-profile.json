@@ -1,0 +1,37 @@
+{
+  "http": 200,
+  "body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae197c32bcec60001463427",
+      "task_url": "https://fieldshortcut.com/tasks/6ae197c32bcec60001463427",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "550217799442596",
+        "nickname": "用户2250285114382",
+        "signature": "-",
+        "location": "",
+        "avatar": "",
+        "cover": "",
+        "follower_count": "",
+        "following_count": "",
+        "like_count": "",
+        "post_count": "",
+        "follower_number": 0,
+        "following_number": 0,
+        "like_number": 0,
+        "post_number": 0,
+        "updated": 1793169354420
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae197c32bcec60001463427"
+  },
+  "error": null,
+  "elapsed": 15.11,
+  "case": "P5",
+  "url": "https://www.douyin.com/user/MS4wLjABAAAA_IodJ3pFZiArks1vf5oSkxKXUGVFhgwjcORnSDTLeNI"
+}

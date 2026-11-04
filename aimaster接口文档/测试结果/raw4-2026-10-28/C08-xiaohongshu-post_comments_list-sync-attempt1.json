@@ -1,0 +1,45 @@
+{
+  "case": "C08",
+  "platform": "xiaohongshu",
+  "action": "post_comments_list",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "出伏倒计时｜换季空调这样开，舒服又省电！ https://xhslink.cn/o/3FgtGUlhO8s",
+      "max_cursor": 0,
+      "reply_pages": -1
+    }
+  },
+  "started_at": "2026-10-28T03:14:52.075248+00:00",
+  "http_status": 500,
+  "response_body": {
+    "code": "RESULT_VALIDATION_FAILED",
+    "message": "1 validation error for MediaCommentsListOpenAPIResult\n  Input should be a valid dictionary or instance of MediaCommentsListOpenAPIResult [type=model_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.11/v/model_type",
+    "details": [
+      {
+        "type": "model_type",
+        "loc": [],
+        "msg": "Input should be a valid dictionary or instance of MediaCommentsListOpenAPIResult",
+        "ctx": {
+          "class_name": "MediaCommentsListOpenAPIResult"
+        }
+      }
+    ],
+    "request_id": "6ae168b26089b10001e89be4"
+  },
+  "response_bytes": 549,
+  "response_sha256": "d87e6a2885d9a01840f1403227801c064fbdaa807df93566fd5ecbd0b0a3addc",
+  "transport_error": null,
+  "elapsed_seconds": 15.05,
+  "classification": "server_error"
+}

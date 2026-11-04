@@ -1,0 +1,55 @@
+{
+  "case": "C02",
+  "platform": "xiaohongshu",
+  "action": "media_user_info",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media_user_info",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media_user_info",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "@日立中央空调 在小红书已经有7.8万个粉丝，点击链接或复制口令查看Ta的主页>> https://xhslink.cn/o/E2W9yK1ctR"
+    }
+  },
+  "started_at": "2026-10-28T03:13:33.778034+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae16863d57ee40001cd09ca",
+      "task_url": "https://fieldshortcut.com/tasks/6ae16863d57ee40001cd09ca",
+      "action": "media_user_info",
+      "status": "succeeded",
+      "result": {
+        "user_id": "49328995493",
+        "nickname": "日立中央空调",
+        "signature": "日立中央空调，与美好生活相昱✨\n宠粉福利 | 品牌资讯 | 干货科普 | 家装案例 \n全国皆可服务💬免费全屋定制方案🎁👇🏻",
+        "follower_count": "81130",
+        "following_count": "187",
+        "like_count": "182425",
+        "post_count": "642",
+        "follower_number": 81130,
+        "following_number": 187,
+        "like_number": 182425,
+        "post_number": 642,
+        "updated": 1793157227833
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae16863d57ee40001cd09ca"
+  },
+  "response_bytes": 710,
+  "response_sha256": "45b8490b1bb5f8a7b35e495122592fe773b5874863813998dc9c3b269bf78150",
+  "transport_error": null,
+  "elapsed_seconds": 15.1,
+  "classification": "success"
+}

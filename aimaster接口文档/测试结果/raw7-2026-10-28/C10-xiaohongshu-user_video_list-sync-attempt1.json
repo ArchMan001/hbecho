@@ -1,0 +1,469 @@
+{
+  "case": "C10",
+  "platform": "xiaohongshu",
+  "action": "user_video_list",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/user_video_list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/user_video_list",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "@郭四火- 在小红书已经有20万个粉丝，点击链接或复制口令查看Ta的主页>> https://xhslink.cn/o/80LXppCuBYY",
+      "max_cursor": "69fd62690000000023006ed0"
+    }
+  },
+  "started_at": "2026-10-28T06:04:34.185655+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae190782bcec600014630be",
+      "task_url": "https://fieldshortcut.com/tasks/6ae190782bcec600014630be",
+      "action": "user_video_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "post_id": "69f6fd330000000023006b0c",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1777794355000,
+            "author_name": "郭四火-",
+            "title": "永远浪漫自由",
+            "tag_text": "#来拍照了[话题]#",
+            "stats": {
+              "like_count": 1798,
+              "comment_count": 18,
+              "collect_count": 521,
+              "share_count": 25
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g2sg31vmrskj42aeg5n3u0qe4ffq22ut7rs0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=73a565a757c1f5a7b85dfeab25a0b09b&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/1/110/258/01e9f6fcfc4bae0c010370019deccd3395_258.mp4",
+              "name": "01e9f6fcfc4bae0c010370019deccd3395_258.mp4",
+              "duration": 9.167
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "69e4784e000000001a02d825",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1776580686000,
+            "author_name": "郭四火-",
+            "title": "💻vlog｜香港打工人的一天",
+            "tag_text": "#vlog[话题]# #来拍照了[话题]#",
+            "stats": {
+              "like_count": 510,
+              "comment_count": 10,
+              "collect_count": 110,
+              "share_count": 16
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g2sg31v4pq7cljq705n3u0qe4ffq2cs53o2o?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=2897aa3f7121eb64e3082adc7b60e936&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/79/110/258/01e9e477731472394f0370019da47677c4_258.mp4",
+              "name": "01e9e477731472394f0370019da47677c4_258.mp4",
+              "duration": 59.467
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "69e1a648000000001a037299",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1776395848000,
+            "author_name": "郭四火-",
+            "title": "## 标题\nall black\n\n## 正文\n夕阳正好",
+            "tag_text": "#来拍照了[话题]# #今天一身黑[话题]#",
+            "stats": {
+              "like_count": 1946,
+              "comment_count": 20,
+              "collect_count": 562,
+              "share_count": 30
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g00831v21ei1j3q005n3u0qe4ffq2gv3n2rg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=e1f4b662fd124318571c7509e01aedaa&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/79/110/258/01e9e1a64806c7fb4f0370019d9971bc64_258.mp4",
+              "name": "01e9e1a64806c7fb4f0370019d9971bc64_258.mp4",
+              "duration": 9.705
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "69e0925100000000230053ae",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1776325201000,
+            "author_name": "郭四火-",
+            "title": "## 标题\nweekend vlog｜🇭🇰香港打工人周末购物24h\n\n## 正文\n#香港逛街[话",
+            "tag_text": "#vlog[话题]# #KODAK[话题]# #香港KODAK[话题]# #香港探店[话题]# #香港生活[话题]# #启德AIRSIDE[话题]# #复古穿搭[话题]# #香港必买[话题]#",
+            "stats": {
+              "like_count": 426,
+              "comment_count": 10,
+              "collect_count": 95,
+              "share_count": 11
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g2sg31v04n1c72g005n3u0qe4ffq2ebanvpg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=3dd887d6a25a91681b201e47b9ea7fc1&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/1/110/258/01e9e091ad061a73010370019d953c9b14_258.mp4",
+              "name": "01e9e091ad061a73010370019d953c9b14_258.mp4",
+              "duration": 83.5
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "69ce23010000000023006162",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1775117057000,
+            "author_name": "郭四火-",
+            "title": "## 标题\n阴天的海港城☁️\n\n## 正文\n最近听徐良演唱会被坏女孩洗脑了",
+            "tag_text": "#来拍照了[话题]#",
+            "stats": {
+              "like_count": 3846,
+              "comment_count": 50,
+              "collect_count": 1625,
+              "share_count": 82
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g00831uej10d22q0g5n3u0qe4ffq2fchsea8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=c9cef9d800f74fbdccfa06cce5b82e02&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/1/110/258/01e9cdb89b5201df010370019d4d38db1f_258.mp4",
+              "name": "01e9cdb89b5201df010370019d4d38db1f_258.mp4",
+              "duration": 9.2
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "69c35c61000000001e00f45b",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1774410849000,
+            "author_name": "郭四火-",
+            "title": "Only look at me",
+            "tag_text": "#来拍照了[话题]# #如果你决定跟随感觉[话题]#",
+            "stats": {
+              "like_count": 1272,
+              "comment_count": 30,
+              "collect_count": 426,
+              "share_count": 32
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g00831u4evgrvii005n3u0qe4ffq2ek5v5g0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=b5c13f8e0e764ab8bceda37999e1c429&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/1/110/258/01e9c35a05233102010370019d2320f973_258.mp4",
+              "name": "01e9c35a05233102010370019d2320f973_258.mp4",
+              "duration": 7.615
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "69b6767f000000002301f069",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1773565567000,
+            "author_name": "郭四火-",
+            "title": "## 标题\n晒晒太阳🌞\n\n## 正文\n来太平山顶观景台晒晒太阳",
+            "tag_text": "#来拍照了[话题]#",
+            "stats": {
+              "like_count": 2411,
+              "comment_count": 35,
+              "collect_count": 808,
+              "share_count": 47
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g00831to2lv0k72005n3u0qe4ffq2dfknqhg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=329a75157ca9c14af340a44422553289&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/1/110/258/01e9b6767fc614ac010370019cf0bef966_258.mp4",
+              "name": "01e9b6767fc614ac010370019cf0bef966_258.mp4",
+              "duration": 6.222
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "69b3aa64000000002301fdce",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1773382244000,
+            "author_name": "郭四火-",
+            "title": "## 标题\n💻vlog｜香港金融打工人的一天\n\n## 正文\n跟我一起过一天吧",
+            "tag_text": "#vlog[话题]# #这就是打工人的生活[话题]#",
+            "stats": {
+              "like_count": 1706,
+              "comment_count": 103,
+              "collect_count": 431,
+              "share_count": 51
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g2sg31tk97oeune705n3u0qe4ffq2brmplm0?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=dfb2ceaea37b99925fcdaa64d3bec8ef&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/1/110/258/01e9b30047c62fe8010370019ce5d2a025_258.mp4",
+              "name": "01e9b30047c62fe8010370019ce5d2a025_258.mp4",
+              "duration": 79.783
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "69aa89f5000000001a030d12",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1772784117000,
+            "author_name": "郭四火-",
+            "title": "我同你港",
+            "tag_text": "#港风[话题]# #我称之为感觉[话题]#",
+            "stats": {
+              "like_count": 3131,
+              "comment_count": 74,
+              "collect_count": 1363,
+              "share_count": 76
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g2sg31tc71nhslk705n3u0qe4ffq2o6a1sko?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=00170cbbcf34fc47f444739a46bb9ee0&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/320/110/258/01e9aa86f5c5da59400370019cc22b07a2_258.mp4",
+              "name": "01e9aa86f5c5da59400370019cc22b07a2_258.mp4",
+              "duration": 7.801
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "6996b0c7000000002801d2c4",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1771483335000,
+            "author_name": "郭四火-",
+            "title": "## 标题\nmini vlog｜心连大地慈善摄影展📷\n\n## 正文\n爱与善意，是最治愈的力量 💛",
+            "tag_text": "#vlog[话题]#",
+            "stats": {
+              "like_count": 848,
+              "comment_count": 14,
+              "collect_count": 462,
+              "share_count": 9
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g00831so2ps6slk005n3u0qe4ffq2hckhjp8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=01da27fdccece860e965771fae411903&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/1/110/258/01e995e8067cff2e010370019c74a3398e_258.mp4",
+              "name": "01e995e8067cff2e010370019c74a3398e_258.mp4",
+              "duration": 73.769
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "698da5c6000000000e03d99d",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1770890694000,
+            "author_name": "郭四火-",
+            "title": "🇫🇷里昂citywalk",
+            "tag_text": "#来拍照了[话题]#",
+            "stats": {
+              "like_count": 1352,
+              "comment_count": 16,
+              "collect_count": 347,
+              "share_count": 31
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g00831sg0ih8gm8005n3u0qe4ffq23af6tso?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=1a7b0d2b94fd209c3c635bcc60fc9436&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/79/110/258/01e98da53745c0624f0370019c514fc3da_258.mp4",
+              "name": "01e98da53745c0624f0370019c514fc3da_258.mp4",
+              "duration": 8.0
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "6979d25b000000002800a463",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1769591387000,
+            "author_name": "郭四火-",
+            "title": "## 标题\nvlog｜周末治愈系挑表时光⌚️\n\n## 正文\n在周末享受这份慢悠悠的美好，和我一起云逛表～",
+            "tag_text": "#沉浸式逛店[话题]# #周末逛街[话题]#",
+            "stats": {
+              "like_count": 798,
+              "comment_count": 6,
+              "collect_count": 432,
+              "share_count": 7
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g00831rs06oei32005n3u0qe4ffq24a949jg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=84c3c90984b6aa19013e521efc13d825&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/1/110/258/01e979d1400c3892010370019c03def93d_258.mp4",
+              "name": "01e979d1400c3892010370019c03def93d_258.mp4",
+              "duration": 98.8
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "6975c186000000002800a108",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1769324935000,
+            "author_name": "郭四火-",
+            "title": "阴天的维港☁️",
+            "tag_text": "#来拍照了[话题]#",
+            "stats": {
+              "like_count": 1846,
+              "comment_count": 22,
+              "collect_count": 625,
+              "share_count": 48
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g00831rom0chh2a0g5n3u0qe4ffq2j7sktug?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=2f8f16000d89a12b5a1e45a364b1957f&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/79/110/258/01e975c1070fc5c44f0370019bf3fc169e_258.mp4",
+              "name": "01e975c1070fc5c44f0370019bf3fc169e_258.mp4",
+              "duration": 8.1
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "695f4d15000000001a022958",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1767853333000,
+            "author_name": "郭四火-",
+            "title": "## 标题\n里昂的氛围感📷\n\n## 正文\n在里昂拍的一组图[害羞R]\n谁能看出其实是在厕所拍的",
+            "tag_text": "#里昂[话题]# #来拍照了[话题]#",
+            "stats": {
+              "like_count": 1710,
+              "comment_count": 16,
+              "collect_count": 461,
+              "share_count": 48
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g00831r2nlot40a205n3u0qe4ffq2rpn5ng8?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=e26fd88577f62b3b9044b3d87661c6f3&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/79/110/258/01e95f4b32073c744f0370019b9c453dfa_258.mp4",
+              "name": "01e95f4b32073c744f0370019b9c453dfa_258.mp4",
+              "duration": 10.267
+            },
+            "images": [],
+            "download_urls": []
+          },
+          {
+            "post_id": "6954e94e000000001e023338",
+            "user_id": "5c7e069c000000001103bf42",
+            "red_id": "",
+            "created": 1767172430000,
+            "author_name": "郭四火-",
+            "title": "🇫🇷Bonjour, Versailles",
+            "tag_text": "#来拍照了[话题]#",
+            "stats": {
+              "like_count": 1413,
+              "comment_count": 14,
+              "collect_count": 281,
+              "share_count": 17
+            },
+            "cover": "https://sns-i11.rednotecdn.com/1040g00831qojka087g005n3u0qe4ffq2rrs40tg?imageView2/2/w/576/format/webp/q/87%7CimageMogr2/strip&redImage/frame/0&ap=12&sc=USR_PRV&sign=e43d32b969eb03899c3dfcb6e92af6fa&t=6ae1907b",
+            "audio": {
+              "url": "",
+              "name": "",
+              "duration": 0.0
+            },
+            "video": {
+              "url": "http://sns-v11.rednotecdn.com/stream/79/110/258/01e954e91a1d55854f0370019b73af8093_258.mp4",
+              "name": "01e954e91a1d55854f0370019b73af8093_258.mp4",
+              "duration": 8.172
+            },
+            "images": [],
+            "download_urls": []
+          }
+        ],
+        "has_more": true,
+        "cursor": "",
+        "max_cursor": "6954e94e000000001e023338"
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae190782bcec600014630be"
+  },
+  "response_bytes": 12713,
+  "response_sha256": "d18c4bee93d055010487b6584f897124da2215967f99b950a420e12654229c68",
+  "transport_error": null,
+  "elapsed_seconds": 13.19,
+  "classification": "success"
+}

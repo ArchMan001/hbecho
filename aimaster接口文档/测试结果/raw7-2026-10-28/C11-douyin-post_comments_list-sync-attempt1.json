@@ -1,0 +1,432 @@
+{
+  "case": "C11",
+  "platform": "douyin",
+  "action": "post_comments_list",
+  "mode": "sync",
+  "attempt": 1,
+  "endpoint": "/openapi/v1/media/comments/list",
+  "request": {
+    "url": "https://openapi.fieldshortcut.com/openapi/v1/media/comments/list",
+    "params": {
+      "async": "false"
+    },
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "url": "1.58 :6pm 09/06 D@H.ip FHI:/ 盛夏抗暑 # 日立硬核抗暑# 极速降温挑战# 三伏天续命神器# 日立硬核抗暑 # 一人一境舒爽一夏 # 日立中央空调品牌月# 日立中央空调  https://v.douyin.com/a3Y63kFd6cI/",
+      "max_cursor": 0,
+      "reply_pages": -1
+    }
+  },
+  "started_at": "2026-10-28T06:04:47.379421+00:00",
+  "http_status": 200,
+  "response_body": {
+    "code": 0,
+    "data": {
+      "task_id": "6ae1908625f71e0001dd6754",
+      "task_url": "https://fieldshortcut.com/tasks/6ae1908625f71e0001dd6754",
+      "action": "post_comments_list",
+      "status": "succeeded",
+      "result": {
+        "result": [
+          {
+            "id": "7667030590276895514",
+            "post_id": "7664908151975619961",
+            "content": "[鼓掌][鼓掌]",
+            "author": {
+              "id": "2323688438373561",
+              "name": "曲阳日立中央空调(红星美凯龙店)",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-hf2m9xxmck_3c7d47638ddb4278bae767fcaf6c09ec~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 1,
+              "reply_count": 13
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785119669000,
+            "download_urls_str": "",
+            "updated": 1793167495867
+          },
+          {
+            "id": "7668127979655332644",
+            "post_id": "7664908151975619961",
+            "content": "[666][666]",
+            "author": {
+              "id": "72712939281",
+              "name": "Pss💍🌹",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c001_ogqRJA45ZNAAHEIqDyFfACg6lkkAEeEG9ADzAQ~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785375176000,
+            "download_urls_str": "",
+            "updated": 1793167495867
+          },
+          {
+            "id": "7668250703048295174",
+            "post_id": "7664908151975619961",
+            "content": "视觉冲击力很强震撼",
+            "author": {
+              "id": "1563966605624484",
+              "name": "佳友666",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c001_o8oMWIfecDrANAeGIAA7Q827I5DegQASAC92AT~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785404176000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7668250576263054106",
+            "post_id": "7664908151975619961",
+            "content": "画面质感很出色细腻",
+            "author": {
+              "id": "2446839008466228",
+              "name": "春来动画",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c001_oIIDoNAzie0RACvESStAxzAAEAD31RAEPgfF9G~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785404176000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7668131272367637297",
+            "post_id": "7664908151975619961",
+            "content": "[玫瑰]",
+            "author": {
+              "id": "94576203106",
+              "name": "大手牵小手3049",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c001_e0adc6effa5f4f63a4328b8984cbb399~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785375941000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7667866838571762481",
+            "post_id": "7664908151975619961",
+            "content": "[比心][比心][比心][比心]",
+            "author": {
+              "id": "93397797654",
+              "name": "💓719🎊",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-avt-0015_74ad419b7bf0ad84cd33373e04ba5cd7~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785314372000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7667833435818492709",
+            "post_id": "7664908151975619961",
+            "content": "[灵机一动][灵机一动][灵机一动][灵机一动]",
+            "author": {
+              "id": "78941778571",
+              "name": "女侠",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c000-ce_o0PHfA2A9IBAQoTf3DEANCDpAwTFEEExCwT0Hz~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785306595000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7667766393890177829",
+            "post_id": "7664908151975619961",
+            "content": "@[赞][赞][赞]",
+            "author": {
+              "id": "92446641756",
+              "name": "ꩵ暴ᩚ꯭富ᩚ小꯭ᩚ仙女$",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-avt-0015_2f5dc7e8cdd3825f7a05b3ca9c62c950~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785290985000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7668128692581745459",
+            "post_id": "7664908151975619961",
+            "content": "[玫瑰][玫瑰]",
+            "author": {
+              "id": "3122209920663416",
+              "name": "金舵瓷砖🍀曉夢伢🍀",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813_ogInwACnlCsYOtUeDAAdaAIZAAs7bXcgn9QeCn~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785375341000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7667832871419380507",
+            "post_id": "7664908151975619961",
+            "content": "[比心][比心][比心]",
+            "author": {
+              "id": "3979884759098151",
+              "name": "怡口净水(曲阳红星美凯龙店)",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-hf2m9xxmck_4b51fc0c768043d6a14a3cdd76e02035~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785306464000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7667763183503475515",
+            "post_id": "7664908151975619961",
+            "content": "日立空调是不错的",
+            "author": {
+              "id": "2009542599645235",
+              "name": "曲阳做净水十年阳哥",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-hf2m9xxmck_57170e6b9f1a4d5c801971b4990ac310~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785290239000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7668130067259835172",
+            "post_id": "7664908151975619961",
+            "content": "@[赞][赞]",
+            "author": {
+              "id": "3874301999845976",
+              "name": "💕越来越好*♡",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813_o4v0lWeDAGB6kXRi5nicLEACAmAXIgC3ewACsA~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785375661000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7667844015086142245",
+            "post_id": "7664908151975619961",
+            "content": "[捂脸][捂脸]",
+            "author": {
+              "id": "99387285888",
+              "name": "叶子☘️",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c000-ce_osDiUKdMEv4Ao0eCygRBPEUeoxAiAAAwAST0I0~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785309059000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7667762701296878390",
+            "post_id": "7664908151975619961",
+            "content": "过去看看去，想要个风管机",
+            "author": {
+              "id": "104430160395",
+              "name": "曲阳做净水—小瑞（红星美凯龙三楼沁园）",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/mosaic-legacy_315d400093286ff7fb4c2~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785290127000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7668116783358411569",
+            "post_id": "7664908151975619961",
+            "content": "后期费电吗",
+            "author": {
+              "id": "3833349112347769",
+              "name": "TA",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c000-ce_oQQfL7FVcveX3LCOKkNGdgABQ4JeATaAggAWIl~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785372567000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7668126669845545780",
+            "post_id": "7664908151975619961",
+            "content": "专业",
+            "author": {
+              "id": "99995873900",
+              "name": "发光的💫甜甜圈🍩",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813_o4nAQAfE0gbGq10CcQCo95AfAgIsFGAADrDDdY~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785374872000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7667765159582057270",
+            "post_id": "7664908151975619961",
+            "content": "[色]都是牛马",
+            "author": {
+              "id": "3416909410480523",
+              "name": "曲阳红星美凯龙老板电器",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-avt-0015_30f2315cbc54b193788bd4f3fab2e107~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785290699000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7668251140790387456",
+            "post_id": "7664908151975619961",
+            "content": "画面色彩很舒服自然",
+            "author": {
+              "id": "213776730710036",
+              "name": "蜜柚青",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813_oAlCE2eAAnDdNgAAyQoCbebQGACW3IoC9ktZzA~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785404187000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7668251228183282467",
+            "post_id": "7664908151975619961",
+            "content": "画面色彩很舒服养眼",
+            "author": {
+              "id": "2446839008466228",
+              "name": "春来动画",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813c001_oIIDoNAzie0RACvESStAxzAAEAD31RAEPgfF9G~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 1
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785404187000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          },
+          {
+            "id": "7668125486983545619",
+            "post_id": "7664908151975619961",
+            "content": "[感谢][玫瑰]",
+            "author": {
+              "id": "110530704077",
+              "name": "梦浩瑶轩夏老二",
+              "avatar": "https://p3.douyinpic.com/aweme-avatar/tos-cn-i-0813_682a3c21ba7c42d58620447933219be3~tplv-dy-shrink-adapter:96:96.heic?from=2064092626"
+            },
+            "stats": {
+              "like_count": 0,
+              "reply_count": 0
+            },
+            "is_liked": false,
+            "download_urls": [],
+            "created": 1785374594000,
+            "download_urls_str": "",
+            "updated": 1793167495868
+          }
+        ],
+        "max_cursor": "20",
+        "has_more": 1,
+        "total": 98,
+        "post_id": "7664908151975619961",
+        "reply_page_count": 0
+      },
+      "error": null,
+      "created_at": null,
+      "updated_at": null
+    },
+    "request_id": "6ae1908625f71e0001dd6754"
+  },
+  "response_bytes": 9579,
+  "response_sha256": "f0b88d330a6b3bf4dcee6ac91eff3293b6ef43a68326d6f40f0af642e7efff5e",
+  "transport_error": null,
+  "elapsed_seconds": 11.26,
+  "classification": "success"
+}

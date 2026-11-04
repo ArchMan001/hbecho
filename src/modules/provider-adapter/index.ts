@@ -2,7 +2,7 @@ export * from "./capability";
 export * from "./contract";
 export { decodeProfile, isSuspectedEmptyProfile } from "./decode-profile";
 export { decodeVideoList } from "./decode-video-list";
-export { classifyLocator, type LocatorDecision } from "./locator";
+export { checkLocatorPlatform, classifyLocator, type LocatorDecision, type PlatformCheck } from "./locator";
 export { buildRequest, type BuildRequestInput } from "./request";
 export * from "./strategy";
 export type { CountState, ValueState } from "./value-state";

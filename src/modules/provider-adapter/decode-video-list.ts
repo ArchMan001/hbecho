@@ -39,21 +39,22 @@ function readCursor(r: JsonObject): TypedCursor {
   return { kind: "invalid", raw: rawOf(v) };
 }
 
-function readCover(e: JsonObject): CoverCandidates {
+function readCover(e: JsonObject, position: number): CoverCandidates {
+  const path = `$.data.result.result[${position}].cover`;
+  const none: CoverCandidates = { candidates: [], selected: null, selectedJsonPath: null, selection: "unavailable" };
   const v = e.cover;
   if (typeof v === "string") {
-    return v === ""
-      ? { candidates: [], selected: null, selection: "unavailable" }
-      : { candidates: [v], selected: v, selection: "single_string" };
+    return v === "" ? none : { candidates: [v], selected: v, selectedJsonPath: path, selection: "single_string" };
   }
   if (Array.isArray(v)) {
     // 保留全部候选；归档引用固定取数组第 2 条（540 宽，A v1.10 §9.2）
-    const candidates = v.filter((x): x is string => typeof x === "string" && x !== "");
-    return candidates.length >= 2
-      ? { candidates, selected: candidates[1]!, selection: "second_of_array" }
-      : { candidates, selected: null, selection: "unavailable" };
+    const indexed = v.map((x, i) => ({ x, i })).filter((p): p is { x: string; i: number } => typeof p.x === "string" && p.x !== "");
+    const candidates = indexed.map((p) => p.x);
+    return indexed.length >= 2
+      ? { candidates, selected: indexed[1]!.x, selectedJsonPath: `${path}[${indexed[1]!.i}]`, selection: "second_of_array" }
+      : { candidates, selected: null, selectedJsonPath: null, selection: "unavailable" };
   }
-  return { candidates: [], selected: null, selection: "unavailable" };
+  return none;
 }
 
 /**
@@ -72,6 +73,27 @@ function inferKind(e: JsonObject, hasText: boolean): ContentKind {
   return hasText ? "text" : "unknown";
 }
 
+const DURATION_RE = /^(0|[1-9]\d*)(\.\d+)?$/;
+
+/** 只在有视频素材时读取 video.duration；十进制小数原文，负数 / 指数 / 非数字类型为 invalid。 */
+function readDuration(e: JsonObject, kind: ContentKind): ValueState<string> {
+  if (kind !== "video") return { state: "missing" };
+  const video = e.video;
+  if (!isJsonObject(video) || !has(video, "duration")) return { state: "missing" };
+  const v = video.duration as JsonValue;
+  if (v === null) return { state: "explicit_null" };
+  if (v instanceof JsonNumber && DURATION_RE.test(v.source)) return { state: "value", value: v.source };
+  return { state: "invalid", raw: rawOf(v) };
+}
+
+function readStringArray(e: JsonObject, key: string): ValueState<string[]> {
+  if (!has(e, key)) return { state: "missing" };
+  const v = e[key] as JsonValue;
+  if (v === null) return { state: "explicit_null" };
+  if (Array.isArray(v) && v.every((x) => typeof x === "string")) return { state: "value", value: v as string[] };
+  return { state: "invalid", raw: rawOf(v) };
+}
+
 function invalidEntry(position: number, platform: Platform, v: JsonValue): ListEntry {
   const bad = { state: "invalid", raw: rawOf(v) } as const;
   return {
@@ -82,10 +104,15 @@ function invalidEntry(position: number, platform: Platform, v: JsonValue): ListE
     authorName: bad,
     title: bad,
     text: bad,
+    publishLocation: bad,
+    tagText: bad,
+    shareUrl: bad,
+    relatedSearchTerms: bad,
+    durationSeconds: bad,
     publishedAtMs: bad,
     metrics: { like: bad, comment: bad, collect: bad, share: bad, play: UNSUPPORTED },
     contentKind: "unknown",
-    cover: { candidates: [], selected: null, selection: "unavailable" },
+    cover: { candidates: [], selected: null, selectedJsonPath: null, selection: "unavailable" },
   };
 }
 
@@ -103,6 +130,7 @@ function decodeEntry(position: number, platform: Platform, v: JsonValue): ListEn
   const title = readText(v, "title");
   const text = readEntryText(v);
   const nonEmpty = (s: ValueState<string>) => s.state === "value" && s.value !== "";
+  const contentKind = inferKind(v, nonEmpty(title) || nonEmpty(text));
   return {
     position,
     postId: readExternalId(v, "post_id"),
@@ -111,6 +139,11 @@ function decodeEntry(position: number, platform: Platform, v: JsonValue): ListEn
     authorName: readText(v, "author_name"),
     title,
     text,
+    publishLocation: readText(v, "publish_location"),
+    tagText: readText(v, "tag_text"),
+    shareUrl: readText(v, "share_url"),
+    relatedSearchTerms: readStringArray(v, "related_search_terms"),
+    durationSeconds: readDuration(v, contentKind),
     publishedAtMs: readCount(v, "created"),
     // 列表接口不提供播放数：抖音返回的 0、小红书缺字段，都记 unsupported（R5.6）
     metrics: {
@@ -120,8 +153,8 @@ function decodeEntry(position: number, platform: Platform, v: JsonValue): ListEn
       share: readCount(stats, "share_count"),
       play: UNSUPPORTED,
     },
-    contentKind: inferKind(v, nonEmpty(title) || nonEmpty(text)),
-    cover: readCover(v),
+    contentKind,
+    cover: readCover(v, position),
   };
 }
 

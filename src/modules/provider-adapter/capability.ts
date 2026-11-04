@@ -91,7 +91,12 @@ const TUPLES: Tuple[] = [
 function rowsFor(t: Tuple): CapabilityProfile[] {
   const knownGaps = [
     "auth_header_doc_contradiction", // 文档写 Bearer，raw4 实测 X-Api-Key；保存的样本头里不含认证头，生产前仍需批准式 smoke
-    ...(t.action === "media_user_info" ? ["non_home_locator_response_unobserved"] : []), // 没有把视频/笔记链接传给主页接口的样本
+    ...(t.action === "media_user_info"
+      ? [
+          "non_home_locator_response_unobserved", // 没有把视频/笔记链接传给主页接口的样本
+          "response_platform_unobservable", // 响应里没有 platform 字段（raw3），平台错配只能在发送前按入口判断
+        ]
+      : []),
   ];
   const common = {
     platform: t.platform,

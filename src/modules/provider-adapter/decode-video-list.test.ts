@@ -226,20 +226,24 @@ describe("合成场景：单条目字段容错", () => {
     expect(cover(',"cover":"https://c"', "xiaohongshu")).toEqual({
       candidates: ["https://c"],
       selected: "https://c",
+      selectedJsonPath: "$.data.result.result[0].cover",
       selection: "single_string",
     });
     expect(cover(',"cover":["https://a"]')).toEqual({
       candidates: ["https://a"],
       selected: null,
+      selectedJsonPath: null,
       selection: "unavailable",
     });
     expect(cover(',"cover":["https://a",1,"https://b"]')).toEqual({
       candidates: ["https://a", "https://b"],
       selected: "https://b",
+      selectedJsonPath: "$.data.result.result[0].cover[2]", // 原始数组下标（中间混入了一个非字符串）
       selection: "second_of_array",
     });
-    expect(cover(',"cover":""')).toEqual({ candidates: [], selected: null, selection: "unavailable" });
-    expect(cover("")).toEqual({ candidates: [], selected: null, selection: "unavailable" });
+    const none = { candidates: [], selected: null, selectedJsonPath: null, selection: "unavailable" };
+    expect(cover(',"cover":""')).toEqual(none);
+    expect(cover("")).toEqual(none);
   });
 
   it("条目本身不是对象：该条保留为全 invalid 的占位，其余条目照常解出", () => {
@@ -253,5 +257,42 @@ describe("合成场景：单条目字段容错", () => {
     expect(d.entries[0]!.postId.state).toBe("invalid");
     expect(d.entries[0]!.contentKind).toBe("unknown");
     expect(d.entries[1]!.postId).toEqual({ state: "value", value: "p" });
+  });
+});
+
+describe("列表条目的其余结构化字段（长期快照需要，ODS 一年后消失）", () => {
+  const dy = decodedData(decodeVideoList("douyin", loadFixtureBytes("raw3.douyin.user_video_list")));
+  const xhs = decodedData(decodeVideoList("xiaohongshu", loadFixtureBytes("raw3.xiaohongshu.user_video_list")));
+  it("抖音：发布地、话题文本、分享页地址、时长（秒，小数原文）、搜索词数组", () => {
+    const e = dy.entries[0]!;
+    expect(e.publishLocation).toEqual({ state: "value", value: "山东省青岛市" });
+    expect(e.tagText).toEqual({ state: "value", value: "#日立中央空调 #全效Ⅱ三管制 #全屋全感3" });
+    expect(e.shareUrl.state === "value" && e.shareUrl.value.startsWith("https://www.iesdouyin.com/share/video/7680127373081070848/")).toBe(true);
+    expect(e.durationSeconds).toEqual({ state: "value", value: "62.602" });
+    expect(e.relatedSearchTerms).toEqual({ state: "value", value: [] });
+  });
+  it("小红书：没有发布地 / 分享页 / 搜索词字段 → missing；空话题文本是有效的空串", () => {
+    const e = xhs.entries[0]!;
+    expect(e.publishLocation).toEqual({ state: "missing" });
+    expect(e.shareUrl).toEqual({ state: "missing" });
+    expect(e.relatedSearchTerms).toEqual({ state: "missing" });
+    expect(e.tagText).toEqual({ state: "value", value: "" });
+  });
+  it("时长：只在有视频素材时读取；没有视频的条目 video.duration 是 0 占位，不当作真实时长", () => {
+    const withVideo = xhs.entries.filter((e) => e.contentKind === "video");
+    const without = xhs.entries.filter((e) => e.contentKind !== "video");
+    expect(withVideo.length).toBeGreaterThan(0);
+    expect(withVideo.every((e) => e.durationSeconds.state === "value" && Number(e.durationSeconds.value) > 0)).toBe(true);
+    expect(without.every((e) => e.durationSeconds.state === "missing")).toBe(true);
+  });
+  it("时长非法（负数、指数、字符串）→ invalid；不会变成 0", () => {
+    for (const lit of ["-1", "1e2", '"62.6"']) {
+      const body = envelope(
+        "user_video_list",
+        `{"result":[{"post_id":"1","user_id":"a","video":{"url":"https://v/x.mp4","duration":${lit}},"images":[]}],"has_more":false,"max_cursor":0}`,
+      );
+      const e = decodedData(decodeVideoList("douyin", body)).entries[0]!;
+      expect(e.durationSeconds.state).toBe("invalid");
+    }
   });
 });

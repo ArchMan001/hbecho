@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyLocator } from "./locator";
+import { checkLocatorPlatform, classifyLocator } from "./locator";
 
 const DY_SHARE = "9- 长按复制此条消息，打开抖音搜索，查看TA的更多作品。 https://v.douyin.com/MPOAlEqWpec/ 1@3.com :1pm";
 const XHS_SHARE = "@日立中央空调 在小红书已经有7.8万个粉丝，点击链接或复制口令查看Ta的主页>> https://xhslink.cn/o/E2W9yK1ctR";
@@ -102,5 +102,34 @@ describe("入口类型（R3.1/R3.2）：只按 URL 路径特征识别明确的�
     for (const t of ["https://www.douyin.com/user/abc", DY_SHARE, "口令"]) {
       expect(Object.keys(kindOf(t)).sort()).toEqual(["action", "cleaned", "kind", "original"]);
     }
+  });
+});
+
+describe("平台校验（R3.8）：入口里出现的链接必须属于命令的平台，不静默切换", () => {
+  it("抖音命令：抖音主页 / 短链 / 分享文本通过", () => {
+    expect(checkLocatorPlatform("douyin", "https://www.douyin.com/user/MS4wLjABAAAA")).toEqual({ ok: true });
+    expect(checkLocatorPlatform("douyin", DY_SHARE)).toEqual({ ok: true });
+    expect(checkLocatorPlatform("douyin", "https://www.iesdouyin.com/share/user/123")).toEqual({ ok: true });
+  });
+  it("抖音命令 + 小红书链接（含短链）：platform_mismatch，并带上识别出的平台", () => {
+    expect(checkLocatorPlatform("douyin", "https://www.xiaohongshu.com/user/profile/49328995493")).toEqual({
+      ok: false,
+      reason: "platform_mismatch",
+      detected: "xiaohongshu",
+    });
+    expect(checkLocatorPlatform("douyin", XHS_SHARE)).toMatchObject({ ok: false, detected: "xiaohongshu" });
+    expect(checkLocatorPlatform("douyin", "https://xhslink.com/abc")).toMatchObject({ ok: false, detected: "xiaohongshu" });
+  });
+  it("小红书命令 + 抖音链接：platform_mismatch", () => {
+    expect(checkLocatorPlatform("xiaohongshu", DY_SHARE)).toEqual({ ok: false, reason: "platform_mismatch", detected: "douyin" });
+    expect(checkLocatorPlatform("xiaohongshu", XHS_SHARE)).toEqual({ ok: true });
+  });
+  it("无法识别平台的链接或纯口令不是错配：照常发送，由供应商判断（与入口类型 unknown 一致）", () => {
+    expect(checkLocatorPlatform("douyin", "https://example.test/a")).toEqual({ ok: true });
+    expect(checkLocatorPlatform("douyin", "口令 ABC")).toEqual({ ok: true });
+  });
+  it("主机名只按真实域名后缀判断：notdouyin.com 不是抖音", () => {
+    expect(checkLocatorPlatform("xiaohongshu", "https://notdouyin.com/x")).toEqual({ ok: true });
+    expect(checkLocatorPlatform("douyin", "https://douyin.com.evil.test/x")).toEqual({ ok: true });
   });
 });

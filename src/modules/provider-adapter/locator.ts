@@ -2,6 +2,8 @@
 // 只看 URL 路径特征，不解析平台 HTML、不跟跳转；短链与分享口令在本地无法判断，记 unknown 并照常发送。
 // 「供应商返回非主页账号 → 终止」目前没有供应商样本，留在 capability 证据的 knownGaps 里（任务 9 smoke 补）。
 
+import type { Platform } from "./contract";
+
 export type LocatorDecision =
   | { action: "send"; kind: "home" | "unknown"; original: string; cleaned: string }
   | {
@@ -18,6 +20,38 @@ const URL_RE = /https?:\/\/[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+/;
 const TRAILING_PUNCT_RE = /[.,;:!?)'\]]+$/;
 
 const hostIs = (host: string, domain: string) => host === domain || host.endsWith(`.${domain}`);
+
+const PLATFORM_DOMAINS: Record<Platform, readonly string[]> = {
+  douyin: ["douyin.com", "iesdouyin.com"],
+  xiaohongshu: ["xiaohongshu.com", "xhslink.com", "xhslink.cn"],
+};
+
+function platformOfHost(host: string): Platform | null {
+  for (const p of Object.keys(PLATFORM_DOMAINS) as Platform[]) {
+    if (PLATFORM_DOMAINS[p].some((d) => hostIs(host, d))) return p;
+  }
+  return null;
+}
+
+export type PlatformCheck = { ok: true } | { ok: false; reason: "platform_mismatch"; detected: Platform };
+
+/**
+ * 入口里的链接必须属于命令的平台（R3.8）：识别出另一个平台就拒绝，不静默切换平台。
+ * 只看第一个 URL 的主机名；无法识别（其他域名、纯口令）不算错配，照常发送，由供应商判断。
+ * 响应里没有 platform 字段（raw3），所以「解析结果的平台」只能在发送前按入口判断（capability knownGaps 已记录）。
+ */
+export function checkLocatorPlatform(platform: Platform, original: string): PlatformCheck {
+  const m = URL_RE.exec(original);
+  if (!m) return { ok: true };
+  let host: string;
+  try {
+    host = new URL(m[0].replace(TRAILING_PUNCT_RE, "")).hostname.toLowerCase();
+  } catch {
+    return { ok: true };
+  }
+  const detected = platformOfHost(host);
+  return detected === null || detected === platform ? { ok: true } : { ok: false, reason: "platform_mismatch", detected };
+}
 
 function kindOfUrl(url: string): "home" | "video" | "note" | "unknown" {
   let u: URL;

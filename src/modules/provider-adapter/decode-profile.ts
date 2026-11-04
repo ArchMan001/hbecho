@@ -17,9 +17,9 @@ export function decodeProfile(platform: Platform, bytes: Uint8Array): DecodeOutc
   if (platform === "douyin") {
     const avatar = readText(r, "avatar");
     const background = readText(r, "cover");
-    if (avatar.state === "value" && avatar.value !== "") mediaCandidates.push({ role: "avatar", url: avatar.value });
+    if (avatar.state === "value" && avatar.value !== "") mediaCandidates.push({ role: "avatar", url: avatar.value, jsonPath: "$.data.result.avatar" });
     if (background.state === "value" && background.value !== "") {
-      mediaCandidates.push({ role: "background", url: background.value });
+      mediaCandidates.push({ role: "background", url: background.value, jsonPath: "$.data.result.cover" });
     }
   }
 
@@ -33,6 +33,7 @@ export function decodeProfile(platform: Platform, bytes: Uint8Array): DecodeOutc
       account: { namespace: PROFILE_NAMESPACE[platform], id: readExternalId(r, "user_id") },
       nickname: readText(r, "nickname"),
       signature: readText(r, "signature"),
+      location: readText(r, "location"),
       followerCount: readCount(r, "follower_number", "follower_count"),
       followingCount: readCount(r, "following_number", "following_count"),
       likeCount: readCount(r, "like_number", "like_count"),

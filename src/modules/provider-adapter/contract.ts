@@ -54,18 +54,22 @@ export interface ProfileData {
   account: { namespace: IdentifierNamespace; id: ValueState<string> };
   nickname: ValueState<string>;
   signature: ValueState<string>;
+  /** 抖音有；小红书主页没有该字段 → missing。 */
+  location: ValueState<string>;
   followerCount: CountState;
   followingCount: CountState;
   likeCount: CountState;
   postCount: CountState;
   providerUpdatedAtMs: CountState;
   /** 只含非空 URL；URL 是临时地址，不是媒资身份。 */
-  mediaCandidates: Array<{ role: "avatar" | "background"; url: string }>;
+  mediaCandidates: Array<{ role: "avatar" | "background"; url: string; jsonPath: string }>;
 }
 
 export interface CoverCandidates {
   candidates: string[];
   selected: string | null;
+  /** 选中候选在响应里的 JSON 路径（media_references.source_json_path）；未选中为 null。 */
+  selectedJsonPath: string | null;
   selection: "second_of_array" | "single_string" | "unavailable";
 }
 
@@ -79,6 +83,16 @@ export interface ListEntry {
   authorName: ValueState<string>;
   title: ValueState<string>;
   text: ValueState<string>;
+  /** 发布地（抖音）、话题文本、分享页地址（抖音）、搜索词（抖音）：快照长期保留这些字段，ODS 一年后消失。 */
+  publishLocation: ValueState<string>;
+  tagText: ValueState<string>;
+  shareUrl: ValueState<string>;
+  relatedSearchTerms: ValueState<string[]>;
+  /**
+   * 时长（秒，十进制小数原文）。只在有视频素材时读取：没有视频的条目 video.duration 是 0 占位，
+   * 不当作真实时长，记 missing。
+   */
+  durationSeconds: ValueState<string>;
   publishedAtMs: CountState;
   metrics: { like: CountState; comment: CountState; collect: CountState; share: CountState; play: CountState };
   contentKind: ContentKind;

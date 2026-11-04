@@ -1,7 +1,7 @@
 # A Data Foundation Tracer Implementation Plan
 
 > **状态**：`draft`  
-> **执行状态**：任务 1–3 已完成（3/9）；任务 4 未开始  
+> **执行状态**：任务 1–4 已完成（4/9）；任务 5 未开始  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
 > **验收**：[`acceptance.md`](acceptance.md)  
@@ -136,7 +136,7 @@
   - **任务 3 未覆盖、已转交后续任务的验收项：** 真实 OSS（`ali-oss`）的 `ObjectStore` 实现与桶权限验证（ENV4，批准的 smoke 之后）；异步提交与每次轮询（GET `/tasks/{id}`）的 ProviderCall 编排与 deadline 在任务 8；预算 / 调用上限的计数器在任务 8（本任务只提供 `SendPolicy` 封口接口）；`ambiguous` 的对账不实现（只读查询例外）。
   - **实现留下的取舍（供复核）：** ① 响应字节落 ODS 并校验**之后**，用 `peekResponseMeta` 提取 `response_action / provider_code / provider_task_id / provider_request_id / provider_task_status` 写入调用元数据——这是元数据提取，不是业务解释；② 陈旧 worker 在发送之后到达的终态证据**照常记录**（不可变观察，R18.4），只是结果标 `fenceValid=false`，由调用方决定不投影；这比「陈旧就拒绝写证据」更安全，因为拒绝会把已经付费的调用丢成 ambiguous；③ 响应已收到但 ODS 写入或校验失败时，调用标 `ambiguous`（远端已执行，但没有可靠证据），不分类、不解析；④ `oss_objects` 里 `storage_class=Standard`、`encryption_mode=SSE-OSS`、`content_type=application/octet-stream` 是占位值，真实 OSS 适配器落地时按桶配置核对；⑤ ODS 对象键布局 `ods/<yyyymmdd>/<role>/<sha256>-<uuid>`（ASCII，含角色与摘要）；⑥ `task_lookup` 被列入只读 action 集合（任务 8 的轮询用）；⑦ 清理中，被未入选调用 reconcile 引用的调用本次保留（`blockedByReference`），下次运行再处理；⑧ 恢复扫描 `recoverInFlightCalls` 的阈值由调用方传入，未硬编码。
 
-- [ ] 4. 打通抖音账号 tracer 纵向切片
+- [x] 4. 打通抖音账号 tracer 纵向切片
   - **Requirements:** R3, R4, R5, R7, R8, R9, R10, R11, R14, R18, R19
   - 实现抖音 Home locator 策略、入口类型识别与最多三次尝试；非主页入口、平台错配和三次失败终态都不得产生 account/identifier/assignment/snapshot/discovery/checkpoint。
   - 通过 captured `media_user_info` 创建/复用 namespaced ExternalAccount 标识，并在同一账号记录、同一短事务中成对写入当前入口与当前归属，投影 finalized profile snapshot 和抖音头像/背景 media references；若 locator 阶段已产生同一 captured profile payload 必须复用。
@@ -147,6 +147,30 @@
   - 计算首次录入结果：正常、`invalid_link` 或 `suspected_empty`；后两者之外写归属行 `intake_status`；`suspected_empty` 另写 `data_quality_issues`，实际监控 = 开关打开且 `intake_status='normal'`，不关开关、不改账号状态。
   - 一专员一平台一账号（D-69）：专员在抖音已占用名额时，提交另一个抖音账号进入阻塞终态 `staff_platform_slot_taken`，不建归属、不继续付费。
   - **Offline acceptance:** 一次命令得到 target `HITACHI1`、1 个当前归属、1 个 finalized profile、20/20 processed entries、20 个预期账号级 discovery、无 `HITACHI2023` ExternalAccount、integer checkpoint、正确的 `content_kind` 与 `unsupported` 播放数、第 2 条封面引用、可查询的 entry outcome；ProviderCall 数符合任务 1 锁定策略，duplicate/resume 无重复业务事实；assignment-conflict fixture 保持旧 owner 且不会继续付费；疑似空账号 fixture 产生 issue、`intake_status='suspected_empty'`、不进入常规采集，账号 status 不变；同专员同平台第二个账号被阻塞且无新归属。
+
+  - **完成记录（2026-11-04）：** `./scripts/verify.sh` 通过（Node 24.22.2；类型检查；unit 16 个文件 208 条；迁移一致；MySQL 8.4 上 db 7 个文件 144 条，其中编排器 24 条）。对 11 处关键逻辑做了变异检查：归属冲突判断、名额检查、可能置顶边界、整数游标转字符串、current 倒退、疑似空账号跳过列表、平台校验、归属快照、有界重试、fencing 校验。第一轮变异里「去掉 fencing 校验」幸存，说明测试只靠网关的 `fenceValid` 拦截，没有覆盖「响应已捕获、投影事务之前被取代」；已补 `beforeIntake / beforePageProjection` 钩子与三条用例，再变异即被杀掉。「重放时整页已投影」的门在当前流程里不可达（整页与 root 终态在同一个事务里），变异存活后按 YAGNI 删除。
+  - **Requirements → 覆盖测试**（只列任务 4 实际覆盖的部分，全部是抖音）：
+
+    | Requirement | 任务 4 覆盖的部分 | 测试 |
+    |---|---|---|
+    | R3.1 / R3.2 / R3.8 | 视频链接直接 `invalid_link`（调用 0）；平台错配（抖音命令 + 小红书链接 / 短链）拒绝，不静默切换；无法识别的主机不算错配；真实域名后缀判断 | `locator.test.ts`（`checkLocatorPlatform`）、`tracer-flow.douyin.db.test.ts` |
+    | R3.4 / R3.7 / R3.9 / R3.10 | 清洗值写入 `resolved_home_url`、原文写入 `current_home_locator`；locator 与账号 ID 来自同一条 captured payload；崩溃后接手复用主页证据，调用数仍是 2；成功路径主页 1 + 列表 1，请求同步、游标整数 0 | `tracer-flow.douyin.db.test.ts` |
+    | R4.1 / R4.2 / R4.4 | 三次 `RESULT_VALIDATION_FAILED`：三条独立 ProviderCall，终态 `invalid_link`，库里账号 / 标识 / 归属 / 快照 / 内容 / 发现 / 检查点 / 媒资引用全为 0；前两次失败第三次成功则继续；HTTP 400 不重试、不当作 `invalid_link` | 同上 |
+    | R5.1 / R5.2 / R5.3 / R5.8 | 标识按 (命名空间, 原文) 查找并复核原文；`douyin.user_id=HITACHI1` 与同 payload 的 `douyin.sec_uid` 绑定到同一账号（`same_payload`）；再次提交不新增账号 / 标识 | 同上 |
+    | R5.5 / R5.6 / R5.7 | 点赞等真实值、列表播放数 `unsupported`、转发 `unsupported`；时长只在有视频时读取；条目缺字段按条目容错（任务 1 的解码测试） | 同上、`decode-video-list.test.ts` |
+    | R7.1 / R7.2 / R7.3 / R7.4 / R7.7 / R7.8 | 无冲突时账号与当前归属同一事务写入，入口成对；同一专员再次提交 no-op；已归属他人：原 owner 不变、提交者不是 owner、只调主页 1 次、记 `assignment_conflict`；同专员同平台第二个账号：`staff_platform_slot_taken`，无新账号 / 归属 | 同上 |
+    | R7.6 | 发现的归属快照三列写入（专员 / 门店 / 品牌）；改绑后的不变性在任务 4 前置提交的 `schema.db.test.ts` | 同上、`schema.db.test.ts` |
+    | R8.1–R8.7 | 每账号每批次一份 finalized 主页快照，绑定调用 / Adapter 版本；值状态保真；旧批次迟到不让 current 倒退；头像 / 背景引用 `pending` | 同上 |
+    | R9.1–R9.3 / R9.6–R9.8 | 20/20 条全部处理；按被观察账号保存内容；第二次提交复用内容、新批次新快照；`content_kind` 推断；封面第 2 条，role=cover；同一页重复 post_id 的合并（任务 6 补完整用例） | 同上、`anchor.test.ts` |
+    | R10.1 / R10.2 / R10.4 / R10.7 / R10.9 / R10.10 | 整页之后才建立检查点；整数游标原文 `1782701295000`；`time` 锚点 = 最大发布时间 + 同刻内容 ID；不请求第二页；已存在检查点时不改写；`id_window` / `empty` 的纯函数测试 | 同上、`anchor.test.ts` |
+    | R11.1 / R11.2 / R11.4 | `HITACHI2023` 的条目保留在内容事实，返回作者在快照里；不建账号、不绑标识、不报质量问题 | 同上 |
+    | R14.2 / R14.7 | 技术失败（400 等）不产生空主页 / 空列表，账号状态不变 | 同上 |
+    | R18.1 / R18.2 / R18.5 | 领取使 fencing token 递增；投影事务先锁定 root（列表阶段还有子任务）并校验租约，被取代 / 已取消的 worker 什么都不写；整页回滚；租约未到期时另一个 worker 得到 `busy` | 同上 |
+    | R19.1 / R19.2 / R19.3 / R19.7 / R19.8 | `normal` / `suspected_empty` 写入归属行 `intake_status`；疑似空账号写 `suspected_empty_account`，监控开关不关、账号状态不变、不发列表、无检查点；只有粉丝 0（作品不为 0）不算 | 同上 |
+    | R15（status 部分） | 结构化成功 + 媒资待办、cursor 类型、录入结果、目标账号与 owner、冲突状态；运行前后查询不增加 transport 调用 | 同上 |
+
+  - **任务 4 未覆盖、已转交后续任务的验收项：** 同批次内重复 post_id、同内容跨账号各一份、`id_window` / `empty` 的入库、空 / null 游标 + `has_more=true` 的质量问题、整页内单条投影失败 → 任务 6；异步主页、心跳、重试退避、崩溃恢复策略（`ambiguous` 的有界重发已由网关支持，编排层的接手策略在任务 8；当前编排器把 `ambiguous` / `in_progress` / 传输错误一律映射为稳定失败码，不盲重发）→ 任务 8；媒资归档 → 任务 7；小红书 → 任务 5。
+  - **实现留下的取舍（供复核）：** ① 列表条目新增解码 `publish_location / tag_text / share_url / related_search_terms / video.duration`，主页新增 `location`：这些是快照列，ODS 一年后消失，不解码就永久丢失；时长只在有视频素材时读取（没有视频的条目 `video.duration` 是 0 占位，记 `missing`，不当作真实 0 秒），单位记 `seconds`；`Adapter` 版本号未升（尚无已落库的解释）。② 抖音 `douyin.sec_uid` 以 `same_payload` 绑定：只取目标账号自己条目里的 `sec_uid`，唯一才绑，多个不同值记 `identity_conflict`；异作者的 `sec_uid` 不绑。③ 归属冲突时**不写**主页快照：快照要挂在账号当前归属上，而那是别人的归属；证据留在 ODS、标识观察时间更新、记 `assignment_conflict` 问题，root 的 `account_id` 指向目标账号以便 status 显示 owner。④ 名额已满时**不创建账号**（避免留下无人归属的孤儿账号），只记 `staff_platform_slot_taken` 问题；问题的 `assignment_id` 指向占用名额的那条归属。⑤ 疑似空账号**不发列表调用**、不建检查点（「不进入常规采集」按首次采集也不进入解读）；已有 `suspected_empty` 归属的账号重新提交同样停在主页。⑥ `has_more` 为真也只建立基线，`stop_reason='first_page_baseline'`。⑦ 检查点只建立、不推进：已存在则不改写，`result_summary.checkpoint='exists'`；内容 ID 集合用平台内容 ID 原文；`version` 从 1 起；`cursor_sha256` 是游标信封 JCS 的 SHA-256。⑧ 平台错配只能在发送前按入口主机名判断（响应里没有 platform 字段），已记入 capability `knownGaps: response_platform_unobservable`；错配的录入结果记为 `invalid_link`，错误码 `platform_mismatch`。⑨ `invalid_link` 的 root 终态是 `failed` + `stop_reason='invalid_link'`；`blocked_*` 状态是 `failed` + `stop_reason`。⑩ 内容快照直接以 `finalized` 插入（单列表任务、无详情依赖），`merge_policy_version='list-merge.v1'`；封面只存被选中的第 2 条引用，`source_json_path` 指向它在响应里的原始下标，其余候选保留在 ODS（一年）。⑪ 子任务 `fetch_content_list` 的 `task_parameters` 是 `data-foundation-tracer-list-task.v1`（v2 只定义了 root 的 schema，此处是实现补充）。⑫ 编排器的异步配置（任一 action 为 `asynchronous`）直接以 `execution_mode_unavailable` 失败，不悄悄走同步。⑬ 本任务没有给 CLI 增加 `run`：真实 OSS 与真实 transport 都不在默认环境里，worker 入口随任务 8 一起落地。
 
 - [ ] 5. 打通小红书多命名空间身份纵向切片
   - **Requirements:** R3, R4, R5, R6, R7, R8, R9, R10, R14, R18, R19

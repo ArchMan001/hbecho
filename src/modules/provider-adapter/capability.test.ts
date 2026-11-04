@@ -104,6 +104,7 @@ describe("默认 capability 表（R13.7：按 raw4/raw5/raw8 固化）", () => {
   it("已知缺口显式记入证据：非主页链接的供应商响应未观察到；认证头文档与实测矛盾（R13.8）", () => {
     const profile = CAPABILITY_PROFILES.filter((p) => p.action === "media_user_info");
     expect(profile.every((p) => p.knownGaps.includes("non_home_locator_response_unobserved"))).toBe(true);
+    expect(profile.every((p) => p.knownGaps.includes("response_platform_unobservable"))).toBe(true);
     expect(CAPABILITY_PROFILES.every((p) => p.knownGaps.includes("auth_header_doc_contradiction"))).toBe(true);
   });
 });

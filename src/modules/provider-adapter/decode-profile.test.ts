@@ -37,6 +37,7 @@ describe("抖音 media_user_info fixture（raw3 HITACHI1）", () => {
     const d = decodedData(outcome);
     expect(d.mediaCandidates.map((m) => m.role)).toEqual(["avatar", "background"]);
     expect(d.mediaCandidates[0]!.url).toContain("aweme-avatar");
+    expect(d.mediaCandidates.map((m) => m.jsonPath)).toEqual(["$.data.result.avatar", "$.data.result.cover"]);
   });
 });
 
@@ -149,5 +150,12 @@ describe("异常响应的分类", () => {
       expect(out.outcome).toBe("schema_drift");
       expect(out).not.toHaveProperty("data");
     }
+  });
+});
+
+describe("主页 location", () => {
+  it("抖音有 location 原文；小红书主页没有该字段 → missing", () => {
+    expect(decodedData(decodeProfile("douyin", loadFixtureBytes("raw3.douyin.media_user_info"))).location).toEqual({ state: "value", value: "山东" });
+    expect(decodedData(decodeProfile("xiaohongshu", loadFixtureBytes("raw3.xiaohongshu.media_user_info"))).location).toEqual({ state: "missing" });
   });
 });

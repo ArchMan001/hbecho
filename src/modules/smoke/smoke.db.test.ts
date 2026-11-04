@@ -20,6 +20,7 @@ import {
   staffAccountAssignments,
   syncBatches,
   syncCheckpoints,
+  syncTasks,
 } from "../../db/schema";
 import { jcsSha256Hex } from "../canonical-json";
 import { TransportFailure, type ProviderRequest } from "../raw-capture";
@@ -149,6 +150,8 @@ describe("获批后的执行：仍走 raw-before-parse / ProviderCall / 成本�
     expect(payloads.map((p) => p.payloadRole).sort()).toEqual(["request_body", "request_body", "response_body", "response_body"]);
     expect(payloads.filter((p) => p.payloadRole === "response_body").every((p) => p.parseStatus === "parsed")).toBe(true);
     expect(await businessRows()).toEqual({ accounts: 0, assignments: 0, profiles: 0, contents: 0, snapshots: 0, checkpoints: 0 });
+    expect((await t.db.select().from(syncTasks)).map((x) => x.status)).toEqual(["succeeded", "succeeded", "succeeded"]);
+    expect((await t.db.select().from(syncBatches))[0]).toMatchObject({ status: "succeeded", succeededTaskCount: 3, failedTaskCount: 0, skippedTaskCount: 0 });
   });
 
   it("审计摘要与日志不含 secret、完整载荷或 locator 原文；locator 只以摘要前缀出现", async () => {
@@ -193,6 +196,14 @@ describe("获批后的执行：仍走 raw-before-parse / ProviderCall / 成本�
     const sum = await s.run(plan());
     expect(sum.tuples[0]).toMatchObject({ category: "transport_failed", decoded: false });
     expect(s.transport.calls).toHaveLength(2);
+    // 任务与批次状态如实反映失败，不能因为"跑完了"就是 succeeded
+    const tasks = await t.db.select().from(syncTasks).orderBy(syncTasks.taskId);
+    expect(tasks.map((x) => [x.requestedAction, x.status, x.lastErrorCode])).toEqual([
+      ["fetch_profile", "failed", "child_failed"],
+      ["fetch_profile", "failed", "transport_failed"],
+      ["fetch_content_list", "succeeded", null],
+    ]);
+    expect((await t.db.select().from(syncBatches))[0]).toMatchObject({ status: "partial_succeeded", succeededTaskCount: 1, failedTaskCount: 2 });
   });
 });
 
@@ -210,6 +221,10 @@ describe("停止逻辑：达到上限在下一次调用前停止", () => {
     expect(sum.tuples[1]).toMatchObject({ calls: 0, category: "stopped:deadline" });
     const calls = await t.db.select().from(odsProviderCalls).orderBy(odsProviderCalls.providerCallId);
     expect(calls[1]).toMatchObject({ callStatus: "terminal", outcome: "not_sent" });
+    // 被上限封口的条目是 cancelled / skipped，不是 failed
+    const tasks = await t.db.select().from(syncTasks).orderBy(syncTasks.taskId);
+    expect(tasks.map((x) => x.status)).toEqual(["succeeded", "succeeded", "cancelled"]);
+    expect((await t.db.select().from(syncBatches))[0]).toMatchObject({ status: "partial_succeeded", failedTaskCount: 0, skippedTaskCount: 1 });
   });
 
   it("异步主页：提交 1 次 + 轮询（pending → pending → success）；轮询计数、不计点；终态可解码", async () => {

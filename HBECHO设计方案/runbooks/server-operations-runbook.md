@@ -1632,7 +1632,7 @@ ossutil --endpoint oss-cn-beijing-internal.aliyuncs.com --region cn-beijing \
 | 密钥 | 类型 | 存放方式 |
 |---|---|---|
 | OSS 访问 | 临时凭证 | 实例 RAM 角色，**机器上不存**（§7.7） |
-| OSS 访问（本机 smoke） | 长期密钥（临时） | 仓库根 `.env`（权限 `600`、已被 `.gitignore` 忽略）。**2026-11-04 决策（liuxuekui）：** 先用 `hbecho-setup` 的 AccessKey 做本机 smoke，用完删除该 AK 并清空这两个变量；服务器侧仍只走实例角色，不受影响 |
+| OSS 访问（本机 smoke） | 长期密钥（临时） | 仓库根 `.env`（权限 `600`、已被 `.gitignore` 忽略）。**2026-11-04 决策（liuxuekui）：** 先用 `hbecho-setup` 的 AccessKey 做本机 smoke；~~用完删除该 AK 并清空这两个变量~~（**2026-11-04 由 liuxuekui 修订：AK 保留在 `.env`，后续还会用到**；以后可换成只限 `hbecho-ods` 的 RAM 用户）；服务器侧仍只走实例角色，不受影响 |
 | AI Master API Key | 长期密钥（供应商只提供这一种） | `/data/app/.env`，权限 `600`，owner root，不进 git |
 | MySQL 应用账号密码 | 长期密钥 | 同上 |
 | SSH 私钥 | 长期密钥 | 只在本机 `~/.ssh/`，不进服务器、不进 git |
@@ -1680,7 +1680,8 @@ OSS_BUCKET_TEMP=<待填写>
 
 # ── OSS（仅仓库根 .env 的本机 smoke；服务器不放）──────
 # 2026-11-04 起：本机没有实例元数据，用不了 hbecho-ecs-role（信任策略只允许 ecs.aliyuncs.com）。
-# 先用 hbecho-setup 的 AK 临时顶替；smoke 跑完即删除该 AK 并清空这两行。键名由 src/modules/smoke/secrets.ts 读取，
+# 先用 hbecho-setup 的 AK 顶替（2026-11-04 liuxuekui 修订：原"smoke 跑完即删除"作废，AK 保留在 .env，后续还会用到；
+# 以后可换成只限 hbecho-ods 的 RAM 用户）。键名由 src/modules/smoke/secrets.ts 读取，
 # 缺任何一个都在这构造 transport / OSS 之前失败，错误只报变量名。
 OSS_ACCESS_KEY_ID=<从密码管理器取>
 OSS_ACCESS_KEY_SECRET=<从密码管理器取>

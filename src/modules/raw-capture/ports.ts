@@ -16,8 +16,9 @@ export interface ProviderResponse {
 
 /**
  * 传输层失败。transport 实现必须尽量区分：
- *  - delivered='no'：有证据确认请求没有到达远端（连接被拒、DNS 失败、TLS 握手失败）——可安全按新 attempt 重试；
- *  - delivered='unknown'：请求可能已到达（超时、连接重置、响应中断）——远端是否执行未知，调用进入 ambiguous。
+ *  - delivered='no'：有证据确认请求没有到达远端（连接被拒、DNS 失败、TLS 握手失败、**连接阶段**超时 UND_ERR_CONNECT_TIMEOUT）
+ *    ——可安全按新 attempt 重试。连接超时的 kind 仍是 'timeout'，但 undici 在连接建立前不写请求字节，所以 delivered='no'；
+ *  - delivered='unknown'：请求可能已到达（**请求发出后**的超时、连接重置、响应中断）——远端是否执行未知，调用进入 ambiguous。
  * 任何不是 TransportFailure 的异常一律按 unknown 处理。
  */
 export class TransportFailure extends Error {

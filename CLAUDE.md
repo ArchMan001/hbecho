@@ -69,7 +69,7 @@ gh run watch <run-id> --exit-status   # 合并前等 CI
 
 - 产品主线：`HBECHO设计方案/prd-platform.md`（总 PRD）；子 PRD 为 `HBECHO设计方案/prd-domain-<代号>-<slug>.md`
 - 完整 spec：`.kiro/specs/<name>/`（`requirements.md` / `design.md` / `tasks.md`；`acceptance.md` 在需要时增加）
-- 当前实施切片：`.kiro/specs/a-data-foundation-tracer/`（status: current；2026-11-04 实现完成并合并 main，进度看 `tasks.md` 勾选状态）
+- 当前实施切片：`.kiro/specs/a-data-foundation-tracer/`（status: draft；任务 1–9 已实现并合并 main，验收见 `acceptance.md`，待确认后升 current；进度看 `tasks.md`）
 - 宪法：`HBECHO设计方案/governance/constitution.md`（v0，待逐条确认）
 - ADR：`HBECHO设计方案/architecture/adr/README.md`
 - 开发与部署流程：`HBECHO设计方案/runbooks/dev-test-deploy-workflow.md`

@@ -1,6 +1,6 @@
 # A Data Foundation Tracer Implementation Plan
 
-> **状态**：`current`（2026-11-04 实现完成，已合并 main）  
+> **状态**：`draft`（任务 1–9 已实现并合并 main；离线验收结果见 acceptance.md，待确认后升 `current`）  
 > **执行状态**：任务 1–9 的**实现范围**已完成（9/9）；任务 9 的**真实 smoke 已执行完毕**（2026-11-04，抖音同步 / 小红书同步 / 抖音异步共 4 次运行、7 次调用，1 次连接超时、其余成功）；capability 仍全部 `activation=disabled`  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
@@ -118,7 +118,7 @@
     |---|---|---|
     | R2.1 / R2.2 | 发送前请求字节已在私有 ODS 且读回校验、prepared→in_flight 已提交；每次提交/重试/续发都是独立 ProviderCall；requested / expected / actual action 分列 | `gateway.db.test.ts`（H1/H2 组、H5 组） |
     | R2.3 / R2.5 | 完整响应字节先落 ODS 并读回校验，才提交终态并允许解析；ODS 写失败 / 哈希不一致 / 截断 → decoder 与 projector 调用数为 0、调用进入 ambiguous 且无响应 payload；请求意图落地失败 → 发送次数 0、无调用行 | `gateway.db.test.ts` |
-    | R2.4 | 传输失败先落结构化 artifact（含响应中断时的部分字节）再分类：已知未送达 → `terminal/transport_error`；超时/重置/未知异常 → `ambiguous`；artifact 写失败 → ambiguous 且不分类 | `gateway.db.test.ts`（H4 组） |
+    | R2.4 | 传输失败先落结构化 artifact（含响应中断时的部分字节）再分类：已知未送达（含连接阶段超时 `UND_ERR_CONNECT_TIMEOUT`）→ `terminal/transport_error`；请求发出后的超时/重置/未知异常 → `ambiguous`；artifact 写失败 → ambiguous 且不分类 | `gateway.db.test.ts`（H4 组） |
     | R2.6 | 解析后 payload 行记录首次解释的 Adapter 版本与状态；新版本重放得到新的 lineage（调用 ID、payload ID、SHA-256、版本），不改写 payload 行、不新增 ODS 对象；`loadCaptured` 重读 ODS 并校验，被篡改 → `integrity_mismatch` | `gateway.db.test.ts`（解释组） |
     | R2.7 | in_flight 失联 → 恢复扫描标 ambiguous（幂等）；之后允许一次新的 ProviderCall（attempt_no+1），原调用不被改写；第二次又 ambiguous 后拒绝；非只读 action、非 ambiguous 调用拒绝；不实现对账 | `gateway.db.test.ts`（H5/H6 组） |
     | R2.8 | 认证头、Cookie、Bearer、形似密钥的 token 不出现在 ODS、调用元数据与错误 artifact | `gateway.db.test.ts`（H8） |
@@ -322,7 +322,7 @@
     5. 审批记录由你签发（`approved_by`、`reason`、`expires_at` ≤ 24 小时），并绑定计划摘要：先 `pnpm smoke preview --plan plan.json` 取得 `plan_sha256`。
     6. 合计首轮最多约 **60 点 ≈ 1.2 元**。QPS 仍未知，并发为 1。
   - **接线缺口（执行前必须先做，需要你批准的依赖 / 工作）：** ① 真实 `ProviderTransport`（HTTP + `X-Api-Key` 认证头注入）；② 真实私有 ODS 的 `ObjectStore`（`ali-oss`，ADR-0005 已登记但**未批准安装**）；③ secret provider（从环境 / 密钥库读取，不进仓库）。三者没有接线之前，`pnpm smoke run` 通过门槛后以**退出码 5**（`executor_not_wired`）停止，不会发出任何调用——这是刻意的。
-  - **接线完成记录（2026-11-04，决策人 liuxuekui：本机 smoke 先用 `hbecho-setup` 的 AccessKey，覆盖运维手册 §8.4/§8.5 原先「OSS 不含任何 AccessKey」的绝对写法）：** ① 真实 `ProviderTransport`（`src/modules/raw-capture/http-transport.ts`：注入 `X-Api-Key`；4xx/5xx 是已捕获响应，不是传输失败；连接类错误 `delivered=no`、超时与中断 `delivered=unknown`）；② 真实私有 ODS 的 `ObjectStore`（`src/modules/raw-capture/oss-store.ts`，`ali-oss` 6.23.0 + `@types/ali-oss`，ADR-0005 已登记；错误信息只留错误码）；③ secret provider（`src/modules/smoke/secrets.ts`：只读环境变量，缺失即失败，消息只含变量名）；④ 装配在 `src/worker/smoke-wiring.ts`，**只在 preflight 通过后**才打开连接池、构造 SDK；⑤ `.env` 由 Node `loadEnvFile` 载入（不引 dotenv）；⑥ smoke 的 ODS 对象键统一加 `smoke/` 前缀（`GatewayDeps.keyPrefix`，键原样写入 `oss_objects.object_key`）。已验证：`pnpm smoke preview` 通过（20 点 / 0.4 元）；真实 OSS 只读自检通过（`hbecho-ods` 当前 0 对象）；本机 `verify.sh` 通过。**仍未发出任何真实 AI Master 调用。** 真实 smoke 还缺 `HBECHO_DATABASE_URL`（用哪个库未定）与审批签发。
+  - **接线完成记录（2026-11-04，决策人 liuxuekui：本机 smoke 先用 `hbecho-setup` 的 AccessKey，覆盖运维手册 §8.4/§8.5 原先「OSS 不含任何 AccessKey」的绝对写法）：** ① 真实 `ProviderTransport`（`src/modules/raw-capture/http-transport.ts`：注入 `X-Api-Key`；4xx/5xx 是已捕获响应，不是传输失败；连接类错误（含连接阶段超时）`delivered=no`、请求发出后的超时与中断 `delivered=unknown`）；② 真实私有 ODS 的 `ObjectStore`（`src/modules/raw-capture/oss-store.ts`，`ali-oss` 6.23.0 + `@types/ali-oss`，ADR-0005 已登记；错误信息只留错误码）；③ secret provider（`src/modules/smoke/secrets.ts`：只读环境变量，缺失即失败，消息只含变量名）；④ 装配在 `src/worker/smoke-wiring.ts`，**只在 preflight 通过后**才打开连接池、构造 SDK；⑤ `.env` 由 Node `loadEnvFile` 载入（不引 dotenv）；⑥ smoke 的 ODS 对象键统一加 `smoke/` 前缀（`GatewayDeps.keyPrefix`，键原样写入 `oss_objects.object_key`）。已验证：`pnpm smoke preview` 通过（20 点 / 0.4 元）；真实 OSS 只读自检通过（`hbecho-ods` 当前 0 对象）；本机 `verify.sh` 通过。**仍未发出任何真实 AI Master 调用。** 真实 smoke 还缺 `HBECHO_DATABASE_URL`（用哪个库未定）与审批签发。
   - **本机 smoke 数据库（2026-11-04，liuxuekui 定）：** 用本机专用持久库 `hbecho_smoke`，容器 `hbecho-smoke-mysql`（`127.0.0.1:3307`，MySQL 8.4）；迁移已跑通（27 张表含 `__drizzle_migrations`、4 个平台、1 个供应商、1 个触发器、UTC）。容器用 `--skip-log-bin` 启动：binlog 开启时非 SUPER 用户无法执行迁移里的 `CREATE TRIGGER`，而应用账号不应拿 SUPER。重建命令见运维手册 §8.5。
   - **首轮真实 smoke 结果（2026-11-04，liuxuekui 签发；抖音同步 2 次调用 / 预算 20 点）：**
     - `douyin / media_user_info / synchronous`：`transport_failed` → `ambiguous`。ODS 里的 transport_error 为 `{"kind":"timeout","delivered":"unknown","message":"供应商请求失败（timeout/UND_ERR_CONNECT_TIMEOUT）"}`——undici 的 10 秒连接超时。同期 `curl` 实测 connect 约 50 ms、TLS < 1 s，属一次偶发，不是链路整体不可达。**请求字节已落 ODS，但没有响应证据；供应商是否已处理未知**（smoke 不自动重试）。
@@ -334,9 +334,21 @@
     - `douyin / media_user_info / synchronous`（补跑）：HTTP 200、1,025 字节、解码成功、6.8 s，10 点。
     - `xiaohongshu / media_user_info / synchronous` + `user_video_list / synchronous`：均 HTTP 200、解码成功（7.16 s / 6.50 s），合计 40,341 字节，30 点。
     - `douyin / media_user_info / asynchronous`：提交 HTTP **202**（2.30 s）+ 1 次轮询（0.16 s）即 `succeeded`，10 点（轮询不计点）。
-    - 本批合计 5 次调用、1 次轮询、估算 50 点（1.0 元）。证据：ProviderCall 3–7，ODS 对象共 14 个。**业务表仍全为 0**（账号 / 归属 / 快照 / 内容 / 发现 / 检查点）。
+    - 本批合计 4 次业务调用 + 1 次轮询（ProviderCall 3–7）、估算 50 点（1.0 元）。证据：ODS 对象 10 个（四次业务调用各 2 个 + 轮询 2 个；全部 7 次调用共 14 个）。**业务表仍全为 0**（账号 / 归属 / 快照 / 内容 / 发现 / 检查点）。
     - **异步实测结论：** ① 终态 schema 与同步一致（`data.result` 含 `user_id / nickname / signature / location / avatar / cover / follower_count / following_count / like_count / post_count`）；② 任务约 2–3 秒完成，2 秒轮询间隔在首次轮询即命中终态；③ **响应里的 `created_at / updated_at` 是 +08:00 本地时间且不带偏移**（`2026-11-04T22:58:53`，对应 UTC 14:58:53）——解析时不能当 UTC；④ 响应里**没有 TTL 字段**，任务保留时长仍未知，不能外推。轮询默认值（2 s / 最多 30 次 / 最长 120 s）本轮未被证伪，保留。
     - capability 登记表本来就把这些 tuple 标为 `smoke_verified`，本轮只是补了 2026-11-04 的实跑证据；`activation` 仍全部 `disabled`，**没有自动升级为 `approved`**。
+  - **审查订正（2026-11-04，独立审查 + 实施方复核后写入；以下取代上文与合并提交说明中冲突的数字与措辞）：**
+    1. **总成本是 60 点 = 1.2 元，不是 50 点。** 五笔成功调用：抖音列表 10 + 抖音主页 10 + 小红书主页 15 + 小红书列表 15 + 抖音异步主页 10。合并提交 `4aa0a91` 说明里的"估算 50 点"只算了后三批，提交历史不改，以此处为准。另有第 1 次调用（连接超时）供应商侧是否计费未知，最坏再加 10 点（0.2 元），以供应商对账单为准。
+    2. **逐次响应字节数（库内 `ods_payloads.byte_length`）：** ProviderCall 2 = 187,726；3 = 1,025；4（小红书主页）= 710；5（小红书列表）= 39,631（小红书合计 40,341）；6（异步提交）= 309；7（轮询）= 1,059。早先记录里 #4–#7 的"字节数"是耗时毫秒，错误。
+    3. **连接超时的证据与现行语义不一致，是预期的：** ProviderCall 1 在库中是 `ambiguous`，其 `transport_error` ODS 对象写的是 `delivered:"unknown"`，这是修复前代码的真实输出，证据不改写。修复后同样的错误会落为 `terminal/transport_error`、`delivered=no`。依据是 undici 在连接建立前不写请求字节，不是后来的 `curl`；`curl` 只说明链路当时正常。该结论目前没有"真实 undici 连接超时"的离线用例（localhost 上构造连接超时不稳定），依赖 Node 24 内置 undici 的行为。`delivered=no` 的调用会按 task 8 的策略退避重试，三次耗尽后失败，所以若将来误判，重复计费上限是 3 次而不是 ambiguous 的 1 次。
+    4. **预算口径：** 成本守卫只给 `outcome='succeeded'` 的调用计点，`ambiguous` 与 `delivered=no` 都按 0 点计；`max_points` 不是对"可能已计费"的上界，真正的硬上限是 `max_calls`。若把 ambiguous 按可能已计费计入，第 1 次的 10 点就会占用同一份计划的预算。生产启用任何 capability 之前，需决定是否把 ambiguous 按上界计入预算（已知缺口 `ambiguous_cost_not_reserved`）。
+    5. **适配器重放：** 审查时把 6 个响应字节从私有 ODS 取回，用 `decodeProfile` / `decodeVideoList` 重放：5 个成功响应均 `decoded`，异步提交响应为 `not_succeeded`（running）。这比"键集合与 raw3 一致"强：版本化适配器能解码，但仍不证明内容正确，也不证明列表分页与游标语义。
+    6. **审批的来源：** 4 次运行的审批 JSON 都由实施方（AI）按用户 2026-11-04 的口头授权生成，`approved_by` 写用户名；开关 `HBECHO_SMOKE` 也由实施方在命令行设置。用户的原话是"抖音和小红书直接跑就行，计划需要怎么测都测了"，上一条消息列出的三轮包含抖音主页异步；因此异步轮视为已授权。这是**委托授权**，不是用户逐轮签发；审批 schema 是 `strictObject`，来源只能写在 `reason`。今后 AI 不得同时持有审批与开关：要么用户自己设置开关，要么用户明确给出带预算上限的会话级授权并记录原话。合并到 `main` 同理：用户回复"继续下一步吧"授权了"推送并在 CI 绿后合并"，该授权由实施方转述，仓库内无其他记录。
+    7. **smoke 任务/批次状态（已修复）：** 原实现无论结果都把全部任务标为 `succeeded`，所以批次 2 的任务 4（唯一调用是 ambiguous）在库里是 `succeeded`。现在失败条目落 `failed`（`last_error_code` 为类别）、被上限封口的条目落 `cancelled`，批次为 `succeeded` / `partial_succeeded` / `failed`，并填 `failed_task_count` / `skipped_task_count`。已有 4 个批次的行是证据，不回写；读它们时以 ProviderCall 的 `call_status` 与 `outcome` 为准。
+    8. **ODS 前缀与清理：** `smoke/` 前缀进入 `oss_objects.object_key`。一年清理 `cleanupExpired` 按库里的 `object_key` 删除，不受前缀影响；只有 `sweepOrphans` 用 `ODS_PREFIX` 列桶，扫不到 `smoke/` 下"已上传、库事务失败"的孤儿对象，已知缺口 `smoke_orphans_not_swept`，由 `hbecho-ods` 桶的 400 天兜底规则（前缀为空，覆盖整桶）回收。这批证据的元数据只在本机 `hbecho_smoke` 库里，已导出到仓库外的本机文件 `~/Documents/hbecho-smoke-evidence-2026-11-04.json`（不提交），容器丢失而无备份时对象会变成无库记录的孤儿。
+    9. **`.env` 里的 OSS AccessKey 保留（2026-11-04 用户决定，取代"用完删除"）：** 后续还会用到。仍是 `hbecho-setup` 的宽权限 AK，`.env` 权限 600 且被 gitignore；以后可以改成只限 `hbecho-ods` 的 RAM 用户，不阻塞任何事。
+    10. **逐条验收与缺口修复(2026-11-04)：** acceptance.md 的 A–J 自动项全部对应到测试并通过；验收中发现的缺口已修：媒资失败补写 `media_archive_failed` 质量问题(R19.4)、补 `identity/repository.db.test`(哈希命中复核原文)、smoke 任务/批次状态如实落库。未修的已知缺口见 acceptance.md「验收结果」。
+    11. **证据库备份：** `hbecho_smoke` 的 `sync_batches / sync_tasks / ods_provider_calls / ods_payloads / oss_objects` 已导出到本机 `~/Documents/hbecho-smoke-evidence-2026-11-04.json`(权限 600，仓库外，不提交)。
   - **实现留下的取舍（供复核）：** ① 开关值是一个不会被随手设成 `1` 的字符串。② 审批绑定计划摘要，所以「批准之后改 locator / 预算」不可能；审批有效期最长 24 小时。③ smoke 创建的批次 / 任务只用于挂 ProviderCall 与成本累计（`subject_type='smoke'`），结束后标记 `succeeded` 以便一年清理回收；预算是**全局**的（所有条目挂在同一个 smoke 根任务下）。④ smoke **不重试**（包括校验失败与 429）：失败如实进摘要，由操作人决定；ambiguous 同样不重发。⑤ smoke 里 locator 原样发送（不做最小清洗），因为 allowlist 按原文核对；`AllowlistTransport` 对轮询只检查路径形态与「计划里存在异步条目」，任务 ID 的归属由执行器保证。⑥ CLI 的 `preview` 不需要审批与开关：它只校验计划和算预算，没有副作用。⑦ 「将实测结果更新为对应 capability 的 evidence」没有自动化：真实 smoke 之后由人把摘要里的证据引用写回 `capability.ts` / manifest，并记录认证头、QPS、TTL、schema 差异——避免自动外推。
 
 ## 实施前必须关闭的文档冲突（2026-11-04 已关闭）

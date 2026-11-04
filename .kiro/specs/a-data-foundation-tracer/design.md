@@ -6,9 +6,9 @@
 > **实施计划**：[`tasks.md`](tasks.md)（仅规划，尚未执行）  
 > **验收**：[`acceptance.md`](acceptance.md)  
 > **所属域**：A 数据底座 · **目录命名**：`a-data-foundation-tracer`，符合 `<代号>-<切片>`  
-> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.9（2026-11-03，定稿候选）  
-> **最近核对**：2026-11-03（按 A v1.9 与 raw4/raw5/raw8 校准；偏差见文末附录）  
-> **更新日期**：2026-11-03
+> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.10（2026-11-04，定稿候选）  
+> **最近核对**：2026-11-04（按 A v1.10 与 raw4/raw5/raw8 校准；v2 十项修订已落地）  
+> **更新日期**：2026-11-04
 
 ## 1. Overview
 
@@ -36,7 +36,7 @@
 ### 2.1 Decision order
 
 1. [`CONTEXT.md`](../../../CONTEXT.md)：领域语义和不可违反的不变量；
-2. [`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.9：A 域产品语义的唯一真相源；它决定做什么、首次录入给什么反馈、明确不做什么；
+2. [`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.10：A 域产品语义的唯一真相源；它决定做什么、首次录入给什么反馈、明确不做什么；
 3. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座实体、历史事实、任务、ODS、快照、检查点和媒资基线。与第 1、2 项冲突时按前两项修订，不在 design 或局部 SQL 里暗中选择；
 4. [AI Master V1.2 文档](<../../../aimaster接口文档/FieldShortcut A Master API 开发文档 V1.2.md>) 与已保存的 [`raw3`](../../../aimaster接口文档/测试结果/raw3/)、[`raw4`](../../../aimaster接口文档/测试结果/raw4-2026-10-28/)、[`raw5`](../../../aimaster接口文档/测试结果/raw5-2026-10-28/)、[`raw8`](../../../aimaster接口文档/测试结果/raw8-2026-10-28/) 证据：供应商声明与实测；二者冲突时必须显式记录，样本行为不能外推为长期合同；
 5. 本 Spec：tracer 的需求、Interface、流程和验收边界，不得静默改写前 4 项事实；
@@ -149,7 +149,7 @@ Tracer workflow 不新增平行持久化模型，映射如下：
 
 `result_summary` 只能保存可重建展示摘要；关键幂等、状态和身份不得藏在无约束 JSON 中。账号 namespace 直接使用代码枚举中的 `douyin.user_id`、`douyin.sec_uid`、`xiaohongshu.profile.user_id`、`xiaohongshu.content.user_id` 等标识（D-25：命名空间是代码枚举，不是独立表）。
 
-内容与发现的持久化 grain 以 CONTEXT 与 A v1.9 §9.2 为准：同一平台作品出现在两个被观察账号时，各账号各一份快照与发现，不跨账号合并。tracer 只验收单账号，因此两种 grain 在本次验收数据上等价；但实现不得依赖 v2 当前的跨账号共享行，也不得把 `mixed` 作为 `content_kind` 输出。
+内容与发现的持久化 grain 以 CONTEXT 与 A v1.10 §9.2 为准：同一平台作品出现在两个被观察账号时，各账号各一份快照与发现，不跨账号合并。tracer 只验收单账号，因此两种 grain 在本次验收数据上等价；但实现不得依赖 v2 当前的跨账号共享行，也不得把 `mixed` 作为 `content_kind` 输出。
 
 ## 5. Deep Module architecture
 
@@ -354,7 +354,7 @@ type CapabilityProfile = {
 };
 ```
 
-生产策略不写死 `async=false` 或 `async=true`。证据按 A v1.9 §6.3 与已保存 raw 结果分层：
+生产策略不写死 `async=false` 或 `async=true`。证据按 A v1.10 §6.3 与已保存 raw 结果分层：
 
 | platform × action × mode | 证据 | tracer 策略 |
 |---|---|---|
@@ -539,7 +539,7 @@ receive page N
 
 ### 11.3 Content grain
 
-内容事实按**被观察账号**保存，不跨账号合并（CONTEXT §Content、A v1.9 §9.2、D-23）：
+内容事实按**被观察账号**保存，不跨账号合并（CONTEXT §Content、A v1.10 §9.2、D-23）：
 
 - 内容身份仍由 platform + external content identifier 判定，但快照与发现的业务 grain 是 `(batch, account, content)`；
 - 同一作品出现在两个被监控账号列表时，各账号各有一份最终快照与一条 discovery；重复计数是已知且可接受的代价；
@@ -723,7 +723,7 @@ GET  /internal/data-foundation/account-tracers/{root_task_id}
 
 - 每个 submission/poll/page/retry 都单独计数；
 - platform/action/mode、最大调用数、最大 polling、最大 pages、media bytes 和 deadline 有硬上限；
-- 成本估算使用 A v1.9 §6.2 的 1.0 点数：抖音主页 10/次、列表 10/页；小红书主页 15/次、列表 15/页；失败、超时、429 与异步轮询不计点；
+- 成本估算使用 A v1.10 §6.2 的 1.0 点数：抖音主页 10/次、列表 10/页；小红书主页 15/次、列表 15/页；失败、超时、429 与异步轮询不计点；
 - 单价与 QPS 仍未知，预算只按点数与调用上限控制，不声称已换算成货币金额；
 - 默认 fixture 路径网络禁用；
 - paid smoke 需要人工批准、显式 switch、allowlist 和固定预算；
@@ -744,7 +744,7 @@ GET  /internal/data-foundation/account-tracers/{root_task_id}
 - media pending/archived/failed/bytes/dedupe；
 - root age、stage age、retry wait、terminal category。
 
-关联键使用 rootTaskId、task/batch、ProviderCall、ODS ref、account、assignment、snapshot、discovery、checkpoint 和 media reference/asset。日志不输出 secret、raw body 或临时 URL；手机号按明文记录（B 域 PRD v1.9）。
+关联键使用 rootTaskId、task/batch、ProviderCall、ODS ref、account、assignment、snapshot、discovery、checkpoint 和 media reference/asset。日志不输出 secret、raw body 或临时 URL；手机号按明文记录（B 域 PRD v1.21）。
 
 ## 16. Verification strategy
 
@@ -820,7 +820,7 @@ smoke 独立于 CI，必须先显示并确认 capability、locator allowlist、c
 
 1. 生产认证启用：raw4 已证明 `X-Api-Key` 可用，但生产开关仍需一次批准式 smoke 复核；
 2. 异步 profile 的 terminal schema、TTL、polling 参数；列表异步已确认失败，保持 disabled；
-3. 供应商 QPS、并发与单价；点数表已由 A v1.9 §6.2 给出；
+3. 供应商 QPS、并发与单价；点数表已由 A v1.10 §6.2 给出；
 4. Home locator 最小清洗的精确规则（截断边界、保留哪些字符），以及三次尝试的策略分配；
 5. 哪些 Home locator strategy 本身会产生 captured terminal `media_user_info` payload；已产生时必须复用，只有未产生的 strategy 才允许一次独立 profile fetch，并须锁定各策略 ProviderCall 数；
 6. 内部 command/status transport、错误 envelope 和最终 Capability 名称；
@@ -848,22 +848,22 @@ smoke 独立于 CI，必须先显示并确认 capability、locator allowlist、c
 
 ---
 
-## 附录：已知过时内容（2026-11-03 核对）
+## 附录：已知过时内容（2026-11-04 核对）
 
-> 本节只记录偏差，不修改正文。偏差的根多数在 [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：它仍是 2026-09 草案，尚未按 A v1.9、D-25 / D-28 逐条复核。requirements §1.2 是这些冲突的权威清单。
+> 本节只记录偏差，不修改正文。偏差的根多数在 [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：v2 已于 2026-11-04 完成十项修订；本节保留历史偏差，实现以 v2 正文为准。requirements §1.2 的注是权威清单。
 
 | # | 位置 | 原写法 | 现处理 | 来源 |
 |---|---|---|---|---|
 | 1 | requirements R7、design §10.5 与身份链、tasks 任务 4 | 把 `AccountAssignment` 当独立实体，归属带 `traceable start` 的区间语义 | 已改为「归属是账号记录上的当前单一事实」，不建独立表、不存时间区间；发现保留采集时的归属快照值 | D-16、D-28、D-67 |
 | 2 | design §10.1 与 §6 | 写「使用 v2 注册的 namespace 代码」 | 已改为代码枚举（命名空间不是表）；新增 namespace 须改 CONTEXT 与枚举 | D-25 |
-| 3 | v2 §6.3 / §8.3 | `identifier_namespaces`、`staff_account_assignments` 两张表仍在 v2 | **v2 未改**；v2 复核前不得据此建表，实施时以本节与 D-25 / D-28 为准 | D-25、D-28 |
-| 4 | design 日志字段 | 原写「日志不输出……完整手机号」 | 已按 2026-10-30 决定改为手机号明文可记录；secret、raw body、临时 URL 仍不写 | D-42、B 域 PRD v1.9 |
-| 5 | v2 §10.2 | 内容快照按 `(batch, content)` 共享，跨账号不合并；发现虽按 assignment 区分，但快照本身不区分账号 | **v2 未改**；CONTEXT 与 A v1.9 §9.2 要求按被观察账号分别保存；tracer 只在单账号场景验收，不实现跨账号共享快照 | CONTEXT §Content、D-23 |
-| 6 | v2 §5.2 | 值状态只有 `value/missing/explicit_null/invalid` | **v2 未改**；A v1.9 §9.2 要求列表播放数记 `unsupported`，需新增第五态并扩展 CHECK | A v1.9 §9.2 |
-| 7 | v2 §10.1 | `content_kind` 包含 `mixed` | A v1.9 §9.2 只定义 `video/image/text/unknown` 推断；tracer 不输出 `mixed` | A v1.9 §9.2 |
-| 8 | v2 §8.1 / §9.7 | 没有录入状态字段；质量问题只表达异常 | tracer 用根任务终态 + `data_quality_issues` 表达 `normal/invalid_link/suspected_empty`，不新增账号状态列；名单级录入状态留给导入 spec | A v1.9 §11.6 |
-| 9 | v2 §11.3 | `media_references.role` 只有 avatar/background/cover/gallery_image/video/audio | 需为标准化衍生图增加独立 asset 与 role/lineage；tracer 至少保证独立 SHA-256 与不替代原始字节 | A v1.9 §10.2 |
+| 3 | v2 §6.3 / §8.3 | `identifier_namespaces`、`staff_account_assignments` 两张表仍在 v2 | v2 已修订（2026-11-04）：§6.3 改代码枚举，§8.3 去掉区间并加 `platform_id`；实现以 v2 为准 | D-25、D-28 |
+| 4 | design 日志字段 | 原写「日志不输出……完整手机号」 | 已按 2026-10-30 决定改为手机号明文可记录；secret、raw body、临时 URL 仍不写 | D-42、B 域 PRD v1.21 |
+| 5 | v2 §10.2 | 内容快照按 `(batch, content)` 共享，跨账号不合并；发现虽按 assignment 区分，但快照本身不区分账号 | v2 已修订（2026-11-04）：`contents` 增加 `account_id`，唯一键含 `account_id`；快照/发现挂在按账号内容上，§10.2 快照键不变；实现以 v2 为准 | CONTEXT §Content、D-23 |
+| 6 | v2 §5.2 | 值状态只有 `value/missing/explicit_null/invalid` | v2 已修订（2026-11-04）：§5.2 增加 `unsupported`；实现以 v2 为准 | A v1.10 §9.2 |
+| 7 | v2 §10.1 | `content_kind` 包含 `mixed` | v2 已修订（2026-11-04）：§10.1 去掉 `mixed`；tracer 仍按四类输出 | A v1.10 §9.2 |
+| 8 | v2 §8.3 | 没有录入状态字段；质量问题只表达异常 | v2 已修订（2026-11-04）：§8.3 归属行增加 `intake_status`；tracer 仍用根任务终态 + `data_quality_issues`，名单级留给导入 spec | A v1.10 §11.6 |
+| 9 | v2 §11.3 | `media_references.role` 只有 avatar/background/cover/gallery_image/video/audio | v2 已修订（2026-11-04）：§11.3 增加 `cover_normalized/avatar_normalized/background_normalized`；衍生图独立 SHA-256 | A v1.10 §10.2 |
 | 10 | design §8.2 旧文 | 「raw3 只能标 fixture，异步未实测」 | 已按 raw4/raw5/raw8 更新：同步主页/列表与异步主页 `smoke_verified`；列表异步 provider-failed 保持 disabled | raw4、raw5、raw8 |
 | 11 | design §8.5 旧文 | 「文档 Bearer 与示例 `X-Api-Key` 冲突，方式未定」 | raw4 全部成功调用使用 `X-Api-Key`；文档 Bearer 记为矛盾；生产启用仍需批准式 smoke | raw4 |
 
-**核对为一致的部分**（不需改动）：首版验收平台为抖音与小红书（快手在 `a-full-sync`，D-47）；不写死 `async=false/true`，按 tuple 门控；20 / 21 条是实测证据而非业务上限（D-12）；ODS 一年、快照与媒资长期保留（D-10）；封面取第 2 条候选（A v1.9 §9.2）；链接与账号 ID 成对写入（A v1.9 §11.2.1）。
+**核对为一致的部分**（不需改动）：首版验收平台为抖音与小红书（快手在 `a-full-sync`，D-47）；不写死 `async=false/true`，按 tuple 门控；20 / 21 条是实测证据而非业务上限（D-12）；ODS 一年、快照与媒资长期保留（D-10）；封面取第 2 条候选（A v1.10 §9.2）；链接与账号 ID 成对写入（A v1.10 §11.2.1）。

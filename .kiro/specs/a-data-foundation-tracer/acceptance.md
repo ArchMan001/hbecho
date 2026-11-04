@@ -5,9 +5,9 @@
 > **设计**：[`design.md`](design.md)  
 > **任务**：[`tasks.md`](tasks.md)  
 > **所属域**：A 数据底座 · **目录命名**：`a-data-foundation-tracer`，符合 `<代号>-<切片>`  
-> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.9（2026-11-03，定稿候选）  
-> **最近核对**：2026-11-03  
-> **更新日期**：2026-11-03
+> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.10（2026-11-04，定稿候选）  
+> **最近核对**：2026-11-04  
+> **更新日期**：2026-11-04
 
 ## 怎么用
 
@@ -168,7 +168,7 @@
 | M1 | R17.1–17.3 | 集成负责人 | smoke 启动页 / 终端 | 审批记录、allowlist、预算与 deadline；无批准时任何网络调用前失败 |
 | M2 | R17.4 | 集成负责人 | smoke 审计摘要 | 实际 tuple、calls、polls、latency、bytes、estimated points、result category、evidence refs；无 secret/full payload |
 | M3 | R15.6 | 平台运营 | tracer 状态页 | 能看到批次级与账号级结果、entry outcome、返回/投影条数、失败原因与媒资警告 |
-| M4 | R12 / A v1.9 §10.2 | 平台运营 | 媒资结果 | tracer 不调用任何 OCR、ASR 或视觉识别能力；衍生图只是格式转换（平台 ASR 归 C 域） |
+| M4 | R12 / A v1.10 §10.2 | 平台运营 | 媒资结果 | tracer 不调用任何 OCR、ASR 或视觉识别能力；衍生图只是格式转换（平台 ASR 归 C 域） |
 | M5 | R3.2 | 平台运营 | 入口提交页 | 视频/笔记链接被明确提示“非主页入口”，没有被当作主页重试 |
 
 ## 环境依赖项（不能离线验证）

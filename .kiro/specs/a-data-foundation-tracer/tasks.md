@@ -1,23 +1,23 @@
 # A Data Foundation Tracer Implementation Plan
 
 > **状态**：`draft`  
-> **执行状态**：本文件只规划；本轮文档重组**不执行任何实现任务**  
+> **执行状态**：任务 1 起进入实施；当前尚未开始代码  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
 > **验收**：[`acceptance.md`](acceptance.md)  
 > **所属域**：A 数据底座 · **目录命名**：`a-data-foundation-tracer`，符合 `<代号>-<切片>`  
-> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.9（2026-11-03，定稿候选）  
-> **最近核对**：2026-11-03（按 A v1.9 与 raw4/raw5/raw8 校准）  
-> **更新日期**：2026-11-03
+> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.10（2026-11-04，定稿候选）  
+> **最近核对**：2026-11-04（A v1.10；v2 六项冲突已修订）  
+> **更新日期**：2026-11-04
 
 ## Planning rules
 
 - 以下任务按纵向结果排序；完成一个任务时应留下可运行、可观察的增量，而不是只创建空表或空 Interface。
 - 默认验收必须离线：fixture transport、fake clock、fake lease、fake OSS、network denied；不得需要 AI Master secret。
 - 每个任务完成前运行其离线 acceptance，记录尚未证明的供应商 capability；通过 fixture 不等于生产能力已验证。
-- 不在任务中预选应用框架、ORM、队列或缓存。若实现前必须做难逆选择，应单独提出决策，而不是隐藏在脚手架里。
+- 应用栈已由 ADR-0005 冻结（Next.js + Drizzle + better-auth + MySQL 任务表）；任务中不重新选型。目录约定按第一份实现 ADR 执行，不凭习惯先建 `src/`。
 - 所有内部 BIGINT transport 值输出十进制字符串；外部 ID 始终保留原始文本。
-- requirements §1.2 的六项基线冲突未修订前，不得据冲突的 v2 定义建表或固化实现；相关能力只在 fixture 中验收或保持 disabled。第 7 项是 tracer 与名单导入的范围区别，不阻塞本 spec。
+- requirements §1.2 的六项基线冲突已于 2026-11-04 在 v2 修订；实现以 v2 修订稿为准，见 requirements §1.2 的注。第 7 项是 tracer 与名单导入的范围区别，不阻塞本 spec。
 - 任务边界跑 `./scripts/verify.sh`；在应用代码与测试落地前，不声称“测试通过”。
 
 ## Tasks
@@ -112,23 +112,23 @@
   - 提供独立于默认 tests/CI 的 smoke 入口；启动前强制 human approval、显式 runtime switch、locator/action/mode allowlist、secret provider、固定 call/cost budget 和 deadline。
   - 首轮只验证最小 `media_user_info`/`user_video_list` tuple；异步 profile 必须作为独立 smoke，不因同步成功而启用；异步列表保持 disabled。
   - 每个真实 submit/poll/retry 仍走 RawCaptureGateway、ProviderCall、cost guard 和 redacted audit；达到预算或 deadline 时在下一次调用前停止。
-  - 使用 A v1.9 §6.2 点数表估算成本（抖音主页 10、列表 10/页；小红书主页 15、列表 15/页），并明确单价与 QPS 仍未知。
+  - 使用 A v1.10 §6.2 点数表估算成本（抖音主页 10、列表 10/页；小红书主页 15、列表 15/页），单价 0.02 元/点（1 元 = 50 点，2026-11-04）；QPS 仍未知。
   - 输出 audit summary：实际 tuple、calls、polls、latency、bytes、estimated points、result category、schema/Adapter version 和 evidence refs，不含 secret/full payload。
-  - 将实测结果更新为对应 capability 的 evidence；认证 header（raw4 为 `X-Api-Key`）、QPS、单价、task TTL 或 schema 差异继续显式记录，不能自动外推。
+  - 将实测结果更新为对应 capability 的 evidence；认证 header（raw4 为 `X-Api-Key`）、QPS、task TTL 或 schema 差异继续显式记录，不能自动外推；单价已确认 0.02 元/点。
   - **Manual acceptance:** 审批记录、预算预览、停止行为、raw-before-parse evidence 和审计摘要均由操作人确认；没有批准时命令必须在任何网络调用前失败。
 
-## 实施前必须关闭的文档冲突
+## 实施前必须关闭的文档冲突（2026-11-04 已关闭）
 
-以下来自 requirements §1.2，任何一项未关闭时，对应能力只能在 fixture 中验收或保持 disabled：
+requirements §1.2 的第 1～6 项已于 2026-11-04 在 v2 修订；实现以 v2 修订稿为准。下表保留为追溯，不再是阻塞项：
 
-| # | 冲突 | 需要修订 | 阻塞的 tracer 能力 |
+| # | 冲突 | v2 修订位置（2026-11-04） | 影响的 tracer 能力 |
 |---|---|---|---|
-| 1 | 归属仍是 v2 独立表 + 时间区间 | v2 §8.3 | 账号当前归属的持久化 |
-| 2 | 内容快照按 `(batch, content)` 共享；发现已按 assignment 区分，但快照不按账号 | v2 §10.2 | 按账号保存的 content snapshot |
-| 3 | 值状态缺 `unsupported` | v2 §5.2、CONTEXT ValueState | 列表播放数 |
-| 4 | `content_kind` 含 `mixed` | v2 §10.1 | `content_kind` 投影 |
-| 5 | 无录入状态载体 | v2 或后续导入 spec | `suspected_empty` 的名单级表达 |
-| 6 | 无封面衍生图 role/lineage | v2 §11.3 | 标准化衍生图 |
+| 1 | 归属仍是 v2 独立表 + 时间区间 | v2 §8.3：账号一行当前归属，去掉区间；新增 `platform_id` | 账号当前归属的持久化 |
+| 2 | 内容快照按 `(batch, content)` 共享；发现已按 assignment 区分，但快照不按账号 | v2 §10.1：`contents` 增加 `account_id`；§10.2 快照键不变 | 按账号保存的 content snapshot |
+| 3 | 值状态缺 `unsupported` | v2 §5.2：增加 `unsupported` | 列表播放数 |
+| 4 | `content_kind` 含 `mixed` | v2 §10.1：去掉 `mixed` | `content_kind` 投影 |
+| 5 | 无录入状态载体 | v2 §8.3：归属行增加 `intake_status` | `suspected_empty` 的名单级表达 |
+| 6 | 无封面衍生图 role/lineage | v2 §11.3：增加 `*_normalized` 角色 | 标准化衍生图 |
 
 ## Final implementation acceptance
 

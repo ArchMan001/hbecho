@@ -8,9 +8,9 @@
 >
 > **所属域**：A 数据底座 · **目录命名**：`a-data-foundation-tracer`，符合 `<代号>-<切片>`
 >
-> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.9（2026-11-03，定稿候选）
+> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.10（2026-11-04，定稿候选）
 >
-> **最近核对**：2026-11-03（按 A v1.9 与 raw4/raw5/raw8 校准）
+> **最近核对**：2026-11-04（按 A v1.10 与 raw4/raw5/raw8 校准）
 >
 > **更新日期**：2026-11-04（需求正文由英文译为中文；语义与编号不变）
 >
@@ -20,14 +20,14 @@
 
 `a-data-foundation-tracer` 证明数据底座的第一条纵向链路：一个已授权的内部调用方提交 `MediaStaff + 平台 + 主页入口` 后，系统能够追踪到稳定的 `ExternalAccount`，建立或复用账号并写入其当前归属，保存主页快照，完整处理首个已返回列表页，建立后续同步检查点，并异步归档头像、背景图和内容封面。
 
-首版验收平台是抖音和小红书。快手属于 `a-full-sync` 的范围（A v1.9 §13.1、D-47），本 spec 不验收。AI Master 只是本 Feature 内部的供应商 Adapter；需求不建设通用供应商 API 平台，也不宣称支持尚未实测的平台或 action。
+首版验收平台是抖音和小红书。快手属于 `a-full-sync` 的范围（A v1.10 §13.1、D-47），本 spec 不验收。AI Master 只是本 Feature 内部的供应商 Adapter；需求不建设通用供应商 API 平台，也不宣称支持尚未实测的平台或 action。
 
 ### 1.1 权威顺序
 
 冲突时按以下顺序裁决：
 
 1. [`CONTEXT.md`](../../../CONTEXT.md)：领域词汇、身份、归属、发现、快照、媒资和时间不变量；
-2. [`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md)：A 域产品语义的唯一真相源（v1.9）；它决定“做什么、给什么反馈、明确不做什么”；
+2. [`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md)：A 域产品语义的唯一真相源（v1.10）；它决定“做什么、给什么反馈、明确不做什么”；
 3. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座技术基线。与第 1、2 项冲突时，按前两项修订 v2，不得在代码或局部 SQL 里暗中选择一方；
 4. [AI Master V1.2 文档](<../../../aimaster接口文档/FieldShortcut A Master API 开发文档 V1.2.md>) 与已保存的 [`raw3`](../../../aimaster接口文档/测试结果/raw3/)、[`raw4`](../../../aimaster接口文档/测试结果/raw4-2026-10-28/)、[`raw5`](../../../aimaster接口文档/测试结果/raw5-2026-10-28/)、[`raw8`](../../../aimaster接口文档/测试结果/raw8-2026-10-28/) 证据：供应商声明与实测；二者冲突时必须显式记录，样本行为不能外推为长期合同；
 5. 本需求文档与 [`design.md`](design.md)：本 Feature 的需求和设计；
@@ -37,17 +37,17 @@
 
 ### 1.2 已知的基线冲突与范围区别（实现前必须显式处理）
 
-本 spec 与 v2 / A v1.9 存在以下冲突或范围区别。它们不是本 spec 的实现选择，而是必须显式记录、必要时回到 v2（或 CONTEXT）修订的基线缺口：
+本 spec 与 v2 / A v1.10 存在以下冲突或范围区别。它们不是本 spec 的实现选择，而是必须显式记录、必要时回到 v2（或 CONTEXT）修订的基线缺口：
 
 | # | 冲突 / 区别 | 以谁为准 | 处理 |
 |---|---|---|---|
-| 1 | v2 `staff_account_assignments` 仍保留独立表与 `valid_from/valid_to` 区间语义；CONTEXT 与 A v1.9 §5.3 规定归属是账号上的当前单一事实 | CONTEXT / A v1.9 | v2 修订前不得据 v2 建此表；tracer 按“账号当前归属”实现 |
-| 2 | v2 `content_snapshots` 按 `(batch, content)` 共享内容快照；CONTEXT §Content 与 A v1.9 §3.4/§9.2 规定按被观察账号分别保存，不跨账号合并。`content_discoveries` 已按 assignment 区分，但快照本身不区分账号 | CONTEXT / A v1.9 | v2 修订前，tracer 只在单账号场景验收，不得把“跨账号共享快照”当成已确认语义 |
-| 3 | v2 `ValueState` 只有 `value/missing/explicit_null/invalid`；A v1.9 §9.2 规定列表接口播放数是“不支持”，不得写成 0 或 missing | A v1.9 | 需新增 `unsupported` 值状态并扩展 v2 CHECK；tracer 不得用 0/missing 冒充 |
-| 4 | v2 `contents.content_kind` 包含 `mixed`；A v1.9 §9.2 只定义 `video/image/text/unknown` 的推断规则 | A v1.9 | tracer 按 A 的四类规则输出；`mixed` 不启用 |
-| 5 | v2 没有“录入状态”（正常录入 / 链接无效 / 疑似空账号）字段或表 | A v1.9 §11.6 | tracer 用命令结果 + `data_quality_issues` 观察，不新增账号状态列；名单级录入状态留给后续导入 spec |
-| 6 | v2 `media_references.role` 没有封面标准化衍生图角色 | A v1.9 §10.2 | 需要新增独立资产与引用语义；tracer 至少保证衍生图有独立 SHA-256 且不替代原始字节 |
-| 7 | A v1.9 §11.2 的名单导入首次只调主页接口做账号核对，内容按周节奏；v2 §12.2 的单账号录入立即执行主页 + 首个完整返回列表页 | 本 spec 按 `prd-platform.md` §7.2 的 tracer 验收边界 | tracer 是单账号录入链路，不是名单导入；它的验收包含首个完整返回页。名单导入的“只调主页”留给后续导入 spec，不在此实现 |
+| 1 | v2 `staff_account_assignments` 仍保留独立表与 `valid_from/valid_to` 区间语义；CONTEXT 与 A v1.10 §5.3 规定归属是账号上的当前单一事实 | CONTEXT / A v1.10 | v2 修订前不得据 v2 建此表；tracer 按“账号当前归属”实现 |
+| 2 | v2 `content_snapshots` 按 `(batch, content)` 共享内容快照；CONTEXT §Content 与 A v1.10 §3.4/§9.2 规定按被观察账号分别保存，不跨账号合并。`content_discoveries` 已按 assignment 区分，但快照本身不区分账号 | CONTEXT / A v1.10 | v2 修订前，tracer 只在单账号场景验收，不得把“跨账号共享快照”当成已确认语义 |
+| 3 | v2 `ValueState` 只有 `value/missing/explicit_null/invalid`；A v1.10 §9.2 规定列表接口播放数是“不支持”，不得写成 0 或 missing | A v1.10 | 需新增 `unsupported` 值状态并扩展 v2 CHECK；tracer 不得用 0/missing 冒充 |
+| 4 | v2 `contents.content_kind` 包含 `mixed`；A v1.10 §9.2 只定义 `video/image/text/unknown` 的推断规则 | A v1.10 | tracer 按 A 的四类规则输出；`mixed` 不启用 |
+| 5 | v2 没有“录入状态”（正常录入 / 链接无效 / 疑似空账号）字段或表 | A v1.10 §11.6 | tracer 用命令结果 + `data_quality_issues` 观察，不新增账号状态列；名单级录入状态留给后续导入 spec |
+| 6 | v2 `media_references.role` 没有封面标准化衍生图角色 | A v1.10 §10.2 | 需要新增独立资产与引用语义；tracer 至少保证衍生图有独立 SHA-256 且不替代原始字节 |
+| 7 | A v1.10 §11.2 的名单导入首次只调主页接口做账号核对，内容按周节奏；v2 §12.2 的单账号录入立即执行主页 + 首个完整返回列表页 | 本 spec 按 `prd-platform.md` §7.2 的 tracer 验收边界 | tracer 是单账号录入链路，不是名单导入；它的验收包含首个完整返回页。名单导入的“只调主页”留给后续导入 spec，不在此实现 |
 
 > **2026-11-04**：第 1～6 项已在 v2 修订（v2 文首「2026-11-04 修订」）。第 2 项的落点是把 `contents` 改为按被观察账号的内容根（唯一键含 `account_id`），快照唯一键 `(batch_id, content_id)` 因此不变，与本 spec design §146 的「快照按 `(batch, account, content)` 唯一」语义等价；实现以 v2 为准。第 5 项落在归属行的 `intake_status`。
 
@@ -354,7 +354,7 @@
 3. 当预算、截止时间或调用上限达到时，smoke SHALL 在发出下一次供应商调用之前停止。
 4. 当 smoke 完成或中止时，Tracer SHALL 输出审计摘要，包含 action、计数、延迟、字节数、估算成本、结果类别与保留的证据引用，但不含 secret 或完整载荷。
 5. 成功的 smoke SHALL 只验证实际执行的 platform/action/mode，且 SHALL NOT 自动启用未测试的 capability。
-6. 当估算成本时，smoke SHALL 使用 A v1.9 §6.2 的点数表（抖音主页 10、列表 10/页；小红书主页 15、列表 15/页），并 SHALL 使用已确认的单价 0.02 元/点（1 元 = 50 点，2026-11-04）；QPS 仍标记为 unknown。
+6. 当估算成本时，smoke SHALL 使用 A v1.10 §6.2 的点数表（抖音主页 10、列表 10/页；小红书主页 15、列表 15/页），并 SHALL 使用已确认的单价 0.02 元/点（1 元 = 50 点，2026-11-04）；QPS 仍标记为 unknown。
 
 ### 需求 18 · 租约、fencing 与单调发布
 

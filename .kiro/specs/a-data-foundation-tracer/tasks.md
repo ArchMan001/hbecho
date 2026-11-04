@@ -98,7 +98,7 @@
   - **Requirements:** R8, R12, R15, R16, R18
   - 从 profile/content snapshot 产生 avatar、background、cover 的 versioned MediaReference；抖音生成 avatar/background，小红书不生成；封面选第 2 条候选；临时 URL 只作 source locator。
   - 实现 `MediaArchiveModule`：idempotent demand、bounded fake/real download seam、私有临时对象、完整 bytes SHA-256、size/type verification、formal MediaAsset dedupe 和 verified binding。
-  - 生成标准化衍生图（JPEG q80、540 宽）作为独立资产，计算独立 SHA-256；原始字节与衍生图都保留，互不替代。
+  - 生成标准化衍生图（JPEG q80、540 宽）作为独立资产，计算独立 SHA-256；原始字节与衍生图都保留，互不替代。抖音封面是 HEVC 编码的 HEIC：解码走 Python 能力服务的 ffmpeg（ADR-0012，D-57 修订）；小红书 WebP 用 sharp。离线测试用 fake 能力服务，另加一条带真实 HEIC 样本的 Python 侧单测。
   - 实施 scheme/host/redirect/size/content-type/timeout/SSRF guard；网络期间不持有数据库事务，签名 URL 不进长期事实；重试必须重新获取有效地址。
   - Root/status 分开显示 structured checkpoint 与 media pending/archived/carried_forward/retryable/terminal warning；media failure 不回滚结构化结果；续用旧资产标 `carried_forward`，不表示本轮成功。
   - **Offline acceptance:** fake OSS 下相同 bytes 去重、不同 bytes 不按 URL 合并；过期 URL/超限/截断/失败都保留 snapshot 和 warning；衍生图有独立 SHA-256 且原图仍在；小红书无 avatar/background 引用；默认测试无网络媒体请求。

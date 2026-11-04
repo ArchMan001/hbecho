@@ -1,6 +1,6 @@
-# ADR-0002 · 首版自建 MySQL 8.0，不用 RDS
+# ADR-0002 · 首版自建 MySQL（8.4 LTS），不用 RDS
 
-- **状态**：accepted
+- **状态**：accepted（2026-11-04 修订：版本基线由 8.0 改为 8.4 LTS，见文末）
 - **日期**：2026-09-04
 - **决策人**：刘学奎
 - **替代**：无（首版基线选择）
@@ -42,3 +42,12 @@ v2 基线要求 MySQL **8.0.16+**，因为整个设计把大量语义不变量�
 ## 原文
 
 `HBECHO设计方案/runbooks/server-operations-runbook.md` §6、§13.1、§13.2；`database-design-v2.md` §5。
+
+## 2026-11-04 修订：版本基线改为 MySQL 8.4 LTS
+
+- **原因**：MySQL 8.0 已于 2026 年 4 月随 8.0.46 结束生命周期，不再有常规安全补丁；Oracle 建议升级到 8.4 LTS（[MySQL 8.0 Release Notes](https://docs.oracle.com/cd/E17952_01/mysql-8.0-relnotes-en/)）。
+- **决定**：应用、CI 与将来的生产库统一用官方镜像 `mysql:8.4`。v2 依赖的 CHECK 强制执行、生成列唯一键、复合外键与严格模式在 8.4 上的实测见 runbook §13.11（全部通过，8.4.13）。
+- **时机**：在 tracer 建第一张业务表之前切换；此时库里没有业务数据，迁移成本为零。
+- **现有容器**：测试 ECS 上的 `hbecho-mysql`（8.0.46）里没有业务表，保留到第一次部署应用时换成 8.4；换之前不在它上面建业务表。
+- **8.4 的已知差异**：`mysql_native_password` 默认不加载，应用账号用默认的 `caching_sha2_password`（Node 的 `mysql2` 驱动支持）；其余默认参数变化在首次部署时按 runbook §6.2 复核。
+

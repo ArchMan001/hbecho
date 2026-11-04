@@ -602,6 +602,7 @@ MediaReference
 → complete-byte SHA-256 + size/type verification
 → formal MediaAsset dedupe（原始字节）
 → normalized derivative: JPEG q80, 540 wide, own SHA-256 → separate MediaAsset
+   （抖音 HEVC HEIC 经 Python 能力服务 ffmpeg 解码，ADR-0012；WebP/JPEG 用 sharp）
 → verified reference binding（原始 + 衍生分别可追溯）
 ```
 

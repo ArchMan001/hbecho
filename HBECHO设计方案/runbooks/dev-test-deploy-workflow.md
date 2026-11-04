@@ -136,7 +136,7 @@ Mac：写代码 + 离线测试
 
 | job | 触发条件 | 内容 |
 |---|---|---|
-| `app-verify` | 每次 push / PR | MySQL 8.0 服务容器 → 空库跑迁移 → typecheck → 测试 → 静态门禁 → 生产构建 |
+| `app-verify` | 每次 push / PR | MySQL 8.4 服务容器 → 空库跑迁移 → typecheck → 测试 → 静态门禁 → 生产构建 |
 | `image` | 仅在应用/worker 相关路径变化或手动触发 | 构建镜像 → 镜像内测试 → 推 ACR，标签 = git 短 sha |
 | `deploy-test` | 手动触发 | 测试 ECS 拉同一标签、一次性库迁移、端到端 |
 | `deploy-prod` | 手动触发 + 环境审批 | 生产 ECS 按 §7 顺序上线 |

@@ -18,7 +18,7 @@
 |---|---|
 | `.githooks/pre-commit` 密钥扫描（文件名 + 内容特征，四种拦截已实测） | 应用代码、DDL 与迁移脚本 |
 | `.gitignore` 凭证与本地文件忽略规则 | 测试套件、fixture |
-| MySQL 8.0.46 + `STRICT_TRANS_TABLES`（CHECK 约束已实测生效，但**尚无任何业务 CHECK 落地**） | CI 门禁、静态检查脚本 |
+| MySQL `STRICT_TRANS_TABLES`（8.0.46 与 8.4 的 CHECK 约束均已实测生效，但**尚无任何业务 CHECK 落地**） | CI 门禁、静态检查脚本 |
 | OSS 四桶 RAM 权限边界（media/backup 无删除权限，已实测） | 长事务告警、逻辑备份 |
 | OSS 生命周期规则（media 无过期规则，已实测） | 自动化的文档/规格一致性检查（本文件落地时新增 `scripts/verify.sh`） |
 

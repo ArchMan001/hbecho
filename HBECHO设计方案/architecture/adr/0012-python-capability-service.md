@@ -15,7 +15,7 @@ C2 档 1 的模板匹配与元素匹配需要本地图像计算（pHash 预筛 +
 |---|---|
 | HTTP 框架 | FastAPI（MIT） |
 | 图像 | OpenCV（`opencv-python-headless`） |
-| 音视频 | ffmpeg（容器内二进制） |
+| 音视频与 HEIC | ffmpeg（容器内二进制，**≥ 7.1**，该版本起支持 HEIF 解码；Debian bookworm 自带 5.1 不够，镜像用 trixie 或官方静态构建）。抖音封面是 HEVC 编码的 HEIC，sharp 预编译包无法解码（[sharp #1105](https://github.com/lovell/sharp/issues/1105)），由本服务转 JPEG 后交回 Node 侧（2026-11-04 实测） |
 | 运行 | docker compose 中的一个服务，`restart: unless-stopped`；单进程 |
 | 网络 | 只在 compose 内网暴露，**不映射宿主端口**，不经 Nginx |
 | 凭证 | **不持有数据库凭证**；只读需要的 OSS 对象（只读 RAM 子账号或由 Node Worker 传入短期签名 URL，二选一在 `c-signals` spec 定） |

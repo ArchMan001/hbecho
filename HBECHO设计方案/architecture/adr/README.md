@@ -17,9 +17,9 @@
 | 编号 | 决定 | 状态 | 日期 | 决策人 |
 |---|---|---|---|---|
 | [0001](0001-oss-bucket-topology.md) | OSS 按保留期分四桶（ods / media / temp / backup） | accepted | 2026-09-03 | 刘学奎 |
-| [0002](0002-self-hosted-mysql-first-version.md) | 首版自建 MySQL 8.0，不用 RDS | accepted | 2026-09-04 | 刘学奎 |
+| [0002](0002-self-hosted-mysql-first-version.md) | 首版自建 MySQL，不用 RDS；版本基线 8.4 LTS（2026-11-04 修订） | accepted | 2026-09-04 | 刘学奎 |
 | [0003](0003-github-authoritative-remote.md) | GitHub 作为权威远端，Codeup 降级为可选镜像 | accepted | 2026-09-03 | 刘学奎 |
-| [0004](0004-defer-application-stack.md) | 暂不冻结应用框架、ORM/迁移工具与队列 | accepted（延迟决定，已被 0005 部分关闭） | 2026-09-02 | 刘学奎 |
+| [0004](0004-defer-application-stack.md) | 暂不冻结应用框架、ORM/迁移工具与队列 | superseded（被 0005、0013 全部关闭） | 2026-09-02 | 刘学奎 |
 | [0005](0005-application-stack-and-auth.md) | 应用技术栈与认证库：Node/TypeScript + Next.js + Drizzle + better-auth；队列自建；导入用 CSV | accepted | 2026-10-27 | 刘学奎 |
 | [0006](0006-host-nginx-reverse-proxy.md) | 反向代理部署形态：Docker Compose + 宿主 Nginx，应用容器只绑 127.0.0.1 | accepted | 2026-10-28 | 刘学奎 |
 | [0007](0007-course-video-vod.md) | 课程视频用阿里云 VOD 承载：媒资存华北2、OpenAPI 走 cn-shanghai、720p+480p 模板组、备案后播放 | accepted | 2026-10-29 | 刘学奎 |

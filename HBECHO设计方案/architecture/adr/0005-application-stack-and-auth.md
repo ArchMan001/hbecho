@@ -16,7 +16,7 @@ hbdam 已在生产前验证了一套 Node / TypeScript 栈，其中认证、ORM�
 
 ### 1. 主语言
 
-- **TypeScript（Node 20 LTS 或更高）** 为应用主语言，承载 Web、API、任务 Worker 与数据访问。
+- **TypeScript（Node 24 LTS）** 为应用主语言，承载 Web、API、任务 Worker 与数据访问。2026-11-04 修订：原写「Node 20 LTS 或更高」，Node 20 已于 2026-04-30 停止维护；Node 24 为 Active LTS，安全支持到 2028-04-30。CI、镜像与本机统一用 24；升级到下一个 LTS 时修订本行。
 - **Python 仅作能力辅助进程**：图像处理（SIFT/ORB、OCR 编排）、音视频（ffmpeg）、文档解析（2.0 的 Docling）。不承载业务状态、不直连业务库、不实现权限。
 
 ### 2. 框架与数据访问

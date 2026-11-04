@@ -2432,6 +2432,26 @@ git log --all --name-only --pretty=format: | sort -u | grep -E '(^|/)\.env$|sett
 
 ---
 
+### 13.11 MySQL 8.4 LTS 约束实测（2026-11-04）
+
+ADR-0002 把版本基线改为 8.4 LTS 后，在测试 ECS 上用**一次性容器**验证 v2 依赖的数据库能力。容器 `m84probe` 挂独立网络 `m84probe_net`、不映射宿主端口、库名 `probe_test`、root 密码在服务器上随机生成且不落盘，跑完即删除容器与网络；没有碰现有的 `hbecho-mysql`。脚本与日志在 `/data/tmp/mysql84-check/`。
+
+启动参数注意：8.4 的时区参数是 `--default-time-zone=+00:00`，写成 `--time-zone` 会让 mysqld 直接退出。
+
+| 检查 | 期望 | 实测（`mysql:8.4` → 8.4.13） |
+|---|---|---|
+| 版本、严格模式、时区 | ≥ 8.0.16；含 `STRICT_TRANS_TABLES`；`+00:00` | ✅ 8.4.13；默认 sql_mode 含 `STRICT_TRANS_TABLES`；`+00:00` |
+| 生成列唯一键：外部账号（`staff_id` 为 NULL）多行并存 | 允许 | ✅ |
+| 同一专员同一平台第二个账号（D-69） | `ERROR 1062` | ✅ `Duplicate entry '100-10' for key 'uq_staff_platform'` |
+| 释放名额（`slot_released_at`）后再录入 | 允许 | ✅ |
+| `watch_type='staff'` 但 `staff_id` 为空 | `ERROR 3819` | ✅ |
+| 关闭监控但没有关闭原因 | `ERROR 3819` | ✅ |
+| 复合外键：账号与平台不匹配 | `ERROR 1452` | ✅ |
+| 严格模式越界写入 | `ERROR 1264` | ✅ |
+| `mysql_native_password` | 默认不可用 | ✅ 插件状态 `DISABLED`；`default_authentication_plugin` 变量在 8.4 已移除（`ERROR 1193`）。应用账号用默认的 `caching_sha2_password` |
+
+**结论**：v2 依赖的 CHECK、生成列唯一键、复合外键与严格模式在 8.4 上全部真实生效。现有 `hbecho-mysql`（8.0.46）没有业务表，首次部署应用时替换为 8.4。
+
 ## 14. 常用运维命令
 
 ```bash

@@ -71,7 +71,7 @@
 | 架构与领域 | `CONTEXT.md`、`HBECHO设计方案/domains/`、`HBECHO设计方案/architecture/`、`HBECHO设计方案/governance/` | 领域语义、模块边界、实施基线、必要 ADR、不可协商条款索引 | 单次任务清单 |
 | Kiro Specs | `.kiro/specs/<code>-<slice>/` | 可验收需求、实现设计、执行任务 | 全项目巨型总设计 |
 | Runbook 与证据 | `HBECHO设计方案/runbooks/`、`aimaster接口文档/` | 运维步骤、供应商合同、fixture 与实测记录 | 未标状态的产品决策 |
-| 应用代码与测试 | `src/`（领域模块在 `src/modules/<模块>/`）、`tests/`（`tests/fixtures/` 登记证据而不复制，`tests/harness/` 为离线测试挂具）；目录约定见 [ADR-0013](architecture/adr/0013-repository-layout.md) | 实现与其自动化验收 | 设计结论；与 CONTEXT / v2 冲突时以文档为准 |
+| 应用代码与测试 | `src/`（领域模块在 `src/modules/<模块>/`，schema 在 `src/db/`）、`drizzle/`（drizzle-kit 迁移与手写 SQL 迁移）、`tests/`（`tests/fixtures/` 登记证据而不复制，`tests/harness/` 为离线测试挂具）；目录约定见 [ADR-0013](architecture/adr/0013-repository-layout.md) | 实现与其自动化验收 | 设计结论；与 CONTEXT / v2 冲突时以文档为准 |
 | 历史归档 | `HBECHO设计方案/archive/` | superseded 方案、旧稿、复盘、评审证据、legacy 输入 | 当前实现依据 |
 
 ### 4.1 命名规范（对齐 hbdam 的做法）

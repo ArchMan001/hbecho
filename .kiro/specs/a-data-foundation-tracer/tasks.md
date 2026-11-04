@@ -1,7 +1,7 @@
 # A Data Foundation Tracer Implementation Plan
 
 > **状态**：`draft`  
-> **执行状态**：任务 1 已完成（离线合同层，1/9）；任务 2 未开始  
+> **执行状态**：任务 1–2 已完成（2/9）；任务 3 未开始  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
 > **验收**：[`acceptance.md`](acceptance.md)  
@@ -62,7 +62,7 @@
   - **仍开放的证据缺口（记入 capability `knownGaps`）：** 供应商对「视频/笔记链接传给 `media_user_info`」的真实响应没有样本，因此 `unknown`（短链、口令）照常发送，「返回非主页账号则终止」待任务 9 smoke 补；文档 Bearer 与实测 `X-Api-Key` 矛盾，保存的样本请求头里不含认证头。
   - **实现留下的取舍（供复核）：** ① 外部 ID 字段为空串记 `invalid`，不当作 `missing`；② 主导作者策略的分母是非空作者条目（与 v2 evidence 的 `non_empty_author_entry_count` 一致）；复核后补充「候选至少 3 次」，「1 条非空 + 20 条空」因此以 `insufficient_samples` 拒绝；③ 拒绝原因枚举（`no_non_empty_author` / `tie_for_highest` / `insufficient_samples` / `below_threshold`）为本任务暂定，任务 5 做 evidence schema 时需与 v2 核对；④ 回环地址不受禁网限制（后续任务要连本机一次性 MySQL）。
 
-- [ ] 2. 建立 tracer 命令、幂等根任务与本地状态纵向骨架
+- [x] 2. 建立 tracer 命令、幂等根任务与本地状态纵向骨架
   - **Requirements:** R1, R15, R18
   - 实现 `AccountTracerCommandModule` 和 `TracerStatusQuery`，入口为 CLI `pnpm tracer submit|status|cancel`（design §14），不做 HTTP。
   - 建立 Drizzle schema 与迁移（本任务首次建表）：v2 中 tracer 用到的表；验证 drizzle-kit 能否生成 CHECK、复合外键、生成列唯一键与受限写入过程，不支持的部分写手写 SQL 迁移，并把结论回填 ADR-0005「已知坑」第 7 行（R6-06）。
@@ -72,6 +72,33 @@
   - 建立 root/stage 状态、logical-effect key、cancel、lease/fencing 和 audit-safe event；一年窗口内相同 key+payload 返回同一 root，不同 payload 返回 conflict，窗口外按新命令处理。
   - Status 从本地事实组装 structured/media/failure 进度与 entry outcome，执行 scope/redaction；查询路径不得调用 provider 或 media origin。为 secret、raw body、完整 ODS key、临时 URL、越权 account/assignment ID 建立逐字段 deny/redaction policy。
   - **Offline acceptance:** duplicate submission、key conflict、unauthorized/unsupported preflight、cancel、同账号同动作复用和 unknown/out-of-scope status 均有稳定结果；TypeScript 实现对 v2 §5.5 两个固定向量的 exact JCS bytes 产生文档指定的 SHA-256，覆盖 Unicode、转义、key 输入顺序、BIGINT decimal string、integer 与 absent/null/unknown-field rejection；redaction fixture 证明上述敏感字段不出现在 body/log；fake clock 证明一年内返回原 root、到期后旧 status 不再承诺且复用 key 创建新 root 仍不重复长期业务事实；对 status query 断言 ProviderTransport 调用次数为 0。
+
+  - **完成记录（2026-11-04）：** `./scripts/verify.sh` 通过（Node 24.22.2；类型检查；unit 13 个文件 173 条；迁移与 schema 一致；MySQL 8.4.11 上 db 4 个文件 76 条；密钥、链接、登记）。另对 5 处关键逻辑做了变异检查（到期边界、fencing 递增、范围检查、活动状态集合、唯一键竞争重试），每个变异都被测试杀掉。
+  - **Drizzle 约束验证结论**（详见 ADR-0005「已知坑 7 的验证结论」）：CHECK（94 条）、复合与循环外键、STORED 生成列唯一键（D-69、D-70）、`ON DELETE SET NULL`、带 `collate` 的自定义列类型都能由 drizzle-kit 生成且被 MySQL 强制；触发器、种子数据不支持，用 `generate --custom` 手写；受限写入过程（存储过程）**未实现**，fencing 与 finalized-only current 由 `src/modules` 的仓储事务保证。
+  - **Requirements → 覆盖测试**（只列任务 2 实际覆盖的部分）：
+
+    | Requirement | 任务 2 覆盖的部分 | 测试 |
+    |---|---|---|
+    | R1.1 | 提交返回十进制字符串 root_task_id；一个 manual 批次 + 一个根 `resolve_account` 任务；原始 locator 逐码点保留；两字段 task_parameters；canonical command 摘要 = JCS(五字段) 的 SHA-256；staff ID > 2^53 不丢精度；limit 缺省取冻结的 sync_settings、显式 1–20 覆盖 | `commands.db.test.ts`（A1 组） |
+    | R1.2 / R1.3 | 同 actor+key+payload 返回原 root 且无新增事实或调用；同 key 不同 payload（locator / limit / staff / platform）→ `idempotency_conflict`；key 按 actor 隔离 | `commands.db.test.ts`（A2/A3 组） |
+    | R1.4 / R1.5 | 缺 Capability → `forbidden`；平台或专员越权 → `out_of_scope`；快手、视频号、production 环境、异步列表 → `unsupported_capability`；均在任何写入与供应商调用之前拒绝 | `commands.db.test.ts`（A4 组） |
+    | R1.6 | 接受 / 去重 / 复用 / 拒绝各一条审计事件；事件不含 locator 原文与幂等 key 原文 | `commands.db.test.ts`（R1.6 组） |
+    | R1.7 | 一年窗口内返回原 root；恰好到期（`expires_at <= now`）即过期，同 key 视为新命令，旧 root 的 key 被释放；长期业务表不动 | `commands.db.test.ts`（A10 组） |
+    | R1.8 / R18.6 | 不同 key、相同 canonical command 在活动状态（pending/leased/running/retry_wait）期间复用；终态后才新建；两个相同提交并发到达只产生一个 root | `commands.db.test.ts`（A5 组 + 并发用例） |
+    | R1.9（部分） | 取消使 root 与子任务进入 `cancelled`、fencing token 递增、租约清空；重复取消与取消终态是 no-op | `commands.db.test.ts`（取消组）；「prepared 的 ProviderCall 关闭为 `terminal/not_sent`」在任务 3 |
+    | R15.1 | 状态查询只执行 SELECT；依赖里没有 ProviderTransport；测试期间任何被拒网络尝试都会使用例失败 | `status.db.test.ts`（A7） |
+    | R15.2 / R15.3 | root 状态、阶段状态与尝试次数、目标账号与归属、返回/投影条数、检查点与游标类型、媒资汇总、质量问题、稳定失败原因；`accepted / in_progress / retry_wait / structured_succeeded_media_pending / succeeded / succeeded_with_warnings / blocked_* / failed / cancelled` 彼此可区分 | `status.db.test.ts`（A8 组） |
+    | R15.4 | 原始 body、认证头、完整 ODS key、临时 URL、locator、供应商错误详情、账号状态原因都不出现在输出；未授权的 owner ID 不出现 | `status.db.test.ts`（脱敏组、归属冲突用例） |
+    | R15.5 | 未知、越权、非 root → `not_found`（不可探测存在性）；一年后 → `expired`；过期后不从长期事实反推旧状态 | `status.db.test.ts`（A9 组） |
+    | R15.6（数据面） | 账号级与批次级结果可从本地事实组装；页面形态（M3）不属于本 spec | `status.db.test.ts` |
+    | R18.1–R18.3（部分） | 表级支撑：`lease_owner/expires` CHECK、`fencing_token` 非负且取消时递增、`idempotency_key` 唯一；陈旧 worker 被 fence 拒绝的行为在任务 3/8 | `schema.db.test.ts`、`commands.db.test.ts` |
+    | R18.5 | 提交与取消只有几条短事务，没有网络 IO | 代码结构；任务 3 起由 ProviderCall 流程测试断言 |
+    | v2 §5.5 向量 1、2 | exact JCS bytes 与 SHA-256 与文档一致；key 输入顺序、Unicode 不归一化、转义、BIGINT 十进制 string、整数、absent/null/unknown-field 拒绝；evidence 由 21 条小红书 fixture 经主导作者决定生成，摘要等于向量 2 | `canonical-json/jcs.test.ts`、`identity/evidence.test.ts` |
+    | CLI（design §14） | `submit / status / cancel`，JSON 输出，退出码 0/2/3/4/1；未知参数与子命令；意外错误不泄露堆栈；真实进程入口冒烟 | `src/worker/cli.db.test.ts` |
+    | v2 基线（表、约束） | 26 张表、无 ENUM、无 CASCADE、94 条 CHECK、循环 current 指针、D-69/D-70 唯一键、ProviderCall 状态矩阵、ODS/媒资用途隔离、BIGINT 与 UTC 往返、SET NULL 清理语义 | `src/db/schema.db.test.ts` |
+
+  - **任务 2 未覆盖、已转交后续任务的验收项：** 「陈旧 worker 提交可变状态被拒」「prepared 取消得到 not_sent」归任务 3 / 8；「非主页入口（视频/笔记）」的拒绝与 `invalid_link` 终态由编排器在任务 4 落地（提交阶段不预判入口类型，避免两处各写一份）。
+  - **实现留下的取舍（供复核）：** ① 审计是一个端口，默认实现写 pino 结构化日志，**没有新建审计表**（B 域审计流水尚不存在）；② Capability 沿用 B 域 PRD 的 `data.sync.trigger`，状态查询与取消也要求它，没有另造名称；③ 状态查询对「未知」与「越权」都返回 `not_found`，只有范围内的调用方才可能看到 `expired`；④ 活动任务复用以 canonical command 摘要为键，因此后到的 key 不会被记录到被复用的 root 上；⑤ 窗口到期后同 key 重提：旧 root 的 actor / key / 摘要三列被置空以释放唯一键，旧 root 本身保留到 ODS 清理；⑥ `sync_settings` 不由迁移种入（`list_safety_page_limit` 等 v2 未定，不静默冻结），未配置时提交返回 `sync_settings_missing`；⑦ 迁移种入四个平台与 `aimaster` 供应商（`base_endpoint` 取自 raw 证据中的主机名）；⑧ 新增 `idx_sync_tasks_canonical_command`（v2 未列，查询所需）；⑨ `stores.source_batch_id` 暂不挂 FK（`import_batches` 属于 a-master-data-import）；⑩ CLI 的 `HBECHO_ENV` 缺省为 `production`，而 production 没有任何已批准的 capability，所以忘记设置时命令会被拒绝（fail closed）；⑪ 三项 v2 文字与 MySQL 不一致（`reconciled_by` 的 SET NULL 与 CHECK、CHECK 不能引用自增列、`oss_objects` 唯一键超长）已按 ADR-0005 记录的方式处理，**v2 §9.5、§11.1 需要同步修订**。
 
 - [ ] 3. 打通 raw-before-parse ProviderCall 纵向链路
   - **Requirements:** R2, R13, R14, R16, R18

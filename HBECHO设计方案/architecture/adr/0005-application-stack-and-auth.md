@@ -45,6 +45,8 @@ hbdam 已在生产前验证了一套 Node / TypeScript 栈，其中认证、ORM�
 | ali-oss | 签发链接、服务端核对对象、分片上传配合 | CDN 鉴权签名 |
 | `@alicloud/*` | 短信、STS 等云资源 | 业务模板与限流 |
 | vitest | 单元与集成测试 | — |
+| mysql2 | Drizzle 的 MySQL 驱动；连接池、`bigNumberStrings` 让 BIGINT 以字符串往返、UTC 时区（2026-11-04 刘学奎批准，tracer 任务 2 引入） | 不做查询构造与迁移（Drizzle 负责）；不在事务内等待网络 IO |
+| tsx | 在开发与 Worker 镜像里直接运行 TypeScript 入口（CLI `pnpm tracer`）（2026-11-04 刘学奎批准，tracer 任务 2 引入） | 不参与类型检查（`tsc --noEmit` 负责）；不用于生产构建产物 |
 | sharp | 缩略图、尺寸与格式校验 | 图像识别（SIFT/ORB 在 Python 侧） |
 | Recharts（待 E 域确认） | 看板图表 | 指标口径与聚合 |
 
@@ -108,7 +110,30 @@ hbdam 已在生产前验证了一套 Node / TypeScript 栈，其中认证、ORM�
 | 4 | `/phone-number/reset-password` 在无 credential account 时会自动建行 | 激活与忘记密码是同一条库路径，激活无需额外端点 |
 | 5 | 登录失败限流不由 better-auth 承担 | 自建限流（IP + 账号双维度） |
 | 6 | 多租户组织插件不适用于本项目 | 组织归属用业务表，不用租户模型 |
-| 7 | drizzle-kit 能否生成 v2 需要的 CHECK、复合外键、生成列与受限写入过程（未核实） | tracer 第一个建表任务里验证；不支持的部分写手写 SQL 迁移，并回来补本行 |
+| 7 | drizzle-kit 能否生成 v2 需要的 CHECK、复合外键、生成列与受限写入过程 | **已验证（2026-11-04，tracer 任务 2，MySQL 8.4.11）**：CHECK、复合与循环外键、STORED 生成列唯一键、`ON DELETE SET NULL`、自定义列类型（含 `collate`）**都能生成且被 MySQL 强制**；触发器、种子数据、受限写入过程**不支持，写手写 SQL 迁移**（`drizzle-kit generate --custom`）。限制与绕法见下方「已知坑 7 的验证结论」 |
+
+## 已知坑 7 的验证结论（2026-11-04）
+
+验证方式：`src/db/schema.db.test.ts`（35 条，真实 MySQL 8.4.11 一次性容器，`./scripts/with-test-mysql.sh`），逐条构造违反约束的写入并断言被点名的约束拒绝。
+
+| 需要 | drizzle-kit 0.31 | 结论 |
+|---|---|---|
+| CHECK（94 条，含 §9.5 的 ProviderCall 状态矩阵） | `check()` 支持 | 直接生成；MySQL 强制 |
+| 复合 FK、循环 current 指针 | `foreignKey()` 支持，且全部以 `ALTER TABLE` 放在最后 | 直接生成；TS 里循环引用需要给 `references` 回调标 `AnyMySqlColumn`，给 `extraConfig` 回调标 `MySqlTableExtraConfigValue[]` |
+| 生成列 + 唯一键（D-69、D-70） | `generatedAlwaysAs(sql, {mode:'stored'})` + `uniqueIndex` | 直接生成；MySQL 强制 |
+| 列字符集/排序规则 | 无选项 | 用 `customType` 返回 `varchar(n) character set … collate …`，DDL 原样透传 |
+| 触发器、种子数据 | 不支持 | `generate --custom` 写手写 SQL；`migrate` 能执行（含 `BEGIN…END` 触发器） |
+| 受限写入过程（存储过程 + 最小权限账号） | 不支持 | **本次没有实现**：fencing、finalized-only current 由 `src/modules` 的仓储事务保证，库层只有 CHECK/FK/UQ/触发器；最小权限账号拆分（v2 §19 第 9 项）留到部署阶段 |
+
+在这个过程里发现并处理的 MySQL / drizzle 限制（其中 3 项是 v2 文字与 MySQL 实际不一致，已在 schema 注释中标明）：
+
+1. **CHECK 不能引用带 `ON DELETE SET NULL` 的列**（错误 3823）。v2 §9.5 同时要求 `reconciled_by_provider_call_id` 自引用 `SET NULL` 与引用它的 CHECK，二者不能共存。处理：该 FK 用 `RESTRICT`——§12.7 规定的清理顺序（先删引用方、再删被引用方）本来就满足；**v2 §9.5 的 `ON DELETE SET NULL` 与随后的清理说明需要修订。**
+2. **CHECK 不能引用自增列**（错误 3818）。v2 §9.5 的「reconciled_by 不等于自身 ID」改由 `BEFORE UPDATE` 触发器保证（`trg_calls_reconciled_not_self`）。
+3. **`oss_objects` 唯一键超过 InnoDB 3072 字节索引上限**：`(provider_code, region, bucket, object_key, object_version)` 合计 1887 字符，按 utf8mb4 是 7548 字节（实测错误 1071）。处理：这五列用 `ascii_bin`（1887 字节）；对象 key 与版本由我们生成，约束为 ASCII。**v2 §11.1 需要补这条。**
+4. drizzle-kit 不能序列化 BigInt 默认值：`.default(0n)` 会让 `generate` 崩溃，改用 ``.default(sql`0`)``。
+5. 自动生成的外键名超过 MySQL 64 字符上限的有 18 个，列级 `.references()` 不能命名，改为表级 `foreignKey({ name })`。
+6. pnpm 11 把未审批的依赖构建脚本当成 `install` 错误：`pnpm-workspace.yaml` 里 `allowBuilds.esbuild: false`（esbuild 的 postinstall 只校验二进制，预编译包已随依赖安装）。
+7. `identifier_namespaces` 不建表（D-25），`returned_author_namespace_id` 按 v2 修订 7 改为 `returned_author_namespace_code`；`stores.source_batch_id` 暂不挂 FK（`import_batches` 属于 a-master-data-import，其 v2 修订尚未合入）。
 
 ## 现在谁在守
 

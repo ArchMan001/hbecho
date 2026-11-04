@@ -8,14 +8,23 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest --run"
+    "test": "vitest --run --project unit",
+    "test:db": "./scripts/with-test-mysql.sh vitest --run --project db",
+    "tracer": "tsx src/worker/tracer-cli.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   },
   "dependencies": {
+    "drizzle-orm": "^0.45.4",
+    "mysql2": "^3.24.6",
+    "pino": "^10.4.0",
     "zod": "^4.6.7"
   }
 }

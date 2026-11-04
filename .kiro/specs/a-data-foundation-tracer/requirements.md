@@ -192,7 +192,7 @@
 3. 当同一页出现少数作者时，Tracer SHALL 将其保留在各自返回的内容事实上，但 SHALL NOT 为它们创建 `ExternalAccount` 记录。
 4. 给定已保存的日立小红书 fixture，当处理该页时，Tracer SHALL 将 profile ID `49328995493` 与主导列表作者 ID `5decba2300000000010007e1` 保留在不同 namespace 中，同时将两者绑定到同一个目标 `ExternalAccount`。
 5. 当主导作者决定被做出或被拒绝时，Tracer SHALL 在可追溯证据中保留策略版本、准确作者计数、分母与拒绝原因。
-6. 首版主导作者策略 `dominant-list-author.v1`（2026-11-04）：非空作者 ID 中出现次数**唯一最高**，且占非空作者条目 **≥ 80%** 时才绑定；否则拒绝并记质量问题。阈值是配置项，调整阈值必须升策略版本。
+6. 首版主导作者策略 `xhs-dominant-author.v1`（2026-11-04）：非空作者 ID 中出现次数**唯一最高**，且占非空作者条目 **≥ 80%** 时才绑定；否则拒绝并记质量问题。阈值是配置项，调整阈值必须升策略版本。
 
 ### 需求 7 · 当前归属且不抢占所有权
 
@@ -236,7 +236,7 @@
 5. 当同一内容在同一批次中稍后再次被观察时，Tracer SHALL 让后到的有效值（包括真实 `0`）覆盖先前的值；后到的 `missing`、`explicit_null`、`invalid` 或 `unsupported` 值 SHALL NOT 擦除先前的有效值。
 6. 当投影条目时，Tracer SHALL 在存在视频素材时推断 `content_kind` 为 `video`，在存在图片且无视频时为 `image`，在只有文本时为 `text`，在信号缺失或矛盾时为 `unknown`；SHALL NOT 输出 `mixed`。
 7. 当列表接口返回播放数时，Tracer SHALL 适用需求 5.6，将其记录为 `unsupported`，而不是 `0` 或 `missing`。
-8. 当条目携带多个封面 URL 候选时，Tracer SHALL 保留完整候选集，并 SHALL 选择第二个封面候选（540 宽封面）作为归档的封面引用；第一个候选可能是视频首帧，第三个候选没有稳定尺寸。
+8. 当条目携带多个封面 URL 候选（抖音为 3 条数组）时，Tracer SHALL 保留完整候选集，并 SHALL 选择第二个封面候选（540 宽封面）作为归档的封面引用；第一个候选可能是视频首帧，第三个候选是大尺寸原图。当 `cover` 是单个字符串（小红书，实测 21/21）时，SHALL 直接以它作为封面引用。
 9. 当成功列表响应返回 0 条且 `has_more=false` 时，Tracer SHALL 将其视为真实空列表，而不是技术失败。
 10. 当投影每条条目时，Tracer SHALL 将其内容快照与 discovery 关联到目标账号、归属快照、batch/page 与准确的 ProviderCall lineage。
 11. 给定已保存的 21 条小红书日立列表 fixture，当 `initial_content_limit <= 20` 时，Tracer 仍 SHALL 处理全部 21 条返回条目，且 SHALL NOT 仅为补偿本地截断而请求续页。
@@ -340,7 +340,7 @@
 1. 当默认验证套件运行时，Tracer SHALL 阻断网络访问，并使用 fixture transport、fake clock、fake lease 与 fake OSS。
 2. 默认套件 SHALL NOT 要求 AI Master 凭证，且如果尝试真实供应商或媒资请求 SHALL 失败。
 3. 抖音 fixture 验收 SHALL 断言目标账号 `HITACHI1`、处理 20 条条目、保留异作者 `HITACHI2023`、不为该作者创建账号、整数游标类型、推断的 `content_kind` 与列表播放状态 `unsupported`。
-4. 小红书 fixture 验收 SHALL 断言 profile ID `49328995493`、主导作者 ID `5decba2300000000010007e1` 在同一账号的不同 namespace、处理 21 条条目、字符串游标类型、无头像/背景引用，以及选中第二个封面候选。
+4. 小红书 fixture 验收 SHALL 断言 profile ID `49328995493`、主导作者 ID `5decba2300000000010007e1` 在同一账号的不同 namespace、处理 21 条条目、字符串游标类型、无头像/背景引用，以及封面取单值 `cover`（小红书列表的 `cover` 是单个字符串，不是数组）。
 5. 离线验证 SHALL 独立于真实网络行为，覆盖 ODS-before-parse 顺序、重复提交、恢复、陈旧 fencing、归属冲突、歧义主导作者、游标类型、媒资失败、非主页 locator、疑似空账号、`content_kind` 推断与 `unsupported` 值状态。
 
 ### 需求 17 · 显式批准的付费 smoke

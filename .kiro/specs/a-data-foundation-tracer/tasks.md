@@ -27,13 +27,15 @@
   - 建立抖音/小红书 `media_user_info` 与 `user_video_list` fixture 清单、来源、checksum 和 evidence label；明确 raw3 是解析后包络，raw4/raw5/raw8 是保存的请求/响应样本，都不替代实现层 raw-before-parse 故障注入。
   - 定义 versioned Adapter 输入/输出合同：requested action、expected response action、captured actual response action、五态值状态（`value/missing/explicit_null/invalid/unsupported`）、外部 ID text、identifier namespace、`content_kind`、完整 entries 和 typed cursor；expected/actual 必须分列，mismatch 保留两值并分类。
   - 锁定主页入口类型（`home/video/note/unknown`）、最小清洗规则（截掉路径之后的分享文案，原值与清洗值都保留），以及非主页入口不建账号/归属/不重试的合同。
+  - 入口识别（2026-11-04 定）：本地只按 URL 路径特征识别**明确**的视频/笔记链接（如 `douyin.com/video/`、`xiaohongshu.com/explore/`、`/discovery/item/`），直接拒绝、不发请求；短链与分享口令记 `unknown` 照常调 `media_user_info`。目前没有「把非主页链接传给 `media_user_info`」的供应商样本，因此「供应商返回非主页账号 → 终止」这条在任务 9 smoke 拿到样本后再补；缺口记入 capability 证据。最小清洗只截掉第一个 URL 路径之后的字符，前缀分享文案保留（raw3 实测整段发送成功）。
+  - fixture 不复制：`tests/fixtures/aimaster/manifest.json` 登记来源路径、SHA-256 与 evidence label，loader 直接读 `aimaster接口文档/测试结果/` 并校验哈希。
   - 单一解析策略：清洗后直接调 `media_user_info`，其返回即主页投影来源；「最多三次」是对 `RESULT_VALIDATION_FAILED` 的有界重试；成功路径调用数固定为主页 1 + 列表 1。
-  - 实现 Xiaohongshu dominant-author policy `dominant-list-author.v1`：唯一最高且占非空作者条目 ≥ 80%；阈值为配置。
+  - 实现 Xiaohongshu dominant-author policy `xhs-dominant-author.v1`：唯一最高且占非空作者条目 ≥ 80%；阈值为配置。
   - 定义 platform × action × mode × environment capability registry，显式区分 `supplier_declared/fixture_observed/smoke_verified` 与 `production approved`；按 raw4/raw5/raw8 固化“同步主页/列表、异步主页可用；异步列表 provider-failed”的 tuple 结论；所有 production activation 保持 `disabled`。
   - 固定测试 harness 的 network-denied、fixture transport、fake clock/fake OSS seam，并确保 fixture 与日志不含 secret。
   - **Offline acceptance:**
     - 抖音 fixture 被识别为 target `HITACHI1`、20 entries、foreign author `HITACHI2023`、integer cursor；`content_kind` 按条目规则推断；列表播放数为 `unsupported`；
-    - 小红书 fixture 被识别为 profile `49328995493`、dominant author `5decba2300000000010007e1`、21 entries、string cursor；无 avatar/background 引用；封面选第 2 条；
+    - 小红书 fixture 被识别为 profile `49328995493`、dominant author `5decba2300000000010007e1`、21 entries、string cursor；无 avatar/background 引用；封面取单值 `cover`；
     - 成功路径 ProviderCall 数 = 主页 1 + 列表 1；重复提交不增加调用；
     - 主导作者：21/21 绑定；唯一最高但低于 80%、tie、空作者均拒绝；
     - 非主页入口、`unknown` 入口类型和三次失败都不产生账号/归属；
@@ -81,9 +83,9 @@
   - 成功绑定使用 v2 `dominant-list-author-evidence.v1`，将 policy version、accepted reason、candidate、exact counts、总 entries、非空 denominator、RFC 8785 JCS evidence SHA-256 与长期 batch 引用写入同一 `external_account_identifiers` 行；后续 replay 不覆盖首次绑定证据。
   - 对 tie、empty、唯一但低占比或其他 policy rejection fail closed，不创建猜测 identifier；使用同一 evidence schema 将 rejected reason、policy version、counts、denominator 和长期 batch 引用写入 `data_quality_issues`；minority authors 只进内容事实。
   - 覆盖既有 Assignment 冲突，与抖音执行同一不抢占/默认停止付费语义。
-  - 小红书主页响应不返回头像与背景，不生成 avatar/background 引用；封面仍选第 2 条候选。
+  - 小红书主页响应不返回头像与背景，不生成 avatar/background 引用；小红书列表的 `cover` 是单个字符串（实测 21/21，576 宽 WebP），直接作为封面引用；`images[*]` 是详情图，不当封面。
   - 处理已返回 21 entries，即使 `initial_content_limit <= 20`；建立 string cursor checkpoint，并计算 entry outcome（含 `suspected_empty` 路径）。
-  - **Offline acceptance:** 一个 ExternalAccount 同时拥有两个不同 namespace 的预期 ID、21/21 entries 被投影、没有 minority-author account、cursor 保持 string、无 avatar/background 引用、封面为第 2 条；TypeScript 实现对 v2 evidence 固定向量的 exact JCS bytes 产生文档指定的 SHA-256，覆盖 key 输入顺序、exact identifier、integer、candidate null 与 absent/unknown-field rejection，且成功 evidence 的 shape、列值和计数总和均可验证；tie/empty/唯一低占比 fixture 均无绑定且 rejected evidence/problem 可见；平台错配、非主页入口、三次失败和 assignment conflict 均无错误 owner 或后续付费副作用；fake clock 推进超过一年并清理 task/call/raw 后，成功 identifier 仍能仅凭长期 evidence 与 batch 解释 policy、candidate、exact counts、denominator 和 accepted reason。
+  - **Offline acceptance:** 一个 ExternalAccount 同时拥有两个不同 namespace 的预期 ID、21/21 entries 被投影、没有 minority-author account、cursor 保持 string、无 avatar/background 引用、封面取单值 `cover`；TypeScript 实现对 v2 evidence 固定向量的 exact JCS bytes 产生文档指定的 SHA-256，覆盖 key 输入顺序、exact identifier、integer、candidate null 与 absent/unknown-field rejection，且成功 evidence 的 shape、列值和计数总和均可验证；tie/empty/唯一低占比 fixture 均无绑定且 rejected evidence/problem 可见；平台错配、非主页入口、三次失败和 assignment conflict 均无错误 owner 或后续付费副作用；fake clock 推进超过一年并清理 task/call/raw 后，成功 identifier 仍能仅凭长期 evidence 与 batch 解释 policy、candidate、exact counts、denominator 和 accepted reason。
 
 - [ ] 6. 完成跨平台完整页、按账号内容与 typed checkpoint 契约
   - **Requirements:** R8, R9, R10, R11, R14, R18
@@ -96,7 +98,7 @@
 
 - [ ] 7. 打通正式媒资归档与独立进度
   - **Requirements:** R8, R12, R15, R16, R18
-  - 从 profile/content snapshot 产生 avatar、background、cover 的 versioned MediaReference；抖音生成 avatar/background，小红书不生成；封面选第 2 条候选；临时 URL 只作 source locator。
+  - 从 profile/content snapshot 产生 avatar、background、cover 的 versioned MediaReference；抖音生成 avatar/background，小红书不生成；封面数组选第 2 条（抖音），单值 `cover` 直接用（小红书）；临时 URL 只作 source locator。
   - 实现 `MediaArchiveModule`：idempotent demand、bounded fake/real download seam、私有临时对象、完整 bytes SHA-256、size/type verification、formal MediaAsset dedupe 和 verified binding。
   - 生成标准化衍生图（JPEG q80、540 宽）作为独立资产，计算独立 SHA-256；原始字节与衍生图都保留，互不替代。抖音封面是 HEVC 编码的 HEIC：解码走 Python 能力服务的 ffmpeg（ADR-0012，D-57 修订）；小红书 WebP 用 sharp。离线测试用 fake 能力服务，另加一条带真实 HEIC 样本的 Python 侧单测。
   - 实施 scheme/host/redirect/size/content-type/timeout/SSRF guard；网络期间不持有数据库事务，签名 URL 不进长期事实；重试必须重新获取有效地址。

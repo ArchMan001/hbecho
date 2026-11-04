@@ -311,7 +311,7 @@ sequenceDiagram
 5. **Project profile**：写 immutable snapshot 和媒资引用；fencing 控制 current。抖音产生头像/背景引用；小红书主页响应不返回头像/背景，不产生这两类引用。
 6. **Fetch first page**：处理完整返回数组。`initial_content_limit` 只在页边界决定是否继续，本 Spec 的最低验收只要求完整首个返回页。
 7. **Bind list identity**：小红书在完整页上计算唯一主导作者；抖音保留同 payload 官方多标识；少数异作者只进内容事实。
-8. **Project list**：每个条目都形成/复用按账号粒度的 ContentSnapshot 和 ContentDiscovery，携带 target account、采集当时的归属快照、batch/page、returned author 和 call lineage；推断 `content_kind`；列表播放数记 `unsupported`；封面选择第 2 条候选。
+8. **Project list**：每个条目都形成/复用按账号粒度的 ContentSnapshot 和 ContentDiscovery，携带 target account、采集当时的归属快照、batch/page、returned author 和 call lineage；推断 `content_kind`；列表播放数记 `unsupported`；封面：数组选第 2 条（抖音），单值直接用（小红书）。
 9. **Advance checkpoint**：只有整页 required projection 完成后推进，保留 cursor 原值与类型，并按 `time` / `id_window` / `empty` 建立初始锚点。
 10. **Archive media**：structured result 可以先完成；头像、背景和封面按引用异步归档，封面同时生成 JPEG q80、540 宽的独立衍生资产，并在 status 中独立汇总。
 11. **Record entry outcome**：首次录入结果为 `normal`、`invalid_link` 或 `suspected_empty`；疑似空账号写质量问题，不自动纳入监控，也不改账号状态。
@@ -485,7 +485,7 @@ ProviderCall、task 与 raw payload 保留一年；正式 profile/content snapsh
 
 已观察：profile `user_id="49328995493"`，同主页 21 条列表的主导作者为 `5decba2300000000010007e1`。二者放在不同 namespace，并通过同一 root/page 的 `dominant_list_author` 证据绑定到一个 ExternalAccount。
 
-小红书主页响应不返回头像与背景，因此本平台不产生 `avatar/background` media reference；封面仍按第 2 条候选归档。
+小红书主页响应不返回头像与背景，因此本平台不产生 `avatar/background` media reference；小红书列表 `cover` 是单个字符串（实测 21/21），直接作为封面引用。
 
 算法边界：
 
@@ -498,7 +498,7 @@ ProviderCall、task 与 raw payload 保留一年；正式 profile/content snapsh
 7. 一年期 task/call/raw 到期后，成功绑定和拒绝决定仍必须分别通过上述长期载体独立解释，不能依赖已删除 ODS；
 8. minority author 只保留在对应内容 snapshot/discovery，不创建账号。
 
-首版策略 `dominant-list-author.v1`：唯一最高，且占非空作者条目 ≥ 80%（2026-11-04）；阈值是配置，改阈值必须升策略版本。首个 fixture 的 21 条均为同一作者，是无争议正例；还必须用唯一但低于 80%、tie、空作者和异常分布负例锁定 policy。fake clock 必须覆盖一年期 operational lineage 清理后的成功证据可解释性。
+首版策略 `xhs-dominant-author.v1`：唯一最高，且占非空作者条目 ≥ 80%（2026-11-04）；阈值是配置，改阈值必须升策略版本。首个 fixture 的 21 条均为同一作者，是无争议正例；还必须用唯一但低于 80%、tie、空作者和异常分布负例锁定 policy。fake clock 必须覆盖一年期 operational lineage 清理后的成功证据可解释性。
 
 ### 10.4 Douyin foreign author
 
@@ -590,7 +590,7 @@ profile avatar、background 与 content cover 先成为绑定 snapshot 的 Media
 
 - 抖音主页头像与背景：生成 `avatar/background` 引用；
 - 小红书主页响应不返回头像与背景：不生成这两类引用，不得用空值或占位图补造；
-- 封面：全平台从列表条目的候选数组选第 2 条（540 宽）作为 `cover` 引用，其余候选作为观察证据保留。
+- 封面：候选是数组时（抖音）选第 2 条（540 宽）作为 `cover` 引用，其余候选作为观察证据保留；候选是单个字符串时（小红书）直接用它。
 
 ### 12.2 Archive flow
 
@@ -751,7 +751,7 @@ pnpm tracer cancel <root_task_id>
 | Douyin Hitachi profile/list | target `HITACHI1`；20/20 entries processed；integer `max_cursor`；`content_kind` 按条目推断；列表播放数 `unsupported` |
 | Douyin foreign author | `HITACHI2023` 保留在 content fact；不创建第二账号；不单凭差异报质量问题 |
 | Xiaohongshu Hitachi profile/list | profile `49328995493` + dominant author `5decba2300000000010007e1` 不同 namespace、同一账号 |
-| Xiaohongshu complete page | 21/21 entries processed，即使 local limit ≤ 20；string `max_cursor`；无 avatar/background 引用；封面选第 2 条 |
+| Xiaohongshu complete page | 21/21 entries processed，即使 local limit ≤ 20；string `max_cursor`；无 avatar/background 引用；封面取单值 `cover` |
 | Locator fail ×3 | no ExternalAccount/identifier/assignment/snapshot/discovery/checkpoint；entry outcome `invalid_link` |
 | Non-homepage locator | no account/assignment；不重试；entry outcome `invalid_link` |
 | ODS write failure | decoder/projector invocation count = 0 |
@@ -809,7 +809,7 @@ smoke 独立于 CI，必须先显示并确认 capability、locator allowlist、c
 | 4、5 | 入口清洗与解析策略 | 单一策略：最小清洗（截掉路径之后的分享文案）后直接调 `media_user_info`；其返回即主页投影来源；成功路径调用数 = 主页 1 + 列表 1 |
 | 6 | 调用入口 | CLI（§14），不做 HTTP |
 | 7 | 是否请求第二页 | 不请求 |
-| 8 | 小红书主导作者 | 唯一最高且 ≥ 80%，策略版本 `dominant-list-author.v1` |
+| 8 | 小红书主导作者 | 唯一最高且 ≥ 80%，策略版本 `xhs-dominant-author.v1` |
 | 9 | 归属冲突后 | 停止后续付费阶段；人工改绑不在本 spec |
 | 10 | 空 / null 游标 | `has_more=false` 正常结束；`has_more=true` 时记质量问题并停止 |
 | 11 | 媒资 | 单张图片 20 MB；下载域名白名单取 fixture 中出现的 CDN 域名；URL 过期时重新取主页 / 列表拿新地址 |

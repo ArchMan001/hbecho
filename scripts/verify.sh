@@ -56,7 +56,10 @@ python3 -I scripts/check-doc-registry.py
 echo "== 9/9 Python 能力服务单测（services/capability）=="
 py=""
 if [ -x "$PWD/services/capability/.venv/bin/python" ]; then py="$PWD/services/capability/.venv/bin/python"; elif python3 -c 'import pytest' 2>/dev/null; then py="python3"; fi
-ffok="$(ffmpeg -version 2>/dev/null | head -1 | sed -E 's/.*version n?([0-9]+)\.([0-9]+).*/\1 \2/' | awk 'NF==2 && ($1>7 || ($1==7 && $2>=1)){print "yes"}')"
+ffok=""
+if command -v ffmpeg >/dev/null 2>&1; then
+  ffok="$(ffmpeg -version 2>/dev/null | head -1 | sed -E 's/.*version n?([0-9]+)\.([0-9]+).*/\1 \2/' | awk 'NF==2 && ($1>7 || ($1==7 && $2>=1)){print "yes"}' || true)"
+fi
 python_verified="未验证"
 if [ -n "$py" ] && [ "$ffok" = "yes" ]; then
   (cd services/capability && "$py" -m pytest -q -p no:cacheprovider)

@@ -6,7 +6,7 @@
 //
 // 并发控制全部靠条件更新（WHERE call_status='prepared' / 'in_flight'）和唯一键 (task, attempt, sequence)，不靠事务内等待。
 import { createHash, randomUUID } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Db, DbTx } from "../../db/client";
 import { odsPayloads, odsProviderCalls, ossObjects, syncTasks } from "../../db/schema";
 import { classifyResponse, peekResponseMeta } from "../provider-adapter";
@@ -535,4 +535,17 @@ export function locatorOfRequest(bytes: Uint8Array): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * 接手任务时恢复：持有该任务租约的 worker 可以确定，此前停在 in_flight 的调用属于已失联的旧 worker，
+ * 标为 ambiguous（原调用不改写，也不盲重发；只读 action 允许有界地新发一次）。幂等。
+ */
+export async function recoverInFlightForTasks(deps: { db: Db; clock: Clock; taskIds: readonly bigint[] }): Promise<number> {
+  if (deps.taskIds.length === 0) return 0;
+  const [r] = await deps.db
+    .update(odsProviderCalls)
+    .set({ callStatus: "ambiguous", outcome: "ambiguous", ambiguousAt: deps.clock.now() })
+    .where(and(eq(odsProviderCalls.callStatus, "in_flight"), inArray(odsProviderCalls.syncTaskId, [...deps.taskIds])));
+  return r.affectedRows;
 }

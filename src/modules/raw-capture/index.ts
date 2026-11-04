@@ -6,6 +6,7 @@ export { fenceFailure } from "./fence";
 export {
   RawCaptureGateway,
   recoverInFlightCalls,
+  recoverInFlightForTasks,
   type CallSpec,
   type ExecuteOutcome,
   type GatewayDeps,
@@ -14,5 +15,5 @@ export {
   type SendPolicy,
 } from "./gateway";
 export { callAndInterpret, interpretCaptured, type Interpreted, type Lineage } from "./interpret";
-export { pairLocatorWithAccount, type LocatorAccountPair } from "./pairing";
+export { pairLocatorWithAccount, pairLocatorWithAsyncAccount, type LocatorAccountPair } from "./pairing";
 export { cleanupExpired, sweepOrphans, type CleanupEvent, type CleanupReport } from "./retention";

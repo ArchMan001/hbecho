@@ -83,6 +83,8 @@ describe("与单一解析策略衔接（任务 1 的 afterProfileAttempt）", ()
     expect(profileAttemptOutcomeOf({ category: "none", retry: "none", outcome: "succeeded", businessMeaning: "none" })).toBe("decoded");
     expect(profileAttemptOutcomeOf({ category: "provider_validation_failed", retry: "bounded", outcome: "http_error", businessMeaning: "undetermined" })).toBe("result_validation_failed");
     expect(profileAttemptOutcomeOf({ category: "provider_null_result", retry: "bounded", outcome: "succeeded", businessMeaning: "undetermined" })).toBe("result_validation_failed");
+    expect(profileAttemptOutcomeOf({ category: "provider_task_failed", retry: "bounded", outcome: "provider_error", businessMeaning: "undetermined" })).toBe("result_validation_failed");
+    expect(profileAttemptOutcomeOf({ category: "provider_task_failed", retry: "none", outcome: "provider_error", businessMeaning: "none" })).toBe("other_failure");
     expect(profileAttemptOutcomeOf({ category: "provider_auth", retry: "none", outcome: "http_error", businessMeaning: "none" })).toBe("other_failure");
     expect(profileAttemptOutcomeOf({ category: "rate_limited", retry: "bounded", outcome: "http_error", businessMeaning: "none" })).toBe("other_failure");
   });

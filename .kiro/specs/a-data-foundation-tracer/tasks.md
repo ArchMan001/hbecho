@@ -1,7 +1,7 @@
 # A Data Foundation Tracer Implementation Plan
 
 > **状态**：`draft`  
-> **执行状态**：任务 1–7 已完成（7/9）；任务 8 未开始  
+> **执行状态**：任务 1–8 已完成（8/9）；任务 9 未开始  
 > **需求**：[`requirements.md`](requirements.md)  
 > **设计**：[`design.md`](design.md)  
 > **验收**：[`acceptance.md`](acceptance.md)  
@@ -263,7 +263,7 @@
 
   - **任务 7 未覆盖、已转交后续任务的验收项：** 真实 HTTP 下载 transport、Python 能力服务的 HTTP 外壳与 Node 客户端、真实 OSS（媒资桶）实现 → 与任务 9 之后的部署一起；真实媒资 URL 有效期（ENV8）和真实下载 → 需要批准的 smoke；`download_media` 的 worker 调度与取消协作 → 任务 8。
   - **实现留下的取舍（供复核）：** ① **没有引入 sharp**：ADR-0005 登记了它，但你批准的依赖清单里没有；衍生图的所有格式（含 WebP / JPEG）都走 `ImageConverter` 端口，由 Python 能力服务的 ffmpeg 承担。需要 sharp 的话请告诉我。② Python 侧只实现了转换**函数**与单测，没有 FastAPI 外壳（没有可测的部分，不写没人验证的代码）；`pyproject.toml` 的运行时依赖为空，开发依赖只有 pytest。③ ffmpeg 的 mjpeg 只有整数 qscale，「q80」取 qscale 6（实测约 q79，qscale 5 约 q82），单测允许 77–83。④ 衍生图**总是**缩放到 540 宽（含比 540 小的图），与「标准化」一致。⑤ **没有「私有临时对象」暂存**：下载上限 20 MB，整份在内存里校验；对象 key 内容寻址，重复写是幂等的，所以不需要先落临时再搬运。媒资桶没有 orphan sweeper（ODS sweeper 只扫 `ods/`）：对象写成功而数据库事务失败时会留下一个以 SHA 命名的孤儿，下次同字节会复用它。⑥ 每轮一个 `download_media` 子任务（idempotency key 含轮次），最多 3 轮；重试不重开终态任务。子任务总是 `succeeded`，媒资失败只是警告。⑦ 衍生引用在**归档时**才创建（`pending` 阶段只有原始引用），所以归档前 `media.total` 是 22，归档后是 44。⑧ 失败码分三类（见 `media-failure`）：`retryable` / `needs_fresh_url` / `terminal`；DB 的 `archive_status` 仍只有 v2 的四个值，类别由 `last_error_code` 推出；**未登记的失败码按 terminal 统计**，不假定可重试。⑨ 续用只在**下载失败**时发生；转换失败不续用（原图本轮已拿到）。⑩ `verify.sh` 新增第 9 步 Python 单测：需要 pytest（`services/capability/.venv`）与 ffmpeg ≥ 7.1，不满足时打印 `SKIPPED（Python 侧未验证）` 且最终一行写「Python 侧未验证」；**CI 的 ubuntu 自带 ffmpeg 6.x，所以 CI 不验 Python 侧**（dev-ci-cadence 已有「CI 绿 ≠ Python 侧验过」的提醒）。要让 CI 验，需要在 workflow 里装静态 ffmpeg ≥ 7.1，这会引入一个新的下载源，我没有擅自加。
-- [ ] 8. 补齐同步/异步、租约、重试、取消与恢复
+- [x] 8. 补齐同步/异步、租约、重试、取消与恢复
   - **Requirements:** R2, R13, R14, R15, R18
   - 对 verified synchronous action 实现单次 captured terminal result；对 verified asynchronous profile 实现 captured submission + persisted task ID + each-poll ProviderCall + bounded terminal handling；`user_video_list` 异步按 raw4/raw5/raw8 结论保持 disabled。
   - 将 provider auth（400）、provider input/inaccessible（500）、间歇性 `RESULT_VALIDATION_FAILED`、quota/rate、transport、ODS、parse/schema、identity、assignment、projection、media、stale fence 分类到稳定 reason/retry policy；技术失败绝不映射为空 profile/list，也不改账号状态；`in_flight` 失联进入 ambiguous 且无 reconcile 证据时不自动重发。
@@ -271,6 +271,25 @@
   - 为 call/page/poll/media 设置硬上限和 cost counters；超限在下一次调用前停止。同步或异步生产 tuple 都必须达到 `smoke_verified + production approved`，不能由 fixture evidence 启用。
   - **Offline acceptance:** fake async pending→success、pending→provider failure、timeout、rate limit、crash-before-send、crash-after-send-before-terminal-capture、crash-after-project、cancel-during-poll、lease takeover 全部可重复运行；crash-after-send-before-terminal-capture 的调用保持 ambiguous，最多再发一次新调用，全程无重复业务事实或 stale publication；`RESULT_VALIDATION_FAILED` 在有界重试内可恢复，重试耗尽才进入业务 `invalid_link`。
 
+  - **完成记录（2026-11-04）：** `./scripts/verify.sh` 通过（unit 19 个文件 233 条；db 12 个文件 234 条，其中本任务 26 条；Python 侧 7 条）。对 13 处关键逻辑做了变异检查（心跳、指数退避、ambiguous 重发上限、接手时恢复失联调用、已知未送达的传输失败重试、运行期 capability 门、异步任务 ID 配对、总截止时间、调用预算、轮询上限、任务 ID 路径安全、`retry_wait` 未到点不领取、轮询被限流继续）。第一轮有 3 个幸存：`retry_wait` 未到点不领取与「轮询被限流继续」补用例后被杀；心跳返回值检查是等价变异——网关发送前的 fencing 校验会同样把调用封口为 `not_sent`，保留它是为了在创建 intent 之前就停下。
+  - **Requirements → 覆盖测试**（只列任务 8 新增或补强的部分）：
+
+    | Requirement | 任务 8 覆盖的部分 | 测试 |
+    |---|---|---|
+    | R13.2 | 同步主页 / 列表仍是单次 captured 终态结果，无多余轮询（任务 4–5 的主路径） | `tracer-flow.douyin/xiaohongshu.db.test.ts` |
+    | R13.3 | 异步主页：提交 1 次（HTTP 202）+ 每次轮询一条独立 ProviderCall（`task_lookup`，`call_sequence` 递增，GET `/openapi/v1/tasks/{id}`）；供应商任务 ID 落在提交调用的 `provider_task_id`；账号来自轮询终态 payload，locator 来自提交调用，二者靠任务 ID 精确相等配对（不一致 → `pairing_mismatch`，无业务身份）；任务 ID 含路径字符时不拼进 URL | `tracer-flow.resilience.db.test.ts` |
+    | R13.4 / R13.5 / R13.7 | 异步列表在运行期同样 fail closed（不发任何调用）；production 环境没有已批准 tuple，运行期再过一次 capability 门，不发任何调用；`async` 取自配置，不写死 | 同上 |
+    | R13.9 / R14.3 | 异步任务以 `RESULT_VALIDATION_FAILED` 失败与同步 HTTP 500 同义：重新提交的有界重试（3 次），耗尽后才 `invalid_link`；其他任务失败不重试，`provider_task_failed` 稳定分类 | 同上 |
+    | R14.1 / R14.3 | 限流（429）、5xx、已知未送达的传输失败：进入 `retry_wait`（释放租约、记录下一次尝试时间），退避 5s、10s，未到点再运行不领取、不换 fencing token、不产生新调用；到点后从第一个没有调用的尝试继续；三次耗尽后失败；列表阶段限流只补列表，不重新调主页；轮询被限流不算失败 | 同上 |
+    | R14.2 / R14.7 | 技术失败（含轮询超时、预算封口、截止时间）不产生空主页 / 空列表，无业务身份，不改账号状态 | 同上 |
+    | R14.5 / R2.7 | crash-before-send：接手后只发送一次；crash-after-send-before-terminal-capture：原调用 `ambiguous` 且不被改写，最多再发一次新调用（新 attempt），业务事实只有一份；重发后又 ambiguous → `provider_outcome_unknown`，不再盲重发；crash-after-project：重新运行得到 `already_terminal`，事实与调用数不变 | 同上 |
+    | R14.6 | 轮询期间取消：不再轮询，返回 `cancelled`，无业务身份 | 同上 |
+    | R15.2 / R15.3 | `retry_wait` 状态与 `failure.retryable`；`provider_timeout`、`policy`、`deadline`、`provider_outcome_unknown` 等稳定类别 | 同上 |
+    | R17.3（上限部分） | 预算：`maxCalls`、`maxPolls`、`maxPoints`（抖音 10+10、小红书 15+15，失败 / 429 / 轮询不计点）在**下一次调用前**封口（`not_sent`），主页事实保留；点数表与单价单测 | 同上、`cost-guard.test.ts` |
+    | R18.1 / R18.2 / R18.3 | 租约 + 单调 fencing：接手使旧 token 失效（w1=1、w2=2）；停滞的 worker1 醒来后的投影被拒绝，事实只有一份，worker2 复用 worker1 已捕获的主页证据；心跳续租：轮询等待比租约长时，另一个 worker 始终得到 `busy`；总截止时间超过则不再发任何调用 | 同上 |
+
+  - **任务 8 未覆盖、已转交后续任务的验收项：** 真实 worker 入口 / 任务领取循环（`SKIP LOCKED`、死信）与 CLI `run`：需要真实 OSS 与真实 transport，不在默认环境 → 部署阶段；`download_media` 子任务的取消协作；异步任务的供应商 TTL 与合适轮询间隔 → 任务 9 smoke。
+  - **实现留下的取舍（供复核）：** ① 退避是确定性的指数（无抖动）：重放时可重新算出同一个等待时间；`ponytail` 上限：多个 worker 同时限流时会同步重试，升级路径是按调用 ID 加确定性抖动。② 校验类失败（含异步任务校验失败、`result:null`）**立即**重试，不退避；限流 / 5xx / 已知未送达才退避。③ 同一个逻辑请求的 `attempt_no` 在校验重试、限流重试、ambiguous 重发之间共享，总数上限 3；所以「ambiguous 重发一次」也消耗这 3 次里的一次。④ ambiguous 的判定不依赖超时阈值：持有 root 租约的 worker 接手时，把该 root 家族里停在 `in_flight` 的调用一律标 `ambiguous`（旧 worker 的 fencing token 已失效，它之后写不进终态）。⑤ 异步轮询里某次轮询失联（ambiguous / 传输失败）不重发，下一次轮询就是新调用（GET 幂等）；总等待用「间隔 × 次数」估算，不读时钟。⑥ 异步提交 202 也计一次点数（`outcome=succeeded` 的 `media_user_info`），轮询不计；供应商对异步提交是否计费未知，按保守估计。⑦ 默认值：退避 5s 起、封顶 300s；轮询间隔 2s、最多 30 次、最长 120s；总截止 24h——全部是配置（`TracerConfig`），**不是产品合同**，任务 9 smoke 后再定。⑧ 预算策略 `createBudgetPolicy` 由调用方装进网关，编排器本身不内置默认上限；任务 9 的 smoke 入口会强制装配。⑨ 重试耗尽后失败的 root 没有自动「重新提交」入口（需要新的幂等 key 或到期后重提），属于运维动作。
 - [ ] 9. 建立人工批准、预算受限的真实 smoke
   - **Requirements:** R2, R13, R14, R17
   - 提供独立于默认 tests/CI 的 smoke 入口；启动前强制 human approval、显式 runtime switch、locator/action/mode allowlist、secret provider、固定 call/cost budget 和 deadline。

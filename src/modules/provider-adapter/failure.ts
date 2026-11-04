@@ -62,5 +62,7 @@ export function decideRetry(c: FailureClassification, attempt: number, maxAttemp
 export function profileAttemptOutcomeOf(c: FailureClassification): ProfileAttemptOutcome {
   if (c.category === "none") return "decoded";
   if (c.category === "provider_validation_failed" || c.category === "provider_null_result") return "result_validation_failed";
+  // 异步任务以 RESULT_VALIDATION_FAILED 失败（HTTP 200 + data.status=failed）与同步 HTTP 500 同义
+  if (c.category === "provider_task_failed" && c.retry === "bounded") return "result_validation_failed";
   return "other_failure";
 }

@@ -4,7 +4,7 @@
 // 退出码：0 成功 / 2 门槛拒绝或输入不合法 / 5 已获批但真实执行器未接线 / 1 其他错误。
 // 门槛在读取 secret、构造 transport、写数据库之前检查；拒绝信息不回显 locator 与审批细节。
 import { parseArgs } from "node:util";
-import { SmokeRefused, preflight, validatePlan, type SmokeAuthorized, type SmokeSummary } from "../modules/smoke";
+import { SmokeConfigError, SmokeRefused, preflight, validatePlan, type SmokeAuthorized, type SmokeSummary } from "../modules/smoke";
 
 export interface SmokeCliDeps {
   readJson(path: string): Promise<unknown>;
@@ -50,6 +50,11 @@ export async function runSmokeCli(argv: string[], deps: SmokeCliDeps): Promise<n
     return 0;
   } catch (e) {
     if (e instanceof SmokeRefused) {
+      print({ ok: false, error: { code: e.code, message: e.message } });
+      return 2;
+    }
+    // 配置缺失/不合法：执行器在装配阶段就失败，没有发出任何调用。消息只含变量名。
+    if (e instanceof SmokeConfigError) {
       print({ ok: false, error: { code: e.code, message: e.message } });
       return 2;
     }

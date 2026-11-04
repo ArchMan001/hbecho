@@ -128,7 +128,7 @@ export async function runSmoke(deps: SmokeDeps, auth: SmokeAuthorized): Promise<
   const deadlineAt = startedAt.getTime() + plan.deadline_ms;
   const budget = createBudgetPolicy(db, { maxCalls: plan.budget.max_calls, maxPolls: plan.budget.max_polls, maxPoints: plan.budget.max_points });
   const policy: SendPolicy = { check: async (ctx) => (clock.now().getTime() >= deadlineAt ? "deadline" : budget.check(ctx)) };
-  const gateway = new RawCaptureGateway({ db, store: deps.store, transport, clock, location: deps.location, policy });
+  const gateway = new RawCaptureGateway({ db, store: deps.store, transport, clock, location: deps.location, policy, keyPrefix: "smoke/" });
 
   // 批次 + 一个 smoke 根任务；每个 allowlist 条目一个子任务（成本守卫按根任务家族累计，所以预算是全局的）
   const [provider] = await db.select().from(dataProviders).where(eq(dataProviders.providerCode, "aimaster"));

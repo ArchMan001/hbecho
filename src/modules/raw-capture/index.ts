@@ -17,3 +17,5 @@ export {
 export { callAndInterpret, interpretCaptured, type Interpreted, type Lineage } from "./interpret";
 export { pairLocatorWithAccount, pairLocatorWithAsyncAccount, type LocatorAccountPair } from "./pairing";
 export { cleanupExpired, sweepOrphans, type CleanupEvent, type CleanupReport } from "./retention";
+export { OssObjectStore, type OssClientLike, type OssStoreOptions } from "./oss-store";
+export { HttpProviderTransport, type HttpTransportOptions } from "./http-transport";

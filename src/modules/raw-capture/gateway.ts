@@ -60,6 +60,8 @@ export interface GatewayDeps {
   clock: Clock;
   location: { providerCode: string; region: string; bucket: string };
   retentionMs?: number;
+  /** ODS 对象键前缀（例如 smoke 的 `smoke/`）。会原样写入 `oss_objects.object_key`。 */
+  keyPrefix?: string;
   policy?: SendPolicy;
   hooks?: GatewayHooks;
 }
@@ -430,7 +432,7 @@ export class RawCaptureGateway {
   /** 上传并校验：put 返回的摘要/长度必须等于预期，再读回比对一次；失败则尽力删除坏对象并抛错。 */
   private async putVerified(role: PayloadRole, bytes: Uint8Array): Promise<{ key: string; sha: string }> {
     const sha = hex(bytes);
-    const key = odsKey(this.d.clock.now(), role, sha, randomUUID());
+    const key = odsKey(this.d.clock.now(), role, sha, randomUUID(), this.d.keyPrefix ?? "");
     try {
       const stored = await this.d.store.put(key, bytes);
       if (stored.sha256 !== sha || stored.byteLength !== bytes.byteLength) throw new Error("存储返回的摘要或长度与预期不一致");

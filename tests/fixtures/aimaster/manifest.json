@@ -1634,6 +1634,52 @@
         "QPS、429、超时未验证",
         "快手列表异步任务稳定 failed，不可使用"
       ]
+    },
+    {
+      "id": "raw8.A3.submit",
+      "platform": "douyin",
+      "action": "post_comments_list",
+      "mode": "async",
+      "role": "submit",
+      "source": "aimaster接口文档/测试结果/raw8-2026-10-28/A3-dy-comments-async-submit.json",
+      "sourceSha256": "4c75f4fc2746f7dc84be70d79c3a27e76ba8394d413b745792fff55c15b947e1",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 202,
+        "taskStatus": "running",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "抖音评论异步任务稳定 failed（RESULT_VALIDATION_FAILED），raw7 C18 同样；不可使用"
+      ]
+    },
+    {
+      "id": "raw8.A3.poll1",
+      "platform": "douyin",
+      "action": "post_comments_list",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw8-2026-10-28/A3-dy-comments-async-poll1.json",
+      "sourceSha256": "a8132283b7c7ef4e2a30b5a7474c5b214f947690ca1376953bcbfd3828b2a3a9",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "provider_failed",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "failed",
+        "action": "post_comments_list",
+        "errorCode": "RESULT_VALIDATION_FAILED"
+      },
+      "knownGaps": [
+        "抖音评论异步任务稳定 failed（RESULT_VALIDATION_FAILED），raw7 C18 同样；不可使用"
+      ]
     }
   ],
   "mediaSamples": [

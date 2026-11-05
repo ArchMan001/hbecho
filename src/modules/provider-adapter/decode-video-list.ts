@@ -16,11 +16,12 @@ import { UNSUPPORTED, rawOf, readCount, readExternalId, readText, type ValueStat
 const AUTHOR_NAMESPACE: Record<Platform, IdentifierNamespace> = {
   douyin: "douyin.user_id",
   xiaohongshu: "xiaohongshu.content.user_id",
+  kuaishou: "kuaishou.user_id",
 };
 
 const has = (o: JsonObject, k: string) => Object.hasOwn(o, k);
 
-function readHasMore(r: JsonObject): ValueState<boolean> {
+export function readHasMore(r: JsonObject): ValueState<boolean> {
   if (!has(r, "has_more")) return { state: "missing" };
   const v = r.has_more as JsonValue;
   if (v === null) return { state: "explicit_null" };
@@ -30,11 +31,11 @@ function readHasMore(r: JsonObject): ValueState<boolean> {
   return { state: "invalid", raw: rawOf(v) };
 }
 
-function readCursor(r: JsonObject): TypedCursor {
+export function readCursor(r: JsonObject): TypedCursor {
   if (!has(r, "max_cursor")) return { kind: "absent" };
   const v = r.max_cursor as JsonValue;
   if (v === null) return { kind: "null" };
-  if (typeof v === "string") return { kind: "string", value: v };
+  if (typeof v === "string") return v === "no_more" ? { kind: "no_more" } : { kind: "string", value: v };
   if (v instanceof JsonNumber && isIntegerLiteral(v)) return { kind: "integer", lexeme: v.source };
   return { kind: "invalid", raw: rawOf(v) };
 }

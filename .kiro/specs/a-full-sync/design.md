@@ -74,11 +74,11 @@ flowchart LR
 
 | tuple | 证据 | 备注 |
 |---|---|---|
-| 抖音 / 小红书 × 详情 × 同步 | raw3 `media_stats` ×10、raw4 C05 / C06 | `*_count` 全 `null`，`*_number` 有值；`cover` / `download_urls` 是字符串 |
+| 抖音 / 小红书 × 详情 × 同步 | raw3 `media_stats` ×9（不含视频号）、raw4 C05 / C06 | `*_count` 全 `null`，`*_number` 有值；`cover` / `download_urls` 是字符串 |
 | 抖音 / 小红书 × 详情 × 异步 | raw9 A5（抖音）、raw5（小红书） | 可用 |
 | 抖音 / 小红书 × 评论 × 同步 | raw3 评论 ×9、raw4 C07 / C08、raw6 C02、raw10 V4、raw11 | 小红书 `total>0` 但 `has_more=0`；回复扁平含 `parent_id` |
 | 小红书 × 评论 × 异步 | raw9 A4 | 可用；抖音评论异步 raw7 / raw8 稳定失败 |
-| 快手 × 主页 / 列表 / 详情 × 同步 | raw12 K1–K4 / K6、raw13 L3 / L4 / V1 | 列表游标科学计数法字符串；K3、K6 `max_cursor='no_more'` + `has_more=true`；K5 / W3 / L1 / P1 为 500 `RESULT_VALIDATION_FAILED`（无效输入） |
+| 快手 × 主页 / 列表 / 详情 × 同步 | raw12 K1–K4 / K6、raw13 L3 / L4 / V1 | 列表游标科学计数法字符串；K3、K6 `max_cursor='no_more'` + `has_more=true`；K5（快手评论）/ L1 / P1 为 500 `RESULT_VALIDATION_FAILED`（无效输入）；raw12 的 W 系列是视频号（2.0），不登记 |
 | 快手 × 主页 / 详情 × 异步 | raw14 A1 / A3 | 轮询 2 次 `running → succeeded`；列表异步 A2 失败 |
 | 快手 / 小红书 / 抖音 × 评论 / 详情的内容 `url` 构造 | 小红书评论样本用 `https://www.xiaohongshu.com/explore/{post_id}`；快手详情样本用 `v.kuaishou.com` 短链，**构造方式无样本** | design §14 第 2 项 |
 | 未证明 | 429、真实 5xx、超时、视频 URL 有效期、异步任务 TTL、QPS | 保持配置化，不写进合同 |

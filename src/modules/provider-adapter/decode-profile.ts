@@ -5,6 +5,7 @@ import { readCount, readExternalId, readText } from "./value-state";
 const PROFILE_NAMESPACE: Record<Platform, IdentifierNamespace> = {
   douyin: "douyin.user_id",
   xiaohongshu: "xiaohongshu.profile.user_id",
+  kuaishou: "kuaishou.user_id",
 };
 
 export function decodeProfile(platform: Platform, bytes: Uint8Array): DecodeOutcome<ProfileData> {

@@ -32,6 +32,26 @@ describe("buildRequest（Adapter 输入合同）", () => {
     expect(body({ kind: "integer", lexeme: "9007199254740993" })).toBe('{"url":"x","max_cursor":9007199254740993}');
   });
 
+  it("详情请求：POST /openapi/v1/media_stats_number，body 只有内容 url", () => {
+    const r = buildRequest({ action: "media_stats_number", mode: "synchronous", locator: "https://www.douyin.com/video/76" });
+    expect(r.path).toBe("/openapi/v1/media_stats_number");
+    expect(r.query).toEqual({ async: "false" });
+    expect(text(r.body)).toBe('{"url":"https://www.douyin.com/video/76"}');
+  });
+  it("评论请求：路径是 /openapi/v1/media/comments/list，首页游标整数 0，reply_pages=-1（不取回复）", () => {
+    const r = buildRequest({ action: "post_comments_list", mode: "synchronous", locator: "https://www.xiaohongshu.com/explore/abc" });
+    expect(r.path).toBe("/openapi/v1/media/comments/list");
+    expect(text(r.body)).toBe('{"url":"https://www.xiaohongshu.com/explore/abc","max_cursor":0,"reply_pages":-1}');
+  });
+  it("评论翻页：上一页返回的字符串游标原样回发，不转整数；科学计数法游标同理", () => {
+    const body = (cursor: Parameters<typeof buildRequest>[0]["cursor"], action: "post_comments_list" | "user_video_list" = "post_comments_list") =>
+      text(buildRequest({ action, mode: "asynchronous", locator: "x", cursor }).body);
+    expect(body({ kind: "string", value: "20" })).toBe('{"url":"x","max_cursor":"20","reply_pages":-1}');
+    expect(body({ kind: "string", value: "1.785394950371E12" }, "user_video_list")).toBe('{"url":"x","max_cursor":"1.785394950371E12"}');
+  });
+  it("no_more 哨兵不是游标，不能进入请求", () => {
+    expect(() => buildRequest({ action: "user_video_list", mode: "synchronous", locator: "x", cursor: { kind: "no_more" } as never })).toThrow();
+  });
   it("locator 中的引号、换行与非 ASCII 被正确转义并以 UTF-8 编码", () => {
     const r = buildRequest({ action: "media_user_info", mode: "synchronous", locator: '日立"中央"\n空调' });
     expect(JSON.parse(text(r.body))).toEqual({ url: '日立"中央"\n空调' });

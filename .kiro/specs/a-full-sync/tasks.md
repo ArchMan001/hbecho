@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（2026-11-05）。任务 0：文档前置、编码命名确认、`a-master-data-import` 已合并 `main`（`fd1dd7d`）、本分支已变基。任务 1：迁移 `0004`、证据登记、本机 `./scripts/verify.sh` 全绿（312 单元 / 330 数据库测试）。下一步任务 2。
+> **执行状态**：任务 0、1 已完成（2026-11-05）。任务 0：文档前置、编码命名确认、`a-master-data-import` 已合并 `main`（`fd1dd7d`）、本分支已变基。任务 1：迁移 `0004`、证据登记、本机 `./scripts/verify.sh` 全绿（312 单元 / 330 数据库测试）。任务 2：Adapter 扩展完成（见下文「实施中的判断」）。下一步任务 3。
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -22,7 +22,7 @@
 
 - [x] 任务 0 · 文档前置（v2 修订、A PRD §7.1 放宽、CONTEXT、ADR-0012 补记、INDEX、分支与编码命名确认）
 - [x] 任务 1 · schema 与迁移、证据登记
-- [ ] 任务 2 · Adapter 扩展（快手、详情、评论）
+- [x] 任务 2 · Adapter 扩展（快手、详情、评论）
 - [ ] 任务 3 · 监控目标、批次生命周期与调度
 - [ ] 任务 4 · Worker 运行时（领取、并发、速率、恢复、预算）
 - [ ] 任务 5 · 账号采集（主页、多页列表、检查点、封口）
@@ -169,12 +169,21 @@
 
 **验证**
 
-- [ ] 解码单元测试：抖音 / 小红书 / 快手 × 主页 / 列表 / 详情 / 评论 的固定字节 fixture 全部断言（值状态、候选集、游标类型、`parent_id` 分流、`has_more` 归一）；
-- [ ] 快手 K3 / K6 的 `no_more` 用例；快手 L3 / L4 的科学计数法游标原样保真；
-- [ ] `pickVideoSource`、`ContentUrlBuilder` 表驱动测试；
-- [ ] capability 测试覆盖 FS-16.1 的每一行；
-- [ ] 点数表测试：失败 / 轮询 0 点；
-- [ ] `./scripts/verify.sh` 通过。
+- [x] 解码单元测试：抖音 / 小红书 / 快手 × 主页 / 列表 / 详情 / 评论 的固定字节 fixture 全部断言（`decode-detail` / `decode-comments` / `decode-kuaishou` 测试；值状态、候选集、游标类型、`parent_id` 分流、`has_more` 归一）。**抖音 / 小红书的主页与列表沿用 tracer 既有测试**；
+- [x] 快手 K3 / K6 的 `no_more` 用例；快手 L3 / L4 的科学计数法游标原样保真；
+- [x] `pickVideoSource`、`ContentUrlBuilder` 表驱动测试；
+- [x] capability 测试覆盖 FS-16.1 的每一行（含 production 全部拒绝）；
+- [x] 点数表测试：详情 / 评论 / 快手价目；失败 / 轮询 0 点沿用 `tracer-flow.resilience.db.test.ts` 的既有用例；
+- [x] `./scripts/verify.sh` 通过（见执行状态）。
+
+**实施中的判断（自行决定项）**
+
+- 快手详情 capability 在 `test` 环境也保持 `disabled`（`content_url_construction_unverified`），对应 FS-7.7；解码器与 fixture 测试不经 capability 门控，不受影响。
+- 列表播放数对三个平台一律 `unsupported`（FS-6.6）。快手列表 `stats.play_count` 有非零值（K3 为 2048），但未验证其语义，播放数以详情为准。
+- `TypedCursor` 增加 `no_more` 种类（任何平台的字符串 `"no_more"` 都归此类）；`RequestCursor` 不包含它，构造请求时抛错。
+- `locator` 识别 `kuaishou.com`：`/profile/…` 为主页，`/short-video/…` 为视频（拒绝），`v.kuaishou.com` 短链本地无法判断照常发送。
+- 快手 `media_user_info` / `user_video_list` 登记后，tracer 的 `submit --platform kuaishou` 在 `test` 环境会通过 capability 预检（production 仍全部拒绝）；快手的单账号端到端流程在任务 5 才有测试。两处旧测试把「未登记平台」从快手改为视频号（`commands.db.test.ts`、`cli.db.test.ts`）。
+- manifest 补登记了抖音评论异步失败样本 raw8 A3（`raw8.A3.submit` / `raw8.A3.poll1`），用于 provider-failed 登记。
 
 **Requirements:** FS-7、FS-9、FS-10、FS-16；**Design:** §2.2、§7.9、§7.10、§10。
 

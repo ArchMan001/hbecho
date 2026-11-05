@@ -133,3 +133,20 @@ describe("平台校验（R3.8）：入口里出现的链接必须属于命令的
     expect(checkLocatorPlatform("douyin", "https://douyin.com.evil.test/x")).toEqual({ ok: true });
   });
 });
+
+describe("快手入口", () => {
+  it("主页链接 → home，发送；v.kuaishou.com 短链本地无法判断 → unknown，照常发送", () => {
+    expect(classifyLocator("https://www.kuaishou.com/profile/3xgxa5ihm6dke52")).toMatchObject({ action: "send", kind: "home" });
+    expect(classifyLocator("https://v.kuaishou.com/abc123")).toMatchObject({ action: "send", kind: "unknown" });
+  });
+  it("明确的视频链接 → video，拒绝（不是主页入口）", () => {
+    expect(classifyLocator("https://www.kuaishou.com/short-video/3x29z4cn3ygqdsc")).toMatchObject({ action: "reject", kind: "video", retryable: false });
+  });
+  it("平台校验：快手命令 + 抖音链接错配；抖音命令 + 快手链接（含短链）错配；快手链接对快手命令通过", () => {
+    expect(checkLocatorPlatform("kuaishou", "https://www.kuaishou.com/profile/3x")).toEqual({ ok: true });
+    expect(checkLocatorPlatform("kuaishou", "https://v.kuaishou.com/abc")).toEqual({ ok: true });
+    expect(checkLocatorPlatform("kuaishou", DY_SHARE)).toEqual({ ok: false, reason: "platform_mismatch", detected: "douyin" });
+    expect(checkLocatorPlatform("douyin", "https://v.kuaishou.com/abc")).toEqual({ ok: false, reason: "platform_mismatch", detected: "kuaishou" });
+    expect(checkLocatorPlatform("kuaishou", "https://notkuaishou.com/x")).toEqual({ ok: true });
+  });
+});

@@ -24,6 +24,7 @@ const hostIs = (host: string, domain: string) => host === domain || host.endsWit
 const PLATFORM_DOMAINS: Record<Platform, readonly string[]> = {
   douyin: ["douyin.com", "iesdouyin.com"],
   xiaohongshu: ["xiaohongshu.com", "xhslink.com", "xhslink.cn"],
+  kuaishou: ["kuaishou.com"], // 含 v.kuaishou.com 短链
 };
 
 function platformOfHost(host: string): Platform | null {
@@ -72,6 +73,11 @@ function kindOfUrl(url: string): "home" | "video" | "note" | "unknown" {
     if (/^\/explore\/[^/]/.test(path) || /^\/discovery\/item\/[^/]/.test(path)) return "note";
     if (/^\/user\/profile\/[^/]/.test(path)) return "home";
     return "unknown";
+  }
+  if (hostIs(host, "kuaishou.com")) {
+    if (/^\/profile\/[^/]/.test(path)) return "home";
+    if (/^\/short-video\/[^/]/.test(path)) return "video";
+    return "unknown"; // v.kuaishou.com 短链等本地无法判断
   }
   return "unknown";
 }

@@ -1,4 +1,5 @@
 export * from "./audit";
+export * from "./authz";
 export * from "./commands";
 export * from "./errors";
 export * from "./planner";

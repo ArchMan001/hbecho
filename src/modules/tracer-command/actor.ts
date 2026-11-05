@@ -3,11 +3,17 @@
 import { TracerError } from "./errors";
 
 export const CAP_SYNC_TRIGGER = "data.sync.trigger";
+// a-full-sync 运营处置命令的 Capability（design §9；名称沿用 B 域 PRD）
+export const CAP_ACCOUNT_MANAGE = "data.account.manage";
+export const CAP_MONITORING_MANAGE = "data.monitoring.manage";
+export const CAP_EXTERNAL_MANAGE = "monitor.external.manage";
 
 export interface ActorContext {
   /** 审计与幂等 key 的归属主体，例如 service:tracer-cli。 */
   readonly actorId: string;
   readonly capabilities: ReadonlySet<string>;
+  /** 超管标记：经销商级监控开关与外部监控账号只给它（B 域接入后由 B 提供）。缺省为 false。 */
+  readonly platformAdmin?: boolean;
   readonly scope: {
     /** 平台编码集合，或 "all"。 */
     readonly platformCodes: ReadonlySet<string> | "all";

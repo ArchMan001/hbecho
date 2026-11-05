@@ -4,8 +4,20 @@ import type { Logger } from "pino";
 export interface SyncAuditEvent {
   at: string;
   event: "sync.command";
-  action: "supplement" | "batch_cancel" | "demand_submit";
-  outcome: "accepted" | "previewed" | "rejected" | "cancelled" | "noop";
+  action:
+    | "supplement"
+    | "batch_cancel"
+    | "demand_submit"
+    | "batch_retry_failed"
+    | "account_rebind"
+    | "account_confirm_deleted"
+    | "issue_set_status"
+    | "monitoring_set"
+    | "external_add"
+    | "external_enable"
+    | "external_disable"
+    | "maintain";
+  outcome: "accepted" | "previewed" | "rejected" | "cancelled" | "noop" | "applied";
   actorId: string;
   code?: string;
   batchId?: string;

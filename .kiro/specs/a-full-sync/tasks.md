@@ -29,7 +29,7 @@
 - [x] 任务 6 · 按需采集（需求、详情、评论）
 - [x] 任务 7 · 媒资（封面首次、快手、视频、音频）
 - [x] 任务 8 · Python 能力服务 HTTP 外壳与 Node 客户端
-- [ ] 任务 9 · 运营命令、查询与定时清理
+- [ ] 任务 9 · 运营命令、查询与定时清理（代码与测试已写；全量 `verify.sh` 待 Docker 恢复后重跑）
 - [ ] 任务 10 · 全量离线验收、故障注入与规模演练
 - [ ] 任务 11 · 批准式 smoke（人工批准，付费）
 
@@ -488,18 +488,29 @@
 - `sample --n` 只读，随机抽 N 个本批次成功账号，输出入口、标识与最新摘要；
 - `maintain` 每日一次、幂等、有界、写日志；其中调用任务 5 的 `sweepOrphanBuilding`（外部取消留下的 `building` 行，有界批量）。
 
-**验证**
+**验证**（证据：见文末「验证记录」）
 
-- [ ] `status` / `batch` / `account` / `freshness` 的输出对照固定数据断言（含 ambiguous 与点数估算）；
-- [ ] `rebind`：成功、新专员名额已占、记审计；`confirm-deleted` 后该专员可再录同平台账号；
-- [ ] 监控开关：五级各一个用例，经销商级权限，上级关闭后下级值不变；
-- [ ] 外部账号：创建、只生成 `fetch_profile`、在目标集中、对非超管不可见；
-- [ ] `retry-failed`：只放回 `failed/dead`、不重复成功任务、非最新批次被拒；
-- [ ] `maintain`：用 fake clock 跑两次，第二次无新增删除；不动快照与媒资；
-- [ ] 预览：不带 `--apply` 时数据库零写入（对比前后行数 / 更新时间），输出受影响数与前 20 个示例；
-- [ ] `sample`：N 超过成功账号数时返回全部；输出不含临时 URL；三态校验在 `status` / `account` 中不合并；
-- [ ] CLI 退出码；
-- [ ] `./scripts/verify.sh` 通过。
+- [x] `status` / `batch` / `account` / `freshness`（`sync-status/status.db.test.ts`）：任务计数、失败原因分布、三态身份校验（verified 1 / unverifiable 1 / mismatch 1 分开计数）、媒资进度、调用数与点数（已计点 70 点 = 1.4 元；ambiguous 另列，不并入）、不发任何供应商调用；
+- [x] `rebind`：成功、新专员名额已占（`slot_taken`）、同专员 noop、停用 / 不存在的专员、缺 Capability / 范围外 / 外部账号被拒，记审计（原 → 新）；`confirm-deleted` 后账号 `deleted`、`slot_released_at` 写入、归属保留、该专员可再录同平台账号（`sync-ops/ops.db.test.ts`）；
+- [x] 监控开关五级各一个用例：组织级默认预览（零写入，含 `updated_at`；受影响账号数 + 示例）、`--apply` 才写、上级关闭后下级值不变、账号级直接写并带 `manual`、经销商级仅超管（`ops.db.test.ts`）；
+- [x] 外部账号：`external add`（`external-add.db.test.ts`）创建后 `watch_type=external`、无专员、不占名额、只有主页快照、没有列表调用 / 内容 / 列表任务；启停只改自身开关；对非超管不可见；规划只生成 `fetch_profile`；
+- [x] `retry-failed`：只放回 `failed/dead`、成功任务不动、尝试额度与 fencing token 重置、终态批次回到 `running`；下一个全量批次已开始 / 非全量批次 / 缺 Capability / 受限身份被拒；默认预览零写入；
+- [x] `maintain`（`maintenance/maintenance.db.test.ts`）：一年后清理 ODS，快照保留，第二次运行无新增删除；有界（`maxPerRun`）多次清完；孤儿清扫覆盖 `ods/` 与 `smoke/ods/`，宽限期内的不动，媒资桶不参与；北京时间 04:00 之前不跑、每日一次；某步失败不抛出、其它步骤照常、退避后重试；
+- [x] `sample`：N 超过成功账号数时返回全部，失败的账号不抽，输出白名单字段、不含临时 URL / 对象 key；
+- [x] CLI（`worker/sync-cli.ops.test.ts`）：参数解析、透传、`--apply` 默认关闭、退出码（授权 2 / 冲突 3 / 不存在 4 / 未装配 2 / `maintain` 失败 1）；
+- [ ] `./scripts/verify.sh` 通过（见验证记录）。
+
+**实施中的判断（自行决定项）**
+
+- **授权**：`ActorContext` 增加可选 `platformAdmin`；Capability 常量 `data.account.manage`、`data.monitoring.manage`、`monitor.external.manage`。**没有「品牌集合」范围**（B 域未接入），所以影响多个账号的开关（分公司 / 经销商 / 门店 / 专员级）只给全范围身份；账号级按平台 + 专员范围判断。`config.manage` 在 1.0 是环境变量与 `sync_settings`，没有命令。共用的授权判断抽到 `sync-schedule/authz.ts`，`commands.ts` 改用它（行为不变）。
+- **外部账号的创建**走 tracer 的根任务（`TracerCommands.submitExternal`，`subject_type='external'`），`runTracerRoot` 增加外部分支：只要求主页 capability、不检查名额、成功后不建列表子任务。**根任务仍由 tracer 流程执行，sync worker 不领取 `resolve_account`**（与 `eligibility.ts` 注释「tracer 的根任务不归本 worker」一致）。运营侧 `external add` 只创建根任务并返回 `rootTaskId`；生产里谁来跑它，等任务 11 批准启用 capability 时一并定（现在 production 全部 disabled，创建会被 capability 门控拒绝）。
+- **`retry-failed` 把已终态的批次改回 `running`**（设计没写这个衔接点）：否则 worker 不会领取。计数列在下一次 `tick` 汇总时重算。
+- **`cleanupExpired` / `sweepOrphans` 增加有界参数**（`maxPerRun` / `maxDelete`），缺省行为不变。`sweepOrphans` 仍会列出前缀下全部对象（`ponytail:` 对象数过万时改成按页清扫）。
+- **`readOssSecrets`**：从 `readSmokeSecrets` 中拆出，`maintain` 只需要 OSS 配置，不能为它强制要求 AI Master 的 API key。
+- **每日维护的挂接**：worker 常驻时每次 tick 后调用 `runDaily`（它自己判断北京时间 04:00 与「今天是否已跑」）；OSS 配置不全时 worker 仍可运行，只是日志里提示「daily maintenance disabled」。
+- **运营 CLI 的身份**：`HBECHO_ACTOR_PLATFORM_ADMIN=true` 才带 `monitor.external.manage` 与超管标记（B 域接入前，由持有数据库凭证的运维显式声明）。
+
+**验证记录（2026-11-05 夜）**：任务 9 的新增测试在最后一轮小改动之前全部通过（`sync-ops` 13、`sync-status` 4、`maintenance` 5 个数据库用例，`orchestrator` / `identity` 回归 97 例）；最后一轮改动（CLI 装配、`retention.ts` 有界参数、`readOssSecrets`）之后，`verify.sh` 的单元测试 591 例通过、类型检查通过，**数据库测试因本机 Docker Desktop 存储报 `input/output error`（镜像 blob 读取失败，容器无法创建 / 删除）未能重跑**。Docker 恢复后需要重跑 `./scripts/verify.sh`，全绿后再勾选本任务。
 
 **Requirements:** FS-13、FS-14、FS-15、FS-17、FS-20；**Design:** §7.13、§9、§15。
 

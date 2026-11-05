@@ -7,7 +7,8 @@ import { accountProfileSnapshots, platforms, staffAccountAssignments as aa, sync
 import { jcsSha256, jcsSha256Hex } from "../canonical-json";
 import type { MonitoringResolver } from "../monitoring";
 import type { Clock } from "../raw-capture";
-import { CAP_SYNC_TRIGGER, type ActorContext } from "../tracer-command";
+import type { ActorContext } from "../tracer-command";
+import { inPlatformScope, inStaffScope, requireCap, requireFullScope as requireFullScopeOf } from "./authz";
 import type { SyncAuditEvent, SyncAuditSink } from "./audit";
 import { SyncError } from "./errors";
 import type { PlanReport, BatchPlanner } from "./planner";
@@ -53,21 +54,8 @@ export function createSyncCommands(deps: { db: Db; clock: Clock; resolver: Monit
   const { db, clock, resolver, planner, runtime, audit } = deps;
   const emit = (e: Omit<SyncAuditEvent, "at" | "event">) => audit.record({ at: clock.now().toISOString(), event: "sync.command", ...e });
 
-  function requireCap(actor: ActorContext): void {
-    if (!actor.capabilities.has(CAP_SYNC_TRIGGER)) throw new SyncError("forbidden", `缺少 Capability ${CAP_SYNC_TRIGGER}`);
-  }
-  /**
-   * 批次级命令（取消批次、cancel_current）的影响面是整个批次，不是某几个账号：1.0 只允许全范围服务身份。
-   * 受限身份（例如 B 域接入后某分公司的用户）取消或顶替全局批次就是越权，宁可拒绝。B 域接入后再按批次内账号集合细化。
-   */
-  function requireFullScope(actor: ActorContext): void {
-    if (actor.scope.platformCodes !== "all" || actor.scope.mediaStaffIds !== "all") {
-      throw new SyncError("out_of_scope", "取消批次需要全平台、全专员范围的服务身份（1.0 不支持按范围部分取消）");
-    }
-  }
-  const inPlatformScope = (actor: ActorContext, code: string) => actor.scope.platformCodes === "all" || actor.scope.platformCodes.has(code);
-  const inStaffScope = (actor: ActorContext, staffId: bigint | null): boolean =>
-    staffId === null ? actor.scope.mediaStaffIds === "all" : actor.scope.mediaStaffIds === "all" || actor.scope.mediaStaffIds.has(staffId);
+  /** 批次级命令（取消批次、cancel_current）的影响面是整个批次：1.0 只允许全范围服务身份（B 域接入后再按批次内账号集合细化）。 */
+  const requireFullScope = (actor: ActorContext) => requireFullScopeOf(actor, "取消批次");
 
   async function lastSuccess(accountId: bigint, only: "profile" | "full"): Promise<Date | null> {
     const [p] = await db.select({ at: max(accountProfileSnapshots.responseReceivedAt) }).from(accountProfileSnapshots).where(eq(accountProfileSnapshots.accountId, accountId));

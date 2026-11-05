@@ -63,7 +63,13 @@ export type SyncApp = ReturnType<typeof buildSyncApp>;
 export const TICK_INTERVAL_MS = 30_000;
 
 /** 常驻：定时 tick + worker 循环；SIGTERM / SIGINT → 停止领取，宽限期内完成在途，放弃的任务租约过期后被重新领取。 */
-export async function runForever(app: SyncApp, cfg: SyncWorkerConfig, signals: { on(sig: "SIGTERM" | "SIGINT", f: () => void): void }): Promise<void> {
+export async function runForever(
+  app: SyncApp,
+  cfg: SyncWorkerConfig,
+  signals: { on(sig: "SIGTERM" | "SIGINT", f: () => void): void },
+  /** 每日维护（北京时间 04:00 之后每天一次，由 maintenance.runDaily 自己判断，这里每次 tick 后调用）。 */
+  extras: { maintain?: () => Promise<unknown> } = {},
+): Promise<void> {
   let stopped = false;
   let stopping: Promise<void> | null = null;
   const tickLoop = (async () => {
@@ -72,6 +78,11 @@ export async function runForever(app: SyncApp, cfg: SyncWorkerConfig, signals: {
         await app.scheduler.tick();
       } catch (e) {
         app.logger.error({ err: e }, "tick failed"); // 下一次 tick 再试；配置错误会在日志里反复出现，不会静默
+      }
+      try {
+        await extras.maintain?.();
+      } catch (e) {
+        app.logger.error({ err: e }, "maintenance failed"); // runDaily 自己吞步骤错误；这里兜底，不让它拖垮 tick 循环
       }
       await new Promise((r) => setTimeout(r, TICK_INTERVAL_MS));
     }

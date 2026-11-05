@@ -46,6 +46,21 @@ function required(env: Record<string, string | undefined>, name: string): string
   return v;
 }
 
+/** 只读 OSS 配置（清理 / 运维命令不需要供应商 API key，所以不能为了它强制要求 AIMASTER_*）。 */
+export function readOssSecrets(env: Record<string, string | undefined>): SmokeSecrets["oss"] {
+  const region = required(env, SMOKE_ENV_VARS.ossRegion);
+  if (!/^[a-z0-9-]{2,32}$/.test(region)) throw new SmokeConfigError("invalid_env", SMOKE_ENV_VARS.ossRegion, "形如 cn-beijing");
+  const bucket = required(env, SMOKE_ENV_VARS.ossBucketOds);
+  if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(bucket)) throw new SmokeConfigError("invalid_env", SMOKE_ENV_VARS.ossBucketOds, "不符合 OSS 桶名规则");
+  const endpoint = env[SMOKE_ENV_VARS.ossEndpoint]?.trim();
+  return {
+    accessKeyId: required(env, SMOKE_ENV_VARS.ossAccessKeyId),
+    accessKeySecret: required(env, SMOKE_ENV_VARS.ossAccessKeySecret),
+    region,
+    bucket,
+    ...(endpoint ? { endpoint } : {}),
+  };
+}
 /** 读取并校验 smoke 需要的全部 secret 与 OSS 配置。幂等、无副作用。 */
 export function readSmokeSecrets(env: Record<string, string | undefined>): SmokeSecrets {
   const apiKey = required(env, SMOKE_ENV_VARS.apiKey);
@@ -57,24 +72,5 @@ export function readSmokeSecrets(env: Record<string, string | undefined>): Smoke
     throw new SmokeConfigError("invalid_env", SMOKE_ENV_VARS.baseUrl, "不是合法 URL");
   }
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new SmokeConfigError("invalid_env", SMOKE_ENV_VARS.baseUrl, "必须是 http(s)");
-
-  const region = required(env, SMOKE_ENV_VARS.ossRegion);
-  if (!/^[a-z0-9-]{2,32}$/.test(region)) throw new SmokeConfigError("invalid_env", SMOKE_ENV_VARS.ossRegion, "形如 cn-beijing");
-
-  const bucket = required(env, SMOKE_ENV_VARS.ossBucketOds);
-  if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(bucket)) throw new SmokeConfigError("invalid_env", SMOKE_ENV_VARS.ossBucketOds, "不符合 OSS 桶名规则");
-
-  const endpoint = env[SMOKE_ENV_VARS.ossEndpoint]?.trim();
-
-  return {
-    apiKey,
-    baseUrl,
-    oss: {
-      accessKeyId: required(env, SMOKE_ENV_VARS.ossAccessKeyId),
-      accessKeySecret: required(env, SMOKE_ENV_VARS.ossAccessKeySecret),
-      region,
-      bucket,
-      ...(endpoint ? { endpoint } : {}),
-    },
-  };
+  return { apiKey, baseUrl, oss: readOssSecrets(env) };
 }

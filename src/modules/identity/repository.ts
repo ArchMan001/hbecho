@@ -23,7 +23,8 @@ export interface IdentifierRef {
 
 export interface IntakeInput {
   platformId: bigint;
-  staffId: bigint;
+  /** null = 外部监控账号（watch_type='external'）：没有专员、不占名额、没有组织链（FS-13.5）。 */
+  staffId: bigint | null;
   primary: IdentifierRef;
   /** 提交的原始入口（current_home_locator）。 */
   submittedLocator: string;
@@ -80,7 +81,7 @@ export async function intakeAccount(tx: DbTx, i: IntakeInput): Promise<IntakeRes
     const [assn] = await tx.select().from(staffAccountAssignments).where(eq(staffAccountAssignments.accountId, accountId)).for("update");
     await touch(tx, accountId, found.accountIdentifierId, i.now);
     if (assn) {
-      if (assn.watchType === "staff" && assn.staffId === i.staffId) {
+      if (assn.watchType === (i.staffId === null ? "external" : "staff") && assn.staffId === i.staffId) {
         return {
           kind: "ready",
           accountId,
@@ -95,7 +96,7 @@ export async function intakeAccount(tx: DbTx, i: IntakeInput): Promise<IntakeRes
     }
   } else {
     // 新账号：名额冲突时不建账号（不留下无人归属的孤儿账号）
-    const holder = await slotHolder(tx, i.staffId, i.platformId);
+    const holder = i.staffId === null ? undefined : await slotHolder(tx, i.staffId, i.platformId);
     if (holder) return { kind: "staff_platform_slot_taken", existingAccountId: holder.accountId, existingAssignmentId: holder.assignmentId };
     const [res] = await tx.insert(externalAccounts).values({
       platformId: i.platformId,
@@ -120,13 +121,13 @@ export async function intakeAccount(tx: DbTx, i: IntakeInput): Promise<IntakeRes
   }
 
   // 已有账号但没有归属（例如此前只有身份观察）：同样要检查名额
-  if (!accountCreated) {
+  if (!accountCreated && i.staffId !== null) {
     const holder = await slotHolder(tx, i.staffId, i.platformId);
     if (holder) return { kind: "staff_platform_slot_taken", existingAccountId: holder.accountId, existingAssignmentId: holder.assignmentId };
   }
 
   const [a] = await tx.insert(staffAccountAssignments).values({
-    watchType: "staff",
+    watchType: i.staffId === null ? "external" : "staff",
     staffId: i.staffId,
     accountId,
     platformId: i.platformId,

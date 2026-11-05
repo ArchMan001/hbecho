@@ -7,6 +7,9 @@ export type SyncErrorCode =
   | "idempotency_conflict"
   | "not_found"
   | "not_cancellable"
+  | "slot_taken"
+  | "not_retryable"
+  | "unsupported_capability"
   | "sync_settings_missing"
   | "invalid_settings";
 const CATEGORY: Record<SyncErrorCode, SyncErrorCategory> = {
@@ -15,6 +18,9 @@ const CATEGORY: Record<SyncErrorCode, SyncErrorCategory> = {
   out_of_scope: "authorization",
   idempotency_conflict: "conflict",
   not_cancellable: "conflict",
+  slot_taken: "conflict",
+  not_retryable: "conflict",
+  unsupported_capability: "input",
   not_found: "not_found",
   sync_settings_missing: "configuration",
   invalid_settings: "configuration",

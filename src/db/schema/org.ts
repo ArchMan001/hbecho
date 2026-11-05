@@ -2,6 +2,7 @@
 import { sql } from "drizzle-orm";
 import { type AnyMySqlColumn, boolean, check, index, mysqlTable, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { binText, id, inList, utc } from "../columns";
+import { importBatches } from "./import";
 
 const status = () => varchar("status", { length: 32 }).notNull();
 const stamps = () => ({ createdAt: utc("created_at").notNull(), updatedAt: utc("updated_at").notNull() });
@@ -112,9 +113,8 @@ export const stores = mysqlTable(
     storeTier: varchar("store_tier", { length: 64 }),
     status: status(),
     monitoringEnabled: boolean("monitoring_enabled").notNull().default(true),
-    // v2 §7.6：最近一次写入该行的 import_batches。import_batches 属于 a-master-data-import（其 v2 修订尚未合入），
-    // 本 spec 不建该表，所以这里先不挂外键；该 spec 建表时再补 FK。
-    sourceBatchId: id("source_batch_id"),
+    // v2 §7.6：最近一次写入该行的 import_batches（R6：FK，RESTRICT）
+    sourceBatchId: id("source_batch_id").references((): AnyMySqlColumn => importBatches.importBatchId),
     ...stamps(),
   },
   (t) => [

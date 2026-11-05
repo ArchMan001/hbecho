@@ -14,3 +14,4 @@ export * from "./profile-runner";
 export * from "./list-walker";
 export * from "./seal";
 export * from "./account-runners";
+export * from "./self-check";

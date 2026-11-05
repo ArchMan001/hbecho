@@ -12,6 +12,7 @@ import { buildRequest, classifyLocator, decodeProfile, profileAttemptOutcomeOf }
 import { platformCodeOf, type AccountRunnerDeps } from "./account-deps";
 import { callDecoded, capabilityFailure } from "./call";
 import { checkProfileFields, checkProfileIdentity } from "./identity-check";
+import { lockAccount, runSelfCheck } from "./self-check";
 import type { RunnerOutcome, TaskContext, TaskRunner, TerminalHook } from "./types";
 
 export const PROFILE_TASK_SCHEMA = "sync-profile-task.v1";
@@ -130,6 +131,7 @@ export function createProfileRunner(deps: AccountRunnerDeps): TaskRunner {
     const receivedAt = call?.at ?? clock.now();
     const done = await withFences(db, clock, [{ taskId: task.taskId, token: ctx.token }], async (tx: DbTx) => {
       const now = clock.now();
+      await lockAccount(tx, accountId); // 与列表封口事务串行化（自比对），先于任何写入
       const snap = await projectProfile(tx, {
         batchId: task.batchId,
         accountId,
@@ -167,6 +169,8 @@ export function createProfileRunner(deps: AccountRunnerDeps): TaskRunner {
           updatedAt: now,
         })
         .where(eq(syncTasks.taskId, task.taskId));
+      // 自比对：列表任务已成功才会比较；只告警
+      await runSelfCheck(tx, { batchId: task.batchId, accountId, assignmentId, now });
     });
     return done.ok ? { kind: "done" } : abandonedOf(done.reason);
   };

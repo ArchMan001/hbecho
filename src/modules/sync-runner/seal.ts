@@ -11,6 +11,7 @@ import { advanceCheckpoint, computeInitialAnchor, recordIssue, selectCurrentCont
 import type { Clock } from "../raw-capture";
 import type { AnchorView } from "./decide-after-page";
 import type { ListProgress, NextCursor } from "./list-progress";
+import { lockAccount, runSelfCheck, type SelfCheckResult } from "./self-check";
 import type { TypedCursor } from "../provider-adapter";
 
 export interface SealScope {
@@ -104,6 +105,7 @@ export interface SealSuccessResult {
   finalized: number;
   currentChanged: number;
   newAnchorMode: string | null;
+  selfCheck: SelfCheckResult;
 }
 
 /**
@@ -117,6 +119,8 @@ export async function sealSuccess(tx: DbTx, i: SealSuccessInput): Promise<SealSu
   if (task.accountId === null) throw new Error("列表任务缺 account_id");
   const scope: SealScope = { batchId: task.batchId, accountId: task.accountId };
 
+  // 与 ProfileRunner 的终态事务串行化（自比对需要看到对方的结果）：先于任何写入
+  await lockAccount(tx, scope.accountId);
   const rows = await loadBuilding(tx, scope);
   // 在定稿之前、同一事务里重建锚点（读的就是将要定稿的那批行）
   let outcome = detail.outcome;
@@ -177,7 +181,9 @@ export async function sealSuccess(tx: DbTx, i: SealSuccessInput): Promise<SealSu
       updatedAt: now,
     })
     .where(eq(syncTasks.taskId, task.taskId));
-  return { taskStatus, outcome, stopReason, checkpoint, finalized: fin.finalized, currentChanged: fin.currentChanged, newAnchorMode: final.anchor_mode };
+  // 自比对：只告警，不影响上面写下的任何结果
+  const selfCheck = await runSelfCheck(tx, { batchId: task.batchId, accountId: scope.accountId, assignmentId: i.assignmentId, now });
+  return { taskStatus, outcome, stopReason, checkpoint, finalized: fin.finalized, currentChanged: fin.currentChanged, newAnchorMode: final.anchor_mode, selfCheck };
 }
 
 const TERMINAL_FAILED = ["failed", "dead", "cancelled"] as const;

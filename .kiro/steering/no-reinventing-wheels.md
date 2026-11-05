@@ -20,7 +20,7 @@ inclusion: always
 
 "成熟"的定义：
 
-- GitHub ⭐ 5,000+（优先 10,000+）
+- GitHub ⭐ 3,000+（优先 10,000+）（2026-11-05 由 5,000 下调，刘学奎；原因：成熟的专用库在细分领域星标天然偏低，例如严格 CSV 解析 csv-parse ≈ 4,300）
 - 近 6 个月有活跃维护（commit / release）
 - 与项目技术栈兼容（见 ADR-0005：Node/TypeScript + Next.js + Drizzle + better-auth；MySQL / OSS / Docker）
 - 是**库**优于**独立服务**（不增加部署和运维负担）

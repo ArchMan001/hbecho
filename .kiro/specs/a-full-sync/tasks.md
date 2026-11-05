@@ -1,0 +1,513 @@
+# A 全量周期同步（a-full-sync）· 实施计划
+
+> **状态**：`draft`
+>
+> **执行状态**：未开始（任务 0 的待确认闸门已于 2026-11-05 通过；任务 0 的文档动作与分支准备未做）
+>
+> **需求**：[`requirements.md`](requirements.md)
+>
+> **设计**：[`design.md`](design.md)
+>
+> **验收**：[`acceptance.md`](acceptance.md)
+>
+> **所属域**：A 数据底座 · **目录命名**：`a-full-sync`，符合 `<代号>-<切片>`
+>
+> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.10.1（2026-11-05，定稿候选）
+>
+> **最近核对**：2026-11-05
+>
+> **更新日期**：2026-11-05（初建；同日闸门通过；吸收旧系统经验：队尾重试、provider 熔断、身份与残缺校验、自比对、默认预览、抽样对账）
+
+## 进度
+
+- [ ] 任务 0 · 文档前置（v2 修订、A PRD §7.1 放宽、CONTEXT、ADR-0012 补记、INDEX、分支与编码命名确认）
+- [ ] 任务 1 · schema 与迁移、证据登记
+- [ ] 任务 2 · Adapter 扩展（快手、详情、评论）
+- [ ] 任务 3 · 监控目标、批次生命周期与调度
+- [ ] 任务 4 · Worker 运行时（领取、并发、速率、恢复、预算）
+- [ ] 任务 5 · 账号采集（主页、多页列表、检查点、封口）
+- [ ] 任务 6 · 按需采集（需求、详情、评论）
+- [ ] 任务 7 · 媒资（封面首次、快手、视频、音频）
+- [ ] 任务 8 · Python 能力服务 HTTP 外壳与 Node 客户端
+- [ ] 任务 9 · 运营命令、查询与定时清理
+- [ ] 任务 10 · 全量离线验收、故障注入与规模演练
+- [ ] 任务 11 · 批准式 smoke（人工批准，付费）
+
+## Planning rules
+
+- 每个任务是一个纵向切片：完成后能运行一条命令、看到可验证的结果，而不是只建空表或空 Interface。
+- 任务边界跑 `./scripts/verify.sh`（类型检查、单元、迁移一致、数据库测试、密钥、文档链接与登记、Python 侧）。**不要在 verify 全绿之前说「测试通过」。**
+- 默认验收离线：不连 AI Master、不连 OSS、不连真实媒资源站、不起真实 Python 服务；MySQL 只用 `scripts/with-test-mysql.sh` 的一次性容器或 `_test` 库。任务 11 是唯一的付费任务。
+- 目录按 [ADR-0013](../../../HBECHO设计方案/architecture/adr/0013-repository-layout.md) 与现有布局：领域代码在 `src/modules/<模块>/`，测试与源码同目录（纯函数 `*.test.ts` → `unit`，需要 MySQL 的 `*.db.test.ts` → `db`），迁移在 `drizzle/`，CLI 在 `src/worker/`，fixture 在 `tests/fixtures/`，设施复用 `tests/harness/`，Python 在 `services/capability/`。
+- **没有新的 Node 依赖**。Python 侧只加 FastAPI（ADR-0012 已批准）与 uvicorn（任务 0 先在 ADR-0012 登记）。任何其他新依赖先走 ADR。
+- 所有内部 BIGINT 在 CLI / JSON 输出为十进制字符串；外部 ID 保留原文；时间保存 UTC `DATETIME(6)`。
+- 任务 0 的闸门未通过之前不写迁移；v2 修订未落回正文之前不写 SQL。
+- 网络 IO 期间不持有数据库事务；供应商响应先落 ODS 再解码；current 只接受 finalized（data-discipline）。
+- 并发测试用两个独立连接顺序触发，不用 `Promise.all` 抢同一行锁（dev-ci-cadence 第 3 条）。
+- 推送节奏（dev-ci-cadence 第 5 条）：一个 spec 推两次——任务 1 做完后推一次（迁移在干净库上跑通 + 异地备份），任务 10 收尾推一次；中间不推。
+
+## 依赖图
+
+```text
+任务 0（文档 + 闸门 + 分支）
+   ↓
+任务 1（迁移 + 证据）──────────────────────────┐
+   ↓                                          │
+任务 2（Adapter）          任务 8（Python 外壳）│  （8 可与 2–6 并行，只依赖 0）
+   ↓                                          │
+任务 3（目标 + 批次 + 调度）                   │
+   ↓                                          │
+任务 4（Worker 运行时）                        │
+   ↓                                          │
+任务 5（账号采集）                             │
+   ├──→ 任务 6（按需采集）                     │
+   └──→ 任务 7（媒资）←───────────────────────┘
+            ↓
+任务 9（运营命令 + 查询 + 清理）← 任务 6
+            ↓
+任务 10（全量离线验收 + 规模）
+            ↓
+任务 11（批准式 smoke，人工）
+```
+
+## 任务 0 · 文档前置：v2 修订、CONTEXT、ADR-0012 补记、INDEX、待确认闸门、分支
+
+**目标**：让后面的代码有合法的基线，不让实现偷偷定义列、依赖或口径。
+
+**动作**
+
+- **分支**：先把 `a-master-data-import` 合并 `main`（它的任务 0–8 已实现、CI 绿；见其 tasks 实施记录），再从 `main` 切 `a-full-sync`。不在 `a-master-data-import` 上直接写本 spec 的代码。
+- 在 [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md) 落回 requirements §1.3 的 R1–R7：
+  - R1：`content_snapshots.seeded_from_snapshot_id` 及 §10.2 增补第 12 条；
+  - R2：§10.2 第 6、7 条改为账号级封口；
+  - R3：§11.3 封面范围与 A §10.1 对齐；
+  - R4：`sync_batches.purpose`；
+  - R5：`sync_batches.finished_at` 语义与 `media_finished_at`；
+  - R6：`kuaishou.user_id`（同步 §6.3 命名空间枚举与 CONTEXT）；
+  - R7：§8.3 / §12.3 外部型只采主页；
+  - header 修订项 + 版本记录补一行。
+- [`CONTEXT.md`](../../../CONTEXT.md)：登记「采集需求（CollectionDemand）」「同步轮次」两个词汇，只写语义，不写表名；`ExternalAccountIdentifier` 一节补快手命名空间。
+- [`ADR-0012`](../../../HBECHO设计方案/architecture/adr/0012-python-capability-service.md)：补记两件事——① A 域音频抽取先按「Node 传短期签名 URL」实现（Python 不持有 OSS 凭证），`c-signals` 沿用或修订；② 登记 uvicorn（FastAPI 运行服务器）的采用记录，按 [`no-reinventing-wheels`](../../steering/no-reinventing-wheels.md) 的格式写「采用 / 用途 / 不用它做什么」。
+- [`INDEX.md`](../../../HBECHO设计方案/INDEX.md)：§5 权威矩阵加本 spec 四件套一行；§7.1 现有 spec 登记加一行；更新日期。
+- **A 域 PRD §7.1 放宽**：把「手工补抓单独建批次；当前有批次在跑时，运营可选择排队或取消当前批次」改为三项（`run_now` 默认 / `queue` / `cancel_current`），并写明「D-33 的串行只约束全量批次」；PRD 升 v1.11 并补版本记录（决策人：刘学奎，2026-11-05）；同步检查 `prd-platform.md` D-33 的措辞与 INDEX。
+- **待确认闸门（已通过，2026-11-05，刘学奎全部采纳建议）**：requirements §1.5 第 1–7 项。数值起步值见 design §14 第 6 项，由运维写入配置，**不写进代码默认值**；熔断阈值与冷却期在任务 4 开工前由运维给出。
+- **分支与编码命名**：合并 `a-master-data-import` 前，请刘学奎确认品牌 / 板块编码命名（`hitachi` / `hisense` / `york_vrf`，`{分公司}-water` / `{分公司}-home`）。
+- 任务 0 收尾：跑 `./scripts/verify.sh`。
+
+**验证**
+
+- [ ] `./scripts/verify.sh` 通过；
+- [ ] v2 修订逐条与 requirements §1.3 对应，没有多改或少改；
+- [ ] `CONTEXT.md` 没有出现表名、字段名、框架或接口；
+- [ ] ADR-0012 有补记与决策日期；
+- [ ] INDEX 两处登记完成，链接检查通过；
+- [ ] A PRD 升版并补版本记录，`prd-platform.md` D-33 措辞一致；
+- [ ] §1.5 第 1–7 项的结论已写回 requirements / design（已于 2026-11-05 完成）。
+
+**Requirements:** §1.3、§1.5；**Design:** §6.1、§10、§13。
+
+## 任务 1 · schema 与迁移、证据登记
+
+**目标**：空库一次迁移成功；新列与约束能挡住非法状态；新 tuple 的证据进了 manifest。
+
+**新增 / 修改**
+
+- `src/db/schema/content.ts`：`content_snapshots.seeded_from_snapshot_id`（自引用 FK，RESTRICT；CHECK：非空 ⇒ `list_observed=FALSE AND detail_observed=TRUE`）；
+- `src/db/schema/sync.ts`：`sync_batches.purpose`（CHECK `full/supplement/demand/intake`）、`media_finished_at`、`IDX(purpose, status, logical_at)`；
+- `src/db/schema/accounts.ts`：`IDENTIFIER_NAMESPACES` 增加 `kuaishou.user_id`（同步 CHECK）；
+- 既有写入 `sync_batches` 的 tracer 代码补 `purpose='intake'`（`tracer-command`、`smoke`）；
+- `drizzle/`：`drizzle-kit generate` 生成迁移；`schema.db.test.ts` 同层补用例；
+- `tests/fixtures/aimaster/manifest.json`：登记 requirements §2.2 证据清单中的 raw 文件（详情 raw3 / raw4、评论 raw3 / raw4 / raw6 / raw10 / raw11、异步 raw9、快手 raw12 / raw13 / raw14），每条带 platform / action / mode / `knownGaps`；
+
+**行为**
+
+- 迁移可重复执行（第二次为空操作）；`drizzle-kit generate` 不产生新文件；
+- `purpose` 只接受四个值；既有 tracer 路径写 `intake`；
+- `seeded_from_snapshot_id` 非空时拒绝 `list_observed=TRUE` 或 `detail_observed=FALSE`；
+- `kuaishou.user_id` 标识可写入，其他未登记 namespace 被拒；
+- 所有新外键不使用 `ON DELETE CASCADE`。
+
+**验证**
+
+- [ ] 空库 migrate → 成功；再跑一次 → 无变更；
+- [ ] 非法 `purpose` / 种子快照组合被 CHECK 拒绝；
+- [ ] tracer 全部既有用例仍通过（`purpose='intake'`）；
+- [ ] manifest 新条目的文件路径都存在，`knownGaps` 非空项如实；
+- [ ] `./scripts/verify.sh` 通过；
+- [ ] 按推送节奏推第一次，等 CI 绿不阻塞后续任务（只在合并前等）。
+
+**Requirements:** FS-1、FS-7、FS-9、§1.3；**Design:** §6。
+
+## 任务 2 · Adapter 扩展（快手、详情、评论）
+
+**目标**：三平台 × 主页 / 列表 / 详情 / 评论的解码、请求构造、capability 与点数表全部就位，纯离线可验证。
+
+**新增 / 修改**
+
+- `provider-adapter/contract.ts`：`Platform` 加 `kuaishou`；`AiMasterAction` 加 `media_stats_number`、`post_comments_list`；`IdentifierNamespace` 加 `kuaishou.user_id`；新增 `DetailData`、`CommentsData`、`CommentEntry` 类型；
+- `decode-profile.ts` / `decode-video-list.ts`：快手分支（12 字段主页，无头像 / 背景 / 位置；列表条目逐条容错；游标保留字符串，`no_more` 识别为 `TypedCursor` 的异常种类并交给 `ListWalker`）；
+- `decode-detail.ts`（新）：`media_stats` 解码；`*_number` 优先、`*_count` 回退；`cover` / `download_urls` 字符串或换行字符串展开为候选集；`play_number=null` 保持 `explicit_null`；`author_homepage` 保存；
+- `decode-comments.ts`（新）：`has_more` 的 `0/1` 归一；`max_cursor` 字符串；`total`；带 `parent_id` 的条目分流计数；评论 `id` 作为外部 ID 保留原文；
+- `request.ts`：详情与评论请求体（`url`、`max_cursor`、`reply_pages=-1`）；
+- `content-url.ts`（新）：`ContentUrlBuilder`——抖音 `share_url` → `https://www.douyin.com/video/{id}`；小红书 `https://www.xiaohongshu.com/explore/{id}`；快手返回 `unavailable`；
+- `video-source.ts`（新）：`pickVideoSource(platform, candidates)` 纯函数（抖音主机优先级且排除 `video.url`；小红书 / 快手取详情 `download_urls`）；
+- `capability.ts`：登记 requirements FS-16.1 的全部 tuple（同步 / 异步 / provider-failed / 不登记），`evidenceRef` 指向 manifest，`knownGaps` 写明快手内容 URL 未验证与认证头文档矛盾；production 全部 `disabled`；
+- `cost-guard/index.ts`：点数表扩展（FS-16.3）；
+- `strategies.ts`：快手策略（无第二标识绑定，author 与 profile 同命名空间）；
+- `tests/harness/fixtures.ts`：加载新 fixture 的辅助。
+
+**行为**
+
+- 每个解码器对每个平台的 fixture 产出稳定输出；未知字段被忽略，保留在 ODS；
+- 快手 `max_cursor='no_more'` 与 `has_more=true` 同时出现时，解码器给出「游标异常」标记而不是整数 / 字符串游标；
+- 小红书图文笔记 `play_number=null` → `explicit_null`，不是 `0`；
+- 抖音列表 `play_count=0` 仍是 `unsupported`（tracer 行为不变）；
+- capability：快手评论、三平台列表异步、抖音评论异步 → 调用前被拒绝；production 一律 `disabled`。
+
+**验证**
+
+- [ ] 解码单元测试：抖音 / 小红书 / 快手 × 主页 / 列表 / 详情 / 评论 的固定字节 fixture 全部断言（值状态、候选集、游标类型、`parent_id` 分流、`has_more` 归一）；
+- [ ] 快手 K3 / K6 的 `no_more` 用例；快手 L3 / L4 的科学计数法游标原样保真；
+- [ ] `pickVideoSource`、`ContentUrlBuilder` 表驱动测试；
+- [ ] capability 测试覆盖 FS-16.1 的每一行；
+- [ ] 点数表测试：失败 / 轮询 0 点；
+- [ ] `./scripts/verify.sh` 通过。
+
+**Requirements:** FS-7、FS-9、FS-10、FS-16；**Design:** §2.2、§7.9、§7.10、§10。
+
+## 任务 3 · 监控目标、批次生命周期与调度
+
+**目标**：到点能生成批次，排队 / 跳过 / 过期 / 取消 / 补抓都对；批次启动时能规划出正确的任务集，每个被排除的账号能解释原因。
+
+**新增**
+
+- `src/modules/sync-schedule/`：`slots.ts`（固定 UTC+8 时点计算）、`scheduler.ts`（`tick`、创建 / 晋升 / 过期、`planned` 恢复）、`planner.ts`（分块规划任务）、`summary.ts`（终态与计数汇总、`media_finished_at`）、`commands.ts`（`createSupplement`、`cancelBatch`；影响面 > 1 的命令默认预览）；
+- `src/modules/monitoring/`：`resolver.ts`（`targets`、`explain`，design §7.3 的 SQL）、`reasons.ts`（原因码与优先级）；
+- 配置：`sync_settings` 读取与校验（`schedule_slots` 的 zod schema；`timezone` 非 `Asia/Shanghai` 拒绝）；批次创建时冻结到 `settings_snapshot`；
+- `src/worker/sync-cli.ts`（先实现 `tick`、`supplement`、`batch cancel`、`batches`）。
+
+**行为**
+
+- `tick` 幂等；同一时点重复调用只有一个批次；超出容忍窗口不补跑；
+- 有运行中 `full` → 新批次 `queued`；队列已满 → `skipped`（摘要行、无任务）；上一批次终态 → 排队批次立即晋升并规划；到下一个时点仍未开始 → `expired`；
+- 规划按 500 一块；崩溃后 `planned` 批次被恢复，任务不重复；
+- 目标集只含满足 FS-2.1 全部条件的账号；external 只有 `fetch_profile`；
+- `supplement`：默认 `run_now` 立即 `running`、与运行中的 `full` 并行；`queue` 排到 `full` 结束后；`cancel_current` 取消当前 `full`（需 `--apply`）并审计；
+- 所有迁移在 `sync_settings` 行锁的短事务内完成，事务里无 IO。
+
+**验证**
+
+- [ ] 时点计算：跨周、两个时点、周日 23:59 与周一 00:00 边界、错过不补跑；
+- [ ] 队列语义（fake clock）：第一个运行、第二个排队、第三个跳过、上一个结束后晋升、排队过期；
+- [ ] 目标集：构造一棵组织树，逐级关闭 / 停用，断言目标集与原因码（最上级优先）；专员停用、门店撤店、`deleted`、`suspected_empty`、`unavailable` 仍采；external 不受五级影响；
+- [ ] 规划崩溃恢复：在第 N 块之后终止，再 `tick`，任务总数正确且无重复；
+- [ ] `supplement` 四种路径（空闲 / `run_now` 并行 / `queue` / `cancel_current`），`cancel_current` 不带 `--apply` 只预览；
+- [ ] `./scripts/verify.sh` 通过。
+
+**Requirements:** FS-1、FS-2、FS-13（补抓与取消）；**Design:** §5.1、§5.3、§7.1–§7.4、§7.12。
+
+## 任务 4 · Worker 运行时（领取、并发、速率、恢复、预算）
+
+**目标**：一个常驻进程能把任务表里的任务安全地领出来执行；崩溃、抢占、取消、预算都有确定行为。
+
+**新增**
+
+- `orchestrator/claim.ts`：`claimNext`（design §7.5 的 SQL，排序键含 `attempt_count`，重试回队尾；`EXPLAIN` 复核，必要时加索引）；
+- `src/worker/provider-breaker.ts`：provider 熔断状态机（design §7.5.1）；
+- `src/modules/sync-runner/`：`run-task.ts`（按动作分派，先占位调用任务 5–7 的 Runner）、`eligibility.ts`（领取时资格复核）、`failure-map.ts`（统一把失败映射到 `retry_wait / failed / dead / cancelled`）、`budget.ts`（批次作用域的调用数 / 点数检查，复用 `createBudgetPolicy`）；
+- `src/worker/sync-worker.ts`：执行循环、进程内信号量、provider 令牌桶、心跳、优雅停机；
+- `src/worker/sync-config.ts`：环境变量的 zod 校验（design §10），缺失即启动失败；
+- `src/worker/sync-wiring.ts`、`sync-main.ts`：依赖装配、`pnpm sync worker`、`run-once`（跑到队列空，供测试与演练）。
+
+**行为**
+
+- 领取按 `priority DESC, attempt_count ASC, task_id`（重试任务回到队尾）；只领 `running` 批次，媒资任务可领已终态未取消批次；
+- 租约过期的任务可被另一个 worker 领取，fencing token 递增；陈旧 token 的写入整笔失败；
+- 并发与 QPS 受配置约束，无配置不启动；
+- `SIGTERM` 后停止领取，宽限期内完成在途，放弃的任务不改状态；
+- 重新领取先恢复 `in_flight` 调用（ambiguous → 只读最多重发一次）；
+- 领取时资格失效 → `cancelled/monitoring_closed`，零调用；
+- 批次调用数 / 点数达到上限 → 下一次调用前停止，任务 `failed/budget_exhausted`；
+- 退避、`dead`、`failed` 的分类按 FS-12；
+- 熔断：连续 K 次供应商级失败后停止为该 provider 领取，任务保持 `pending` 且不消耗额度；冷却后单探测，成功恢复；账号级失败不计入。
+
+**验证**
+
+- [ ] 两个连接顺序领取同一批任务：无任务被领取两次；
+- [ ] 租约过期被抢后，原 worker 的页投影 / 检查点 / 封口全部被拒；
+- [ ] 取消批次后在途任务下一次心跳停止，不再发调用；
+- [ ] 预算：达到点数上限时，下一次调用未发出（断言 transport 调用数）；
+- [ ] 资格复核：领取前关闭门店，任务 `cancelled`，transport 零调用；
+- [ ] 优雅停机与崩溃恢复（用钩子模拟丢进程）；
+- [ ] 重试队尾：10 个任务，第 3 个首次失败，其余 9 个都先完成首次尝试，第 3 个的第二次尝试排在最后（断言领取顺序）；
+- [ ] 熔断：注入连续 K 次 5xx → 之后不再领取、`attempt_count` 不变；冷却后只发一个探测；`RESULT_VALIDATION_FAILED` 连续出现不触发熔断；
+- [ ] 缺少任一必需环境变量（含 `HBECHO_SYNC_BREAKER_FAILURES`、`HBECHO_SYNC_BREAKER_COOLDOWN_MS`），进程启动失败并列出缺项；
+- [ ] `./scripts/verify.sh` 通过。
+
+**Requirements:** FS-3、FS-12、FS-16.4、FS-2.6；**Design:** §7.5、§7.5.1、§7.11、§8、§10。
+
+## 任务 5 · 账号采集（主页、多页列表、检查点、封口）
+
+**目标**：一个 `running` 批次里，每个账号的主页和列表被采全，缺口被记录，快照定稿，current 不倒退；三个平台都过。
+
+**新增 / 修改**
+
+- `sync-runner/profile-runner.ts`：已存在账号的 `fetch_profile`（解码 → 身份一致性 → 主页快照 → current CAS → 头像 / 背景引用）；`RESULT_VALIDATION_FAILED` 耗尽的 `account_inaccessible_suspected` 与自动 `resolved`；
+- `sync-runner/list-walker.ts` + `decide-after-page.ts`（纯函数，design §7.6 的 9 行判定表）；页进度写 `result_summary`（`list-walk-progress.v1`）；
+- `sync-runner/seal.ts`：账号级封口（定稿、current CAS、检查点推进 / 重建 / blocked、失败列表任务的可靠条目封口、清残留 `building`）；
+- `projection/content-list.ts`：支持 `building` 写入、多页续写、跨页重复合并；封面规则的钩子（任务 7 实现）；
+- `sync-runner/identity-check.ts`（纯函数 + 持久化）：主页标识校验、主页残缺校验、列表作者校验，三态结果写 `result_summary.identity_check`（design §7.6.1）；
+- `sync-runner/self-check.ts`：主页 `post_value` 增量 vs 本批次新发现内容（design §7.6.2）；
+- 质量问题码：`continuity_gap`、`window_overflow`、`empty_window_not_rebased`、`cursor_no_more_with_has_more`、`has_more_invalid`、`account_inaccessible_suspected`、`identity_conflict`、`profile_uid_mismatch`、`profile_fields_missing`、`list_author_mismatch`、`suspected_missing_content`；
+- 平台策略接入：小红书主导作者（首页完整页上算一次）、抖音第二标识、快手无绑定。
+
+**行为**
+
+- 严格按 design §7.6：整页投影 → 判定 → 继续 / 封口；`initial_content_limit` 只在首次基线时使用；
+- 第一页位置 1–3 不作为边界证据；
+- 命中边界、安全页数缺口、列表结束缺口、空窗口、游标异常、首次基线、首次空列表，七种结局的任务状态、`stop_reason`、检查点状态、质量问题与 `gap_task_count` 全部符合 FS-5；
+- 进程在两页之间终止，重新领取后从 `next_cursor` 继续，已提交页不重复请求；
+- 任一条目投影失败 → 检查点不推进；
+- 旧批次迟到：保留历史，不回退 current 与检查点；
+- 身份校验：主页标识不符 → 不写快照、不下数据、登记值不被改写；四项指标全无效 → 可重试失败；列表累计 ≥ 5 条且无一条由登记作者创作 → 清除 `building`、检查点不推进；< 5 条 → `unverifiable`；
+- 自比对只告警，不改任务结果与检查点。
+
+**验证**
+
+- [ ] `decide-after-page` 表驱动：9 行判定 × 三种锚点模式 × 置顶位置，含「等于高水位时间但 ID 不在集合内则继续」；
+- [ ] 三平台端到端（fixture transport）：抖音 20 条 + 异作者、小红书 21 条整页处理、快手 23 / 20 条两页；
+- [ ] 多页：构造 3 页合成 fixture（基于真实条目拼接，文档里标明是合成），命中边界在第 2 页、第 3 页；安全页数 = 2 时产生缺口并重建锚点；
+- [ ] 空窗口：旧锚点非空 + 空页 → `blocked`，旧锚点未被覆盖；
+- [ ] 快手 `no_more`：停止翻页、记质量问题、锚点按自然结束处理；回发的游标从不是 `no_more`；
+- [ ] 崩溃恢复：在第 1 页提交后丢进程，第二次运行只请求第 2 页；
+- [ ] 失败隔离：一个账号 `dead`，其余账号不受影响，批次 `partial_succeeded`；
+- [ ] 技术失败不改账号状态；`account_inaccessible_suspected` 的创建与自动解决；
+- [ ] current 不倒退：先跑新批次再跑旧批次；
+- [ ] 身份校验：构造「主页返回别的账号」「四项指标全 `null`」「20 条列表无一条是登记作者」「20 条中有 1 条异作者」「3 条列表」五个用例，结果依次为 `profile_uid_mismatch` / `profile_fields_missing` / `list_author_mismatch` / `verified` / `unverifiable`；`mismatch` 后库里该账号没有本批次 `finalized` 快照，登记标识未变；
+- [ ] 自比对：主页作品数 +5、本批次新发现 2 条 → 警告；+0 → 不报；上周主页 `missing` → 不比对；
+- [ ] `./scripts/verify.sh` 通过。
+
+**Requirements:** FS-4、FS-5、FS-6、FS-7；**Design:** §5.2、§7.6、§7.6.1、§7.6.2、§7.7。
+
+## 任务 6 · 按需采集（需求、详情、评论）
+
+**目标**：规则域能提交需求并查到结果；本轮已有的复用，没有的才抓；详情落种子快照，评论落最新态。
+
+**新增**
+
+- `src/modules/demand/`：`submit.ts`（规范化、幂等、范围校验、依赖展开、复用判定、分块建任务）、`get.ts`、`reuse.ts`（`round_start` 与复用条件的纯函数 + SQL）；
+- `sync-runner/detail-runner.ts`：URL 构造 → `media_stats_number` → 种子快照 → 合并 → 定稿 → current CAS；失败清理；
+- `src/modules/comments/`：`comments-runner.ts`、`project.ts`（upsert、疑似删除、恢复）、`policy.ts`（完整性口径）；
+- 质量问题码：`detail_inaccessible`、`comments_total_mismatch`、`comment_coverage_incomplete`；
+- `sync-cli.ts`：`demand submit --file`、`demand get`；
+- `tests/harness/fake-rule-source.ts`：测试用假提出方（固定圈定若干内容，提交需求）。
+
+**行为**
+
+- 提交：逐项处置七类全部可达；同键同载荷返回原批次，同键异载荷冲突；范围外内容 `out_of_scope`；快手评论 `unsupported_platform`；快手详情 `capability_disabled`；
+- 复用：本轮已有 → `reused`；活动任务 → `already_pending`；视频 / 音频已有资产 → `reused`；`audio` 隐含 `video`，`video` 隐含 `detail`；
+- 详情：种子快照拷贝全部 value / state，`list_observed=FALSE`、`detail_observed=TRUE`、`seeded_from_snapshot_id` 非空；详情有效值覆盖，缺失 / null 不擦除；定稿并参与 current 比较；失败 → 不留种子快照、内容 `status` 不变；
+- 评论：一级过滤、幂等 upsert、完整性口径（抖音自然翻完为完整，小红书与触达上限不完整）；疑似删除只在完整抓取后；重新出现恢复；`total>0` 与空结果、`total` 大于已抓 → 质量问题；
+- `get` 只读本地，返回读取指针；预算耗尽的项如实展示。
+
+**验证**
+
+- [ ] 提交处置矩阵：七类处置各一个用例；幂等与冲突；
+- [ ] 复用：同一轮内两个计划先后提交同一内容，只有一次详情 ProviderCall；下一个 `full` 批次开始后再提交，重新抓取；
+- [ ] 种子快照：详情只覆盖详情有的字段，列表独有字段（例如小红书正文）不丢；current 切到详情快照后，列表字段仍可读；
+- [ ] 详情失败：无种子快照残留，内容状态未变，质量问题存在；
+- [ ] 评论：抖音两页翻完 → 标记疑似删除并可恢复；小红书 `total=28` 只返回 2 → 不标记、记 `comment_coverage_incomplete`；触达 `page_limit` → 不标记；`parent_id` 条目被忽略并计数；
+- [ ] 按需批次不受全量串行约束，优先级高于周期任务（断言领取顺序）；
+- [ ] `./scripts/verify.sh` 通过。
+
+**Requirements:** FS-8、FS-9、FS-10；**Design:** §5.4、§7.8、§7.9。
+
+## 任务 7 · 媒资（封面首次、快手、视频、音频）
+
+**目标**：头像 / 背景每周、封面首次、快手封面可用、视频与音频按需入库，失败如实标记，批次媒资进度独立可查。
+
+**新增 / 修改**
+
+- `projection/content-list.ts`：封面首次规则（R3）；
+- `media-archive/`：`account-batch.ts`（周期媒资任务：处理该账号本批次所有 `pending` 引用，等 profile 与 list 都终态后可领）、`kuaishou-cover.ts`（CDN 转换来源）、`video.ts`（流式下载到 `HBECHO_MEDIA_TMP_DIR`、边写边算 SHA-256、完整性校验、`finally` 删除、启动清理）、`audio.ts`（签名 URL → `CapabilityClient.extractAudio` → 正式资产；`no_audio_track` 终态）；
+- `raw-capture/oss-store.ts`：`putFile`（ali-oss `multipartUpload`）与 `signedGetUrl`（`signatureUrl`）；`ports.ts` 同步；
+- `media-archive/ports.ts`：`VideoTransport.stream`、`CapabilityClient`；`tests/harness/fake-media.ts` 扩展流式 fake、`fake-capability.ts`；
+- `sync-summary`：批次媒资汇总与 `media_finished_at`；
+- 质量问题码：`media_cover_unavailable`、`media_archive_failed`（沿用）。
+
+**行为**
+
+- 同一内容连续两个批次出现：第一次建并下载封面，第二次不建新引用；第一次下载失败，第二次用新地址重建引用；
+- 快手封面：原始 KVIF 为原始资产；CDN JPEG 经 `ImageConverter` 生成 JPEG q80 / 540 宽衍生资产；转换失败标记「封面不可用」，内容不受影响；
+- 视频：来源选择遵守 `pickVideoSource`；峰值内存不随文件大小增长（用大文件 fake 断言缓冲上限）；超 `maxBytes` 中止并删除临时文件；`Content-Length` 不符 → `truncated`；相同字节命中 `UQ(sha256)` 复用资产；
+- 音频：只在视频入库成功后抽取；无音轨 → `no_audio_track` 终态、不重试、不计失败；
+- `source_expired`：重新取详情拿新地址（有界）；
+- 规则未圈中的视频从不下载；
+- 媒资失败不影响结构化快照；续用旧资产标记 `carried_forward` 并记录本轮失败。
+
+**验证**
+
+- [ ] 封面首次规则的四种序列（成功 / 成功、失败 / 成功、成功 / 失败）；
+- [ ] 快手封面链路（fake CDN）与失败路径；
+- [ ] 视频流式：fake 源 200 MB（生成），进程缓冲小于阈值；中止、截断、超限、过期各一个用例；
+- [ ] 音频：有音轨 / 无音轨 / 能力服务不可用（可重试）；
+- [ ] 相同字节两条引用 → 一份资产；临时 URL 变化 → 不产生新资产；
+- [ ] 批次终态后媒资任务仍被领取；全部终态后 `media_finished_at` 写入；
+- [ ] `./scripts/verify.sh` 通过。
+
+**Requirements:** FS-11；**Design:** §7.10。
+
+## 任务 8 · Python 能力服务 HTTP 外壳与 Node 客户端
+
+**目标**：生产环境里图片标准化与音频抽取有一个真正在跑的服务，契约稳定，默认测试不依赖它。
+
+**新增**
+
+- `services/capability/capability/app.py`：FastAPI，`POST /v1/image/normalize`、`POST /v1/audio/extract`、`GET /healthz`；
+- `services/capability/capability/audio.py`：`ffmpeg -i <url> -vn -c:a copy -f ipod`，带超时与最大字节；无音轨返回结构化错误；
+- `services/capability/tests/`：外壳契约测试（`TestClient`）、音频抽取的真实 ffmpeg 小样本测试（ffmpeg ≥ 7.1 才跑）；
+- `src/modules/media-archive/capability-client.ts`：`HttpCapabilityClient`（Node 内置 `fetch`，无新依赖），错误码映射到 `converter_unavailable / convert_failed / no_audio_track`；
+- 服务只在 compose 内网暴露，**不映射宿主端口、无数据库 / OSS 凭证**（compose 文件属 I 域，本任务只在 README 写约束）。
+
+**行为**
+
+- 契约失败返回 `{code}`，不靠日志文本；
+- 请求体大小与超时有上限；
+- `HttpCapabilityClient` 在服务不可用时抛出可重试错误；
+- 默认测试用 fake，不起 Python 服务。
+
+**验证**
+
+- [ ] `pytest`：外壳契约、图片标准化（沿用 HEIC 样本）、音频抽取（有音轨 / 无音轨 / 非法 URL）；
+- [ ] Node 侧：`HttpCapabilityClient` 对本地 fake HTTP 服务器的契约测试（回环地址，允许）；
+- [ ] `./scripts/verify.sh` 第 9 步在 ffmpeg ≥ 7.1 环境下通过；环境不满足时明确打印「未验证」。
+
+**Requirements:** FS-11.4、FS-11.7；**Design:** §7.10。
+
+## 任务 9 · 运营命令、查询与定时清理
+
+**目标**：运营能查到本周同步到哪、缺什么、花多少；能做授权范围内的处置；清理按时运行。
+
+**新增 / 修改**
+
+- `src/modules/sync-status/`：`status`、`batch`、`account`、`freshness`、`sample`（本地聚合、点数估算、脱敏、三态校验汇总、随机抽样对账）；
+- `src/modules/sync-ops/`：`rebind`、`confirmDeleted`、`setIssueStatus`、`externalAdd/enable/disable/list`、`retryFailed`（调用 `sync-schedule`）；
+- `monitoring/set-switch.ts`：五级开关写入（经销商级仅超管；账号级关闭写 `monitoring_closed_reason='manual'`）；
+- `identity/repository.ts` 与 `orchestrator/tracer-flow.ts`：`external` 入口分支（≤3 次解析、非主页拒绝、成对写入、无名额检查、owner 快照为空、只写主页快照、不请求列表）；
+- `src/modules/maintenance/`：`runDaily`；
+- `sync-cli.ts`：补全 design §15 的全部命令；退出码沿用 tracer；
+- 审计事件：全部处置命令走 `AuditSink`。
+
+**行为**
+
+- 查询只读本地，不触发供应商调用，输出脱敏；
+- `rebind` 校验新专员名额、不改写已发生 discovery 的 owner 快照；`confirm-deleted` 写 `slot_released_at` 释放名额、归属保留；
+- `issue set-status` 不删除业务数据；
+- `monitoring set` 不改写下级值；分公司主体不能设经销商级；
+- 外部账号只由超管创建，分公司 / 总部不可见；
+- `retry-failed` 条件与效果按 FS-12.5；
+- 影响面 > 1 的命令（`monitoring set` 在非账号级、`batch cancel`、`batch retry-failed`）默认只预览，`--apply` 才写；
+- `sample --n` 只读，随机抽 N 个本批次成功账号，输出入口、标识与最新摘要；
+- `maintain` 每日一次、幂等、有界、写日志。
+
+**验证**
+
+- [ ] `status` / `batch` / `account` / `freshness` 的输出对照固定数据断言（含 ambiguous 与点数估算）；
+- [ ] `rebind`：成功、新专员名额已占、记审计；`confirm-deleted` 后该专员可再录同平台账号；
+- [ ] 监控开关：五级各一个用例，经销商级权限，上级关闭后下级值不变；
+- [ ] 外部账号：创建、只生成 `fetch_profile`、在目标集中、对非超管不可见；
+- [ ] `retry-failed`：只放回 `failed/dead`、不重复成功任务、非最新批次被拒；
+- [ ] `maintain`：用 fake clock 跑两次，第二次无新增删除；不动快照与媒资；
+- [ ] 预览：不带 `--apply` 时数据库零写入（对比前后行数 / 更新时间），输出受影响数与前 20 个示例；
+- [ ] `sample`：N 超过成功账号数时返回全部；输出不含临时 URL；三态校验在 `status` / `account` 中不合并；
+- [ ] CLI 退出码；
+- [ ] `./scripts/verify.sh` 通过。
+
+**Requirements:** FS-13、FS-14、FS-15、FS-17、FS-20；**Design:** §7.13、§9、§15。
+
+## 任务 10 · 全量离线验收、故障注入与规模演练
+
+**目标**：requirements 的每条 SHALL 有离线检查；6,000 账号规模的数字有记录。
+
+**动作**
+
+- 按 [`acceptance.md`](acceptance.md) 逐条补齐缺失的测试，把「逐条结果」表填上测试文件；
+- 故障矩阵（FS-18.3）：ODS 写失败、`in_flight` 后丢进程、租约被抢、陈旧 token、页投影中途失败、媒资失败 / 过期、预算耗尽、取消；
+- 规模演练（FS-18.4）：生成 6,000 账号 / 三平台组织与账号，fake transport 跑一轮周期批次，记录规划耗时、峰值内存、`sync_tasks` / `content_snapshots` 行数、是否出现重复任务；结果写入 design §12；
+- **测试 ECS 运行**（需要刘学奎授权）：一次性 MySQL 容器上跑本 spec 的 `*.db.test.ts` 与规模演练，记录耗时与内存（server-access 第 5 条）；
+- 回填 INDEX 与本 spec 状态；
+- 按推送节奏推第二次，**合并前**等 CI 绿（`gh run watch --exit-status`），合并提交写 run id 与本机 verify 结果。
+
+**验证**
+
+- [ ] acceptance 自动项全部有对应测试且通过；
+- [ ] 规模演练无重复任务，数字已回填；超出预期（例如规划超过 10 分钟或内存异常）则停下来问；
+- [ ] `./scripts/verify.sh` 通过；
+- [ ] CI 绿。
+
+**Requirements:** FS-18；**Design:** §11、§12。
+
+## 任务 11 · 批准式 smoke（人工批准，付费）
+
+**目标**：用最小预算在真实供应商上验证新 tuple 的实际行为，回填未知项；**不自动启用任何 production**。
+
+**前置**：任务 10 完成；刘学奎书面批准预算与 allowlist；显式运行时开关；密钥在源码控制之外（server-access 第 6 条）。
+
+**动作**（沿用 `src/modules/smoke`，扩展 allowlist 与摘要）
+
+- 快手：主页、列表（观察 `no_more` 与翻页）、详情（**验证内容 URL 构造方式**）；
+- 抖音 / 小红书：详情、评论（小红书翻页行为）；
+- 一次视频下载 + 音频抽取（选小文件）；
+- 一次两页以上的列表走法，观察检查点命中；
+- 记录：调用数、延迟、字节数、估算点数 / 金额、视频 URL 有效期线索、QPS 线索、异步轮询 TTL；
+- 输出审计摘要，回填 design §14 第 2、5、7 项与 capability `knownGaps`；
+- production activation 保持 `disabled`，启用另走人工批准。
+
+**验证**
+
+- [ ] 预算 / 调用上限在发出下一次调用前生效；
+- [ ] 摘要不含 secret 与完整载荷；
+- [ ] 快手内容 URL 构造方式有结论（可用 / 不可用 / 需要别的形式），写入 ADR 或 design 并更新 `ContentUrlBuilder`；
+- [ ] 未执行的 tuple 仍为 disabled。
+
+**Requirements:** FS-19；**Design:** §14。
+
+## 对已有代码与测试的改动（实施时登记）
+
+| 任务 | 可能触到的既有文件 | 说明 |
+|---|---|---|
+| 0 | v2、`CONTEXT.md`、ADR-0012、`INDEX.md` | 只改基线与登记，不改代码 |
+| 1 | `src/db/schema/{content,sync,accounts}.ts`、`drizzle/*`、`tracer-command`、`smoke` 的批次写入 | 补 `purpose='intake'`；不改 tracer 语义 |
+| 2 | `provider-adapter/*`、`cost-guard`、`tests/harness/fixtures.ts` | 扩展枚举与表；tracer 既有 fixture 断言不变 |
+| 4 | `orchestrator/claim.ts` | 新增 `claimNext`，不改 `claimTask` |
+| 5 | `projection/content-list.ts` | `building` 与多页；tracer 单页路径的行为不变（既有 tracer 测试必须仍通过） |
+| 7 | `projection/content-list.ts`（封面）、`media-archive/*`、`raw-capture/oss-store.ts` | 封面首次规则只影响「已有成功封面」的内容；tracer 首次入库行为不变 |
+| 9 | `identity/repository.ts`、`orchestrator/tracer-flow.ts` | `external` 分支只在 `watchType='external'` 时进入 |
+
+## 必须停下来问
+
+出现以下任一情况，停止实现，先问，不自行决定：
+
+1. requirements §1.5 的结论被推翻，或评审要求不同写法；
+2. v2 的 R1–R7 未落回正文，或评审要求不同写法；
+3. 需要新增表、改变门店 / 账号 / 归属语义，或把 `unavailable` / `deleted` 改为自动设置；
+4. 供应商返回的字段与 fixture 不符（尤其详情 / 评论的新字段、快手列表第三页之后的行为）；
+5. 任何需要网络、真实用户、真实密钥或生产数据的验证（任务 11 之外）；
+6. 规划 6,000 账号超过 10 分钟，或 worker 峰值内存异常；
+7. 视频下载需要突破 2GB / 技术上限，或能力服务需要持有 OSS / 数据库凭证；
+8. 需要新增 Node 依赖，或 Python 侧除 FastAPI / uvicorn 外的新依赖；
+9. `a-activity-plan` 对 `monitoring_enabled` / `monitoring_closed_reason` 提出与 FS-14 冲突的需求；
+10. `ContentUrlBuilder` 对快手需要猜测 URL 形式（只有 smoke 证据才能放行）。
+
+**小的判断自己做**：reason code 命名、fixture 具体值、索引名、规划分块大小（100–500）、日志字段顺序、CLI 帮助文案、令牌桶实现细节。
+
+## 页面任务
+
+本 spec 没有页面（design §15）。运营入口只有 CLI；将来的同步 / 账号 / 外部账号页面由后续 UI spec 承接，该 spec 需先完成界面设计并经刘学奎确认（`structure` steering）才能写页面任务。
+
+## 完成定义
+
+- 全部任务 0–10 完成，不等于生产可用：production capability 仍 `disabled`，启用需要任务 11 的 smoke 与单独的人工批准；
+- acceptance.md 的自动项全绿、手工项通过、v2 修订已落回、ADR-0012 补记已完成，才可进入合并评审；
+- 合并前按 `dev-ci-cadence.md` 等 CI 绿，并在合并提交写 run id 与本机 `verify.sh` 结果；涉及测试机验证的再写通过数与耗时；
+- 合并后：INDEX 状态由「未开始」改为实际状态，路线图第 3 位标注结果。

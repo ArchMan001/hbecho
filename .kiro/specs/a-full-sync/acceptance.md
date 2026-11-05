@@ -29,7 +29,11 @@
 
 | 组 | 结果 | 测试文件 |
 |---|---|---|
-| A–R 自动项 | 待实施 | — |
+| D 组（FS-4，任务 5） | 通过（D1–D11） | `profile-runner.db.test.ts`、`identity-check.test.ts` |
+| E 组（FS-5，任务 5） | 通过（E1–E22、E24–E26；E23 仅纯函数层） | `decide-after-page.test.ts`、`list-walker.db.test.ts`、`list-walker.recovery.db.test.ts`、`self-check.db.test.ts` |
+| F 组（FS-6，任务 5） | 部分（F1、F2、F4、F6、F7 通过；F3 无读取接口、F5 等任务 6/7） | `list-walker.recovery.db.test.ts`、`seal.db.test.ts`、`full-sync-projection.db.test.ts`、`projection.db.test.ts` |
+| G 组（FS-7，任务 5 部分） | 部分（G3–G6 通过；G7 的列表 `video.url` 部分等任务 7；G8、G9 等任务 6） | `list-walker.db.test.ts`、`account-sync.db.test.ts` |
+| 其余自动项 | 待实施 | — |
 | 手工项 MAN1–MAN6 | 待实施 | — |
 | 环境项 ENV-1～ENV-5 | 待实施 | — |
 

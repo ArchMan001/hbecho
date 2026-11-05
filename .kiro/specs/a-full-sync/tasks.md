@@ -25,7 +25,7 @@
 - [x] 任务 2 · Adapter 扩展（快手、详情、评论）
 - [x] 任务 3 · 监控目标、批次生命周期与调度
 - [x] 任务 4 · Worker 运行时（领取、并发、速率、恢复、预算）
-- [ ] 任务 5 · 账号采集（主页、多页列表、检查点、封口）
+- [x] 任务 5 · 账号采集（主页、多页列表、检查点、封口）
 - [ ] 任务 6 · 按需采集（需求、详情、评论）
 - [ ] 任务 7 · 媒资（封面首次、快手、视频、音频）
 - [ ] 任务 8 · Python 能力服务 HTTP 外壳与 Node 客户端
@@ -306,20 +306,32 @@
 - 身份校验：主页标识不符 → 不写快照、不下数据、登记值不被改写；四项指标全无效 → 可重试失败；列表累计 ≥ 5 条且无一条由登记作者创作 → 清除 `building`、检查点不推进；< 5 条 → `unverifiable`；
 - 自比对只告警，不改任务结果与检查点。
 
-**验证**
+**验证**（证据：`./scripts/verify.sh` 全绿，536 单元 / 498 数据库测试；任务 4 结束时是 459 / 419）
 
-- [ ] `decide-after-page` 表驱动：9 行判定 × 三种锚点模式 × 置顶位置，含「等于高水位时间但 ID 不在集合内则继续」；**`empty` 锚点 + 本轮有内容 → 成功并重建锚点、无缺口**；**`empty` 锚点 + 本轮仍为空 → 保持 `empty`、成功**；**有旧锚点 + 首页 + `no_more` 游标异常 → 命中则成功、未命中则 `cursor_anomaly_rebased` 缺口**；`has_more` 缺失 / 非法同上；
-- [ ] 三平台端到端（fixture transport）：抖音 20 条 + 异作者、小红书 21 条整页处理、快手 23 / 20 条两页；
-- [ ] 多页：构造 3 页合成 fixture（基于真实条目拼接，文档里标明是合成），命中边界在第 2 页、第 3 页；安全页数 = 2 时产生缺口并重建锚点；
-- [ ] 空窗口：旧锚点非空 + 空页 → `blocked`，旧锚点未被覆盖；
-- [ ] 快手 `no_more`：停止翻页、记质量问题、锚点按自然结束处理；回发的游标从不是 `no_more`；
-- [ ] 崩溃恢复：在第 1 页提交后丢进程，第二次运行只请求第 2 页；
-- [ ] 失败隔离：一个账号 `dead`，其余账号不受影响，批次 `partial_succeeded`；
-- [ ] 技术失败不改账号状态；`account_inaccessible_suspected` 的创建与自动解决；
-- [ ] current 不倒退：先跑新批次再跑旧批次；
-- [ ] 身份校验：构造「主页返回别的账号」「四项指标全 `null`」「20 条列表无一条是登记作者」「20 条中有 1 条异作者」「3 条列表」五个用例，结果依次为 `profile_uid_mismatch` / `profile_fields_missing` / `list_author_mismatch` / `verified` / `unverifiable`；`mismatch` 后库里该账号没有本批次 `finalized` 快照，登记标识未变；
-- [ ] 自比对：主页作品数 +5、本批次新发现 2 条 → 警告；+0 → 不报；上周主页 `missing` → 不比对；
-- [ ] `./scripts/verify.sh` 通过。
+- [x] `decide-after-page` 表驱动（`decide-after-page.test.ts`）：9 行判定 × 三种锚点模式 × 置顶位置，含「等于高水位时间但 ID 不在集合内则继续」；`empty` 锚点 + 本轮有内容 → 成功并重建锚点、无缺口；`empty` + 仍为空 → 保持 `empty`、成功；有旧锚点 + 首页 + `no_more` → 命中则成功、未命中则 `cursor_anomaly_rebased`；`has_more` 缺失 / 非法同上（数据库层只覆盖 `no_more`，缺失 / 非法在纯函数层）；
+- [x] 三平台端到端（`account-sync.db.test.ts`、`list-walker.db.test.ts`）：抖音 20 条含异作者、小红书 21 条整页、快手 K3 / K6 / L3（23 条）+ L4（20 条）两页；批次由 `tick` 汇总为 `succeeded`；
+- [x] 多页（`list-walker.db.test.ts`，页内容**合成**，结构取自 raw3 形态，文件头注明）：命中边界在第 2、3 页；安全页数 2 → 缺口并重建锚点；`has_more=false` 未命中 → `end_of_list_rebased`；
+- [x] 空窗口：旧锚点非空 + 空页 → `blocked`、旧锚点未被覆盖；`empty` 锚点两种用例；
+- [x] 快手 `no_more`：停止翻页、记质量问题、锚点按自然结束处理，请求体里从无 `no_more`，游标 `1.785394950371E12` 作为字符串回发；
+- [x] 崩溃恢复（`list-walker.recovery.db.test.ts`）：第 1 页提交后丢进程，第二次运行只请求第 2 页；判定已落进度、封口前丢进程，不再发请求直接封口；
+- [x] 失败隔离（`account-sync.db.test.ts`）：一个账号主页 `dead`，其余不受影响，批次 `partial_succeeded`；带缺口的列表任务使批次 `partial_succeeded`；
+- [x] 技术失败不改账号状态（`profile-runner.db.test.ts`）：传输错误 / 超时 / 429 / 5xx / 解析失败 / ODS 写失败；`account_inaccessible_suspected` 的创建与下一批次的自动解决；
+- [x] current 不倒退：旧批次迟到（`list-walker.recovery.db.test.ts`）；检查点 version 拒绝与 fencing 双重校验（`full-sync-projection.db.test.ts`、`seal.db.test.ts`）；
+- [x] 身份校验五用例：`profile_uid_mismatch` / `profile_fields_missing`（`profile-runner.db.test.ts`）、`list_author_mismatch`（20 条无一条登记作者；mismatch 后无本批次 `finalized` 快照，登记标识未变）/ `verified`（抖音 20 条含 1 条异作者）/ `unverifiable`（3 条列表、小红书无登记作者）；
+- [x] 自比对（`self-check.db.test.ts`）：+5、发现 2 → 警告；+0、负增长、发现数足够、上周 `missing` → 不报；两种完成顺序都只报一次；
+- [x] `./scripts/verify.sh` 通过。
+
+**未被本任务覆盖、转交后续任务的验收项**：acceptance F3（下游读取接口只返回 `finalized`：还没有读取接口，本任务只证明 `building` 不会成为 current）、F5（评论 / 媒资不阻塞定稿：任务 6、7）、G7 的列表 `video.url` 部分（任务 7）、E23 的数据库层用例（纯函数层已覆盖）。
+
+**实施中的判断（自行决定项；细节见 [design-task5-account-sync.md](design-task5-account-sync.md) §13、§15）**
+
+- **Runner 合同扩展**：失败结果加可选 `onTerminal`，框架只在终态时、在写终态的同一事务里执行；钩子抛错则回滚并不带钩子重写终态。这是对任务 4 的 `types.ts` / `run-task.ts` 的增量改动（既有测试不变）。
+- **判定表按 A→G 顺序实现**，结果集不变，只有「旧锚点 + 累计 0 条 + `has_more=true` 且到上限」改为 `blocked`（原顺序会用空窗口覆盖非空锚点）；已回写 design §7.6。
+- **attempt 规则**：`attempt_no = task.attemptCount + 1`，`call_sequence = 页号`；同一 `(task, seq)` 已有 ≥ 2 个 `ambiguous` 调用时不再发起，所以不用 `resendAfterAmbiguous`。
+- **自比对串行化**：主页与列表封口两个终态事务最开始先锁同一个账号行。
+- **worker 启动守卫**：`assertWorkerCanRun` 拒绝 `HBECHO_ENV=test`，并要求 production 至少有一个已批准 tuple。**当前 production 全部 disabled，真实 worker 现在不会启动**（启用 = 任务 11 的批准式 smoke + 单独的人工批准）；`tick` 与运营命令不受影响。
+- **孤儿清扫**：任务 5 提供 `sweepOrphanBuilding` 并在 ListWalker 发现任务被取消时对自己的（批次, 账号）调用；定期的全局清扫在任务 9 的 `maintain` 里调用。
+- 列表任务 `mode≠synchronous` → `capability_disabled`（周期列表只走同步）；列表 `RESULT_VALIDATION_FAILED` 耗尽按框架默认 `dead`，不产生 `account_inaccessible_suspected`。
 
 **Requirements:** FS-4、FS-5、FS-6、FS-7；**Design:** §5.2、§7.6、§7.6.1、§7.6.2、§7.7。
 
@@ -447,7 +459,7 @@
 - `retry-failed` 条件与效果按 FS-12.5；
 - 影响面 > 1 的命令（`monitoring set` 在非账号级、`batch cancel`、`batch retry-failed`）默认只预览，`--apply` 才写；
 - `sample --n` 只读，随机抽 N 个本批次成功账号，输出入口、标识与最新摘要；
-- `maintain` 每日一次、幂等、有界、写日志。
+- `maintain` 每日一次、幂等、有界、写日志；其中调用任务 5 的 `sweepOrphanBuilding`（外部取消留下的 `building` 行，有界批量）。
 
 **验证**
 

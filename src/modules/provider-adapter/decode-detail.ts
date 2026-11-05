@@ -10,7 +10,7 @@ import {
 } from "./contract";
 import { openEnvelope } from "./envelope";
 import { JsonNumber, type JsonObject, type JsonValue } from "./lossless-json";
-import { rawOf, readCount, readExternalId, readText, type ValueState } from "./value-state";
+import { rawOf, readCount, readExternalId, readText, type CountState, type ValueState } from "./value-state";
 
 const AUTHOR_NAMESPACE: Record<Platform, IdentifierNamespace> = {
   douyin: "douyin.user_id",
@@ -61,6 +61,17 @@ function readSearchTerms(r: JsonObject): ValueState<string[]> {
   return { state: "value", value: s.value.split(/\r?\n/).map((x) => x.trim()).filter((x) => x !== "") };
 }
 
+/**
+ * `*_number` 优先、`*_count` 回退：只有优先字段**缺失或非法**时才回退。优先字段是显式 null 就是 null——
+ * 旧的 `*_count` 字段可能是占位 0（列表接口的抖音 play_count 就是占位 0），不能把 explicit_null 变成真实 0。
+ */
+function readPreferred(r: JsonObject, preferred: string, fallback: string): CountState {
+  const p = readCount(r, preferred);
+  if (p.state === "value" || p.state === "explicit_null") return p;
+  const f = readCount(r, fallback);
+  return f.state === "value" ? f : p.state === "invalid" ? p : f;
+}
+
 export function decodeDetail(platform: Platform, bytes: Uint8Array): DecodeOutcome<DetailData> {
   const opened = openEnvelope(platform, "media_stats_number", bytes);
   if (!opened.ok) return opened.outcome;
@@ -83,11 +94,11 @@ export function decodeDetail(platform: Platform, bytes: Uint8Array): DecodeOutco
       relatedSearchTerms: readSearchTerms(r),
       publishedAtMs: readCount(r, "created"),
       metrics: {
-        play: readCount(r, "play_number", "play_count"),
-        like: readCount(r, "like_number", "like_count"),
-        comment: readCount(r, "comment_number", "comment_count"),
-        collect: readCount(r, "collect_number", "collect_count"),
-        share: readCount(r, "share_number", "share_count"),
+        play: readPreferred(r, "play_number", "play_count"),
+        like: readPreferred(r, "like_number", "like_count"),
+        comment: readPreferred(r, "comment_number", "comment_count"),
+        collect: readPreferred(r, "collect_number", "collect_count"),
+        share: readPreferred(r, "share_number", "share_count"),
       },
       durationSeconds: readDuration(r, "duration_number", "duration"),
       coverCandidates: expandCandidates(r.cover),

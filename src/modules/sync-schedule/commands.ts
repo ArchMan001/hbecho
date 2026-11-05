@@ -56,6 +56,15 @@ export function createSyncCommands(deps: { db: Db; clock: Clock; resolver: Monit
   function requireCap(actor: ActorContext): void {
     if (!actor.capabilities.has(CAP_SYNC_TRIGGER)) throw new SyncError("forbidden", `缺少 Capability ${CAP_SYNC_TRIGGER}`);
   }
+  /**
+   * 批次级命令（取消批次、cancel_current）的影响面是整个批次，不是某几个账号：1.0 只允许全范围服务身份。
+   * 受限身份（例如 B 域接入后某分公司的用户）取消或顶替全局批次就是越权，宁可拒绝。B 域接入后再按批次内账号集合细化。
+   */
+  function requireFullScope(actor: ActorContext): void {
+    if (actor.scope.platformCodes !== "all" || actor.scope.mediaStaffIds !== "all") {
+      throw new SyncError("out_of_scope", "取消批次需要全平台、全专员范围的服务身份（1.0 不支持按范围部分取消）");
+    }
+  }
   const inPlatformScope = (actor: ActorContext, code: string) => actor.scope.platformCodes === "all" || actor.scope.platformCodes.has(code);
   const inStaffScope = (actor: ActorContext, staffId: bigint | null): boolean =>
     staffId === null ? actor.scope.mediaStaffIds === "all" : actor.scope.mediaStaffIds === "all" || actor.scope.mediaStaffIds.has(staffId);
@@ -107,6 +116,7 @@ export function createSyncCommands(deps: { db: Db; clock: Clock; resolver: Monit
       requireCap(actor);
       const parsed = batchIdSchema.safeParse(rawId);
       if (!parsed.success) throw new SyncError("invalid_input", "batch_id 必须是十进制整数");
+      requireFullScope(actor);
       const batchId = BigInt(parsed.data);
       const before = await previewOf(batchId);
       if (!before) throw new SyncError("not_found", "批次不存在");
@@ -143,6 +153,7 @@ export function createSyncCommands(deps: { db: Db; clock: Clock; resolver: Monit
       const parsed = supplementInput.safeParse(raw);
       if (!parsed.success) throw new SyncError("invalid_input", parsed.error.issues.map((i) => `${i.path.join(".") || "$"}: ${i.message}`).join("; "));
       const input = parsed.data;
+      if (input.onBusy === "cancel_current") requireFullScope(actor); // 它会取消正在运行的全量批次，即使只是预览也先拒绝
       const ids = [...new Set(input.accountIds)].map(BigInt).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 
       // 1) 逐账号处置：存在性 → 范围 → 有效监控资格（FS-2.4 原因码）→ 新鲜度

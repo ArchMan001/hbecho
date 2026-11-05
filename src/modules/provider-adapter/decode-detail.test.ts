@@ -77,6 +77,12 @@ describe("详情 media_stats_number（请求 / 响应动作分列）", () => {
     expect(d.metrics.collect).toEqual({ state: "explicit_null" });
     expect(d.metrics.share).toEqual({ state: "explicit_null" });
   });
+  it("*_number 是显式 null 时不回退到 *_count 的占位 0：explicit_null 不能变成真实 0", () => {
+    const d = decodedData(decodeDetail("douyin", envelope("media_stats", '{"post_id":"p1","play_number":null,"play_count":0,"like_number":5,"like_count":0,"share_number":"x","share_count":3}')));
+    expect(d.metrics.play).toEqual({ state: "explicit_null" });
+    expect(d.metrics.like).toEqual({ state: "value", value: 5n });
+    expect(d.metrics.share).toEqual({ state: "value", value: 3n }); // 优先字段非法 → 回退到有效的 *_count
+  });
   it("19 位内容 ID 与作者 ID 按文本保真，整数 token 取原文", () => {
     const d = decodedData(decodeDetail("douyin", envelope("media_stats", '{"post_id":7676403385372904742,"user_id":"007"}')));
     expect(d.postId).toEqual({ state: "value", value: "7676403385372904742" });

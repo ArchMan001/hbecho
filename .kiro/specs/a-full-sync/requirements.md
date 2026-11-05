@@ -67,7 +67,7 @@
 | R3 | 封面下载范围与 A 不一致 | v2 §11.3 写「所有列表内容下载封面」，且 tracer 对每个快照都建 `cover` 引用 | 与 A §10.1 对齐：封面**首次入库**时下载；内容已有 `archived` / `carried_forward` 封面时不再为新快照建 `cover` 引用；此前没有成功过（`pending` / `failed`）时，下一次出现在列表就用新地址重建引用（FS-D09） | FS-11 |
 | R4 | 批次用途无法区分 | `sync_batches.trigger_type` 只有 `scheduled` / `manual`；tracer 的单账号录入、补抓、按需批次都是 `manual` | 增加 `purpose VARCHAR(32) NOT NULL`（**迁移分三步：先建可空列 → 回填已有批次为 `intake` → 改 NOT NULL**，不留 DEFAULT，避免新代码漏写时静默变成 `intake`），CHECK 为 `full` / `supplement` / `demand` / `intake`；tracer 创建的根批次为 `intake`；只有 `full` 受「全量批次串行」约束（FS-D02） | FS-1、FS-13 |
 | R5 | 批次「结束」不含媒资 | `sync_batches.finished_at` 语义未定；媒资下载是该批次的子任务 | `finished_at` = 结构化阶段（profile / list）结束；增加 `media_finished_at DATETIME(6) NULL`，媒资任务全部终态时写入（FS-D13） | FS-1、FS-11 |
-| R6 | 快手账号标识命名空间 | `IDENTIFIER_NAMESPACES` 与 CHECK 只有抖音 / 小红书四项 | 增加 `kuaishou.user_id`；CONTEXT 同步登记。快手主页与列表作者同一命名空间，没有第二官方标识（A §5.2） | FS-7 |
+| R6 | 快手账号标识命名空间 | v2 §6.3 只写了「视频号、快手账号空间」，没有给出命名空间代码；代码枚举 `IDENTIFIER_NAMESPACES` 与 0000 迁移的 CHECK **已含** `kuaishou.user_id`（tracer 阶段已预留） | 在 v2 §6.3 写明 `kuaishou.user_id`；CONTEXT 同步登记；**不需要改 schema 或迁移**（任务 1 只补测试）。快手主页与列表作者同一命名空间，没有第二官方标识（A §5.2） | FS-7 |
 | R7 | 外部监控账号的采集范围 | v2 §8.3 说外部型「采集与自有账号走同一条链路」，§12.3 步骤 5 对所有 active 账号生成主页 + 列表任务 | 澄清：`watch_type='external'` **只生成 `fetch_profile`**（及头像 / 背景媒资），不生成列表、内容、详情任务（A §5.6：1.0 只采主页快照） | FS-13 |
 | R8 | 批次排队语义缺失 | v2 §12.3 第 2 条写「已有全量批次运行 → 记录 skipped」，没有 `queued` / `expired`；§9.2、A §7.1、D-33 都是「排队 1 个、队列满才跳过、排到下一时点仍未开始则过期」 | §12.3 第 2 条改为与 §9.2 一致：无运行 → 创建并开始；有运行且队列空 → `queued`；队列满 → `skipped`；排队过期 → `expired`。**§9.2 的 `skipped` 语义同步放宽**：由「队列已满时创建摘要、不创建任务」扩展为「没有执行任何任务的批次」，`skip_reason` 取 `queue_full` / `no_targets`（没有有效监控目标）/ `all_targets_closed`（规划了任务但全部在领取前因监控资格失效被取消）；后一种批次里存在已取消的任务行 | FS-1 |
 
@@ -187,6 +187,22 @@
 | 音频无字节上限 | 属实，采纳 | FS-11.7；design §7.10 |
 | 任务 0 分支动作与现状冲突 | 属实，采纳 | tasks 任务 0 |
 
+**实施期复核（任务 2、3 之后，同日）**：对一份外部评审意见逐条核对代码与原文后的结论：
+
+| 评审意见 | 结论 | 落点 |
+|---|---|---|
+| tick 顺序应保持「先过期、后创建」，改文档而非代码 | 采纳 | FS-1.4；acceptance A6、A18 |
+| `cancelBatch` 与 `cancel_current` 没有范围校验 | 属实，采纳：批次级命令 1.0 只允许全范围服务身份，受限身份在任何读写前拒绝 | FS-20.1；`commands.ts` |
+| `demand` 批次没有终态归属 | 属实，登记到任务 6（`summary.ts` 当前只汇总 `full` / `supplement`） | tasks 任务 6 |
+| R6 现状写错（代码里早有 `kuaishou.user_id`） | 属实，已改正；任务 1 的结论本来就是不需要新迁移 | R6 |
+| `*_number=null` + `*_count=0` 会得到真实 0 | 属实（仅限详情）：优先字段显式 null 时不再回退 | `decode-detail.ts` |
+| `--if-older-than` 取较早者 spec 没写 | **不成立**：FS-13.4 已写（「主页与列表两者中较早的那个」） | — |
+| `--only profile` 的依据是延伸 | **不成立**：A §11.2 第 ⑥ 步与要点写了「只调主页接口、内容采集不在此刻触发」，FS-D30 已引用 | — |
+| 补抓 `dup` 重放不会推进 `planned` 批次 | **不成立**：`out.status === 'planned'` 对重放同样成立，会再规划一次（幂等） | — |
+| `explain` 对断链的 staff 型报 `brand_inactive` | **不成立**：`stores` 的 dealer / brand / sector 与上级外键都是 NOT NULL，链不可能断；缺失只会来自归属行不存在（`no_assignment`） | — |
+| `staging` 没有 capability 行 | 非缺陷：tracer 起就是「test + production」两行，staging 一律 `unregistered`，即 fail closed；任务 4 的 worker 配置决定是否拒绝 `HBECHO_ENV=staging` | tasks 任务 4 |
+| 非抖音多候选视频默认取第一个 | 部分成立：小红书 / 快手的候选在样本里没有可区分的优先级依据（同主机、无分辨率标记）；`rankVideoSources` 返回全部可用候选，任务 7 的下载必须按顺序逐个尝试，失败换下一个，不能只取第一个 | FS-11.5；tasks 任务 7 |
+
 **第二轮复核（同日）**：
 
 | 审查项 | 结论 | 落点 |
@@ -231,7 +247,7 @@
 1. 当 `Asia/Shanghai` 时间命中 `sync_settings.schedule_slots` 的某个时点（每周 1–2 个）时，同步调度 SHALL 为该时点创建恰好一个 `scheduled` / `full` 批次，批次键由时点 UTC 值确定性生成；同一时点重复触发 SHALL 返回已有批次，SHALL NOT 创建第二个。
 2. 创建批次时，调度 SHALL 冻结 `sync_settings` 与运行时配置到 `settings_snapshot`，之后批次内所有任务只读取该快照，SHALL NOT 读取实时设置。
 3. 错过的时点（调度器当时未运行且超出容忍窗口）SHALL NOT 自动补跑。
-4. 当没有运行中的 `full` 批次时，新批次 SHALL 进入 `running`；当已有一个运行中批次且队列为空时，新批次 SHALL 进入 `queued`；当队列已有一个等待批次时，新触发 SHALL 创建 `status='skipped'` 的摘要批次（`skip_reason='queue_full'`），SHALL NOT 创建任务。
+4. 当没有运行中的 `full` 批次时，新批次 SHALL 进入 `running`；当已有一个运行中批次且队列为空时，新批次 SHALL 进入 `queued`；当队列里已有一个**未到期**的等待批次时，新触发 SHALL 创建 `status='skipped'` 的摘要批次（`skip_reason='queue_full'`），SHALL NOT 创建任务。排队批次到下一个计划时点即到期（第 6 条），而新触发恰好发生在这个时点，所以 SHALL 先处理过期、再创建：到点时排队批次先 `expired`，新触发接替并排队（A §7.1「由新的触发接替」）；`queue_full` 只在存在尚未到期的排队批次时出现。
 5. 当上一个 `full` 批次进入终态时，调度 SHALL 立即把排队批次提升为 `running`；提升时才规划任务（FS-2），SHALL NOT 使用排队期间过期的目标集。
 6. 当排队批次到下一个计划时点仍未开始时，调度 SHALL 将其标记为 `expired` 并让运营可见。
 7. `full` 批次的终态 SHALL 由结构化任务（`fetch_profile` / `fetch_content_list`）决定：全部成功且无连续性缺口为 `succeeded`；有失败、死信或缺口且至少一个成功为 `partial_succeeded`；没有成功且有失败为 `failed`。因监控资格失效而取消的任务 SHALL 计入 `skipped_task_count`，SHALL NOT 影响终态判定；但规划了任务而**全部**被跳过（没有任何成功与失败）时，批次 SHALL 为 `skipped`、`skip_reason='all_targets_closed'`，SHALL NOT 记为 `succeeded`；规划任务数为 0（没有有效监控目标）的批次同样为 `skipped`、`skip_reason='no_targets'`。
@@ -385,7 +401,7 @@
 2. 媒资下载 SHALL 作为独立 `download_media` 任务异步推进（每账号每批次一个，按需视频 / 音频另有任务），SHALL NOT 阻塞结构化阶段，状态独立可查。
 3. 正式资产 SHALL 按完整字节 SHA-256 判同；同一字节多个引用共享一份资产；临时 URL SHALL NOT 成为身份，SHALL NOT 写入长期业务事实。
 4. 快手封面（KVIF）SHALL 取 CDN `x-oss-process` 转换的 JPEG 作为标准化衍生图的来源，原始字节与衍生图同为独立资产；转换失败 SHALL 标记「封面不可用」并写质量问题 `media_cover_unavailable`，SHALL NOT 阻塞内容（D-62）。
-5. 视频 SHALL 按平台选择来源：抖音优先 `api-play.amemv.com` / `api.amemv.com` 候选，SHALL NOT 用 `video.url`；小红书与快手用详情 `download_urls`（720p h264），快手 SHALL NOT 用列表 `video.url`；候选集 SHALL 全部保留。
+5. 视频 SHALL 按平台选择来源：抖音优先 `api-play.amemv.com` / `api.amemv.com` 候选，SHALL NOT 用 `video.url`；小红书与快手用详情 `download_urls`（720p h264），快手 SHALL NOT 用列表 `video.url`；候选集 SHALL 全部保留；小红书 / 快手的候选没有可区分的优先级依据，SHALL 按响应顺序依次尝试，一个失败换下一个（A §9.2 不得「默认只取第一条」）。
 6. 视频 SHALL 流式写临时文件并边写边算 SHA-256，再分片上传正式媒资桶并校验；单文件与单批次总字节受可配置技术上限约束；内存占用 SHALL NOT 随文件大小线性增长。
 7. 音频轨 SHALL 由 Python 能力服务经短期签名 URL 读取已入库视频后抽取为 m4a / AAC 原样，作为独立正式资产保存；视频没有音轨 SHALL 记 `no_audio_track` 终态（引用 `failed` + 该错误码，按 `media-failure` 分类为 informational），SHALL NOT 重试、SHALL NOT 计入失败数；音频字节上限 = 源视频字节数（`-c:a copy` 不会比源更大）且不超过 `HBECHO_MEDIA_MAX_BYTES`。
 8. 下载失败 SHALL NOT 影响结构化快照；上一份已验证资产可续用，但 SHALL 标记 `carried_forward` 并记录本轮失败，SHALL NOT 表示为本轮归档成功。
@@ -500,7 +516,7 @@
 
 #### 验收标准
 
-1. 所有 CLI / Module 入口 SHALL 先校验 Capability 与范围，失败 SHALL 在任何供应商、媒资请求之前拒绝：补抓与取消 `data.sync.trigger`；改绑与确认删除、质量问题状态 `data.account.manage`；监控开关 `data.monitoring.manage`（经销商级仅超管）；外部账号 `monitor.external.manage`；调度参数与预算 `config.manage`。
+1. 所有 CLI / Module 入口 SHALL 先校验 Capability 与范围，失败 SHALL 在任何供应商、媒资请求之前拒绝：补抓与取消 `data.sync.trigger`；改绑与确认删除、质量问题状态 `data.account.manage`；监控开关 `data.monitoring.manage`（经销商级仅超管）；外部账号 `monitor.external.manage`；调度参数与预算 `config.manage`。影响整个批次的命令（`batch cancel`、`supplement --on-busy cancel_current`）在 1.0 只允许全平台、全专员范围的服务身份，受限身份 SHALL 在任何读写之前以 `out_of_scope` 拒绝；B 域接入后再按批次内账号集合细化。
 2. 周期任务 SHALL 以固定服务身份（`service:sync-worker`）运行，范围覆盖全平台被监控账号，且没有任何把数据交给某个人的出口（B PRD §10.3）。
 3. 用户触发的任务 SHALL 继承提交者范围，交付前复查（B 域接入后生效；本 spec 先记录提交者 actor）。
 4. 审计事件 SHALL 含 actor、时间、对象、批次 / 任务、前后状态，SHALL NOT 含 secret、原始载荷、临时 URL。

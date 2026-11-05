@@ -301,6 +301,33 @@ describe("batch cancel（FS-12.6、FS-14.6）", () => {
   });
 });
 
+describe("批次级命令的范围（FS-20.1）", () => {
+  const scoped = (): ActorContext => actor({ scope: { platformCodes: new Set(["douyin"]), mediaStaffIds: "all" } });
+  it("受限身份不能取消批次：不论预览还是 apply，都在任何读写之前拒绝", async () => {
+    const { org, commands, scheduler, audit } = await world();
+    await accounts(org);
+    await scheduler.tick(S1);
+    const [b] = await batches();
+    const before = await dump();
+    await expect(commands.cancelBatch(b!.batchId.toString(), scoped())).rejects.toMatchObject({ code: "out_of_scope" });
+    await expect(commands.cancelBatch(b!.batchId.toString(), scoped(), { apply: true })).rejects.toMatchObject({ code: "out_of_scope" });
+    await expect(commands.cancelBatch(b!.batchId.toString(), actor({ scope: { platformCodes: "all", mediaStaffIds: new Set([org.staffA]) } }), { apply: true })).rejects.toMatchObject({ code: "out_of_scope" });
+    expect(await dump()).toBe(before);
+    expect(audit.events.filter((e) => e.outcome === "rejected").map((e) => e.code)).toEqual(["out_of_scope", "out_of_scope", "out_of_scope"]);
+  });
+  it("受限身份不能用 cancel_current 顶替正在运行的全量批次（预览也拒绝）；run_now / queue 仍可用", async () => {
+    const { org, commands, scheduler } = await world();
+    const acc = await accounts(org);
+    await scheduler.tick(S1);
+    const before = await dump();
+    await expect(commands.createSupplement({ accountIds: ids(acc.a.accountId), onBusy: "cancel_current", idempotencyKey: "k1" }, scoped())).rejects.toMatchObject({ code: "out_of_scope" });
+    await expect(commands.createSupplement({ accountIds: ids(acc.a.accountId), onBusy: "cancel_current", apply: true, idempotencyKey: "k1" }, scoped())).rejects.toMatchObject({ code: "out_of_scope" });
+    expect(await dump()).toBe(before);
+    const ok = await commands.createSupplement({ accountIds: ids(acc.a.accountId), onBusy: "queue", idempotencyKey: "k2" }, scoped());
+    expect(ok).toMatchObject({ kind: "created", status: "queued" });
+  });
+});
+
 describe("batches 列表", () => {
   it("按批次号倒序，ID 为十进制字符串，时间 ISO", async () => {
     const { org, commands, scheduler } = await world();

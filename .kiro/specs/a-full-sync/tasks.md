@@ -242,6 +242,7 @@
 
 **行为**
 
+- **环境**：`HBECHO_ENV=staging` 目前没有任何 capability 行（tracer 起只有 test + production），所有任务会 `unregistered`，即 fail closed。worker 配置校验应直接拒绝 `staging`（或明确登记 staging 行，默认 disabled），不要让它启动后全部失败；
 - 领取按 `priority DESC, attempt_count ASC, task_id`（重试任务回到队尾）；只领 `running` 批次，媒资任务可领已终态未取消批次；
 - 租约过期的任务可被另一个 worker 领取，fencing token 递增；陈旧 token 的写入整笔失败；
 - 并发与 QPS 受配置约束，无配置不启动；
@@ -325,6 +326,7 @@
 
 **行为**
 
+- **批次终态**：`sync-schedule/summary.ts` 当前只汇总 `purpose IN ('full','supplement')`，按需批次有任务后会永远停在 `running`。本任务必须扩展汇总到 `demand`（按其详情 / 评论 / 媒资任务的终态判定，规则见 FS-8），并有测试；
 - 提交：逐项处置七类全部可达；同键同载荷返回原批次，同键异载荷冲突；范围外内容 `out_of_scope`；快手评论 `unsupported_platform`；快手详情 `capability_disabled`；
 - 复用：本轮已有 → `reused`；活动任务 → `already_pending`；视频 / 音频已有资产 → `reused`；`audio` 隐含 `video`，`video` 隐含 `detail`；
 - 详情：种子快照拷贝全部 value / state，`list_observed=FALSE`、`detail_observed=TRUE`、`seeded_from_snapshot_id` 非空；详情有效值覆盖，缺失 / null 不擦除；定稿并参与 current 比较；失败 → 不留种子快照、内容 `status` 不变；
@@ -359,6 +361,7 @@
 
 **行为**
 
+- **视频多候选**：`rankVideoSources` 返回全部可用候选；下载必须按顺序逐个尝试，一个失败（含过期）换下一个，全部失败才算失败，不能只取第一个；
 - 同一内容连续两个批次出现：第一次建并下载封面，第二次不建新引用；第一次下载失败，第二次用新地址重建引用；
 - 快手封面：原始 KVIF 为原始资产；CDN JPEG 经 `ImageConverter` 生成 JPEG q80 / 540 宽衍生资产；转换失败标记「封面不可用」，内容不受影响；
 - 视频：来源选择遵守 `pickVideoSource`；峰值内存不随文件大小增长（用大文件 fake 断言缓冲上限）；超 `maxBytes` 中止并删除临时文件；`Content-Length` 不符 → `truncated`；相同字节命中 `UQ(sha256)` 复用资产；

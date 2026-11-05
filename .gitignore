@@ -71,6 +71,8 @@ coverage/
 !aimaster接口文档/**/*.csv
 !aimaster接口文档/*.xlsx
 !HBECHO设计方案/domains/data-foundation/seed/**/*.csv
+# a-master-data-import 的测试夹具全是脱敏造数；真实权威导出（xlsx / csv）永远不放这里
+!tests/fixtures/master-data/*.csv
 
 # ── 编辑器与系统 ────────────────────────────────────────
 .DS_Store

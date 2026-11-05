@@ -1,8 +1,9 @@
 // worker 的依赖装配。纯装配、无业务逻辑：配置 → 连接池 → 熔断 / 令牌桶 / 预算 / 调度 / worker。
-// 供应商 transport、OSS 等带 secret 的依赖由各 Runner 的装配（任务 5 起）按需在这里创建；
-// 现在 RUNNERS 为空，所以这里不读任何 secret。
+// 供应商 transport、OSS 等带 secret 的依赖由 makeRunners（sync-runner-wiring.ts）在 worker 命令里装配；
+// 不传 runners / makeRunners 时 RUNNERS 为空，这里不读任何 secret。
 import pino, { type Logger } from "pino";
-import { createDb, createPool } from "../db/client";
+import { createDb, createPool, type Db } from "../db/client";
+import type { Clock } from "../modules/raw-capture";
 import { DEFAULT_RETRY } from "../modules/tracer-command";
 import { createMonitoringResolver } from "../modules/monitoring";
 import { RUNNERS, type RunnerRegistry } from "../modules/sync-runner";
@@ -11,7 +12,10 @@ import { createBreakerSet } from "./provider-breaker";
 import type { SyncWorkerConfig } from "./sync-config";
 import { createSyncWorker } from "./sync-worker";
 
-export function buildSyncApp(cfg: SyncWorkerConfig, opts: { runners?: RunnerRegistry; logger?: Logger; workerId?: string } = {}) {
+export function buildSyncApp(
+  cfg: SyncWorkerConfig,
+  opts: { runners?: RunnerRegistry; /** 需要 db / clock 才能装配的 Runner（真实 transport、OSS 等带 secret 的依赖），在连接池建好之后调用。 */ makeRunners?: (c: { db: Db; clock: Clock }) => RunnerRegistry; logger?: Logger; workerId?: string } = {},
+) {
   const logger = opts.logger ?? pino({ name: "sync-worker", redact: ["*.apiKey", "*.authorization"] }, pino.destination(2));
   const pool = createPool(cfg.databaseUrl);
   const db = createDb(pool);
@@ -38,7 +42,7 @@ export function buildSyncApp(cfg: SyncWorkerConfig, opts: { runners?: RunnerRegi
     db,
     clock,
     resolver,
-    runners: opts.runners ?? RUNNERS,
+    runners: opts.runners ?? opts.makeRunners?.({ db, clock }) ?? RUNNERS,
     breakers,
     workerId: opts.workerId ?? `${cfg.actorId}:${process.pid}`,
     concurrency: cfg.concurrency,

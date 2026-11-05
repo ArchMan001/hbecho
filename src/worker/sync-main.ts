@@ -7,11 +7,11 @@ import pino from "pino";
 import { z } from "zod";
 import { createDb, createPool } from "../db/client";
 import { createMonitoringResolver } from "../modules/monitoring";
-import { RUNNERS } from "../modules/sync-runner";
 import { createLogSyncAuditSink, createSyncCommands, createSyncScheduler } from "../modules/sync-schedule";
 import { CAP_SYNC_TRIGGER, type ActorContext } from "../modules/tracer-command";
 import { runSyncCli } from "./sync-cli";
 import { parseSyncWorkerConfig } from "./sync-config";
+import { assertWorkerCanRun, buildAccountRunners } from "./sync-runner-wiring";
 import { buildSyncApp, runForever } from "./sync-wiring";
 
 const sub = process.argv[2];
@@ -40,8 +40,14 @@ if (isWorkerCommand) {
     process.stderr.write(`${e instanceof Error ? e.message : String(e)}\n`);
     process.exit(1);
   }
-  const app = buildSyncApp(cfg);
-  if (Object.keys(RUNNERS).length === 0) app.logger.warn("没有注册任何 Runner：worker 不会领取任何任务（任务 5 起逐个注册）");
+  let app;
+  try {
+    assertWorkerCanRun(cfg); // 先于连接池与 secret：没有已批准的 capability 就不启动
+    app = buildSyncApp(cfg, { makeRunners: ({ db, clock }) => buildAccountRunners({ db, clock, cfg, env: process.env }) });
+  } catch (e) {
+    process.stderr.write(`${e instanceof Error ? e.message : String(e)}\n`);
+    process.exit(1);
+  }
   if (sub === "run-once") {
     await app.scheduler.tick();
     const stats = await app.worker.run({ untilIdle: true });

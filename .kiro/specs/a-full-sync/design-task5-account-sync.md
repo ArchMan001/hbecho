@@ -1,6 +1,6 @@
 # a-full-sync 任务 5 · 账号采集实施设计
 
-> **状态**：`draft`，等待刘学奎确认后才开始实现
+> **状态**：已实现（2026-11-05，任务 5 第 1–9 步）；实现记录见 §15
 >
 > **性质**：[`design.md`](design.md) §5.2、§7.6、§7.6.1、§7.6.2、§7.7 的**实施级补充**。只写模块拆分、事务边界、测试矩阵和需要澄清的地方；不复制 design 的判定表原文。冲突时按 `CONTEXT.md` → PRD v1.11 → v2 → [requirements](requirements.md) / [design](design.md) / [tasks](tasks.md) / [acceptance](acceptance.md) 的顺序裁决。
 >
@@ -83,7 +83,7 @@
 
 | # | 步骤 | 事务 / IO | 带 fence |
 |---|---|---|---|
-| 0 | 解析任务参数与 `result_summary` 里的进度；capability 门控；读 `locator`。若进度 `identity.state='mismatch'` → 直接到第 8 步失败；若 `stop≠null` → 直接到第 7 步封口 | 只读 | 否 |
+| 0 | 解析任务参数与 `result_summary` 里的进度；capability 门控；读 `locator`。若进度 `identity_check.state='mismatch'` → 直接到第 8 步失败；若 `stop≠null` → 直接到第 7 步封口 | 只读 | 否 |
 | 1 | `ctx.shouldStop()` → `abandoned('shutdown')`；`ctx.heartbeat()` | 单条 UPDATE | 是 |
 | 2 | 请求第 `pages_done+1` 页：游标取 `next_cursor`（无则整数 `0`，与 tracer 一致）；`call_sequence = 页号`，`attempt_no = task.attemptCount+1` | **网络 IO，不持有事务** | 网关内校验 |
 | 3 | `interpretCaptured(decodeVideoList)`；`cls.category≠none` → 失败码；`outcome≠decoded` → `schema_drift`（**不会变成空列表**） | 内存 | 否 |
@@ -183,7 +183,8 @@ export function decideAfterPage(anchor: AnchorView, page: PageFacts, totals: Wal
   "stop": null,
   "stop_detail": { "outcome": "success|gap|blocked", "stop_reason": "...", "anchor": "rebuild|keep_old|empty", "window_overflow": false },
   "anomalies": [ {"code":"…"} ],
-  "identity": { "baseline_has_registered": true, "known_author_entries": 12, "matched_entries": 12, "state": "pending|verified|unverifiable|mismatch" },
+  "last_cursor": {"kind":"string","value":"…"} | null,
+  "identity_check": { "baseline_has_registered": true, "known_author_entries": 12, "matched_entries": 12, "state": "pending|verified|unverifiable|mismatch" },
   "last_page_call_id": "123" }
 ```
 
@@ -238,7 +239,7 @@ export function decideAfterPage(anchor: AnchorView, page: PageFacts, totals: Wal
 
 ### 7.4 孤儿清扫
 
-`sweepOrphanBuilding(db, clock)`：找 `building` 快照所属（批次、账号）对应的列表任务已是 `failed` / `dead` / `cancelled` 的情形，对每个任务 `SELECT … FOR UPDATE` 并确认仍为终态，再按 §7.3 处理（该任务的 `result_summary.identity.state='mismatch'` 则清除，否则封口）。孤儿的唯一来源是外部取消（`cancelBatch` 把任务置 `cancelled`，没有 fence）；失败路径的封口与终态同事务，不会留孤儿。清扫没有 fence 但安全：终态任务不可能再有 fenced 写入。
+`sweepOrphanBuilding(db, clock)`：找 `building` 快照所属（批次、账号）对应的列表任务已是 `failed` / `dead` / `cancelled` 的情形，对每个任务 `SELECT … FOR UPDATE` 并确认仍为终态，再按 §7.3 处理（该任务的 `result_summary.identity_check.state='mismatch'` 则清除，否则封口）。孤儿的唯一来源是外部取消（`cancelBatch` 把任务置 `cancelled`，没有 fence）；失败路径的封口与终态同事务，不会留孤儿。清扫没有 fence 但安全：终态任务不可能再有 fenced 写入。
 
 任务 5 实现并测试这个函数，Runner 在 `heartbeat→cancelled` 时对自己的任务调用一次；周期调用交任务 9 的 `maintain`（§13.9）。
 
@@ -261,7 +262,7 @@ checkListAuthors(c: { baselineHasRegistered: boolean; knownAuthorEntries: number
   "pending" | "verified" | "unverifiable" | "mismatch"
 ```
 
-- **基线**：第 1 页事务一开始、绑定之前，读该账号在列表作者命名空间下的已登记标识，写入 `identity.baseline_has_registered`。抖音含 `douyin.user_id`、`douyin.sec_uid`；小红书是 `xiaohongshu.content.user_id`；快手是 `kuaishou.user_id`。
+- **基线**：第 1 页事务一开始、绑定之前，读该账号在列表作者命名空间下的已登记标识，写入 `identity_check.baseline_has_registered`。抖音含 `douyin.user_id`、`douyin.sec_uid`；小红书是 `xiaohongshu.content.user_id`；快手是 `kuaishou.user_id`。
 - **匹配**：条目作者 ID（抖音另看 `sec_uid`）∈ 登记集合。登记集合在后续页用当前值，但 `baseline_has_registered=false` 时整次任务都是 `unverifiable`——小红书首次主导作者绑定是本次任务自己造的，用它去「验证」本次列表是循环论证。
 - **计数口径**：只数作者 ID 为 `value` 的条目（`known_author_entries`）。≥ 5 且 `matched=0` → `mismatch`；< 5 → `unverifiable`。字段整体缺失不算 `mismatch`（那是契约漂移，不是串号）。见 §13.5。
 - 每页事务内更新；一旦 `mismatch` 立即停止翻页并失败，不再为同一个错号付费。
@@ -391,3 +392,16 @@ checkListAuthors(c: { baselineHasRegistered: boolean; knownAuthorEntries: number
 **停下来问**的触发点（tasks.md「必须停下来问」）：快手 / 小红书 fixture 条数与清单不符；需要新表；需要自动设置 `unavailable` / `deleted`；需要新的 Node 依赖。
 
 本设计**没有新表、没有新依赖、没有页面**。
+
+## 15. 实现记录（与上文不同或上文没写的地方）
+
+| 项 | 实现 |
+|---|---|
+| `profile_uid_mismatch` | 不是「fenced 短事务记问题再返回失败」，而是失败结果的 `onTerminal`：它是稳定失败，必然终态，所以问题与终态同一事务（比 §3 第 6 步更强） |
+| 进度字段 | `identity` 改名 `identity_check`（与 acceptance 的 `result_summary.identity_check` 一致）；新增 `last_cursor`（检查点 cursor 列用）与封口写入的可选 `final`（检查点结局、定稿数） |
+| 重建结果为空而旧锚点非空 | 返回了条目但没有一条能投影出内容 ID：封口时改判 `blocked` / `empty_window_not_rebased`，不用 `empty` 覆盖非空锚点 |
+| 列表异步 | `mode≠synchronous` → `capability_disabled`（detail `list_async_not_supported`）：异步轮询的 `call_sequence` 会与下一页冲突，design §14 第 4 项也规定周期列表只走同步 |
+| 自比对串行化 | 两个终态事务（主页、列表封口）最开始先 `lockAccount`；见 §8.3。与规划器的「先锁账号再改任务优先级」顺序相反，只在补抓提升优先级时有极小的死锁窗口，MySQL 会回滚其中一个，Runner 按 `runner_error` 有界重试 |
+| `AccountRunnerDeps.projector` | 新增注入点，默认真实投影；测试用来注入「第 N 条失败」 |
+| worker 启动守卫 | `assertWorkerCanRun`：真实装配拒绝 `HBECHO_ENV=test`（test 的 capability 只对应 fixture transport），且要求 production 至少有一个已批准 tuple；当前 production 全部 disabled，所以**真实 worker 现在不会启动**，启用需要任务 11 的批准式 smoke 与单独的人工批准。先于读 secret、先于建连接池 |
+| 孤儿清扫的调用点 | `sweepOrphanBuilding` 的 `scope` 选项限定到一个（批次, 账号）；ListWalker 在发现任务被取消（`heartbeat→cancelled`、页事务 / 封口事务 fence 返回 `cancelled`）而放弃时对自己的（批次, 账号）调用一次；定期的全局清扫写入任务 9 的 `maintain` |

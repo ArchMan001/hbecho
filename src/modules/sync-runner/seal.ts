@@ -193,12 +193,12 @@ const TERMINAL_FAILED = ["failed", "dead", "cancelled"] as const;
  * 唯一来源是外部取消（cancelBatch 把任务置 cancelled，没有 fence）；失败路径的封口与终态同事务，不会留孤儿。
  * 没有 fence 但安全：终态任务不可能再有 fenced 写入，且这里先锁任务行再确认仍是终态。
  */
-export async function sweepOrphanBuilding(db: Db, clock: Clock, o: { limit?: number; taskId?: bigint } = {}): Promise<{ tasks: number; finalized: number; purged: number }> {
+export async function sweepOrphanBuilding(db: Db, clock: Clock, o: { limit?: number; scope?: SealScope } = {}): Promise<{ tasks: number; finalized: number; purged: number }> {
   const pairs = await db
     .selectDistinct({ batchId: contentSnapshots.batchId, accountId: contents.accountId })
     .from(contentSnapshots)
     .innerJoin(contents, eq(contents.contentId, contentSnapshots.contentId))
-    .where(eq(contentSnapshots.snapshotStatus, "building"))
+    .where(and(eq(contentSnapshots.snapshotStatus, "building"), ...(o.scope ? [eq(contentSnapshots.batchId, o.scope.batchId), eq(contents.accountId, o.scope.accountId)] : [])))
     .limit(o.limit ?? 500);
   const out = { tasks: 0, finalized: 0, purged: 0 };
   for (const p of pairs) {
@@ -206,7 +206,7 @@ export async function sweepOrphanBuilding(db: Db, clock: Clock, o: { limit?: num
       const [task] = await tx
         .select()
         .from(syncTasks)
-        .where(and(eq(syncTasks.batchId, p.batchId), eq(syncTasks.accountId, p.accountId), eq(syncTasks.requestedAction, "fetch_content_list"), ...(o.taskId === undefined ? [] : [eq(syncTasks.taskId, o.taskId)])))
+        .where(and(eq(syncTasks.batchId, p.batchId), eq(syncTasks.accountId, p.accountId), eq(syncTasks.requestedAction, "fetch_content_list")))
         .for("update")
         .limit(1);
       if (!task || !(TERMINAL_FAILED as readonly string[]).includes(task.status)) return;

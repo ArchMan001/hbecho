@@ -295,6 +295,33 @@ describe("孤儿清扫（外部取消没有 fence）", () => {
     expect(await sweepOrphanBuilding(t.db, env.clock)).toMatchObject({ tasks: 0 });
   });
 
+  it("取消后 Runner 自己放弃时顺手清扫：下一次心跳发现 cancelled → 已提交页的可靠条目定稿，current 切换，检查点不动", async () => {
+    let taskId = 0n;
+    let cancelled = false;
+    // 第 1 页已提交；此刻运营取消该任务（没有 fence 可言）
+    const env = await setupSync(t, {
+      runnerHooks: {
+        afterPageProjection: async () => {
+          if (cancelled) return;
+          cancelled = true;
+          await t.db.update(syncTasks).set({ status: "cancelled" }).where(eq(syncTasks.taskId, taskId));
+        },
+      },
+    });
+    const a = await env.addAccount("douyin", env.org.staffA, { identifier: "HITACHI1" });
+    await putCheckpoint(env, a.accountId);
+    env.routeList(() => page(syn("a", 5), true, 1000));
+    await env.scheduler.tick(SLOT);
+    taskId = (await listTask(env, a.accountId)).taskId;
+    const stats = await run(env);
+    expect(stats.abandoned).toBe(1);
+    expect(env.listCursors()).toEqual(["0"]); // 取消后不再发请求
+    expect((await listTask(env, a.accountId)).status).toBe("cancelled");
+    expect((await snaps()).every((s) => s.snapshotStatus === "finalized")).toBe(true);
+    expect((await t.db.select().from(contents)).every((c) => c.currentSnapshotId !== null)).toBe(true);
+    expect(await checkpoint()).toMatchObject({ version: 1n, highWatermarkContentIds: ["OLD"] });
+  });
+
   it("仍在运行 / 重试等待的任务的 building 行不会被清扫（任务还要续跑）", async () => {
     const crash = once(() => {
       throw new Error("进程丢失");

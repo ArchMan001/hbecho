@@ -19,7 +19,7 @@ import { decideAfterPage, pinnedIdMatchOf, type AnchorView, type Decision, type 
 import { AUTHOR_NAMESPACES, PROFILE_NAMESPACE, checkListAuthors, countListAuthors } from "./identity-check";
 import { afterPage, initialProgress, parseProgress, type ListProgress, type NextCursor } from "./list-progress";
 import { homeLocatorOf } from "./profile-runner";
-import { sealFailed, sealSuccess } from "./seal";
+import { sealFailed, sealSuccess, sweepOrphanBuilding } from "./seal";
 import type { RunnerOutcome, TaskContext, TaskRunner, TerminalHook } from "./types";
 
 export const LIST_TASK_SCHEMA = "sync-list-task.v1";
@@ -61,7 +61,6 @@ function factsOf(pageNo: number, data: ListData): PageFacts {
   };
 }
 
-const abandonedOf = (reason: string): RunnerOutcome => ({ kind: "abandoned", reason: reason === "cancelled" ? "cancelled" : "stale" });
 
 export function createListWalker(deps: AccountRunnerDeps): TaskRunner {
   const { db, clock } = deps;
@@ -95,6 +94,15 @@ export function createListWalker(deps: AccountRunnerDeps): TaskRunner {
     const expectedVersion = params.anchor_snapshot ? BigInt(params.anchor_snapshot.checkpoint_version) : null;
 
     let progress: ListProgress | null = parseProgress(task.resultSummary);
+
+    /**
+     * 放弃。外部取消（cancelBatch 把任务置 cancelled）没有 fence，已提交页的 building 行没人封口：
+     * 这里顺手清扫本任务的（幂等；终态任务不可能再有 fenced 写入）。stale / shutdown 不动——任务还会被续跑。
+     */
+    const abandon = async (reason: string): Promise<RunnerOutcome> => {
+      if (reason === "cancelled") await sweepOrphanBuilding(db, clock, { scope });
+      return { kind: "abandoned", reason: reason === "cancelled" ? "cancelled" : "stale" };
+    };
 
     /** 终态钩子：失败 / 死信 / 取消时封口已投影的可靠条目（mismatch 则条件清除）。retry_wait 不执行。 */
     const closeOnTerminal = (extra?: TerminalHook): TerminalHook => async (tx, t) => {
@@ -236,7 +244,7 @@ export function createListWalker(deps: AccountRunnerDeps): TaskRunner {
         request: buildRequest({ action: "user_video_list", mode: params.mode, locator, cursor }),
         decode: (bytes) => decodeVideoList(platform, bytes),
       });
-      if (r.kind === "abandoned") return { kind: "abandoned", reason: r.reason };
+      if (r.kind === "abandoned") return abandon(r.reason);
       if (r.kind === "failed") return fail(r.code, r.detail);
 
       await deps.hooks?.beforePageProjection?.();
@@ -248,7 +256,7 @@ export function createListWalker(deps: AccountRunnerDeps): TaskRunner {
         // 整页事务已回滚：技术失败不会变成空列表，进度不前进
         return fail("page_projection_failed", { reason: e instanceof PageIncompleteError ? "page_incomplete" : "page_projection_failed", page_no: pageNo });
       }
-      if (!committed.ok) return abandonedOf(committed.reason);
+      if (!committed.ok) return abandon(committed.reason);
       progress = committed.value;
       await deps.hooks?.afterPageProjection?.();
     }
@@ -275,7 +283,7 @@ export function createListWalker(deps: AccountRunnerDeps): TaskRunner {
     const sealed = await withFences(db, clock, [{ taskId: task.taskId, token: ctx.token }], (tx, tasks) =>
       sealSuccess(tx, { task: tasks.get(task.taskId)!, token: ctx.token, assignmentId, progress: progress!, oldAnchor: anchor, expectedCheckpointVersion: expectedVersion, now: clock.now() }),
     );
-    return sealed.ok ? { kind: "done" } : abandonedOf(sealed.reason);
+    return sealed.ok ? { kind: "done" } : abandon(sealed.reason);
   };
 }
 

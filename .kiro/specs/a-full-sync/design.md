@@ -458,6 +458,8 @@ LIMIT :n FOR UPDATE SKIP LOCKED
 | 8 | 本任务全部页累计 0 条且旧锚点为 `time` / `id_window` | `stop`，空窗口：检查点 `blocked`，`empty_window_not_rebased` |
 | 9 | 本任务全部页累计 0 条且 `has_more=false` 且（无旧锚点，或旧锚点为 `empty`） | `stop`，建立 / 保持 `empty` 锚点，成功，检查点 `ready` |
 
+**实现顺序（2026-11-05 任务 5 评审，详见 [design-task5-account-sync.md](design-task5-account-sync.md) §5.2、§13）**：上表是**结果集**。按行序读会产生歧义（第 4 行排在第 8、9 行之前；第 7、9 行的「旧锚点为 `empty`」被下面的 `empty` 规则架空），所以代码按 A→G 判定：A 归一 `has_more`（第 1 行）→ B `empty` 锚点 → C 累计 0 条且（`has_more=false` 或已到页数上限）→ D 旧锚点命中（第 2 行）→ E 首次基线够数（第 3 行）→ F 还有更多（第 4、5 行）→ G 自然结束（第 6、7 行）。结果只有一处与按行序读不同：**旧锚点 + 累计 0 条 + `has_more=true` 且已到页数上限**，按行序得「缺口并用空窗口重建锚点」，违反 CONTEXT「空窗口不能覆盖已有的非空锚点」，所以改为 `blocked`、保留旧锚点。另有三处澄清：① 到自然结束时整张列表已读完，**置顶位置的内容 ID** 命中旧集合也算证据（只看 ID，不看时间），否则只有 ≤ 3 条作品的账号每周误报 `end_of_list_rebased`；② 检查点 `blocked` 之后只抓首页：有效页数上限取 1，其余走原行；③ 检查点版本比较被拒（别的批次已推进）时任务照常 `succeeded`，只在 `result_summary.final.checkpoint` 记 `stale_rejected`，不记缺口。`stop_reason` 取值见 v2 §9.4 末尾。
+
 边界命中细则：`time` 模式——条目 `published_at` **严格早于**旧高水位时间，或其内容 ID ∈ 旧高水位 ID 集合；等于高水位时间但 ID 不在集合内则继续。`id_window` 模式——条目 ID ∈ 旧窗口。`empty` 模式——没有可命中的边界，只处理首个完整页：有内容走第 7 行（成功 + 重建锚点），无内容走第 9 行；`empty` 模式**无视 `has_more`**，首个完整页处理完即停（`stop_reason='baseline'`），不翻页；它不是第 7 行的特例（第 7 行要求 `has_more=false`），而是单独规则：先判 `empty` 再判其余。
 
 **多页边界**：每页先整页投影，再判定；第 4 行 `continue` 之前保存进度（同一事务）。跨页重复的内容 ID 在同一批次内合并（`INSERT … ON DUPLICATE`），discovery 保留第一次出现的位置。
@@ -474,15 +476,19 @@ LIMIT :n FOR UPDATE SKIP LOCKED
 |---|---|---|
 | 主页标识 | 本次响应的账号标识 vs `external_account_identifiers` 已登记值（文本精确比较，同 namespace） | 不等 → `profile_uid_mismatch`：不写快照、不下载媒资、任务 `failed`；质量问题含期望值、实际值、ProviderCall 引用；**不改写登记值** |
 | 主页残缺 | 粉丝 / 关注 / 获赞 / 作品数四项 | 全部无效 → `profile_fields_missing`（可重试），不写快照 |
-| 列表作者 | 已登记的作者标识集合（抖音 `user_id` + `sec_uid`、小红书已绑定内容作者 ID、快手 `user_id`） | 累计条目 ≥ 5 且无一条由这些标识创作 → `list_author_mismatch`：清除本批次该账号 `building` 快照、检查点不推进、任务 `failed`；条目 < 5 或无登记标识 → `unverifiable` |
+| 列表作者 | 已登记的作者标识集合（抖音 `user_id` + `sec_uid`、小红书已绑定内容作者 ID、快手 `user_id`），**取自本任务开始时、任何绑定之前** | 累计**作者 ID 有效**的条目 ≥ 5 且无一条由这些标识创作 → `list_author_mismatch`：清除本批次该账号 `building` 快照、检查点不推进、任务 `failed`；条目 < 5 或任务开始时没有登记标识 → `unverifiable` |
 
 三态结果（`verified` / `unverifiable` / `mismatch`）写入任务 `result_summary.identity_check`，批次汇总与 `account` 查询都按三态展示，**`unverifiable` 不并入 `verified`**。
+
+两处口径（2026-11-05）：① 只数作者 ID 为有效值的条目——作者字段整体缺失是契约漂移，不是串号，不能因此清库；② 登记集合取任务开始时的快照——小红书首次主导作者绑定是本任务自己产生的，拿它去验证本任务是循环论证，所以那一次整体 `unverifiable`。`mismatch` 在确定的那一页立即停止翻页并失败，不再为同一个错号付费。
 
 异作者共创是常态（抖音 20 条里有 1 条异作者），所以列表校验的是「**是否一条都没有**」而不是「是否全部是」，阈值 5 条是为了避免小账号误报；阈值是纯函数参数，调整要升版本。
 
 #### 7.6.2 自比对（FS-5.14）
 
 列表任务成功后：`k = 本批次主页 post_value − 该账号上一份更早的主页快照 post_value`（"更早"= `batch.logical_at` 更小的最近一份，补抓批次也算）；两份主页的 `post_state` 均为 `value` 且 `k > 0` 时，若**自那份主页快照接收时间以来**首次发现的内容数（`contents.first_seen_at > 上一份主页的 response_received_at`，不限批次）`< k`，记警告级 `suspected_missing_content`（`k`、`discovered`、两份主页快照 ID）。有账号删作品、平台统计延迟等正常原因，所以只告警，不使任务失败、不动检查点，也不进批次终态判定；它用来发现「检查点以为接上了其实漏了」这类静默缺口。
+
+实现（2026-11-05）：主页任务与列表任务谁先结束不确定，所以**在两个终态事务里各触发一次**（幂等，指纹 = code + 批次 + 账号），哪个后到哪个报；为了不出现「两边都看不到对方」，两个终态事务在最开始先锁同一个账号行。**首次基线（`anchor_snapshot=null`）跳过**：基线受 `initial_content_limit` 限制，发现数少于作品数增量是设计内的结果，不是漏采。
 
 ### 7.7 账号级封口与 current（FS-6）
 
@@ -491,7 +497,7 @@ LIMIT :n FOR UPDATE SKIP LOCKED
 1. 把 `batch_id = B AND content 属于账号 A AND snapshot_status='building'` 的快照置 `finalized`（`finalized_at=now`）；
 2. 对每个内容：若 `(batch.logical_at, batch_id)` 严格新于 `current_snapshot_selected` 对应批次，则 `contents.current_snapshot_id=…`（复合 FK 保证所属）；
 3. 写检查点（或不动）与任务终态、`result_summary`；
-4. 失败 / 取消的列表任务也封口**已投影的可靠条目**（它们是供应商已返回的事实），但**不推进检查点**；没有可靠条目则删除残留 `building` 行（只在此事务内、条件 `snapshot_status='building' AND batch_id=B`）。
+4. 失败 / 取消的列表任务也封口**已投影的可靠条目**（它们是供应商已返回的事实），但**不推进检查点**。失败终态由**框架**写（Runner 不知道本次失败是 `retry_wait` 还是 `failed` / `dead`），所以 Runner 返回的失败结果带可选的 `onTerminal` 钩子，框架只在终态时、在写终态的**同一个 fenced 事务**里执行它（`retry_wait` 不执行；钩子抛错则整笔回滚，框架记日志后不带钩子重写终态，任务不会停在 `running`）。`list_author_mismatch` 的条目不可靠：钩子里**条件清除**（只在 `snapshot_status='building' AND batch_id=B` 且内容属于该账号时，先删这些快照的 `pending` 媒资引用）。外部取消（`cancelBatch` 把任务置 `cancelled`）没有 fence，留下的 `building` 行由孤儿清扫（`sweepOrphanBuilding`）按同一规则收尾；定期调用交任务 9 的 `maintain`。
 
 主页快照创建即终态，current 在 `ProfileRunner` 的投影事务里 CAS。
 

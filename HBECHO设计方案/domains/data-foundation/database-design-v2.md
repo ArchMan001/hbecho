@@ -661,6 +661,8 @@ Tracer 提交映射为一个 `trigger_type='manual'`、`purpose='intake'` 的批
 13. 可能置顶内容始终参与 upsert 和新锚点候选计算；旧置顶内容不会提高最大发布时间；
 14. `succeeded_with_gap` 同时计入批次 `succeeded_task_count` 和 `gap_task_count`；任一 gap 使批次至少为 `partial_succeeded`，即使没有普通失败任务。
 
+`sync_tasks.stop_reason` 取值（`VARCHAR(64)`，无 CHECK，不需要迁移）：成功类 `boundary_hit`（命中旧边界）、`initial_limit`（首次基线累计够数）、`baseline`（旧锚点为 `empty`，首个完整页处理完即停）、`end_of_list`（首次基线时列表自然结束）、`empty_list`（返回空且无旧非空锚点）；缺口类 `safety_limit_rebased`、`end_of_list_rebased`、`cursor_anomaly_rebased`（`has_more` 缺失 / 非法，或 `has_more=true` 而游标不可用：按自然结束处理，快手 `no_more` 属于后者）、`empty_window_not_rebased`。tracer 单页路径沿用 `first_page_baseline`。（a-full-sync，2026-11-05）
+
 检查点只控制翻页，不过滤更新范围。
 
 ### 9.5 `ods_provider_calls`

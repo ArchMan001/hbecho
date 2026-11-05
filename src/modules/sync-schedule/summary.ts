@@ -4,6 +4,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../../db/client";
 import { syncBatches, syncTasks } from "../../db/schema";
 import type { Clock } from "../raw-capture";
+import { ensureMediaTasks } from "./media-tasks";
 import { loadSettings } from "./settings";
 import { ACTIVE_TASK_STATUSES, DEMAND_ACTIONS, STRUCTURED_ACTIONS } from "./task-keys";
 
@@ -104,6 +105,9 @@ export function createBatchSummarizer(deps: { db: Db; clock: Clock }) {
       .where(and(inArray(syncBatches.status, ["succeeded", "partial_succeeded", "failed"]), sql`${syncBatches.mediaFinishedAt} IS NULL`, inArray(syncBatches.purpose, ["full", "supplement"])));
     const mediaFinished: string[] = [];
     for (const { id } of pending) {
+      // 结构化阶段已终态：先对账补建账号级媒资任务（已有则跳过），再判断是否全部终态
+      const [any] = await db.select({ n: sql<number>`COUNT(*)`.mapWith(Number) }).from(syncTasks).where(and(eq(syncTasks.batchId, id), eq(syncTasks.requestedAction, "download_media")));
+      if ((any?.n ?? 0) === 0) await ensureMediaTasks(db, clock, id);
       const [open] = await db
         .select({ n: sql<number>`COUNT(*)`.mapWith(Number) })
         .from(syncTasks)

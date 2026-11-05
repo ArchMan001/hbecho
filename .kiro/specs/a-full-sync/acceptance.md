@@ -33,6 +33,8 @@
 | E 组（FS-5，任务 5） | 通过（E1–E22、E24–E26；E23 仅纯函数层） | `decide-after-page.test.ts`、`list-walker.db.test.ts`、`list-walker.recovery.db.test.ts`、`self-check.db.test.ts` |
 | F 组（FS-6，任务 5） | 部分（F1、F2、F4、F6、F7 通过；F3 无读取接口、F5 等任务 6/7） | `list-walker.recovery.db.test.ts`、`seal.db.test.ts`、`full-sync-projection.db.test.ts`、`projection.db.test.ts` |
 | G 组（FS-7，任务 5 部分） | 部分（G3–G6 通过；G7 的列表 `video.url` 部分等任务 7；G8、G9 等任务 6） | `list-walker.db.test.ts`、`account-sync.db.test.ts` |
+| H–J 组（FS-8～10，任务 6） | 已落地，逐条对照待任务 10 补齐（代表性用例已通过：处置七类、幂等与重放、复用与「本轮」、种子快照、详情失败、评论完整性口径、`get`） | `demand/demand.db.test.ts`、`comments/comments.db.test.ts`、`comments/policy.test.ts` |
+| K 组（FS-11，任务 7） | 部分（K1、K2、K4、K7、K8、K11–K14、K16、K20 通过；K5、K6 由 tracer 的 `archive.db.test.ts` 与本任务的「相同字节复用」共同覆盖；K3、K9、K10、K15 的视频路径、K17、K18 的 DNS 解析部分、K19 待任务 10 对照补证） | `sync-runner/media.db.test.ts`、`media-archive/video.unit.test.ts`、`raw-capture/oss-store.test.ts`、`media-archive/archive.db.test.ts` |
 | 其余自动项 | 待实施 | — |
 | 手工项 MAN1–MAN6 | 待实施 | — |
 | 环境项 ENV-1～ENV-5 | 待实施 | — |

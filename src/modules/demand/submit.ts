@@ -182,7 +182,7 @@ export function createDemandSubmitter(deps: { db: Db; clock: Clock; runtime: Dem
           tasks.push({ ...base, action: "fetch_content_detail", params: { schema_version: DETAIL_TASK_SCHEMA, mode: runtime.modes.media_stats_number, content_id: cid, followups: { roles: reusableDetail ? [] : mediaRoles } }, sourceSnapshotId: base.sourceSnapshotId });
         }
         if (mediaRoles.length > 0 && reusableDetail) {
-          tasks.push({ ...base, action: "download_media", params: { schema_version: MEDIA_VIDEO_TASK_SCHEMA, content_id: cid, content_snapshot_id: reusableDetail.snapshotId, roles: mediaRoles, sources: reusableDetail.sources }, sourceSnapshotId: reusableDetail.snapshotId });
+          tasks.push({ ...base, action: "download_media", params: { schema_version: MEDIA_VIDEO_TASK_SCHEMA, content_id: cid, content_snapshot_id: reusableDetail.snapshotId, roles: mediaRoles, sources: reusableDetail.sources, detail_mode: runtime.modes.media_stats_number }, sourceSnapshotId: reusableDetail.snapshotId });
         }
       }
     }

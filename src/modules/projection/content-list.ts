@@ -1,6 +1,6 @@
 // 完整返回页投影（R9）：已返回的每条条目都处理，不按本地 limit 截断；内容按被观察账号保存；
 // 整页在调用方给定的同一个事务里完成，所以「全部终态之后才推进检查点」天然成立。
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { DbTx } from "../../db/client";
 import { contentDiscoveries, contentSnapshots, contents, mediaReferences } from "../../db/schema";
 import type { ListData, ListEntry } from "../provider-adapter";
@@ -286,3 +286,17 @@ export interface ContentListProjector {
 }
 
 export const contentListProjector: ContentListProjector = { projectCompletePage: projectContentPage };
+
+/**
+ * 封面首次规则（FS-D09、v2 R3）：内容已有 archived / carried_forward 的封面时，新快照不再建 cover 引用；
+ * 此前没有成功过（pending / failed）则照常建，下一次出现就用新地址重建。ListWalker 把它作为 skipCover 钩子传入。
+ */
+export async function hasArchivedCover(tx: DbTx, contentId: bigint): Promise<boolean> {
+  const [row] = await tx
+    .select({ id: mediaReferences.mediaReferenceId })
+    .from(mediaReferences)
+    .innerJoin(contentSnapshots, eq(contentSnapshots.contentSnapshotId, mediaReferences.contentSnapshotId))
+    .where(and(eq(contentSnapshots.contentId, contentId), eq(mediaReferences.role, "cover"), inArray(mediaReferences.archiveStatus, ["archived", "carried_forward"])))
+    .limit(1);
+  return row !== undefined;
+}

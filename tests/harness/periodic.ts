@@ -15,6 +15,8 @@ export interface PeriodicAccount {
   postIds: string[];
   /** 列表条目的作者；抖音默认与 raw3 主页一致，其余随意（不足 5 条不做作者判定）。 */
   author?: string;
+  /** 每条作品的封面候选地址（默认是不在白名单的占位地址）。 */
+  cover?: (postId: string) => string[];
 }
 
 export async function runPeriodic(t: TestDb, env: SyncEnv, specs: PeriodicAccount[]) {
@@ -24,7 +26,7 @@ export async function runPeriodic(t: TestDb, env: SyncEnv, specs: PeriodicAccoun
   for (const s of specs) {
     const a = await env.addAccount(s.platform, s.staffId);
     profiles[env.locatorOf(a.accountId)] = defaultProfileFixture(s.platform);
-    lists[env.locatorOf(a.accountId)] = s.postIds.map((postId, i) => ({ postId, userId: s.author ?? (s.platform === "douyin" ? "HITACHI1" : "AUTHOR"), createdMs: 1788169004000 - i * 1000 }));
+    lists[env.locatorOf(a.accountId)] = s.postIds.map((postId, i) => ({ postId, userId: s.author ?? (s.platform === "douyin" ? "HITACHI1" : "AUTHOR"), createdMs: 1788169004000 - i * 1000, ...(s.cover ? { cover: s.cover(postId) } : {}) }));
     made.push(a);
   }
   env.routeBy(PROFILE_PATH, profiles);

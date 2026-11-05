@@ -11,7 +11,7 @@ import type { Db, DbTx } from "../../db/client";
 import { externalAccountIdentifiers, odsProviderCalls, staffAccountAssignments, syncTasks } from "../../db/schema";
 import { bindDominantListAuthor, bindSecondaryIdentifier, loadOwnerSnapshot, type IdentifierRef } from "../identity";
 import { DEFAULT_STRATEGIES, withFences } from "../orchestrator";
-import { contentListProjector, recordIssue, validPublishedAtMs } from "../projection";
+import { contentListProjector, hasArchivedCover, recordIssue, validPublishedAtMs } from "../projection";
 import { buildRequest, decodeVideoList, type ListData, type RequestCursor, type TypedCursor } from "../provider-adapter";
 import { platformCodeOf, type AccountRunnerDeps } from "./account-deps";
 import { callDecoded, capabilityFailure } from "./call";
@@ -151,6 +151,7 @@ export function createListWalker(deps: AccountRunnerDeps): TaskRunner {
           now,
           mode: "building",
           positionOffset: prev.entries_done,
+          skipCover: hasArchivedCover, // 封面首次入库：已有成功封面的内容不再建引用（R3）
         });
 
         const issue = (code: string, severity: "info" | "warning" | "error", discriminator: string, detail: Record<string, unknown>) =>

@@ -33,7 +33,7 @@ const MAX_ROUNDS = 3;
 const IN_RUN_ATTEMPTS = 2;
 const DEFAULT_LEASE_MS = 120_000;
 
-type RefRow = typeof mediaReferences.$inferSelect;
+export type RefRow = typeof mediaReferences.$inferSelect;
 
 export interface MediaArchiveHooks {
   /** 一个引用的下载与转换完成、提交事务之前。 */
@@ -69,18 +69,19 @@ export interface MediaRunResult {
   needsFreshUrl: number;
 }
 
-interface Ctx {
+/** 一次归档运行的上下文：tracer（根任务 + 轮次子任务）与 a-full-sync（账号 / 批次级 download_media 任务）共用。 */
+export interface Ctx {
   deps: MediaArchiveDeps;
-  root: TaskRow;
-  child: TaskRow;
-  token: bigint;
+  scope: { batchId: bigint; accountId: bigint; /** 快手封面走 CDN 转换来源；tracer 不区分平台（null）。 */ platform: string | null };
+  /** 所有写入都带这个任务的 fencing token。 */
+  fence: { taskId: bigint; token: bigint };
   batchOrder: { logicalAt: Date; batchId: bigint };
   derivedMemo: Map<string, NormalizedImage & { sha: string }>;
   tally: { archived: number; carriedForward: number };
 }
 
-const hex = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
-const mediaKey = (sha: string) => `media/${sha.slice(0, 2)}/${sha}`;
+export const hex = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
+export const mediaKey = (sha: string) => `media/${sha.slice(0, 2)}/${sha}`;
 
 export async function runMediaArchive(deps: MediaArchiveDeps, rootTaskId: bigint): Promise<MediaRunResult> {
   const { db, clock } = deps;
@@ -116,9 +117,8 @@ export async function runMediaArchive(deps: MediaArchiveDeps, rootTaskId: bigint
   const [batch] = await db.select().from(syncBatches).where(eq(syncBatches.batchId, root.batchId));
   const ctx: Ctx = {
     deps,
-    root,
-    child: claim.task,
-    token: claim.token,
+    scope: { batchId: root.batchId, accountId: root.accountId!, platform: null },
+    fence: { taskId: claim.task.taskId, token: claim.token },
     batchOrder: { logicalAt: batch!.logicalAt, batchId: batch!.batchId },
     derivedMemo: new Map(),
     tally: { archived: 0, carriedForward: 0 },
@@ -168,7 +168,7 @@ const normalizedOf = (r: RefRow, all: RefRow[]) =>
   all.find((n) => n.role === NORMALIZED_OF[r.role as OriginalRole] && n.slotIndex === r.slotIndex && n.profileSnapshotId === r.profileSnapshotId && n.contentSnapshotId === r.contentSnapshotId);
 
 /** 只在原始引用上判断：待下载 / 可重试的失败 / 已归档但衍生图缺失或可重试地失败。 */
-function needsWork(r: RefRow, all: RefRow[]): boolean {
+export function needsWork(r: RefRow, all: RefRow[]): boolean {
   if (!isOriginal(r)) return false;
   if (r.archiveStatus === "pending") return true;
   if (r.archiveStatus === "failed") return classifyMediaFailure(r.lastErrorCode) === "retryable";
@@ -179,7 +179,7 @@ function needsWork(r: RefRow, all: RefRow[]): boolean {
   return false; // carried_forward 已经是本轮的终态
 }
 
-async function loadRefs(db: Db, root: TaskRow): Promise<RefRow[]> {
+export async function loadRefs(db: Db, root: { batchId: bigint; accountId: bigint | null }): Promise<RefRow[]> {
   const p = await db
     .select({ r: mediaReferences })
     .from(mediaReferences)
@@ -243,13 +243,14 @@ async function settleBatchOf(tx: DbTx, batchId: bigint, now: Date): Promise<void
 
 // ───────────────────────── 单个引用 ─────────────────────────
 
-type StepOutcome = "ok" | "stale" | "cancelled";
+export type StepOutcome = "ok" | "stale" | "cancelled";
 
-async function processOriginal(ctx: Ctx, ref: RefRow): Promise<StepOutcome> {
+export async function processOriginal(ctx: Ctx, ref: RefRow): Promise<StepOutcome> {
   const { deps } = ctx;
   const needsDownload = ref.archiveStatus === "pending" || ref.archiveStatus === "failed";
   const policy = deps.policy ?? DEFAULT_MEDIA_POLICY;
-
+  // 快手封面：原始 KVIF 作不透明字节保存；标准化衍生图的来源是 CDN x-oss-process 转换出的 JPEG（FS-11.4、D-62）
+  const kuaishouCover = ctx.scope.platform === "kuaishou" && ref.role === "cover";
   let bytes: Uint8Array;
   let mime: string;
   let originalSha: string;
@@ -259,7 +260,7 @@ async function processOriginal(ctx: Ctx, ref: RefRow): Promise<StepOutcome> {
     let dl;
     for (let attempt = 1; ; attempt++) {
       try {
-        dl = await downloadBounded(deps.transport, ref.sourceLocator, policy);
+        dl = await downloadBounded(deps.transport, ref.sourceLocator, policy, { opaque: kuaishouCover });
         break;
       } catch (e) {
         const code = e instanceof MediaFailure ? e.code : "transport_error";
@@ -300,21 +301,34 @@ async function processOriginal(ctx: Ctx, ref: RefRow): Promise<StepOutcome> {
     if (memo) derived = { sha: memo.sha, bytes: memo.bytes, width: memo.width, height: memo.height };
     else {
       try {
-        const out = await deps.converter.toNormalizedJpeg({ bytes, mimeType: mime });
+        let source: { bytes: Uint8Array; mimeType: string } = { bytes, mimeType: mime };
+        if (kuaishouCover) {
+          // 转换失败 / 取不到：封面不可用，内容不受影响
+          if (ref.sourceLocator === null) throw new MediaFailure("cover_unavailable");
+          try {
+            const jpeg = await downloadBounded(deps.transport, kuaishouCoverTransformUrl(ref.sourceLocator), policy);
+            if (jpeg.mimeType !== "image/jpeg") throw new MediaFailure("cover_unavailable");
+            source = { bytes: jpeg.bytes, mimeType: jpeg.mimeType };
+          } catch {
+            throw new MediaFailure("cover_unavailable");
+          }
+        }
+        const out = await deps.converter.toNormalizedJpeg(source);
         if (sniffImage(out.bytes) !== "image/jpeg") throw new ConverterError("unsupported", "转换结果不是 JPEG");
         const sha = hex(out.bytes);
         if (!(await assetBySha(deps.db, sha))) await putVerified(deps.mediaStore, mediaKey(sha), out.bytes);
         ctx.derivedMemo.set(originalSha, { ...out, sha });
         derived = { sha, bytes: out.bytes, width: out.width, height: out.height };
       } catch (e) {
-        derived = { failure: e instanceof ConverterError && e.kind === "unsupported" ? "convert_failed" : "converter_unavailable" };
+        derived = { failure: e instanceof MediaFailure ? e.code : e instanceof ConverterError && e.kind === "unsupported" ? "convert_failed" : "converter_unavailable" };
+        if (kuaishouCover && derived.failure !== "cover_unavailable") derived = { failure: "cover_unavailable" };
       }
     }
   }
 
   await deps.hooks?.beforeRefCommit?.();
 
-  const r = await withFences(deps.db, deps.clock, [{ taskId: ctx.child.taskId, token: ctx.token }], async (tx) => {
+  const r = await withFences(deps.db, deps.clock, [{ taskId: ctx.fence.taskId, token: ctx.fence.token }], async (tx) => {
     const now = deps.clock.now();
     let originalAssetId = ref.mediaAssetId;
     if (fresh) {
@@ -326,7 +340,7 @@ async function processOriginal(ctx: Ctx, ref: RefRow): Promise<StepOutcome> {
     }
     if ("failure" in derived) {
       await upsertNormalized(tx, ref, { status: "failed", assetId: null, error: derived.failure, carried: false }, now);
-      await recordMediaIssue(tx, ctx, ref, derived.failure, { derivative: true });
+      await recordMediaIssue(tx, ctx, ref, derived.failure, { derivative: true }, kuaishouCover ? "media_cover_unavailable" : undefined);
     } else {
       const assetId = await ensureAsset(tx, deps, { sha: derived.sha, byteLength: derived.bytes?.byteLength ?? 0, mime: "image/jpeg", width: derived.width, height: derived.height, now, knownOnly: derived.bytes === null });
       await upsertNormalized(tx, ref, { status: "archived", assetId, error: null, carried: false }, now);
@@ -340,12 +354,12 @@ async function processOriginal(ctx: Ctx, ref: RefRow): Promise<StepOutcome> {
 const fenceOutcome = (r: Extract<Fenced<unknown>, { ok: false }>): StepOutcome => (r.reason === "cancelled" ? "cancelled" : "stale");
 
 /** R19.4：媒资失败（含续用旧资产的本轮失败）留一条可查询的质量问题；指纹含引用 ID 与错误码，同批次重放不重复。 */
-async function recordMediaIssue(tx: DbTx, ctx: Ctx, ref: RefRow, code: string, extra: Record<string, unknown>): Promise<void> {
+async function recordMediaIssue(tx: DbTx, ctx: Ctx, ref: RefRow, code: string, extra: Record<string, unknown>, issueCode = "media_archive_failed"): Promise<void> {
   await recordIssue(tx, {
-    code: "media_archive_failed",
+    code: issueCode,
     severity: "warning",
-    batchId: ctx.root.batchId,
-    accountId: ctx.root.accountId,
+    batchId: ctx.scope.batchId,
+    accountId: ctx.scope.accountId,
     entityType: "media_reference",
     entityId: ref.mediaReferenceId,
     discriminator: `${ref.mediaReferenceId}:${ref.role}:${code}`,
@@ -359,7 +373,7 @@ async function commitFailure(ctx: Ctx, ref: RefRow, code: MediaFailureCode): Pro
   const { deps } = ctx;
   const prior = await priorVerified(ctx, ref, ref.role);
   const priorNorm = prior ? await priorVerified(ctx, ref, NORMALIZED_OF[ref.role as OriginalRole], prior) : null;
-  const r = await withFences(deps.db, deps.clock, [{ taskId: ctx.child.taskId, token: ctx.token }], async (tx) => {
+  const r = await withFences(deps.db, deps.clock, [{ taskId: ctx.fence.taskId, token: ctx.fence.token }], async (tx) => {
     const now = deps.clock.now();
     if (prior) {
       await tx
@@ -383,7 +397,7 @@ async function commitFailure(ctx: Ctx, ref: RefRow, code: MediaFailureCode): Pro
 
 async function commitDerivativeFailure(ctx: Ctx, ref: RefRow, code: MediaFailureCode): Promise<StepOutcome> {
   const { deps } = ctx;
-  const r = await withFences(deps.db, deps.clock, [{ taskId: ctx.child.taskId, token: ctx.token }], async (tx) => {
+  const r = await withFences(deps.db, deps.clock, [{ taskId: ctx.fence.taskId, token: ctx.fence.token }], async (tx) => {
     await upsertNormalized(tx, ref, { status: "failed", assetId: null, error: code, carried: false }, deps.clock.now());
     await recordMediaIssue(tx, ctx, ref, code, { derivative: true });
   });
@@ -392,16 +406,16 @@ async function commitDerivativeFailure(ctx: Ctx, ref: RefRow, code: MediaFailure
 
 // ───────────────────────── 资产与引用写入 ─────────────────────────
 
-async function assetBySha(db: Db | DbTx, sha: string) {
+export async function assetBySha(db: Db | DbTx, sha: string) {
   const [row] = await db.select().from(mediaAssets).where(eq(mediaAssets.sha256, Buffer.from(sha, "hex")));
   return row;
 }
 
 /** 内容寻址的正式资产：同字节只一份。已存在直接复用（不重复写对象行）。 */
-async function ensureAsset(
+export async function ensureAsset(
   tx: DbTx,
-  deps: MediaArchiveDeps,
-  a: { sha: string; byteLength: number; mime: string; width: number | null; height: number | null; now: Date; knownOnly?: boolean },
+  deps: Pick<MediaArchiveDeps, "location">,
+  a: { sha: string; byteLength: number; mime: string; width: number | null; height: number | null; now: Date; knownOnly?: boolean; kind?: "image" | "video" | "audio"; durationMs?: number | null },
 ): Promise<bigint> {
   const found = await assetBySha(tx, a.sha);
   if (found) return found.mediaAssetId;
@@ -425,10 +439,11 @@ async function ensureAsset(
   const [asset] = await tx.insert(mediaAssets).values({
     sha256: Buffer.from(a.sha, "hex"),
     byteLength: BigInt(a.byteLength),
-    mediaKind: "image",
+    mediaKind: a.kind ?? "image",
     mimeType: a.mime,
     width: a.width,
     height: a.height,
+    durationMs: a.durationMs == null ? null : BigInt(Math.round(a.durationMs)),
     ossObjectId: BigInt(obj.insertId),
     verificationStatus: "verified",
     verifiedAt: a.now,
@@ -492,7 +507,7 @@ async function existingDerivative(db: Db, originalSha: string) {
 }
 
 /** 上一快照里同角色同槽位、已有已验证资产的引用（按批次逻辑时间向前找最近的一条）。 */
-async function priorVerified(ctx: Ctx, ref: RefRow, role: string, requireSameBatchOf?: RefRow): Promise<RefRow | null> {
+export async function priorVerified(ctx: Ctx, ref: RefRow, role: string, requireSameBatchOf?: RefRow): Promise<RefRow | null> {
   const { db } = ctx.deps;
   const { logicalAt, batchId } = ctx.batchOrder;
   const older = (b: typeof syncBatches) => or(sql`${b.logicalAt} < ${logicalAt}`, and(sql`${b.logicalAt} = ${logicalAt}`, sql`${b.batchId} < ${batchId}`));
@@ -528,7 +543,7 @@ function pick(rows: Array<{ r: RefRow }>, sameSnapshotAs?: RefRow): RefRow | nul
 }
 
 /** 上传并读回校验（内容寻址，重复写同一个 key 是幂等的）。 */
-async function putVerified(store: ObjectStore, key: string, bytes: Uint8Array): Promise<void> {
+export async function putVerified(store: ObjectStore, key: string, bytes: Uint8Array): Promise<void> {
   const sha = hex(bytes);
   const stored = await store.put(key, bytes);
   if (stored.sha256 !== sha || stored.byteLength !== bytes.byteLength) {
@@ -540,4 +555,9 @@ async function putVerified(store: ObjectStore, key: string, bytes: Uint8Array): 
     await store.delete(key).catch(() => undefined);
     throw new MediaFailure("transport_error", "媒资对象读回校验失败");
   }
+}
+
+/** 快手封面的标准化来源：CDN 的 x-oss-process 转换为 540 宽 JPEG（D-62）。原始地址已带查询串时用 & 追加。 */
+export function kuaishouCoverTransformUrl(source: string): string {
+  return `${source}${source.includes("?") ? "&" : "?"}x-oss-process=image/format,jpg/resize,w_540`;
 }

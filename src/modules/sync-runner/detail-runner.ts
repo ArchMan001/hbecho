@@ -8,9 +8,9 @@ import { sha256Utf8 } from "../canonical-json";
 import { MEDIA_VIDEO_TASK_SCHEMA, insertDemandTask } from "../demand/tasks";
 import { withFences } from "../orchestrator";
 import { insertDetailSnapshot, recordIssue } from "../projection";
-import { buildContentUrl, buildRequest, decodeDetail, profileAttemptOutcomeOf, rankVideoSources } from "../provider-adapter";
+import { buildContentUrl, buildRequest, decodeDetail, profileAttemptOutcomeOf, rankVideoSources, type DetailData, type ExecutionMode, type Platform } from "../provider-adapter";
 import { platformCodeOf, type AccountRunnerDeps } from "./account-deps";
-import { callDecoded, capabilityFailure } from "./call";
+import { callDecoded, capabilityFailure, type CallResult } from "./call";
 import type { RunnerOutcome, TaskContext, TaskRunner, TerminalHook } from "./types";
 
 export const DETAIL_SCHEMA = "sync-detail-task.v1";
@@ -39,22 +39,7 @@ export function createDetailRunner(deps: AccountRunnerDeps): TaskRunner {
     const [content] = await db.select().from(contents).where(eq(contents.contentId, contentId));
     if (!content || content.accountId !== accountId) return { kind: "failure", code: "task_parameters_invalid", detail: { reason: "content_account_mismatch" } };
 
-    // 内容 URL：抖音取最近快照的分享页地址，否则规范形式；快手没有样本 → content_url_unavailable（不猜测）
-    const [src] = content.currentSnapshotId === null ? [] : await db.select({ shareUrl: contentSnapshots.shareUrl }).from(contentSnapshots).where(eq(contentSnapshots.contentSnapshotId, content.currentSnapshotId));
-    const url = buildContentUrl(platform, { postId: content.platformContentId, shareUrl: src?.shareUrl ?? null });
-    if (!url.ok) return { kind: "failure", code: "content_url_unavailable" };
-    const gate = capabilityFailure(deps, platform, "media_stats_number", mode);
-    if (gate) return { kind: "failure", code: gate };
-
-    const r = await callDecoded(deps, ctx, {
-      platform,
-      action: "media_stats_number",
-      expectedResponse: "media_stats",
-      mode,
-      seq: 1,
-      request: buildRequest({ action: "media_stats_number", mode, locator: url.url }),
-      decode: (bytes) => decodeDetail(platform, bytes),
-    });
+    const r = await requestDetail(deps, ctx, { platform, mode, content });
     if (r.kind === "abandoned") return { kind: "abandoned", reason: r.reason };
     if (r.kind === "failed") {
       // RESULT_VALIDATION_FAILED 一类耗尽：详情不可访问。只记问题，不改内容 status（D-54）
@@ -109,7 +94,7 @@ export function createDetailRunner(deps: AccountRunnerDeps): TaskRunner {
             accountId,
             contentId,
             action: "download_media",
-            params: { schema_version: MEDIA_VIDEO_TASK_SCHEMA, content_id: contentId.toString(), content_snapshot_id: snap.contentSnapshotId.toString(), roles: followups.roles, sources },
+            params: { schema_version: MEDIA_VIDEO_TASK_SCHEMA, content_id: contentId.toString(), content_snapshot_id: snap.contentSnapshotId.toString(), roles: followups.roles, sources, detail_mode: mode },
             sourceContentSnapshotId: snap.contentSnapshotId,
             ruleDecisionId: task.ruleDecisionId,
             ruleVersion: task.ruleVersion,
@@ -145,4 +130,31 @@ export function createDetailRunner(deps: AccountRunnerDeps): TaskRunner {
     });
     return done.ok ? { kind: "done" } : abandonedOf(done.reason);
   };
+}
+
+/**
+ * 一次详情调用：URL 构造（抖音取最近快照的分享页地址，否则规范形式；快手没有样本 → content_url_unavailable，不猜测）
+ * → capability 门控 → media_stats_number（响应动作 media_stats）→ 先捕获后解码。
+ * DetailRunner 与视频下载任务的「地址过期后重新取详情」共用。
+ */
+export async function requestDetail(
+  deps: AccountRunnerDeps,
+  ctx: TaskContext,
+  p: { platform: Platform; mode: ExecutionMode; content: { platformContentId: string; currentSnapshotId: bigint | null } },
+): Promise<CallResult<DetailData>> {
+  const { db } = deps;
+  const [src] = p.content.currentSnapshotId === null ? [] : await db.select({ shareUrl: contentSnapshots.shareUrl }).from(contentSnapshots).where(eq(contentSnapshots.contentSnapshotId, p.content.currentSnapshotId));
+  const url = buildContentUrl(p.platform, { postId: p.content.platformContentId, shareUrl: src?.shareUrl ?? null });
+  if (!url.ok) return { kind: "failed", code: "content_url_unavailable", cls: null };
+  const gate = capabilityFailure(deps, p.platform, "media_stats_number", p.mode);
+  if (gate) return { kind: "failed", code: gate, cls: null };
+  return callDecoded(deps, ctx, {
+    platform: p.platform,
+    action: "media_stats_number",
+    expectedResponse: "media_stats",
+    mode: p.mode,
+    seq: 1,
+    request: buildRequest({ action: "media_stats_number", mode: p.mode, locator: url.url }),
+    decode: (bytes) => decodeDetail(p.platform, bytes),
+  });
 }

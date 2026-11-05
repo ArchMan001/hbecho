@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import type { Clock, ObjectStore, StoredObject } from "../../src/modules/raw-capture/ports";
+import { readFileSync } from "node:fs";
+import type { Clock, MediaObjectStore, StoredObject } from "../../src/modules/raw-capture/ports";
 
 export type OssFault = "fail" | "corrupt" | "truncate";
 
@@ -10,7 +11,7 @@ export type OssFault = "fail" | "corrupt" | "truncate";
  *  - truncate：只存前半（截断）。
  * 故障按 key 匹配、按次数消耗。
  */
-export class FakeObjectStore implements ObjectStore {
+export class FakeObjectStore implements MediaObjectStore {
   private readonly objects = new Map<string, { bytes: Uint8Array; createdAt: Date }>();
   private faults: Array<{ match: (key: string) => boolean; fault: OssFault; times: number }> = [];
   readonly deleted: string[] = [];
@@ -38,6 +39,18 @@ export class FakeObjectStore implements ObjectStore {
     return { sha256: createHash("sha256").update(stored).digest("hex"), byteLength: stored.byteLength };
   }
 
+  /** 视频：测试里文件不大（大文件测试直接断言上传的是文件而不是内存缓冲）；记录调用便于断言。 */
+  readonly uploadedFiles: Array<{ key: string; path: string; byteLength: number }> = [];
+  readonly signed: Array<{ key: string; ttlSeconds: number }> = [];
+  async putFile(key: string, path: string): Promise<StoredObject> {
+    const bytes = readFileSync(path);
+    this.uploadedFiles.push({ key, path, byteLength: bytes.byteLength });
+    return this.put(key, bytes);
+  }
+  async signedGetUrl(key: string, ttlSeconds: number): Promise<string> {
+    this.signed.push({ key, ttlSeconds });
+    return `https://fake-oss.test/${key}?ttl=${ttlSeconds}`;
+  }
   async get(key: string): Promise<Uint8Array | null> {
     return this.objects.get(key)?.bytes.slice() ?? null;
   }

@@ -49,6 +49,16 @@ export function createDemandReader(deps: { db: Db }) {
         .where(and(inArray(contentSnapshots.contentId, contentIds), inArray(mediaReferences.role, ["video", "audio"]), inArray(mediaReferences.archiveStatus, ["archived", "carried_forward"])))
         .orderBy(desc(mediaReferences.mediaReferenceId))) if (a.asset !== null) assets.set(`${a.contentId}/${a.role}`, a.asset.toString());
     }
+    // 媒资任务成功但没有资产（例如无音轨）：如实展示引用上的稳定原因，而不是 ready
+    const mediaErr = new Map<string, string>();
+    if (contentIds.length) {
+      for (const a of await db
+        .select({ contentId: contentSnapshots.contentId, role: mediaReferences.role, err: mediaReferences.lastErrorCode })
+        .from(mediaReferences)
+        .innerJoin(contentSnapshots, eq(contentSnapshots.contentSnapshotId, mediaReferences.contentSnapshotId))
+        .where(and(inArray(contentSnapshots.contentId, contentIds), inArray(mediaReferences.role, ["video", "audio"]), eq(mediaReferences.archiveStatus, "failed")))
+        .orderBy(mediaReferences.mediaReferenceId)) if (a.err) mediaErr.set(`${a.contentId}/${a.role}`, a.err);
+    }
     const commentsPointer = async (cid: string, taskRow?: (typeof tasks)[number]) => {
       let t = taskRow;
       if (!t || t.status !== "succeeded") [t] = await db.select().from(syncTasks).where(and(eq(syncTasks.contentId, BigInt(cid)), eq(syncTasks.requestedAction, "fetch_comments"), eq(syncTasks.status, "succeeded"))).orderBy(desc(syncTasks.finishedAt)).limit(1);
@@ -86,7 +96,9 @@ export function createDemandReader(deps: { db: Db }) {
         const media = r.taskId ? byId.get(BigInt(r.taskId)) : taskOf(r.contentId, "download_media");
         if (media) {
           const st = stateOf(media.status);
-          items.push({ ...base, state: st, ...(st === "failed" ? { reason: media.lastErrorCode ?? media.status } : {}) });
+          const refErr = st === "ready" ? mediaErr.get(`${r.contentId}/${r.want}`) : undefined;
+          if (refErr) items.push({ ...base, state: "failed", reason: refErr });
+          else items.push({ ...base, state: st, ...(st === "failed" ? { reason: media.lastErrorCode ?? media.status } : {}) });
           continue;
         }
         const detail = taskOf(r.contentId, "fetch_content_detail");

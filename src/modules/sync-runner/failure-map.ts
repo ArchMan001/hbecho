@@ -33,6 +33,7 @@ export const FAILURE_SPECS = {
   page_projection_failed: account,
   converter_unavailable: account,
   media_download_failed: account,
+  media_source_expired: account, // 下载地址过期：下一次尝试先重新取详情拿新地址（有界）
   runner_error: account, // Runner 抛出的未预期异常：有界重试，额度用尽后 dead，不会无限重跑
   // 稳定失败：不重试
   provider_input_inaccessible: stable,
@@ -43,6 +44,15 @@ export const FAILURE_SPECS = {
   profile_uid_mismatch: stable,
   list_author_mismatch: stable,
   detail_inaccessible: stable,
+  // 媒资的终态失败原因（media-failure 判为 terminal 的都在这里，不能走可重试的 media_download_failed 被重试到 dead）
+  media_too_large: stable,
+  media_url_rejected: stable,
+  media_content_type_not_allowed: stable,
+  media_unsupported_format: stable,
+  media_too_many_redirects: stable,
+  media_no_source: stable,
+  media_convert_failed: stable,
+  media_cover_unavailable: stable,
   source_expired_exhausted: stable,
   // 没有发出调用：不消耗额度
   budget_exhausted: noCall,

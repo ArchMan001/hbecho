@@ -10,11 +10,11 @@
 >
 > **所属域**：A 数据底座 · **目录命名**：`a-full-sync`，符合 `<代号>-<切片>`
 >
-> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.10.1（2026-11-05，定稿候选）§14 A3–A7
+> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.11（2026-11-05，定稿候选）§14 A3–A7
 >
 > **最近核对**：2026-11-05
 >
-> **更新日期**：2026-11-05（初建；同日吸收旧系统经验，新增 C13–C15、D10–D12、E20–E22、N9、O6–O7；尚未实施，所有结果列为「待实施」）
+> **更新日期**：2026-11-05（外部审查两轮后新增 A15–A17、B12、E24–E26、H14、K19–K20，修正 C3、J10、M11，D 组去掉重复的 D4 并重排；初建；同日吸收旧系统经验，新增 C13–C15、D10–D12、E20–E22、N9、O6–O7；尚未实施，所有结果列为「待实施」）
 
 ## 怎么用
 
@@ -55,6 +55,9 @@
 | A12 | FS-1.9 | 在规划第 3 块之后终止，再 `tick` | `planned` 批次被恢复；任务总数 = 目标数 ×（1 或 2），无重复 |
 | A13 | FS-1.10 | 查询任意时刻 `running` 的 `full` 批次数 | ≤ 1（含并发 `tick` 的顺序触发） |
 | A14 | FS-1 | 时区配置为 `UTC` 启动 | 启动失败，错误说明只支持 `Asia/Shanghai` |
+| A15 | FS-1.7、R8 | 规划了 5 个任务且全部因监控资格失效取消；另一批次没有任何有效目标 | 前者 `skipped/all_targets_closed`（存在 5 个已取消任务行），后者 `skipped/no_targets`（零任务行）；都不是 `succeeded` |
+| A17 | FS-8.4 | 构造「上一批次排队 3 小时才晋升」：上一批次在其 `logical_at` 与 `started_at` 之间完成了某内容的详情 | 本轮（以新批次 `started_at` 为起点）**不**复用该详情；用 `logical_at` 会误复用 |
+| A16 | R4 | 在已有 tracer / smoke 批次行的库上应用 `purpose` 迁移 | 迁移成功；既有行 `purpose='intake'`；列为 NOT NULL 且无 DEFAULT；`drizzle-kit generate` 无新文件 |
 
 ### B. 实际监控目标（FS-2）
 
@@ -71,6 +74,7 @@
 | B9 | FS-2.5 | 关闭分公司，下级门店自身开关为开 | 下级值不被改写；恢复分公司后按下级原值继续 |
 | B10 | FS-2.6 | 任务已规划，领取前关闭其门店 | 任务 `cancelled/monitoring_closed`；transport 调用数为 0；计入 `skipped_task_count` |
 | B11 | FS-2.7 | 规划 1,200 个账号 | 事务分块（每块 ≤ 500）；没有单个事务写完全部任务 |
+| B12 | FS-2.1、FS-2.4 | 品牌停用；大区停用 | 名下账号不在目标集；原因码分别为 `brand_inactive`、`region_inactive`（品牌 / 大区没有监控开关） |
 
 ### C. 任务图、幂等、租约与并发（FS-3）
 
@@ -78,7 +82,7 @@
 |---|---|---|---|
 | C1 | FS-3.1 | 对同一批次重复规划 | 任务数不变；幂等键冲突被吞掉 |
 | C2 | FS-3.1 | `external` 账号的任务 | 只有 `fetch_profile` |
-| C3 | FS-3.2 | 两个连接顺序领取 20 个任务 | 无任务被领取两次；顺序为 `priority DESC, task_id` |
+| C3 | FS-3.2 | 两个连接顺序领取 20 个任务 | 无任务被领取两次；顺序为 `priority DESC, attempt_count ASC, task_id` |
 | C4 | FS-3.2 | 批次 `queued` / `skipped` / `cancelled` 下的 pending 任务 | 不被领取；终态批次的 `download_media` 可被领取 |
 | C5 | FS-3.3 | worker 1 领取后租约过期，worker 2 领取 | fencing token 递增；worker 1 的页投影、检查点、封口、媒资终态全部整笔失败 |
 | C6 | FS-3.4 | 取消批次后，在途任务下一次发调用前 | 心跳返回 `cancelled`；transport 不再被调用 |
@@ -99,15 +103,14 @@
 | D1 | FS-4.1 | 抖音 / 小红书 / 快手各一个账号跑 `fetch_profile` | 每账号每批次一份快照；current 指向它；ODS 先于解码 |
 | D2 | FS-4.1 | 同一批次同一账号重复运行 | 仍只有一份快照 |
 | D3 | FS-4.2 | 真实 0 / 缺失 / 显式 `null` / 非法值 | 四种状态分别保留，不互转 |
-| D4 | FS-4.3 | 主页返回的 ID 与任务账号不一致 | 不写快照；`identity_conflict` 质量问题；任务 `failed`；不新建账号、不改绑定 |
-| D5 | FS-4.4 | 注入传输错误、429、5xx、解析失败、存储失败 | 无空快照，指标不为 0；账号 `status` 不变 |
-| D6 | FS-4.5 | 对已有账号连续返回 `RESULT_VALIDATION_FAILED` 直至额度耗尽 | 任务 `failed/provider_input_inaccessible`；`account_inaccessible_suspected` 存在；账号状态不变 |
-| D7 | FS-4.5 | 下一批次该账号主页成功 | 上条质量问题自动 `resolved`，`resolved_by_actor='system:recovered'` |
-| D8 | FS-4.6 | 已有账号主页粉丝与作品数均为 `0` | 照常写快照；`intake_status` 不变 |
-| D9 | FS-4.7 | 抖音 / 小红书 / 快手主页的媒资引用 | 抖音有头像、背景；小红书、快手无 |
-| D10 | FS-4.3 | 主页响应的账号标识与已登记值不同 | 不写快照、不下载媒资；任务 `failed`；`profile_uid_mismatch` 带期望值、实际值、ProviderCall 引用；已登记标识**未被改写** |
-| D11 | FS-4.8 | 主页响应账号标识有效，但四项指标全是 `null` / 缺失 | 不写快照；任务按可重试的 `profile_fields_missing` 处理；不出现「全部缺失」的快照 |
-| D12 | FS-4.3 | 身份校验函数的入参 | 基准只来自本次响应与 `external_account_identifiers` 登记值；不读取 `current_home_locator`、`resolved_home_url` 等可被覆盖的字段（函数签名 + 单测断言） |
+| D4 | FS-4.4 | 注入传输错误、429、5xx、解析失败、存储失败 | 无空快照，指标不为 0；账号 `status` 不变 |
+| D5 | FS-4.5 | 对已有账号连续返回 `RESULT_VALIDATION_FAILED` 直至额度耗尽 | 任务 `failed/provider_input_inaccessible`；`account_inaccessible_suspected` 存在；账号状态不变 |
+| D6 | FS-4.5 | 下一批次该账号主页成功 | 上条质量问题自动 `resolved`，`resolved_by_actor='system:recovered'` |
+| D7 | FS-4.6 | 已有账号主页粉丝与作品数均为 `0` | 照常写快照；`intake_status` 不变 |
+| D8 | FS-4.7 | 抖音 / 小红书 / 快手主页的媒资引用 | 抖音有头像、背景；小红书、快手无 |
+| D9 | FS-4.3 | 主页响应的账号标识与已登记值不同 | 不写快照、不下载媒资；任务 `failed`；`profile_uid_mismatch` 带期望值、实际值、ProviderCall 引用；已登记标识**未被改写** |
+| D10 | FS-4.8 | 主页响应账号标识有效，但四项指标全是 `null` / 缺失 | 不写快照；任务按可重试的 `profile_fields_missing` 处理；不出现「全部缺失」的快照 |
+| D11 | FS-4.3 | 身份校验函数的入参 | 基准只来自本次响应与 `external_account_identifiers` 登记值；不读取 `current_home_locator`、`resolved_home_url` 等可被覆盖的字段（函数签名 + 单测断言） |
 
 ### E. 列表多页、检查点与缺口（FS-5）
 
@@ -136,6 +139,9 @@
 | E21 | FS-5.13 | 20 条中 1 条异作者（共创）；3 条列表；无登记作者标识 | 分别为 `verified`、`unverifiable`、`unverifiable`；不判错；三态写入 `result_summary.identity_check` |
 | E22 | FS-5.14 | 主页作品数比上周 +5，本批次首次发现 2 条 | 警告级 `suspected_missing_content`（k=5、发现 2）；任务与检查点不受影响；+0、负增长、上周主页 `missing` 时不报 |
 | E23 | FS-5.9 | 列表响应 `has_more` 缺失 / 非法 | 停止翻页；`has_more_invalid`；按自然结束处理锚点；不猜测 |
+| E24 | FS-5.3 | 旧锚点为 `empty`，本轮首页返回 5 条（`has_more=false`；另一用例 `has_more=true`） | 任务 `succeeded`；锚点重建为 `time` / `id_window`；**没有** `continuity_gap`、没有 `gap_task_count`；`has_more=true` 时也不翻页（`stop_reason='baseline'`） |
+| E25 | FS-5.7 | 旧锚点为 `empty`，本轮仍返回空且 `has_more=false` | 保持 `empty`；任务 `succeeded`；检查点 `ready`（不是 `blocked`） |
+| E26 | FS-5.9、FS-7.4 | 有旧锚点（`time`）+ 首页 + `has_more=true` 且 `max_cursor='no_more'`（raw12 K3 形态），分别构造「命中旧边界」与「未命中」 | 命中 → `succeeded`，仍记 `cursor_no_more_with_has_more`；未命中 → `succeeded_with_gap`、`stop_reason='cursor_anomaly_rebased'`、`window_overflow=FALSE`；两种都不回发 `no_more` |
 
 ### F. 内容快照定稿与 current（FS-6）
 
@@ -180,6 +186,7 @@
 | H11 | FS-8.7 | `get` 对每种状态 | 返回 `pending / running / ready / failed / unsupported / reused_ready` 与读取指针；调用数为 0 |
 | H12 | FS-8.8 | 批次点数上限在中途耗尽 | 余下任务 `budget_exhausted`，`get` 如实展示，不静默丢弃 |
 | H13 | FS-8.1 | 一次提交 5,001 项 | 稳定的校验错误，无批次 |
+| H14 | FS-8.4 | 上一轮由**按需批次**产生了该内容的详情，本轮没有；本轮再提交 | 不复用，重新抓取（不得因批次用途是 `demand` 而永久复用） |
 
 ### I. 内容详情（FS-9）
 
@@ -208,7 +215,7 @@
 | J7 | FS-10.4 | 小红书（`total=28`、返回 2 条、`has_more=0`） | 不标记疑似删除；不视为完整 |
 | J8 | FS-10.5 | `total>0` 且结果为空数组 | `comments_total_mismatch`；不记 0 条评论 |
 | J9 | FS-10.5 | 小红书 `total` 大于已抓条数 | `comment_coverage_incomplete`（带 reported_total、fetched、reason） |
-| J10 | FS-10.6 | 小红书第一次 `RESULT_VALIDATION_FAILED`，重试成功 | 同页重试；最终评论落库 |
+| J10 | FS-10.6 | 小红书第一次 `RESULT_VALIDATION_FAILED`，重试成功 | 任务 `retry_wait` 回队尾，之后从已提交页的下一游标继续；没有进程内原地重试；最终评论落库 |
 | J11 | FS-10.7 | 评论抓取期间 | 内容快照结构化字段不变；不阻塞定稿 |
 
 ### K. 媒资归档（FS-11）
@@ -233,6 +240,8 @@
 | K16 | FS-11.9 | `source_expired` | 重新取详情拿新地址再重试（有界）；不复用旧地址 |
 | K17 | FS-11.10 | 规则未圈中的内容 | 视频从不被下载 |
 | K18 | FS-11.10 | URL 指向私网 / 回环 / DNS 解析到内网 | 被拒绝，`url_rejected` |
+| K19 | FS-11.1 | 抖音列表封面数组 3 条；小红书 / 快手单值 | 抖音选第 2 条；小红书、快手取单值；首次规则不改变选择 |
+| K20 | FS-11.7 | 音频抽取 | `maxBytes` = 源视频字节数与 `HBECHO_MEDIA_MAX_BYTES` 的较小者；`no_audio_track` 的引用为 `failed` + 该错误码，`media-failure` 分类为 `informational`，批次媒资失败数不含它 |
 
 ### L. 失败、重试与补跑（FS-12）
 
@@ -256,11 +265,12 @@
 | M3 | FS-13.2 | 有 `full` 运行时 `supplement` 不带 `--on-busy` | 默认 `run_now`：与 `full` 并行执行，两个批次互不阻塞；`full` 的任务数与终态不受影响 |
 | M4 | FS-13.2 | `--on-busy queue` | 批次 `queued`，`full` 结束后开始 |
 | M5 | FS-13.2 | `--on-busy cancel_current` | 当前 `full` 取消并审计，补抓开始 |
-| M6 | FS-13.4 | 超管创建外部账号（含短链、非主页入口） | ≤3 次解析、非主页拒绝、链接与账号成对写入；`watch_type='external'`，owner 快照为空 |
-| M7 | FS-13.4 | 分公司 / 总部主体创建外部账号 | 授权拒绝，发生在任何供应商调用之前 |
-| M8 | FS-13.5 | 一轮周期批次包含外部账号 | 只有 `fetch_profile`（及头像 / 背景媒资）；无列表 / 内容 / 详情任务 |
-| M9 | FS-13.5 | 以分公司主体列出账号 | 外部账号不可见 |
-| M10 | FS-13.6 | 外部账号启停 | 只改自身开关；关闭写 `manual` |
+| M6 | FS-13.5 | 超管创建外部账号（含短链、非主页入口） | ≤3 次解析、非主页拒绝、链接与账号成对写入；`watch_type='external'`，owner 快照为空 |
+| M7 | FS-13.5 | 分公司 / 总部主体创建外部账号 | 授权拒绝，发生在任何供应商调用之前 |
+| M8 | FS-13.6 | 一轮周期批次包含外部账号 | 只有 `fetch_profile`（及头像 / 背景媒资）；无列表 / 内容 / 详情任务 |
+| M9 | FS-13.6 | 以分公司主体列出账号 | 外部账号不可见 |
+| M10 | FS-13.7 | 外部账号启停 | 只改自身开关；关闭写 `manual` |
+| M11 | FS-13.4 | `supplement --only profile` 对一个新账号；`--if-older-than 168`（`full`）对「主页 3 天前、列表 3 天前」「主页 3 天前、列表 10 天前」「从未同步」三个账号；`--only profile --if-older-than 168` 对「主页 3 天前、列表 10 天前」的账号 | `--only profile` 只生成 `fetch_profile`；`full` 三个账号依次 `not_due` / `queued`（取主页与列表中较早的时间）/ `queued`；`--only profile` 那个账号 `not_due`（只看主页）；`not_due` 不创建任务；不在目标集返回 `not_eligible` |
 
 ### N. 运营处置命令（FS-14）
 

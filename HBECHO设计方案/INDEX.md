@@ -106,7 +106,7 @@
 |---|---|---|---|
 | 数据底座领域语言 | [`CONTEXT.md`](../CONTEXT.md) | current | 只含词汇、语义和不变量，不加入表名、框架或接口决策 |
 | 产品总纲 | [`prd-platform.md`](prd-platform.md) | draft（逐章复核中） | v1.0 重构：定位、基线、域划分 A–I、跨域决策、1.0 范围、需求编号与追踪矩阵 |
-| 域 A 产品需求 | [`prd-domain-a-data-foundation.md`](prd-domain-a-data-foundation.md) | draft（v1.10.1 定稿候选，盘问完成） | 数据底座：组织主数据、账号与归属、AI Master 客户端、同步编排、原始证据、明细层、媒资；批量导入与 `structure` 精确分层 |
+| 域 A 产品需求 | [`prd-domain-a-data-foundation.md`](prd-domain-a-data-foundation.md) | draft（v1.11 定稿候选，盘问完成） | 数据底座：组织主数据、账号与归属、AI Master 客户端、同步编排、原始证据、明细层、媒资；批量导入与 `structure` 精确分层 |
 | 域 B 产品需求 | [`prd-domain-b-access-control.md`](prd-domain-b-access-control.md) | current（v1.20 定稿） | 访问控制：开户与激活、登录会话、生命周期、Capability、DataScope、管理范围、10 个出口、审计 |
 | 域 A → C 供数说明 | [`domain-a-handoff-to-c.md`](domain-a-handoff-to-c.md) | draft | A 能给 C 的事实、粒度、质量限制与待对齐项 |
 | 域 C 产品需求 | [`prd-domain-c-signals.md`](prd-domain-c-signals.md) | draft（v1.2 定稿候选，第三轮 ASR 前移） | 识别能力：文本信号、素材比对（图片一致 / 元素 / 文字）、音频 ASR + 大模型判定（1.0）、图片/视频理解（2.0）、特征存储、信号五态；拥有监控判定计划的监控段 |
@@ -131,7 +131,7 @@
 | 数据底座字段字典 | [`field-dictionary.md`](domains/data-foundation/field-dictionary.md) | draft | 主页/列表/详情/评论的规范字段、含义、值状态与 10 个未确认语义 |
 | 数据底座 tracer | [requirements](../.kiro/specs/a-data-foundation-tracer/requirements.md) · [design](../.kiro/specs/a-data-foundation-tracer/design.md) · [tasks](../.kiro/specs/a-data-foundation-tracer/tasks.md) · [acceptance](../.kiro/specs/a-data-foundation-tracer/acceptance.md) | draft（任务 1–9 已实现并合并 main；离线验收见 acceptance，待确认后升 current） | 首个 Design-First 纵向切片；已按 A v1.9 与 raw4/raw5/raw8 校准；AI Master 是内部适配器 |
 | 主数据导入 | [requirements](../.kiro/specs/a-master-data-import/requirements.md) · [design](../.kiro/specs/a-master-data-import/design.md) · [tasks](../.kiro/specs/a-master-data-import/tasks.md) · [acceptance](../.kiro/specs/a-master-data-import/acceptance.md) | draft（任务 0–8 已实现，未合并） | 路线图第 2 位；权威主档导出预检与确认写入，含 bootstrap、`structure` 模式与门店改码（单条结构命令族延后）；文件列名以上游 xlsx 为准（11 列）；六项 v2 修订已落回、ADR-0014 已接受（2026-11-05）；路径 1 页面本轮不交付 |
-| 全量周期同步 | [requirements](../.kiro/specs/a-full-sync/requirements.md) · [design](../.kiro/specs/a-full-sync/design.md) · [tasks](../.kiro/specs/a-full-sync/tasks.md) · [acceptance](../.kiro/specs/a-full-sync/acceptance.md) | draft（2026-11-05 初建，未实施；任务 0 待确认闸门未通过） | 路线图第 3 位；周期批次（排队 / 跳过 / 过期）、有效监控目标、多页列表与检查点缺口、账号级封口、快手、按需采集接入契约（详情 / 评论 / 视频 / 音频）、媒资、补抓与运营处置命令、ODS 清理定时；要求七项 v2 修订；无页面 |
+| 全量周期同步 | [requirements](../.kiro/specs/a-full-sync/requirements.md) · [design](../.kiro/specs/a-full-sync/design.md) · [tasks](../.kiro/specs/a-full-sync/tasks.md) · [acceptance](../.kiro/specs/a-full-sync/acceptance.md) | draft（2026-11-05 初建并经外部审查修订，未实施；闸门已通过，待任务 0 的文档前置） | 路线图第 3 位；周期批次（排队 / 跳过 / 过期）、有效监控目标、多页列表与检查点缺口、账号级封口、快手、按需采集接入契约（详情 / 评论 / 视频 / 音频）、媒资、补抓与运营处置命令、ODS 清理定时；要求八项 v2 修订与两处 A PRD 修订（§7.1、§7.3）；无页面 |
 | 界面原型 | [`ui-lab/`](../ui-lab/README.md) | 空目录 | 可点击界面原型与走查记录；不进生产构建；ADR-0013 增补；原型通过且刘学奎确认界面设计后才可写页面任务 |
 | 访问控制 | [`design.md`](../.kiro/specs/access-control/design.md) | draft | 认证、Capability、DataScope、异步任务撤权语义 |
 | 规则引擎 | [`design.md`](../.kiro/specs/rule-engine/design.md) | draft | 消费 v2 终态快照；规则、证据和重算归规则域所有 |
@@ -191,7 +191,7 @@ flowchart LR
 |---|---|---|---|---|---|
 | `a-data-foundation-tracer` | A | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | A v1.10（定稿候选） | 已按 A v1.9 与 raw4/raw5/raw8 校准；v2 六项基线冲突已于 2026-11-04 修订，见 requirements §1.2 |
 | `a-master-data-import` | A | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | A v1.10（定稿候选） | 2026-11-04 初建，2026-11-05 审查修订；六项 v2 修订已于 2026-11-05 落回 v2（`import_row_results.precheck_class`、`import_batches.summary` 与确认租约、三个 actor 字段、`data_quality_issues.import_batch_id/resolved_by_actor`、§12.1 同步；`stores.source_batch_id` 外键待任务 1 的迁移），ADR-0014 已接受，见 requirements §1.3；不新增 `store_code_match`；任务 0–8 已实现，本机 verify、CI 与测试 ECS 运行通过（2026-11-05，分支 `a-master-data-import`，未合并）；人工验收 M1/M2/M4 已通过，仅余品牌/板块编码命名待确认 |
-| `a-full-sync` | A | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | A v1.10.1（定稿候选） | 2026-11-05 初建；要求七项 v2 修订（`content_snapshots.seeded_from_snapshot_id`、账号级封口、封面首次入库、`sync_batches.purpose` / `media_finished_at`、`kuaishou.user_id`、外部型只采主页，见 requirements §1.3）；六项待确认见 requirements §1.5；开工前需先合并 `a-master-data-import`；快手详情的内容 URL 构造方式未验证（design §14 第 2 项） |
+| `a-full-sync` | A | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | A v1.11（定稿候选） | 2026-11-05 初建；八项 v2 修订与两处 A PRD 修订（§7.1、§7.3）已于同日落回正文（`content_snapshots.seeded_from_snapshot_id`、账号级封口、封面首次入库、`sync_batches.purpose` / `media_finished_at`、`kuaishou.user_id`、外部型只采主页，见 requirements §1.3）；§1.5 全部待确认项已于 2026-11-05 采纳；开工前需先合并 `a-master-data-import`；快手详情的内容 URL 构造方式未验证（design §14 第 2 项） |
 | `access-control` | B | 旧名，应为 `b-access-control` | 仅 design | B v1.21（current） | design 待按 B v1.21 重写：Capability 清单、资源谓词、10 个出口、MediaStaff 自动停用均未同步 |
 | `rule-engine` | D | 旧名，应为 `d-rule-engine` | 仅 design（`requirements.md` 已移除） | D v1.0（定稿候选） | 已改：3 个评论刷量算子改「搁置」；requirements / tasks 仍缺；design 的 AssessmentItem 模型待与考核项模型对齐 |
 | `metrics-and-dashboard` | E | 旧名，应为 `e-metrics` | 仅 design | E v1.0（定稿候选） | 已改：`n_day` 降为 2.0、投影自动激活；design 待同步分项列与两层分母 |

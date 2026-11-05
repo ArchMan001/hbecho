@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：未开始（任务 0 的待确认闸门已于 2026-11-05 通过；任务 0 的文档动作与分支准备未做）
+> **执行状态**：任务 0 进行中（2026-11-05）：文档动作已完成并通过 `./scripts/verify.sh`（v2 R1–R8、A PRD v1.11、D-33 澄清、CONTEXT、ADR-0012 补记、INDEX）；**分支动作未做**，等刘学奎确认品牌 / 板块编码命名后，才能合并 `a-master-data-import` 并把本分支变基到 `main`。任务 1 起的代码在变基完成前不开工。
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -12,11 +12,11 @@
 >
 > **所属域**：A 数据底座 · **目录命名**：`a-full-sync`，符合 `<代号>-<切片>`
 >
-> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.10.1（2026-11-05，定稿候选）
+> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.11（2026-11-05，定稿候选）
 >
 > **最近核对**：2026-11-05
 >
-> **更新日期**：2026-11-05（初建；同日闸门通过；吸收旧系统经验：队尾重试、provider 熔断、身份与残缺校验、自比对、默认预览、抽样对账）
+> **更新日期**：2026-11-05（初建；同日闸门通过；外部审查后修订（requirements §1.8）；吸收旧系统经验：队尾重试、provider 熔断、身份与残缺校验、自比对、默认预览、抽样对账）
 
 ## 进度
 
@@ -76,33 +76,35 @@
 
 **动作**
 
-- **分支**：先把 `a-master-data-import` 合并 `main`（它的任务 0–8 已实现、CI 绿；见其 tasks 实施记录），再从 `main` 切 `a-full-sync`。不在 `a-master-data-import` 上直接写本 spec 的代码。
-- 在 [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md) 落回 requirements §1.3 的 R1–R7：
+- **分支**：当前本地分支 `a-full-sync` 是从未合并的 `a-master-data-import` 分出来的（文档已提交，未推送）。开工前先把 `a-master-data-import` 合并 `main`（它的任务 0–8 已实现、CI 绿），再把 `a-full-sync` 变基到 `main`；代码不写在 `a-master-data-import` 上。
+- 在 [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md) 落回 requirements §1.3 的 R1–R8：
   - R1：`content_snapshots.seeded_from_snapshot_id` 及 §10.2 增补第 12 条；
-  - R2：§10.2 第 6、7 条改为账号级封口；
+  - R2：§10.2 第 6、7 条**与 §12.3 第 6 条**改为账号级封口；
   - R3：§11.3 封面范围与 A §10.1 对齐；
   - R4：`sync_batches.purpose`；
   - R5：`sync_batches.finished_at` 语义与 `media_finished_at`；
   - R6：`kuaishou.user_id`（同步 §6.3 命名空间枚举与 CONTEXT）；
   - R7：§8.3 / §12.3 外部型只采主页；
+  - R8：§12.3 第 2 条补 `queued` / `skipped` / `expired`，与 §9.2 一致；§9.2 的 `skipped` 放宽为「没有执行任何任务的批次」；
   - header 修订项 + 版本记录补一行。
 - [`CONTEXT.md`](../../../CONTEXT.md)：登记「采集需求（CollectionDemand）」「同步轮次」两个词汇，只写语义，不写表名；`ExternalAccountIdentifier` 一节补快手命名空间。
-- [`ADR-0012`](../../../HBECHO设计方案/architecture/adr/0012-python-capability-service.md)：补记两件事——① A 域音频抽取先按「Node 传短期签名 URL」实现（Python 不持有 OSS 凭证），`c-signals` 沿用或修订；② 登记 uvicorn（FastAPI 运行服务器）的采用记录，按 [`no-reinventing-wheels`](../../steering/no-reinventing-wheels.md) 的格式写「采用 / 用途 / 不用它做什么」。
+- [`ADR-0012`](../../../HBECHO设计方案/architecture/adr/0012-python-capability-service.md)：补记两件事——① A 域音频抽取先按「Node 传短期签名 URL」实现（Python 不持有 OSS 凭证），`c-signals` 沿用或修订；② 登记 uvicorn（FastAPI 运行服务器）的采用记录；③ 图片标准化接口使用二进制 body + `Content-Type` 而不是 JSON（base64 膨胀 33%），作为 ADR-0012「JSON 契约」的例外；按 [`no-reinventing-wheels`](../../steering/no-reinventing-wheels.md) 的格式写「采用 / 用途 / 不用它做什么」。
 - [`INDEX.md`](../../../HBECHO设计方案/INDEX.md)：§5 权威矩阵加本 spec 四件套一行；§7.1 现有 spec 登记加一行；更新日期。
-- **A 域 PRD §7.1 放宽**：把「手工补抓单独建批次；当前有批次在跑时，运营可选择排队或取消当前批次」改为三项（`run_now` 默认 / `queue` / `cancel_current`），并写明「D-33 的串行只约束全量批次」；PRD 升 v1.11 并补版本记录（决策人：刘学奎，2026-11-05）；同步检查 `prd-platform.md` D-33 的措辞与 INDEX。
+- **A 域 PRD 修订（升 v1.11 并补版本记录，决策人：刘学奎，2026-11-05）**：① §7.1 手工补抓改为三项（`run_now` 默认 / `queue` / `cancel_current`），写明「D-33 的串行只约束全量批次」；② **§7.3 一次同步做什么**去掉「列表处理完后按规则拉详情 / 评论 → 详情 / 评论完成后内容定稿」，改为周期同步只做主页 → 列表 → 账号级定稿 → 媒资 → 批次汇总，详情 / 评论 / 视频 / 音频按需触发；同步检查 `prd-platform.md` D-33 的措辞与 INDEX。
 - **待确认闸门（已通过，2026-11-05，刘学奎全部采纳建议）**：requirements §1.5 第 1–7 项。数值起步值见 design §14 第 6 项，由运维写入配置，**不写进代码默认值**；熔断阈值与冷却期在任务 4 开工前由运维给出。
 - **分支与编码命名**：合并 `a-master-data-import` 前，请刘学奎确认品牌 / 板块编码命名（`hitachi` / `hisense` / `york_vrf`，`{分公司}-water` / `{分公司}-home`）。
 - 任务 0 收尾：跑 `./scripts/verify.sh`。
 
 **验证**
 
-- [ ] `./scripts/verify.sh` 通过；
-- [ ] v2 修订逐条与 requirements §1.3 对应，没有多改或少改；
-- [ ] `CONTEXT.md` 没有出现表名、字段名、框架或接口；
-- [ ] ADR-0012 有补记与决策日期；
-- [ ] INDEX 两处登记完成，链接检查通过；
-- [ ] A PRD 升版并补版本记录，`prd-platform.md` D-33 措辞一致；
-- [ ] §1.5 第 1–7 项的结论已写回 requirements / design（已于 2026-11-05 完成）。
+- [x] `./scripts/verify.sh` 通过（2026-11-05：311 单元、325 数据库测试、链接 103 文件、spec 结构 7 个、Python 7 项）；
+- [x] v2 修订逐条与 requirements §1.3（R1–R8）对应；A PRD 的 P1、P2 两处修订完成且升版。**一处连带**：v2 §12.5 / §12.6 里「内容终态等待详情依赖」的旧写法与 R2 同义，一并改为账号级封口与按需种子快照；
+- [x] `CONTEXT.md` 没有出现表名、字段名、框架或接口；
+- [x] ADR-0012 有补记与决策日期（2026-11-05，含 uvicorn 登记）；
+- [x] INDEX 两处登记完成（A PRD 版本与本 spec 行同步为 v1.11），链接检查通过；
+- [x] A PRD 升版并补版本记录，`prd-platform.md` D-33 加澄清并升 v1.0.9；
+- [x] §1.5 第 1–7 项的结论已写回 requirements / design（已于 2026-11-05 完成）；
+- [ ] **分支**：确认编码命名 → 合并 `a-master-data-import` 到 `main`（CI 绿）→ `a-full-sync` 变基到 `main`。**待刘学奎确认，未执行。**
 
 **Requirements:** §1.3、§1.5；**Design:** §6.1、§10、§13。
 
@@ -113,7 +115,7 @@
 **新增 / 修改**
 
 - `src/db/schema/content.ts`：`content_snapshots.seeded_from_snapshot_id`（自引用 FK，RESTRICT；CHECK：非空 ⇒ `list_observed=FALSE AND detail_observed=TRUE`）；
-- `src/db/schema/sync.ts`：`sync_batches.purpose`（CHECK `full/supplement/demand/intake`）、`media_finished_at`、`IDX(purpose, status, logical_at)`；
+- `src/db/schema/sync.ts`：`sync_batches.purpose`（CHECK `full/supplement/demand/intake`）、`media_finished_at`、`IDX(purpose, status, logical_at)`；**迁移文件手工改成三步**（可空列 → 回填 `intake` → NOT NULL，无 DEFAULT），改完 `drizzle-kit generate` 不得再产生新文件；
 - `src/db/schema/accounts.ts`：`IDENTIFIER_NAMESPACES` 增加 `kuaishou.user_id`（同步 CHECK）；
 - 既有写入 `sync_batches` 的 tracer 代码补 `purpose='intake'`（`tracer-command`、`smoke`）；
 - `drizzle/`：`drizzle-kit generate` 生成迁移；`schema.db.test.ts` 同层补用例；
@@ -130,6 +132,7 @@
 **验证**
 
 - [ ] 空库 migrate → 成功；再跑一次 → 无变更；
+- [ ] **有数据的库**：先迁移到上一版并插入若干 tracer / smoke 批次行，再应用本迁移 → 成功且这些行 `purpose='intake'`（测试 ECS 的 `hbecho` 库同理，演练前先备份）；
 - [ ] 非法 `purpose` / 种子快照组合被 CHECK 拒绝；
 - [ ] tracer 全部既有用例仍通过（`purpose='intake'`）；
 - [ ] manifest 新条目的文件路径都存在，`knownGaps` 非空项如实；
@@ -181,7 +184,7 @@
 
 **新增**
 
-- `src/modules/sync-schedule/`：`slots.ts`（固定 UTC+8 时点计算）、`scheduler.ts`（`tick`、创建 / 晋升 / 过期、`planned` 恢复）、`planner.ts`（分块规划任务）、`summary.ts`（终态与计数汇总、`media_finished_at`）、`commands.ts`（`createSupplement`、`cancelBatch`；影响面 > 1 的命令默认预览）；
+- `src/modules/sync-schedule/`：`slots.ts`（固定 UTC+8 时点计算）、`scheduler.ts`（`tick`、创建 / 晋升 / 过期、`planned` 恢复）、`planner.ts`（分块规划任务）、`summary.ts`（终态与计数汇总、`media_finished_at`）、`commands.ts`（`createSupplement`，含 `--only profile|full` 与 `--if-older-than`；`cancelBatch`；影响面 > 1 的命令默认预览）；
 - `src/modules/monitoring/`：`resolver.ts`（`targets`、`explain`，design §7.3 的 SQL）、`reasons.ts`（原因码与优先级）；
 - 配置：`sync_settings` 读取与校验（`schedule_slots` 的 zod schema；`timezone` 非 `Asia/Shanghai` 拒绝）；批次创建时冻结到 `settings_snapshot`；
 - `src/worker/sync-cli.ts`（先实现 `tick`、`supplement`、`batch cancel`、`batches`）。
@@ -202,6 +205,8 @@
 - [ ] 目标集：构造一棵组织树，逐级关闭 / 停用，断言目标集与原因码（最上级优先）；专员停用、门店撤店、`deleted`、`suspected_empty`、`unavailable` 仍采；external 不受五级影响；
 - [ ] 规划崩溃恢复：在第 N 块之后终止，再 `tick`，任务总数正确且无重复；
 - [ ] `supplement` 四种路径（空闲 / `run_now` 并行 / `queue` / `cancel_current`），`cancel_current` 不带 `--apply` 只预览；
+- [ ] `--only profile` 只建 `fetch_profile`；`--if-older-than`：近期同步过 → `not_due`，不在目标集 → `not_eligible`，其余 `queued`；
+- [ ] 批次终态：全部任务被跳过 → `skipped/all_targets_closed`；没有目标 → `skipped/no_targets`；
 - [ ] `./scripts/verify.sh` 通过。
 
 **Requirements:** FS-1、FS-2、FS-13（补抓与取消）；**Design:** §5.1、§5.3、§7.1–§7.4、§7.12。
@@ -274,7 +279,7 @@
 
 **验证**
 
-- [ ] `decide-after-page` 表驱动：9 行判定 × 三种锚点模式 × 置顶位置，含「等于高水位时间但 ID 不在集合内则继续」；
+- [ ] `decide-after-page` 表驱动：9 行判定 × 三种锚点模式 × 置顶位置，含「等于高水位时间但 ID 不在集合内则继续」；**`empty` 锚点 + 本轮有内容 → 成功并重建锚点、无缺口**；**`empty` 锚点 + 本轮仍为空 → 保持 `empty`、成功**；**有旧锚点 + 首页 + `no_more` 游标异常 → 命中则成功、未命中则 `cursor_anomaly_rebased` 缺口**；`has_more` 缺失 / 非法同上；
 - [ ] 三平台端到端（fixture transport）：抖音 20 条 + 异作者、小红书 21 条整页处理、快手 23 / 20 条两页；
 - [ ] 多页：构造 3 页合成 fixture（基于真实条目拼接，文档里标明是合成），命中边界在第 2 页、第 3 页；安全页数 = 2 时产生缺口并重建锚点；
 - [ ] 空窗口：旧锚点非空 + 空页 → `blocked`，旧锚点未被覆盖；
@@ -313,8 +318,8 @@
 **验证**
 
 - [ ] 提交处置矩阵：七类处置各一个用例；幂等与冲突；
-- [ ] 复用：同一轮内两个计划先后提交同一内容，只有一次详情 ProviderCall；下一个 `full` 批次开始后再提交，重新抓取；
-- [ ] 种子快照：详情只覆盖详情有的字段，列表独有字段（例如小红书正文）不丢；current 切到详情快照后，列表字段仍可读；
+- [ ] 复用：同一轮内两个计划先后提交同一内容，只有一次详情 ProviderCall；下一个 `full` 批次开始后再提交，重新抓取（**包括上一轮由按需批次产生的详情**，不得永久复用）；
+- [ ] 种子快照：`snapshot_at`、`merge_policy_version` 取值符合 design §7.8；`source_content_snapshot_id` 指向种子；详情只覆盖详情有的字段，列表独有字段（例如小红书正文）不丢；current 切到详情快照后，列表字段仍可读；
 - [ ] 详情失败：无种子快照残留，内容状态未变，质量问题存在；
 - [ ] 评论：抖音两页翻完 → 标记疑似删除并可恢复；小红书 `total=28` 只返回 2 → 不标记、记 `comment_coverage_incomplete`；触达 `page_limit` → 不标记；`parent_id` 条目被忽略并计数；
 - [ ] 按需批次不受全量串行约束，优先级高于周期任务（断言领取顺序）；
@@ -329,6 +334,7 @@
 **新增 / 修改**
 
 - `projection/content-list.ts`：封面首次规则（R3）；
+- `media-failure/index.ts`：新增 `informational` 分类（`no_audio_track`），`classifyMediaFailure` 与 `isRetryableWithSameUrl` 的用例补齐；
 - `media-archive/`：`account-batch.ts`（周期媒资任务：处理该账号本批次所有 `pending` 引用，等 profile 与 list 都终态后可领）、`kuaishou-cover.ts`（CDN 转换来源）、`video.ts`（流式下载到 `HBECHO_MEDIA_TMP_DIR`、边写边算 SHA-256、完整性校验、`finally` 删除、启动清理）、`audio.ts`（签名 URL → `CapabilityClient.extractAudio` → 正式资产；`no_audio_track` 终态）；
 - `raw-capture/oss-store.ts`：`putFile`（ali-oss `multipartUpload`）与 `signedGetUrl`（`signatureUrl`）；`ports.ts` 同步；
 - `media-archive/ports.ts`：`VideoTransport.stream`、`CapabilityClient`；`tests/harness/fake-media.ts` 扩展流式 fake、`fake-capability.ts`；
@@ -350,7 +356,7 @@
 - [ ] 封面首次规则的四种序列（成功 / 成功、失败 / 成功、成功 / 失败）；
 - [ ] 快手封面链路（fake CDN）与失败路径；
 - [ ] 视频流式：fake 源 200 MB（生成），进程缓冲小于阈值；中止、截断、超限、过期各一个用例；
-- [ ] 音频：有音轨 / 无音轨 / 能力服务不可用（可重试）；
+- [ ] 音频：有音轨 / 无音轨 / 能力服务不可用（可重试）；`no_audio_track` 分类为 `informational`，不重试、不计入批次媒资失败数；
 - [ ] 相同字节两条引用 → 一份资产；临时 URL 变化 → 不产生新资产；
 - [ ] 批次终态后媒资任务仍被领取；全部终态后 `media_finished_at` 写入；
 - [ ] `./scripts/verify.sh` 通过。

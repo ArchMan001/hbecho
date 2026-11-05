@@ -29,6 +29,15 @@
   16. §9.8 `import_batches` 增加 `uploaded_by_actor/confirmed_by_actor`、`summary JSON`、确认租约 `writing_token/heartbeat_at`；`uploaded_by_user_id/confirmed_by_user_id` 改为可空；原有四个计数列不变（名单导入使用）；
   17. §9.7 `data_quality_issues` 增加 `import_batch_id`（FK）与 `resolved_by_actor`，与同步批次引用互斥；
   18. §12.1 同步：上游真实列名（门店所属商家 / 门店所属商家渠道编码）、撤店情况只会是「无撤销」、六类、已撤店恢复、结构边界。
+- **2026-11-05 修订（`a-full-sync` 评审，已在正文改完；对应该 spec requirements §1.3 的 R1–R8，实现以正文为准）**：
+  19. （R1）§10.2 `content_snapshots` 增加 `seeded_from_snapshot_id`，§10.2 增补第 12 条：按需批次以内容当前 finalized 快照为种子建 `building` 快照；
+  20. （R2）§10.2 第 6、7 条与 §12.3 第 6 条改为账号级封口（一个账号的列表任务终态后即可定稿，不等整批次，也不为详情 / 评论等待）；
+  21. （R3）§11.3 封面范围与 A §10.1 对齐：首次入库时下载；已有成功封面不再为新快照建 `cover` 引用；
+  22. （R4）§9.2 `sync_batches` 增加 `purpose`（`full/supplement/demand/intake`）；只有 `full` 受全量串行约束；
+  23. （R5）§9.2 `finished_at` 明确为结构化阶段（主页 / 列表）结束；增加 `media_finished_at`；
+  24. （R6）§6.3 命名空间增补 `kuaishou.user_id`；
+  25. （R7）§8.3 / §12.3：`watch_type='external'` 只生成主页任务；
+  26. （R8）§12.3 第 2 条与 §9.2 对齐为 `queued/skipped/expired`；§9.2 的 `skipped` 放宽为「没有执行任何任务的批次」，`skip_reason` 增 `no_targets`、`all_targets_closed`。
 
 ---
 
@@ -330,7 +339,7 @@ SHA-256 = 2ecbbeebd4d015bb5685d288c0230ab92646f1d0cba08a0937b2a5def673b36d
 
 字段：`namespace_id BIGINT PK`；`namespace_code VARCHAR(128) NOT NULL`；`platform_id BIGINT NOT NULL FK`；`provider_id BIGINT NULL FK`；`description VARCHAR(512) NOT NULL`；`status VARCHAR(32) NOT NULL`；`created_at/updated_at DATETIME(6) NOT NULL`。
 
-约束/索引：`UQ(namespace_code)`；`IDX(platform_id, status)`。首批包括 `douyin.user_id`、`douyin.sec_uid`、`xiaohongshu.profile.user_id`、`xiaohongshu.content.user_id` 及视频号、快手账号空间。
+约束/索引：`UQ(namespace_code)`；`IDX(platform_id, status)`。首批包括 `douyin.user_id`、`douyin.sec_uid`、`xiaohongshu.profile.user_id`、`xiaohongshu.content.user_id` 及视频号、快手账号空间。**快手命名空间为 `kuaishou.user_id`**（2026-11-05，R6）：主页与列表作者同一空间，没有第二官方标识，昵称与主页链接不是绑定证据。
 
 ---
 
@@ -494,6 +503,8 @@ SHA-256 = 2ecbbeebd4d015bb5685d288c0230ab92646f1d0cba08a0937b2a5def673b36d
 
 `external` 型与竞品、官方号共用一套表达：业务上它们都只是「被观察的账号」，不区分归属主体（2026-11-02 决策，放弃第三型 `brand`）。
 
+**采集范围差异**（2026-11-05，R7）：`external` 型在周期同步中**只生成 `fetch_profile`**（及头像 / 背景媒资），不生成内容列表、内容、详情任务（A §5.6：1.0 只采主页快照）；`staff` 型生成主页与列表任务。
+
 运营提交账号后先创建 `resolve_account` 任务，最多解析 3 次。全部失败时不创建账号和归属，但任务与 ODS 保留一年。若已存在账号归属于他人，不自动抢占，创建归属冲突问题等待人工处理。
 
 ### 8.4 `account_profile_snapshots`
@@ -543,16 +554,18 @@ SHA-256 = 2ecbbeebd4d015bb5685d288c0230ab92646f1d0cba08a0937b2a5def673b36d
 
 - `batch_id BIGINT PK`；`batch_key BINARY(32) NOT NULL`；
 - `trigger_type VARCHAR(32) NOT NULL`：`scheduled/manual`；
+- `purpose VARCHAR(32) NOT NULL`：`full/supplement/demand/intake`（2026-11-05，R4）。`full` 是到点的全量周期批次，**只有它受「同一时刻一个全量批次、队列最多 1 个」约束**；`supplement` 是运营手工补抓；`demand` 是规则域提出的按需采集；`intake` 是单账号录入（tracer 根批次与 smoke）。无 DEFAULT，写入方必须显式给值；
 - `logical_at DATETIME(6) NOT NULL`：跨批次新旧排序基准；
 - `status VARCHAR(32) NOT NULL`：`planned/queued/running/succeeded/partial_succeeded/failed/cancelled/skipped/expired`；
 - `settings_version BIGINT NOT NULL`；`settings_snapshot JSON NOT NULL`；
 - `detail_rule_version/comment_rule_version VARCHAR(128) NULL`；
 - `planned_task_count/succeeded_task_count/failed_task_count/skipped_task_count/gap_task_count BIGINT NOT NULL DEFAULT 0`；
 - `skip_reason VARCHAR(128) NULL`；
-- `started_at/finished_at DATETIME(6) NULL`；
+- `started_at/finished_at DATETIME(6) NULL`：`finished_at` 是**结构化阶段（主页 / 列表任务）全部终态**的时间（2026-11-05，R5）；
+- `media_finished_at DATETIME(6) NULL`：媒资下载任务全部终态时写入；批次终态后媒资仍可继续推进，所以与 `finished_at` 分开；
 - `created_at/updated_at DATETIME(6) NOT NULL`。
 
-约束/索引：`UQ(batch_key)`；计数非负；`IDX(status, logical_at)`。错过计划不补跑；前一全量批次未完成时新批次 `queued`（队列最多 1 个），队列已满时创建 `skipped` 摘要、不创建任务；排队到下一个计划时点仍未开始则 `expired`（D-33、A §7.1）。批次长期保留。
+约束/索引：`UQ(batch_key)`；计数非负；`CHECK(purpose IN ('full','supplement','demand','intake'))`；`IDX(status, logical_at)`；`IDX(purpose, status, logical_at)`。错过计划不补跑；前一全量批次未完成时新批次 `queued`（队列最多 1 个），队列已满时创建 `skipped` 摘要、不创建任务；排队到下一个计划时点仍未开始则 `expired`（D-33、A §7.1）。**`skipped` 的语义（2026-11-05，R8）是「没有执行任何任务的批次」**，`skip_reason` 取：`queue_full`（队列已满，不创建任务）、`no_targets`（没有有效监控目标，零任务）、`all_targets_closed`（规划了任务，但全部在领取前因监控资格失效被取消；这种批次里存在已取消的任务行）。批次长期保留。
 
 ### 9.3 `sync_tasks`
 
@@ -587,7 +600,7 @@ SHA-256 = 2ecbbeebd4d015bb5685d288c0230ab92646f1d0cba08a0937b2a5def673b36d
 
 领取任务使用 `SELECT ... FOR UPDATE SKIP LOCKED`。fencing token 不只保护任务控制状态，也必须由受限写入过程校验后才能写业务快照、发现和评论；token 过期、任务非运行态或目标不匹配时整笔事务失败。同账号同动作已有活动任务时复用。任务创建时写入一年期 `expires_at`；`parent_task_id` 使用 `ON DELETE SET NULL`，任务详情到期后按清理闭包删除。
 
-Tracer 提交映射为一个 `trigger_type='manual'` 的批次和一个根 `resolve_account` 任务；对外 `root_task_id` 即该根任务 `task_id`。根任务固定：`platform_id` 为提交平台，`subject_type='media_staff'`，`subject_id=media_staff_id`，`subject_key` 为原始 HomeLocator 且复核其摘要；后续 profile/list/media 阶段使用 `parent_task_id` 指向根任务。
+Tracer 提交映射为一个 `trigger_type='manual'`、`purpose='intake'` 的批次和一个根 `resolve_account` 任务；对外 `root_task_id` 即该根任务 `task_id`。根任务固定：`platform_id` 为提交平台，`subject_type='media_staff'`，`subject_id=media_staff_id`，`subject_key` 为原始 HomeLocator 且复核其摘要；后续 profile/list/media 阶段使用 `parent_task_id` 指向根任务。
 
 根任务 `task_parameters` 必须通过版本化 `data-foundation-tracer-task-parameters.v1` persistence-projection schema，当前只允许：
 
@@ -808,11 +821,12 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 - `last_list_provider_call_id/last_detail_provider_call_id BIGINT NULL`；
 - `list_response_received_at/detail_response_received_at DATETIME(6) NULL`；
 - `snapshot_at DATETIME(6) NOT NULL`；
+- `seeded_from_snapshot_id BIGINT NULL FK`：指向同表的另一行（`ON UPDATE/DELETE RESTRICT`），表示本行是按需批次以该 finalized 快照为种子建立的（2026-11-05，R1）；
 - `merge_policy_version VARCHAR(64) NOT NULL`；
 - `list_adapter_version/detail_adapter_version VARCHAR(64) NULL`；
 - `finalized_at DATETIME(6) NULL`；`created_at/updated_at DATETIME(6) NOT NULL`。
 
-约束/索引：`UQ(batch_id, content_id)`；`UQ(content_id, content_snapshot_id)` 供内容 current 复合 FK 引用；指标 value/state 检查；URL 与摘要同空同非空；`CHECK((snapshot_status='building' AND finalized_at IS NULL) OR (snapshot_status='finalized' AND finalized_at IS NOT NULL))`；`IDX(content_id, batch_id)`；`IDX(batch_id, published_at)`；`IDX(published_at, content_id)`。
+约束/索引：`UQ(batch_id, content_id)`；`UQ(content_id, content_snapshot_id)` 供内容 current 复合 FK 引用；指标 value/state 检查；URL 与摘要同空同非空；`CHECK((snapshot_status='building' AND finalized_at IS NULL) OR (snapshot_status='finalized' AND finalized_at IS NOT NULL))`；`CHECK(seeded_from_snapshot_id IS NULL OR (list_observed = FALSE AND detail_observed = TRUE))`（种子快照必须是详情观察、非列表观察）；`IDX(content_id, batch_id)`；`IDX(batch_id, published_at)`；`IDX(published_at, content_id)`。
 
 合并与终态规则：
 
@@ -821,12 +835,13 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 3. `finalized` 后结构化业务字段不可修改；唯一允许的行内变化是 ODS 删除触发的来源调用 FK 置空，媒资归档状态保存在独立引用行；
 4. 同批次后收到的有效字段和真实零覆盖；null/缺失/非法值不擦除；调用先后以 `response_received_at`、相同时以尚在保留期内的 `provider_call_id` 判定，但该顺序只影响本行构建，不参与跨批次 current 选择；
 5. 同时收到 `*_count`、`*_number` 时适配器按属性存在性与平台映射选择有效候选；每个列表返回的旧内容也创建本批次快照；
-6. 同一内容的快照不能由首个列表任务独立终态化。批次中所有可能产生内容的列表任务都进入终态后，列表阶段才封口；失败、取消或重试耗尽的列表任务也必须先终止写权限；
-7. 该账号的列表任务终态后，按该内容的 discovery 与规则决定是否需要详情。详情任务可提前启动，但只有所有去重后的详情任务成功或重试耗尽/取消后，该内容才能终态化；不需要详情时在列表阶段封口后终态化；
+6. **账号级封口**（2026-11-05，R2；原「批次中所有列表任务终态后才封口」是 D-23 之前按内容跨账号合并的写法）：一个账号的 `fetch_content_list` 任务进入终态（成功、带缺口、失败、取消）后，该账号本批次的 `building` 快照即可定稿，不等其他账号，不做跨账号 fan-in。失败、取消或重试耗尽的列表任务也必须先终止写权限（任务状态与 fencing），再封口；
+7. 周期批次**不等待详情**：详情、评论、视频、音频只在规则域提出需求时由按需批次（`purpose='demand'`）执行（A §7.3、总 PRD §6.11）。账号的列表任务终态后，其本批次快照在同一个封口事务内终态化并尝试切换 current；按需详情落在第 12 条的种子快照上，不拖住周期批次的封口；
 8. 批次取消时先通过任务状态与 fencing 终止列表/详情写入，再封口并终态化已有可靠事实；没有可靠业务事实的残留 building 行由恢复过程清除。进程崩溃后同样先恢复或终止关联任务，再处理 building 行；
 9. 评论和媒资下载不写内容结构化字段，不阻塞快照终态；媒资引用拥有独立可变的归档状态；
-10. current 只能选择 `finalized` 快照。每个内容满足详情依赖后即可独立切换 current，不等待评论、媒资或整个批次结束；后续人工重抓使用新批次；
-11. ODS 到期后来源调用 ID 通过 `ON DELETE SET NULL` 置空，快照本身长期保留。
+10. current 只能选择 `finalized` 快照。每个账号封口后其内容即可独立切换 current，不等待评论、媒资或整个批次结束；后续人工重抓使用新批次；
+11. ODS 到期后来源调用 ID 通过 `ON DELETE SET NULL` 置空，快照本身长期保留；
+12. **按需详情的种子快照**（2026-11-05，R1）：按需批次为每个被请求的内容建一行 `building` 快照，**以该内容当前 finalized 快照的全部值与状态为种子**拷贝，`seeded_from_snapshot_id` 指向被拷贝的快照，`list_observed=FALSE`、`detail_observed=TRUE`；再把详情有效值按第 4 条的 LaterValidValueWins 合并（缺失 / null 不擦除种子里的有效值），定稿后与其他快照一样按 `(logical_at, batch_id)` 参与 current 比较。内容还没有任何 finalized 快照可作种子时，不得发起按需详情（需求被如实拒绝为 `content_not_found`）。`snapshot_at` 取本次详情响应的接收时间，`merge_policy_version` 取当前合并策略常量。
 
 ### 10.3 `content_discoveries`
 
@@ -918,7 +933,7 @@ CHECK 约束必须保证上述 asset/error/carried 组合。新快照创建新�
 下载范围：
 
 - 所有有效监控账号每周重新下载头像、背景图并计算 SHA-256；
-- 所有列表内容下载封面；
+- 封面在内容**首次入库**时下载（2026-11-05，R3，与 A §10.1 对齐）：内容已有 `archived` / `carried_forward` 的封面引用时，不再为新快照建 `cover` 引用；此前没有成功过（`pending` / `failed`）的，下一次出现在列表就用新地址重建引用；
 - 规则引擎圈定内容下载完整图文图片、视频和音频；
 - 评论头像和附件不下载。
 
@@ -975,12 +990,12 @@ CHECK 约束必须保证上述 asset/error/carried 组合。新快照创建新�
 ### 12.3 定时全量同步
 
 1. 北京时间命中配置时点；
-2. 若已有全量批次运行，记录 skipped；否则创建 scheduled 批次；
+2. 创建 `purpose='full'` 的 scheduled 批次（R8，与 §9.2 一致）：没有运行中的全量批次 → 创建并开始；有运行中且队列为空 → `queued`；队列已满 → `skipped`（`skip_reason='queue_full'`，不创建任务）；排队到下一个计划时点仍未开始 → `expired`；
 3. 冻结同步设置和详情/评论规则版本；
 4. 计算五级实际监控状态；
-5. `active` 和 `unavailable` 账号生成主页、列表任务；`deleted` 不生成；
-6. 主页快照创建成功即为终态；全部列表任务终止并封口后，内容再按汇总后的详情依赖逐对象终态化和更新 current，不等待评论、媒资或批次其他收尾任务；
-7. 部分任务失败或出现 continuity gap 时批次为 `partial_succeeded`，成功数据不回滚。
+5. `active` 和 `unavailable` 账号生成主页、列表任务；`deleted` 不生成；`watch_type='external'` 的账号**只生成主页任务**（R7）；
+6. 主页快照创建成功即为终态；**每个账号的列表任务终止后即对该账号做账号级封口**（R2）：本批次该账号的内容快照终态化并更新 current，不等其他账号，不等待详情、评论、媒资或批次其他收尾任务；
+7. 部分任务失败或出现 continuity gap 时批次为 `partial_succeeded`，成功数据不回滚；规划了任务而全部在领取前被取消的批次为 `skipped`（`all_targets_closed`），没有有效监控目标的批次为 `skipped`（`no_targets`）。
 
 ### 12.4 单次调用落地
 
@@ -1001,18 +1016,18 @@ ODS 对象上传成功而数据库短事务失败时，由用途限定的 orphan
 
 1. 列表每页所有内容均更新稳定身份、批次快照候选和列表出现记录；
 2. 检查点仅在整页处理后决定是否继续；
-3. 每个账号的列表任务终止后，该账号的内容进入详情判断；不做跨账号 fan-in；
+3. 每个账号的列表任务终止后，对该账号做账号级封口（§10.2 第 6 条，2026-11-05）；不做跨账号 fan-in；
 4. 本轮全部返回内容都按其所有 discovery 的组织上下文重新进入规则引擎评估；
 5. 账号长期范围、内容标题/时间/话题规则与平台指标门槛按规则引擎定义执行；
-6. 详情和评论拥有独立规则版本与独立任务；
-7. 同一内容同时命中时，两任务可在列表处理中提前并行；评论不依赖详情，但内容终态仍等待列表阶段封口及全部详情任务终止；
-8. 详情有效字段合并进同一批次内容快照；
-9. 内容满足详情依赖后终态化；评论和媒资归档不阻塞结构化快照终态。
+6. 详情和评论拥有独立规则版本与独立任务；规则域在 finalized 快照上圈定后，通过采集需求提交给按需批次（`purpose='demand'`），**周期批次不等待它们**；
+7. 评论不依赖详情；详情与评论都不阻塞周期批次内容快照的封口；
+8. 详情有效字段合并进按需批次的种子快照（§10.2 第 12 条），不回写已 finalized 的周期快照；
+9. 周期批次的内容快照在账号级封口时终态化；按需详情的种子快照在其详情任务终止后终态化；评论和媒资归档不阻塞结构化快照终态。
 
 ### 12.6 账号/内容 current 更新
 
-- 账号主页快照创建成功即为终态；内容快照先在 `building` 中接收同批次全部列表来源和详情结果；
-- 批次列表阶段封口后，且该内容全部详情依赖终止，才允许转为 `finalized`；
+- 账号主页快照创建成功即为终态；周期批次的内容快照先在 `building` 中接收该账号同批次全部列表页；按需批次的种子快照先在 `building` 中接收详情结果；
+- 周期批次：该账号的列表任务终止并封口后转为 `finalized`；按需批次：该内容的详情任务终止后转为 `finalized`；
 - current 只接受自身 `finalized` 快照，由复合 FK 保证所有权、受限事务保证状态；
 - 比较 `(batch.logical_at, batch_id)`，候选严格更新时才切换；
 - 快照终态化与 current 切换放在同一事务；

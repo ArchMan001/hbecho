@@ -10,13 +10,13 @@
 >
 > **所属域**：A 数据底座 · **目录命名**：`a-full-sync`，符合 `<代号>-<切片>`
 >
-> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.10.1（2026-11-05，定稿候选）
+> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.11（2026-11-05，定稿候选）
 >
-> **数据基线**：[`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)（draft）；本设计要求七项修订（requirements §1.3 R1–R7）
+> **数据基线**：[`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)（draft）；本设计要求八项修订（requirements §1.3 R1–R8）
 >
 > **最近核对**：2026-11-05
 >
-> **更新日期**：2026-11-05（初建；同日 requirements §1.5 闸门通过，吸收旧系统 lxk-BigSpard 经验，见 §2.3）
+> **更新日期**：2026-11-05（初建；同日 requirements §1.5 闸门通过，吸收旧系统 lxk-BigSpard 经验，见 §2.3；外部审查两轮后修订，见 requirements §1.8、§1.9）
 >
 > **语言约定**：正文中文；标识符、表名、接口名保留英文。
 
@@ -266,7 +266,7 @@ stateDiagram-v2
 
 ### 5.3 补抓与取消
 
-`supplement`：校验范围与资格 → 建 `supplement` 批次 → 若有运行中 `full`，按 `--on-busy` 处理：`run_now`（**默认**）立即 `running`、与全量批次并行；`queue` 置 `queued`，全量批次结束后开始；`cancel_current` 取消当前全量批次后开始（需 `--apply`）→ 任务与周期任务同类、优先级 100。同账号同动作已有活动任务时复用并把该任务优先级提到 100。
+`supplement`：校验范围与资格 → 建 `supplement` 批次 → 若有运行中 `full`，按 `--on-busy` 处理：`run_now`（**默认**）立即 `running`、与全量批次并行；`queue` 置 `queued`，全量批次结束后开始；`cancel_current` 取消当前全量批次后开始（需 `--apply`）→ 任务与周期任务同类、优先级 100。同账号同动作已有活动任务时复用并把该任务优先级提到 100。`--only profile|full` 与 `--if-older-than <小时>` 供 `a-activity-plan` 实现 A §11.5：对每个账号先检查最近一次成功同步时间，更近则 `not_due`；不在目标集则 `not_eligible`；其余 `queued`。
 `cancel`：批次 `cancelled`；未开始任务 `cancelled`；在途任务靠租约失效（`heartbeat` 返回 `cancelled`）停止。
 
 ### 5.4 按需采集
@@ -301,11 +301,11 @@ sequenceDiagram
 | 表 | 修改 | 对应 |
 |---|---|---|
 | `content_snapshots` | 加 `seeded_from_snapshot_id BIGINT NULL`，FK → `content_snapshots(content_snapshot_id)` `RESTRICT`；CHECK：非空时 `list_observed=FALSE AND detail_observed=TRUE` | R1 |
-| `sync_batches` | 加 `purpose VARCHAR(32) NOT NULL`，CHECK `full/supplement/demand/intake`；加 `media_finished_at DATETIME(6) NULL`；加 `IDX(purpose, status, logical_at)` | R4、R5 |
+| `sync_batches` | 加 `purpose VARCHAR(32) NOT NULL`，CHECK `full/supplement/demand/intake`；加 `media_finished_at DATETIME(6) NULL`；加 `IDX(purpose, status, logical_at)`。**迁移分三步写进同一个手工修改过的迁移文件**：① `ADD COLUMN purpose VARCHAR(32) NULL`；② `UPDATE sync_batches SET purpose='intake' WHERE purpose IS NULL`（此前所有批次都是 tracer 根批次或 smoke，全是 `intake`）；③ `MODIFY purpose VARCHAR(32) NOT NULL`，不留 DEFAULT。schema 快照仍是 `notNull()`，所以 `drizzle-kit generate` 不应产生新文件 | R4、R5 |
 | `external_account_identifiers` | `namespace_code` CHECK 增加 `kuaishou.user_id` | R6 |
 | 其余 | 无结构修改 | — |
 
-v2 文字修订：§10.2 第 6、7 条改账号级、增补第 12 条（R1、R2）；§11.3 封面范围（R3）；§8.3 / §12.3 外部型只采主页（R7）；§9.2 补 `purpose` 与 `media_finished_at`。
+v2 文字修订：§10.2 第 6、7 条与 **§12.3 第 6 条**改账号级、§10.2 增补第 12 条（R1、R2）；**§12.3 第 2 条**补 `queued` / `expired`（R8）；§11.3 封面范围（R3）；§8.3 / §12.3 外部型只采主页（R7）；§9.2 补 `purpose` 与 `media_finished_at`，并把 `skipped` 的语义放宽为「没有执行任何任务的批次」（R8）。A PRD 同步修订 §7.1（补抓 `run_now`）与 §7.3（周期同步不含详情 / 评论，requirements §1.3 P1、P2）。
 
 **迁移归属**：任务 1 一次迁移（`drizzle-kit generate`），测试 `schema.db.test` 同层补用例。
 
@@ -371,6 +371,7 @@ LEFT JOIN brands b       ON b.brand_id = st.brand_id
 LEFT JOIN dealers d      ON d.dealer_id = st.dealer_id
 LEFT JOIN sectors sc     ON sc.sector_id = st.sector_id
 LEFT JOIN branches br    ON br.branch_id = sc.branch_id
+LEFT JOIN regions rg     ON rg.region_id = br.region_id
 WHERE ea.status IN ('active','unavailable')
   AND aa.monitoring_enabled AND aa.intake_status = 'normal'
   AND ( aa.watch_type = 'external'
@@ -378,12 +379,13 @@ WHERE ea.status IN ('active','unavailable')
              AND st.status='active' AND st.monitoring_enabled
              AND b.status='active'
              AND d.status='active' AND d.monitoring_enabled
-             AND br.status='active' AND br.monitoring_enabled ) )
+             AND br.status='active' AND br.monitoring_enabled
+             AND rg.status='active' ) )
   AND aa.account_id > :after
 ORDER BY aa.account_id LIMIT :limit
 ```
 
-`explain(accountId)` 逐级检查并按固定顺序返回第一个失败原因：`deleted` → `suspected_empty` → `branch_*` → `dealer_*` → `store_*` → `staff_*` → `account_off`；开关类用 `*_off`，业务状态类用 `*_inactive` / `store_closed`。顺序为「最上级优先」（A §11.6）。
+`explain(accountId)` 逐级检查并按固定顺序返回第一个失败原因：`deleted` → `suspected_empty` → `brand_inactive` → `region_inactive` → `branch_*` → `dealer_*` → `store_*` → `staff_*` → `account_off`；品牌与大区只有业务状态，没有监控开关；开关类用 `*_off`，业务状态类用 `*_inactive` / `store_closed`。顺序为「最上级优先」（A §11.6）。
 
 **领取时复核**：`SyncRunner` 在每个任务发出第一个付费调用之前执行同样的单账号条件（`WHERE aa.account_id = :id AND …`），不满足则 `cancelled/monitoring_closed`（FS-2.6）。
 
@@ -411,7 +413,7 @@ LIMIT :n FOR UPDATE SKIP LOCKED
 
 读取后在同一事务里写租约与 `fencing_token + 1`（沿用 `claimTask` 的写法）。
 
-**重试回队尾**：`attempt_count` 是排序的第二键，所以重试过的任务永远排在同优先级所有未重试任务之后；一个批次先把全部账号采一遍，再依次做第 2、3 轮。这与旧系统「失败账号末尾统一重试」同效，但不需要单独的重试阶段。`idx_sync_tasks_claim (status, next_attempt_at, priority, task_id)` 已存在，新增排序键后用 `EXPLAIN` 复核；若出现全表排序，加 `(status, priority, attempt_count, task_id)` 索引（任务 4 视实测决定）。
+**重试回队尾**：`attempt_count` 是排序的第二键，所以重试过的任务永远排在同优先级所有未重试任务之后；一个批次先把全部账号采一遍，再依次做第 2、3 轮。这与旧系统「失败账号末尾统一重试」同效，但不需要单独的重试阶段。**"队尾"在同一优先级内成立**：同一个 `full` 批次的任务优先级相同；被运营补抓提升过优先级（100）的周期任务、补抓批次与按需批次（50）的重试任务，仍排在更高优先级一档，这是显式要求的结果，不是缺陷。`idx_sync_tasks_claim (status, next_attempt_at, priority, task_id)` 已存在，新增排序键后用 `EXPLAIN` 复核；若出现全表排序，加 `(status, priority, attempt_count, task_id)` 索引（任务 4 视实测决定）。
 
 `SyncWorker`：
 
@@ -446,17 +448,17 @@ LIMIT :n FOR UPDATE SKIP LOCKED
 
 | 序 | 条件 | 结果 |
 |---:|---|---|
-| 1 | 游标异常（`has_more=true` 且游标空 / `no_more`） | 记 `cursor_no_more_with_has_more`；等同「列表自然结束」，下面第 3、5 行按 `end` 处理，`stop_reason` 以 `cursor_anomaly_rebased` 代替 `end_of_list_rebased` |
+| 1 | 游标异常（`has_more=true` 且游标空 / `no_more`；或 `has_more` 缺失 / 非法） | 记 `cursor_no_more_with_has_more`（缺失 / 非法记 `has_more_invalid`）；**把 `has_more` 视为 `false`** 再走下面各行，缺口时 `stop_reason` 用 `cursor_anomaly_rebased` 代替 `end_of_list_rebased`。因此「有旧锚点 + 游标异常」落在第 2 行（命中）或第 6 行（缺口）；「无旧锚点 + 游标异常」落在第 3 / 7 行 |
 | 2 | 有旧锚点且本页**正常时间序列**条目命中边界 | `stop`，成功（第一页位置 1–3 不参与命中） |
 | 3 | 无旧锚点（首次基线）且累计条目 ≥ `initial_content_limit` | `stop`，成功，供应商仍有更多不算缺口 |
 | 4 | `has_more=true` 且 `pageNo < safety_page_limit` | `continue`，保存 `next_cursor` |
 | 5 | `has_more=true` 且 `pageNo = safety_page_limit` | `stop`，缺口 `safety_limit_rebased`，`window_overflow=TRUE` |
-| 6 | `has_more=false` 且有旧锚点未命中 | `stop`，缺口 `end_of_list_rebased`（游标异常时 `cursor_anomaly_rebased`） |
-| 7 | `has_more=false` 且无旧锚点 | `stop`，成功（首次基线，列表已读完） |
-| 8 | 本任务全部页累计 0 条且旧锚点非空 | `stop`，空窗口：检查点 `blocked`，`empty_window_not_rebased` |
-| 9 | 本任务全部页累计 0 条且无旧锚点且 `has_more=false` | `stop`，建 `empty` 锚点 |
+| 6 | `has_more=false` 且旧锚点为 `time` / `id_window` 且未命中 | `stop`，缺口 `end_of_list_rebased`（游标异常时 `cursor_anomaly_rebased`） |
+| 7 | `has_more=false` 且（无旧锚点，或旧锚点为 `empty`）且本任务累计 ≥ 1 条 | `stop`，**成功**并重建锚点（首次基线 / 上次为空这次有内容，**不是缺口**） |
+| 8 | 本任务全部页累计 0 条且旧锚点为 `time` / `id_window` | `stop`，空窗口：检查点 `blocked`，`empty_window_not_rebased` |
+| 9 | 本任务全部页累计 0 条且 `has_more=false` 且（无旧锚点，或旧锚点为 `empty`） | `stop`，建立 / 保持 `empty` 锚点，成功，检查点 `ready` |
 
-边界命中细则：`time` 模式——条目 `published_at` **严格早于**旧高水位时间，或其内容 ID ∈ 旧高水位 ID 集合；等于高水位时间但 ID 不在集合内则继续。`id_window` 模式——条目 ID ∈ 旧窗口。`empty` 模式——无边界，只处理首个完整页后按第 6/7/9 行。
+边界命中细则：`time` 模式——条目 `published_at` **严格早于**旧高水位时间，或其内容 ID ∈ 旧高水位 ID 集合；等于高水位时间但 ID 不在集合内则继续。`id_window` 模式——条目 ID ∈ 旧窗口。`empty` 模式——没有可命中的边界，只处理首个完整页：有内容走第 7 行（成功 + 重建锚点），无内容走第 9 行；`empty` 模式**无视 `has_more`**，首个完整页处理完即停（`stop_reason='baseline'`），不翻页；它不是第 7 行的特例（第 7 行要求 `has_more=false`），而是单独规则：先判 `empty` 再判其余。
 
 **多页边界**：每页先整页投影，再判定；第 4 行 `continue` 之前保存进度（同一事务）。跨页重复的内容 ID 在同一批次内合并（`INSERT … ON DUPLICATE`），discovery 保留第一次出现的位置。
 
@@ -480,7 +482,7 @@ LIMIT :n FOR UPDATE SKIP LOCKED
 
 #### 7.6.2 自比对（FS-5.14）
 
-列表任务成功后：`k = 本周主页 post_value − 上周主页 post_value`；两份主页的 `post_state` 均为 `value` 且 `k > 0` 时，若本批次**首次发现**的内容数（`first_seen_at` 在本批次内）`< k`，记警告级 `suspected_missing_content`（`k`、`discovered`、两份主页快照 ID）。有账号删作品、平台统计延迟等正常原因，所以只告警，不使任务失败、不动检查点，也不进批次终态判定；它用来发现「检查点以为接上了其实漏了」这类静默缺口。
+列表任务成功后：`k = 本批次主页 post_value − 该账号上一份更早的主页快照 post_value`（"更早"= `batch.logical_at` 更小的最近一份，补抓批次也算）；两份主页的 `post_state` 均为 `value` 且 `k > 0` 时，若**自那份主页快照接收时间以来**首次发现的内容数（`contents.first_seen_at > 上一份主页的 response_received_at`，不限批次）`< k`，记警告级 `suspected_missing_content`（`k`、`discovered`、两份主页快照 ID）。有账号删作品、平台统计延迟等正常原因，所以只告警，不使任务失败、不动检查点，也不进批次终态判定；它用来发现「检查点以为接上了其实漏了」这类静默缺口。
 
 ### 7.7 账号级封口与 current（FS-6）
 
@@ -512,18 +514,18 @@ LIMIT :n FOR UPDATE SKIP LOCKED
 
 | want | 复用条件 | 否则 |
 |---|---|---|
-| `detail` | 存在 `fetch_content_detail` 任务 `succeeded`，且其批次 `purpose='demand'` 或为本轮内的批次（`created_at ≥ round_start`） | 新建 |
-| `comments` | 同上，动作 `fetch_comments` | 新建 |
+| `detail` | 存在该内容的 `fetch_content_detail` 任务 `succeeded` 且 `finished_at ≥ round_start`（**不看批次用途**：周期、补抓、按需批次产生的都算，更早轮次的都不算） | 新建 |
+| `comments` | 同上，动作 `fetch_comments`，且 `finished_at ≥ round_start` | 新建 |
 | `video` | 该内容的任一快照上存在 `role='video'` 且 `archived` 的引用 | 新建（隐含 detail） |
 | `audio` | 同上 `role='audio'` | 新建（隐含 video） |
 
-`round_start` = 最近一个 `purpose='full'` 且状态非 `skipped / expired / cancelled` 的批次的 `started_at`（没有则 `-∞`，即不限轮次）。
+`round_start` = 最近一个 `purpose='full'` 且状态非 `skipped / expired / cancelled` 的批次的 `started_at`（没有则 `-∞`，即不限轮次）。用 `started_at` 而不是 `logical_at`：批次可能排队几小时才晋升，`logical_at` 是计划时点，早于真正开始，会把上一批次期间完成的结果误算进本轮（requirements §1.4 第 4 项）。
 
 **详情执行**（`DetailRunner`）：
 
 1. 经 `ContentUrlBuilder(platform, content)` 得 `url`：抖音 `share_url`（最近快照观察到的）→ 回退 `https://www.douyin.com/video/{post_id}`；小红书 `https://www.xiaohongshu.com/explore/{post_id}`；快手 → `content_url_unavailable`（直到 smoke 证实）；
 2. `media_stats_number`（`mode` 按 capability）→ 落 ODS → `decodeDetail`；
-3. 一个短事务（`withFences`）：若本批次该内容没有快照，则以当前 finalized 快照为种子插入 `building` 行（拷贝全部 value / state / 文本；`list_observed=FALSE`，`detail_observed=TRUE`，`seeded_from_snapshot_id=…`，`last_list_*` 为空）；把详情有效值按 LaterValidValueWins 合并；`cover` / `download_urls` 展开为候选集，写 `video` 引用（`pending`，`source_locator` 为按平台选出的来源）；随即定稿并做 current CAS；
+3. 一个短事务（`withFences`）：若本批次该内容没有快照，则以当前 finalized 快照为种子插入 `building` 行：拷贝全部 value / state / 文本 / 返回作者 / 发布时间 / 话题；`list_observed=FALSE`，`detail_observed=TRUE`，`seeded_from_snapshot_id=…`，`last_list_provider_call_id`、`list_response_received_at`、`list_adapter_version` 为空；**必填列取值**：`snapshot_at` = 本次详情响应的接收时间，`merge_policy_version` = 当前 `MERGE_POLICY_VERSION` 常量，`detail_adapter_version` / `last_detail_provider_call_id` / `detail_response_received_at` 取本次详情调用。任务的 `source_content_snapshot_id` 指向被拷贝的种子（这是该既有列的原本用途：任务从哪份快照派生；它不能替代 `seeded_from_snapshot_id`，后者是快照到快照的血缘，要有外键与 CHECK）；把详情有效值按 LaterValidValueWins 合并；`cover` / `download_urls` 展开为候选集，写 `video` 引用（`pending`，`source_locator` 为按平台选出的来源）；随即定稿并做 current CAS；
 4. 失败：详情 `RESULT_VALIDATION_FAILED` 有界重试后 → `failed/detail_inaccessible` + 质量问题；**不建种子快照**（或建了就删），不改内容 `status`。
 
 需求只能引用**至少有一个 finalized 快照**的内容（`content_not_found` 的口径就是「没有 finalized 快照」）。所以种子永远存在；内容刚被周期批次发现、该账号还没封口时，需求会被如实拒绝，规则域稍后再提。
@@ -546,12 +548,13 @@ interface CommentsPolicy { platform: 'douyin'|'xiaohongshu'; completeWhen: 'natu
 3. 停止：`has_more` 为 0；或 `page_count ≥ page_limit`；或条目数 ≥ `item_limit`；
 4. 收尾（一个短事务）：`complete = policy.completeWhen==='natural_end' && has_more==0 && 未触达上限`；仅 `complete` 时把 `status='active' AND last_seen_at < fetch_started_at` 的评论置 `suspected_deleted`（`suspected_deleted_at=now`）；
 5. 质量问题：`total>0 && 抓到 0 条` → `comments_total_mismatch`；`total` 大于已抓条数且 `!complete` → `comment_coverage_incomplete`（带 `reported_total`、`fetched`、`reason ∈ page_limit | item_limit | platform_partial`）。问题指纹含 `content_id + 原因`，重复抓取更新 `last_seen_at`，不重复建；
-6. `RESULT_VALIDATION_FAILED` 按小红书间歇性处理：同一页有界重试（`decideRetry`）。
+6. `RESULT_VALIDATION_FAILED` 按小红书间歇性处理：用 `decideRetry` 判定为可重试后，任务回队尾（`retry_wait`），之后从已提交页的下一游标继续；不在进程内原地重试。
 
 ### 7.10 媒资（FS-11）
 
 **周期媒资任务**：每个账号每个批次一个 `download_media`（`scope='account_batch'`），在 `fetch_profile` 与 `fetch_content_list` 都终态后才可领取（避免引用还在增长）；处理该账号本批次所有 `pending` 引用：头像 / 背景 / 封面。复用 `runMediaArchive` 的单引用逻辑，并做三处扩展：
 
+- **封面来源不变**：抖音取封面数组第 2 条（540 宽），小红书 / 快手取单值（解码器已实现，R3 不改）；下面只改「何时建引用」。
 - **封面首次规则（R3）**：`projectContentPage` 在建快照时判断内容是否已有 `archived/carried_forward` 的 `cover` 引用；有则**不建**新引用。（SQL：`EXISTS (SELECT 1 FROM media_references r JOIN content_snapshots s … WHERE s.content_id=:c AND r.role='cover' AND r.archive_status IN ('archived','carried_forward'))`。）
 - **快手封面（FS-11.4）**：下载原始字节作为原始资产；另请求 `{source}?x-oss-process=image/format,jpg/resize,w_540` 得 JPEG，作为 `ImageConverter` 的输入生成 JPEG q80 / 540 宽的衍生资产。CDN 转换失败 → 引用 `cover_normalized` 置 `failed(cover_unavailable)`、质量问题 `media_cover_unavailable`，原始引用照常归档。
 - **失败分类**：沿用 `media-failure`；`source_expired` 对周期引用的含义是「等下次列表出现再取新地址」（引用保持 `failed`/`needs_fresh_url`，下一周期封面规则会重建引用）。
@@ -564,15 +567,16 @@ interface CommentsPolicy { platform: 'douyin'|'xiaohongshu'; completeWhen: 'natu
 4. 分片上传正式媒资桶（`OssObjectStore.putFile`，ali-oss `multipartUpload`），校验后一个短事务写 `oss_objects` / `media_assets`（`UQ(sha256)` 命中则复用已有资产并丢弃新对象）/ 引用 `archived`；
 5. 删除临时文件（`finally`）；启动时清理 `$HBECHO_MEDIA_TMP_DIR` 里超过 24 小时的 `.part`。
 
-**音频**：视频入库成功后，同一任务继续：`OssObjectStore.signedGetUrl(videoObject, ttl=10min)` → `CapabilityClient.extractAudio({ sourceUrl, maxBytes })`（Python 侧 `ffmpeg -i <url> -vn -c:a copy -f ipod`，不重编码）→ 返回 m4a 字节（小）→ 计算 SHA-256 → 正式资产 + `role='audio'` 引用；无音轨返回 `no_audio_track`，引用置 `failed(no_audio_track)` 并标 `terminal`，不重试、不算失败计数。
+**音频**：视频入库成功后，同一任务继续：`OssObjectStore.signedGetUrl(videoObject, ttl=10min)` → `CapabilityClient.extractAudio({ sourceUrl, maxBytes })`（Python 侧 `ffmpeg -i <url> -vn -c:a copy -f ipod`，不重编码）→ 返回 m4a 字节（小）→ 计算 SHA-256 → 正式资产 + `role='audio'` 引用；`maxBytes` = 源视频字节数（`-c:a copy` 只拷贝音频流，不会比源更大）与 `HBECHO_MEDIA_MAX_BYTES` 的较小者。无音轨返回 `no_audio_track`：引用置 `failed` 并写该错误码；`media-failure` 的分类表里把 `no_audio_track` 登记为 `terminal` 且带 `informational` 标记，所以不重试，也不计入批次的媒资失败数（引用没有新的 `archive_status` 取值，不改 v2）。**`media-failure` 当前只有 `retryable` / `needs_fresh_url` / `terminal` 三类，没有 `informational`**：任务 7 新增第四类 `informational`（不重试、不计失败），并给 `classifyMediaFailure` 与其测试补用例。
 
 > ADR-0012 把「Node 传签名 URL 还是 Python 读 OSS」留给 `c-signals`。本 spec 先按**签名 URL**实现（Python 不持有 OSS 凭证），任务 0 把这一选择补记进 ADR-0012，`c-signals` 沿用或修订（FS-D10）。
 
-**Python 外壳**（任务 8）：`services/capability/capability/app.py`，FastAPI；`POST /v1/image/normalize`（body：原始字节，`Content-Type` 为图片 MIME；返回 JPEG q80 / 540 宽，附宽高）、`POST /v1/audio/extract`（JSON：`source_url`、`max_bytes`；返回 m4a 字节，`X-Duration-Ms`）、`GET /healthz`。无数据库凭证、无 OSS 凭证、不映射宿主端口。失败返回结构化 `{code}`，Node 映射到 `converter_unavailable` / `convert_failed` / `no_audio_track`。FastAPI 已由 ADR-0012 批准；uvicorn 作为其运行服务器，任务 0 在 ADR-0012 登记（⭐ 约 9k，BSD-3-Clause）。
+**Python 外壳**（任务 8）：`services/capability/capability/app.py`，FastAPI；`POST /v1/image/normalize`（body：原始字节，`Content-Type` 为图片 MIME；返回 JPEG q80 / 540 宽，附宽高）、`POST /v1/audio/extract`（JSON：`source_url`、`max_bytes`；返回 m4a 字节，`X-Duration-Ms`）、`GET /healthz`。无数据库凭证、无 OSS 凭证、不映射宿主端口。失败返回结构化 `{code}`，Node 映射到 `converter_unavailable` / `convert_failed` / `no_audio_track`。`POST /v1/image/normalize` 的请求 / 响应是二进制 body + `Content-Type`（ADR-0012 写的是 JSON；图片字节用 base64 会膨胀 33%，所以例外，任务 0 在 ADR-0012 补记）。FastAPI 已由 ADR-0012 批准；uvicorn 作为其运行服务器，任务 0 在 ADR-0012 登记（⭐ 约 9k，BSD-3-Clause）。
 
 ### 7.11 重试、死信与补跑（FS-12）
 
-- **退避与队尾**：沿用 tracer 的 `decideRetry`、`backoffMs`（`DEFAULT_RETRY`）；失败后 `attempt_count + 1`、置 `retry_wait` 并写 `next_attempt_at`；因 §7.5 的排序键，重试任务排在所有未重试任务之后，**不立即重试**；
+- **退避与队尾**：沿用 tracer 的 `decideRetry`、`backoffMs`（`DEFAULT_RETRY`）；失败后 `attempt_count + 1`、置 `retry_wait` 并写 `next_attempt_at`；因 §7.5 的排序键，重试任务排在**同优先级内所有**未重试任务之后，**不立即重试**；
+- **不使用进程内重试**：tracer 的 `attemptLoop` 为单账号录入流程在一次运行里原地重试（交互式、单账号）；full-sync 的 Runner 只复用它的分类与退避函数（`decideRetry`、`backoffMs`），每次失败都返回调度层变成 `retry_wait`。tracer 流程本身保持原行为；
 - **尝试额度**：每次调用失败消耗一次额度（熔断期间不领取，不消耗）；`attempt_count` 到 `max_attempts`（= `settings_snapshot.task_max_attempts`）→ `dead`；不可重试稳定失败 → `failed`；
 - **`retry-failed`**：校验批次为最新 `full`、下一个 `full` 未开始；把 `failed/dead` 任务置 `pending`，`max_attempts += task_max_attempts`，`last_error_*` 保留，`result_summary.retry_rounds += 1`；列表任务保留已提交的进度（不重复已提交页）；批次从终态回到 `running`，`finished_at` 清空，结束后重算终态。记审计。
 - **取消**：见 §5.3。
@@ -588,7 +592,8 @@ SELECT requested_action, status, COUNT(*) FROM sync_tasks WHERE batch_id=:b GROU
 - 结构化任务（`fetch_profile`/`fetch_content_list`）全部终态 → 批次终态：
   - `failed`：成功数为 0 且 (失败 + 死信) > 0；
   - `partial_succeeded`：(失败 + 死信 > 0 或缺口 > 0) 且成功数 > 0；
-  - `succeeded`：其余；零任务的批次为 `succeeded`；
+  - `skipped`：规划任务数为 0（`skip_reason='no_targets'`），或规划了任务但全部在领取前因监控资格失效被取消（成功 0、失败 0，`skip_reason='all_targets_closed'`；此时存在已取消的任务行）。`skipped` 的 v2 定义因此由「队列满、不创建任务」放宽为「没有执行任何任务」（requirements §1.3 R8）；
+  - `succeeded`：其余；
   - `cancelled` 任务中 `last_error_code='monitoring_closed'` 计入 `skipped_task_count`；
 - 计数列（`planned/succeeded/failed/skipped/gap`）只在汇总时写，**不在每个任务完成时对批次行做 `+1`**（避免 6,000 个任务争同一行锁，FS-D21）；
 - 媒资任务全部终态 → 写 `media_finished_at`。
@@ -719,6 +724,8 @@ B 域接入后只替换 `ActorContext` 的来源，不改调用方。审计沿�
 | FS-D26 | 每次采集做身份与残缺校验，三态结果，`unverifiable` 不并入 `verified` | 旧系统最大的坑是「成功但抓错号」 | 同上 |
 | FS-D27 | 自比对（作品数增量 vs 新发现内容）只告警，不改任务结果 | 平台统计延迟 / 删作品是正常原因，不能因此判失败 | 同上 |
 | FS-D28 | 影响面 > 1 的命令默认预览，`--apply` 才写；`sample` 抽样对账 | 旧系统 dry-run 挡下过三次数据损坏；商用 API 无法自证正确 | 同上 |
+| FS-D29 | 批次全部任务被跳过 / 没有目标时终态为 `skipped`，不是 `succeeded` | 运营看到「成功」会以为采了；零采样必须可见 | 刘学奎，2026-11-05 采纳（外部审查） |
+| FS-D30 | `supplement` 增加 `--only` 与 `--if-older-than`，作为活动计划联动的唯一采集入口 | A §11.2 第 ⑥ 步（名单导入后只采主页）与 §11.5（新账号立即、老账号满一周立即）需要一个与 `tick` 不同的入口；老账号立即采什么 PRD 未写，默认 `full` | 同上 |
 
 ## 14. Open items
 
@@ -740,7 +747,7 @@ B 域接入后只替换 `ActorContext` 的来源，不改调用方。审计沿�
 pnpm sync worker                                   常驻：tick + 执行器
 pnpm sync tick                                     单步（测试 / 外部 cron）
 pnpm sync status | batches | batch <id> | account <id> | freshness
-pnpm sync supplement --account <id>... --key <k> [--on-busy run_now|queue|cancel_current]
+pnpm sync supplement --account <id>... --key <k> [--on-busy run_now|queue|cancel_current] [--only profile|full] [--if-older-than <小时>]
 pnpm sync batch cancel <id> [--apply] | retry-failed <id> [--apply]   默认只预览
 pnpm sync demand submit --file <json> | demand get <demand_batch_id>
 pnpm sync account rebind --account <id> --staff <id> | confirm-deleted --account <id>

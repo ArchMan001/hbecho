@@ -8,15 +8,15 @@
 >
 > **所属域**：A 数据底座 · **目录命名**：`a-full-sync`，符合 `<代号>-<切片>`；路线图第 3 位（[`prd-platform.md`](../../../HBECHO设计方案/prd-platform.md) §7.2）
 >
-> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.10.1（2026-11-05，定稿候选）§5.5–§5.6、§6、§7、§8、§9、§10
+> **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.11（2026-11-05，定稿候选）§5.5–§5.6、§6、§7、§8、§9、§10
 >
-> **相邻 PRD**：[`prd-platform.md`](../../../HBECHO设计方案/prd-platform.md) v1.0.8 §6.11（常态与按需采集）、[`prd-domain-d-rule-engine.md`](../../../HBECHO设计方案/prd-domain-d-rule-engine.md) v1.1（按需采集的提出方）、[`prd-domain-c-signals.md`](../../../HBECHO设计方案/prd-domain-c-signals.md) v0.4（finalized 快照与媒资的读取方）、[`prd-domain-b-access-control.md`](../../../HBECHO设计方案/prd-domain-b-access-control.md) v1.21（Capability 名称）、[`prd-domain-i-ops.md`](../../../HBECHO设计方案/prd-domain-i-ops.md) v0.1（硬上限、ODS 清理）
+> **相邻 PRD**：[`prd-platform.md`](../../../HBECHO设计方案/prd-platform.md) v1.0.9 §6.11（常态与按需采集）、[`prd-domain-d-rule-engine.md`](../../../HBECHO设计方案/prd-domain-d-rule-engine.md) v1.1（按需采集的提出方）、[`prd-domain-c-signals.md`](../../../HBECHO设计方案/prd-domain-c-signals.md) v0.4（finalized 快照与媒资的读取方）、[`prd-domain-b-access-control.md`](../../../HBECHO设计方案/prd-domain-b-access-control.md) v1.21（Capability 名称）、[`prd-domain-i-ops.md`](../../../HBECHO设计方案/prd-domain-i-ops.md) v0.1（硬上限、ODS 清理）
 >
 > **数据基线**：[`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)（draft）§8–§12
 >
 > **最近核对**：2026-11-05
 >
-> **更新日期**：2026-11-05（初建；同日 §1.5 闸门通过；吸收旧系统 lxk-BigSpard 经验，见 §1.7）
+> **更新日期**：2026-11-05（初建；同日 §1.5 闸门通过；吸收旧系统 lxk-BigSpard 经验，见 §1.7；外部审查两轮后修订：见 §1.8）
 >
 > **语言约定**：正文中文；验收标准中的规范性关键词 `SHALL` / `SHALL NOT` / `MAY` 与技术标识保留英文（对齐 `a-data-foundation-tracer`、`a-master-data-import` 的写法）。
 
@@ -31,7 +31,7 @@
 冲突时按此顺序裁决，不在代码、SQL 或本 spec 里暗中选择一方：
 
 1. [`CONTEXT.md`](../../../CONTEXT.md)：领域词汇与不变量；
-2. [`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.10.1：A 域产品语义的唯一真相源。本 spec 的同步规则以其 §5.5、§7、§9、§10 为准；
+2. [`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.11：A 域产品语义的唯一真相源。本 spec 的同步规则以其 §5.5、§7、§9、§10 为准；
 3. [`prd-platform.md`](../../../HBECHO设计方案/prd-platform.md) §6.11：常态采集与按需采集的分工、按需采集幂等（本 spec 的 FS-8 实现这一节中属于 A 的部分）；
 4. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：同步控制、内容、评论、媒资的物理基线。与第 1–3 项冲突时按前三项修订 v2，不在局部 SQL 里另建平行结构；
 5. AI Master V1.2 文档与已保存的 [`raw4`](../../../aimaster接口文档/测试结果/raw4-2026-10-28/)、[`raw5`](../../../aimaster接口文档/测试结果/raw5-2026-10-28/)、[`raw6`](../../../aimaster接口文档/测试结果/raw6-2026-10-28/)、[`raw9`](../../../aimaster接口文档/测试结果/raw9-2026-10-28/)、[`raw10`](../../../aimaster接口文档/测试结果/raw10-2026-10-28/)、[`raw12`](../../../aimaster接口文档/测试结果/raw12-2026-10-28/)、[`raw13`](../../../aimaster接口文档/测试结果/raw13-2026-10-28/)、[`raw14`](../../../aimaster接口文档/测试结果/raw14-2026-10-28/) 实测，以及 [`返回字段与特殊情况.md`](../../../aimaster接口文档/返回字段与特殊情况.md)：外部合同与证据。样本行为不能外推为供应商长期合同；
@@ -49,7 +49,7 @@
 | C 域（识别） | PRD v0.4；实现路线图第 6 位 | C 读取 finalized 快照与正式媒资字节。本 spec 保证 finalized 状态、媒资读取方式（短期签名 URL）与音频轨可用，不实现信号 |
 | B 域访问控制 | PRD v1.21 定稿；实现未开始 | 沿用 tracer 的受限服务身份；Capability 名称按 B PRD。真实用户与 DataScope 由 B 实现 |
 | Python 能力服务（ADR-0012） | 仓库里只有 `image.py` 与测试，**没有 HTTP 外壳** | 本 spec 建最小 FastAPI 外壳（图片标准化、音频抽取），ADR-0012 已批准 FastAPI，不新增依赖选型（design §7.10、FS-D11） |
-| v2 数据基线 | draft；2026-11-04 十项、2026-11-05 六项修订后 | 本 spec 要求七项修订（§1.3），实施前必须落回 v2 正文 |
+| v2 数据基线 | draft；2026-11-04 十项、2026-11-05 六项修订后 | 本 spec 要求八项 v2 修订与两处 A PRD 修订（§1.3），实施前必须落回 v2 正文 |
 | ADR-0005 / 0008 / 0010 / 0012 / 0013 | accepted | 应用栈、门店身份、品牌交集、能力服务、仓库目录是硬约束 |
 
 **不依赖**：任何真实用户、页面、真实供应商（默认验收）、真实 OSS（默认验收）。
@@ -58,36 +58,47 @@
 
 下列修订只增列、放宽约束或澄清文字，不删除既有列。未落回 v2 正文前，不得写迁移或 SQL。
 
+> **落回状态（2026-11-05，任务 0）**：R1–R8 已全部落回 v2 正文（见 v2 文首「2026-11-05 修订」第 19–26 项）；P1、P2 已落回 A PRD v1.11；`prd-platform.md` D-33 已加澄清（v1.0.9）。落回时 v2 §12.5 / §12.6 里与 R2 同义的「内容终态等待详情依赖」旧写法一并改为账号级封口与按需种子快照，属于 R2 的必要连带，不是新增修订。
+
 | # | 冲突 / 缺口 | 现状 | 本 spec 的修订要求 | 影响 |
 |---:|---|---|---|---|
 | R1 | 按需详情的落点没有定义 | v2 §10.2 只描述周期批次内「列表 + 详情」合并，并说「后续人工重抓使用新批次」；`content_snapshots` 一个批次一内容一行，finalized 后不可改 | 增加 `content_snapshots.seeded_from_snapshot_id BIGINT NULL`（FK → 同表，RESTRICT）；§10.2 增补第 12 条：按需批次为内容建一行 `building` 快照，**以该内容当前 finalized 快照的值与状态为种子**，再按 LaterValidValueWins 合并详情，定稿后可成为 current（FS-D05） | FS-8、FS-9 |
-| R2 | 「列表阶段封口」的单位 | v2 §10.2 第 6、7 条写成「批次中所有列表任务终态后」，是 D-23 之前按内容跨账号合并的写法 | 澄清为**账号级封口**：一个账号的列表任务终态（含失败 / 取消）后，该账号本批次的 `building` 快照即可定稿；不做跨账号 fan-in。按需详情不在周期批次内等待（FS-D04） | FS-6 |
+| R2 | 「列表阶段封口」的单位 | v2 §10.2 第 6、7 条与 **§12.3 第 6 条**都写成「批次中所有 / 全部列表任务终态后」，是 D-23 之前按内容跨账号合并的写法 | 澄清为**账号级封口**（§10.2 第 6、7 条与 §12.3 第 6 条一并改）：一个账号的列表任务终态（含失败 / 取消）后，该账号本批次的 `building` 快照即可定稿；不做跨账号 fan-in。按需详情不在周期批次内等待（FS-D04） | FS-6 |
 | R3 | 封面下载范围与 A 不一致 | v2 §11.3 写「所有列表内容下载封面」，且 tracer 对每个快照都建 `cover` 引用 | 与 A §10.1 对齐：封面**首次入库**时下载；内容已有 `archived` / `carried_forward` 封面时不再为新快照建 `cover` 引用；此前没有成功过（`pending` / `failed`）时，下一次出现在列表就用新地址重建引用（FS-D09） | FS-11 |
-| R4 | 批次用途无法区分 | `sync_batches.trigger_type` 只有 `scheduled` / `manual`；tracer 的单账号录入、补抓、按需批次都是 `manual` | 增加 `purpose VARCHAR(32) NOT NULL`，CHECK 为 `full` / `supplement` / `demand` / `intake`；tracer 创建的根批次为 `intake`；只有 `full` 受「全量批次串行」约束（FS-D02） | FS-1、FS-13 |
+| R4 | 批次用途无法区分 | `sync_batches.trigger_type` 只有 `scheduled` / `manual`；tracer 的单账号录入、补抓、按需批次都是 `manual` | 增加 `purpose VARCHAR(32) NOT NULL`（**迁移分三步：先建可空列 → 回填已有批次为 `intake` → 改 NOT NULL**，不留 DEFAULT，避免新代码漏写时静默变成 `intake`），CHECK 为 `full` / `supplement` / `demand` / `intake`；tracer 创建的根批次为 `intake`；只有 `full` 受「全量批次串行」约束（FS-D02） | FS-1、FS-13 |
 | R5 | 批次「结束」不含媒资 | `sync_batches.finished_at` 语义未定；媒资下载是该批次的子任务 | `finished_at` = 结构化阶段（profile / list）结束；增加 `media_finished_at DATETIME(6) NULL`，媒资任务全部终态时写入（FS-D13） | FS-1、FS-11 |
 | R6 | 快手账号标识命名空间 | `IDENTIFIER_NAMESPACES` 与 CHECK 只有抖音 / 小红书四项 | 增加 `kuaishou.user_id`；CONTEXT 同步登记。快手主页与列表作者同一命名空间，没有第二官方标识（A §5.2） | FS-7 |
 | R7 | 外部监控账号的采集范围 | v2 §8.3 说外部型「采集与自有账号走同一条链路」，§12.3 步骤 5 对所有 active 账号生成主页 + 列表任务 | 澄清：`watch_type='external'` **只生成 `fetch_profile`**（及头像 / 背景媒资），不生成列表、内容、详情任务（A §5.6：1.0 只采主页快照） | FS-13 |
+| R8 | 批次排队语义缺失 | v2 §12.3 第 2 条写「已有全量批次运行 → 记录 skipped」，没有 `queued` / `expired`；§9.2、A §7.1、D-33 都是「排队 1 个、队列满才跳过、排到下一时点仍未开始则过期」 | §12.3 第 2 条改为与 §9.2 一致：无运行 → 创建并开始；有运行且队列空 → `queued`；队列满 → `skipped`；排队过期 → `expired`。**§9.2 的 `skipped` 语义同步放宽**：由「队列已满时创建摘要、不创建任务」扩展为「没有执行任何任务的批次」，`skip_reason` 取 `queue_full` / `no_targets`（没有有效监控目标）/ `all_targets_closed`（规划了任务但全部在领取前因监控资格失效被取消）；后一种批次里存在已取消的任务行 | FS-1 |
 
-> 这些是**基线修订**，不是本 spec 私有的实现细节。修订未落回 v2 正文前，不得开始写迁移或 SQL。
+
+**对 A 域 PRD 的修订**（产品语义的唯一真相源，任务 0 同步改，升 v1.11 并补版本记录）：
+
+| # | 位置 | 现写法 | 改为 | 依据 |
+|---|---|---|---|---|
+| P1 | §7.1 手工补抓 | 当前有批次在跑时，运营选择「排队」或「取消当前批次」 | 增加第三项 `run_now`（默认，并行）；写明 D-33 的串行只约束全量批次 | 刘学奎 2026-11-05 |
+| P2 | §7.3 一次同步做什么 | 「列表处理完后：按规则决定哪些内容要拉详情 / 评论 → 详情 / 评论完成后：内容定稿」 | 周期同步只做「主页 → 列表 → 账号级定稿 → 媒资（头像 / 背景 / 封面）→ 批次汇总」；详情、评论、视频、音频由监控判定计划按需触发，不在周期批次内等待 | D-31、D-68、PRD §6.11 第 1 条；刘学奎 2026-11-05 采纳 |
+
+> 这些是**基线修订**，不是本 spec 私有的实现细节。修订未落回 v2 / A PRD 正文前，不得开始写迁移或 SQL。
 
 ### 1.4 PRD 真空与已定结论
 
-下列问题 PRD 没有直接写死，但实现必须选一条。「已定」来自 PRD 或既有决策；「建议」是本 spec 的提议，评审时一并裁决（design §13 对应 FS-Dnn）。
+下列问题 PRD 没有直接写死，但实现必须选一条。「已定」来自 PRD、既有决策或刘学奎 2026-11-05 对本 spec 全部建议的采纳（design §13 对应 FS-Dnn）。
 
 | # | 问题 | 结论 | 性质 |
 |---:|---|---|---|
 | 1 | 单账号补抓遇到全量批次正在跑 | 运营可选 `run_now`（并行执行，**默认**；一个账号只有两次调用）、`queue`（排到全量批次结束后）、`cancel_current`（取消当前全量批次）。`run_now` 是对 A §7.1 的放宽，任务 0 修订 A PRD §7.1 并补版本记录 | 已定（刘学奎，2026-11-05 采纳建议） |
-| 2 | 按需采集批次是否受「全量批次串行」约束 | 不受：它不是全量批次（D-33 只约束全量批次），优先级高于周期任务，共用同一并发与速率上限 | 建议（FS-D17） |
-| 3 | 按需采集如何落到快照 | 新建按需批次（`purpose='demand'`），为被请求的内容建种子快照并合并详情，定稿后参与 current 比较 | 建议（FS-D05，v2 R1） |
-| 4 | 「本轮已有则复用」的「本轮」 | 本轮 = 最近一个已开始的 `full` 批次的 `logical_at` 起，到下一个 `full` 批次开始为止；详情与评论在本轮内有成功任务即复用；视频 / 音频只要已有已验证资产就复用（字节不随时间变化） | 建议（FS-D06） |
+| 2 | 按需采集批次是否受「全量批次串行」约束 | 不受：它不是全量批次（D-33 只约束全量批次），优先级高于周期任务，共用同一并发与速率上限 | 已定（刘学奎，2026-11-05 采纳；FS-D17） |
+| 3 | 按需采集如何落到快照 | 新建按需批次（`purpose='demand'`），为被请求的内容建种子快照并合并详情，定稿后参与 current 比较 | 已定（刘学奎，2026-11-05 采纳；FS-D05） |
+| 4 | 「本轮已有则复用」的「本轮」 | 本轮 = 最近一个已开始的 `full` 批次的 `started_at` 起（不是 `logical_at`：排队几小时才晋升的批次，计划时点早于真正开始，用 `logical_at` 会把上一批次的结果算进本轮），到下一个 `full` 批次开始为止；详情与评论在本轮内有成功任务即复用；视频 / 音频只要已有已验证资产就复用（字节不随时间变化） | 已定（刘学奎，2026-11-05 采纳；FS-D06） |
 | 5 | 账号状态 `unavailable` 谁设置 | 本 spec **从不自动设置**账号或内容的 `unavailable` / `deleted`：供应商对无效链接、私密、已删除返回同一个 500，无法区分（A §9.2、D-54）。技术与业务不可访问都只记质量问题 | 已定（D-38、D-54） |
-| 6 | 评论「自然翻完」何时可信 | 抖音：`has_more` 为 0 即自然结束，可标记疑似删除；小红书：**永远视为覆盖不完整**（D-50，实测 `has_more=0` 但 `total` 远大于返回），不标记疑似删除；达到页数 / 条数上限也不标记 | 建议（FS-D08） |
+| 6 | 评论「自然翻完」何时可信 | 抖音：`has_more` 为 0 即自然结束，可标记疑似删除；小红书：**永远视为覆盖不完整**（D-50，实测 `has_more=0` 但 `total` 远大于返回），不标记疑似删除；达到页数 / 条数上限也不标记 | 已定（刘学奎，2026-11-05 采纳；FS-D08） |
 | 7 | 周期同步是否带详情 | 否。周期批次只做主页 + 列表 + 头像 / 背景 / 封面；详情、评论、视频、音频全部由按需需求触发（D-31、PRD §6.11 第 1 条） | 已定 |
-| 8 | 失败任务如何在下一周期前重试 | 提供 `batch retry-failed` 命令（运营触发），把 `failed` / `dead` 的任务放回队列并增加尝试额度；只在同一批次仍是最新 `full` 批次、下一个 `full` 批次尚未开始时允许。不做自动二轮重试 | 建议（FS-D16） |
-| 9 | 调度时区 | `Asia/Shanghai` 无夏令时，按固定 UTC+8 计算时点；`sync_settings.timezone` 为其他值时拒绝启动 | 建议（FS-D15） |
-| 10 | 视频 / 音频下载方式 | 视频流式写临时文件并边写边算 SHA-256，再分片上传 OSS；音频由 Python 能力服务通过**短期签名 URL** 读取已入库视频并返回 m4a 字节 | 建议（FS-D10，补记 ADR-0012） |
-| 11 | 周期同步的详情 / 评论 / 视频请求如何拼 `url` | 供应商详情与评论接口要内容 `url`。抖音用列表观察到的 `share_url`，缺失时回退到 `https://www.douyin.com/video/{post_id}`；小红书用 `https://www.xiaohongshu.com/explore/{post_id}`（raw6 评论样本用过）；**快手没有可用样本**，快手详情在 smoke 证实构造方式之前保持 `disabled` | 已知缺口（design §14 第 2 项） |
-| 12 | 运营处置命令是否属于本 spec | 属于：A §7.6「处理归属冲突」、§5.3 改绑、§5.5 确认已删除、§9.4 质量问题状态、§4.3 监控开关五级，路线图里没有别的 spec 拥有它们；页面不做 | 建议（FS-D19） |
+| 8 | 失败任务如何在下一周期前重试 | 提供 `batch retry-failed` 命令（运营触发），把 `failed` / `dead` 的任务放回队列并增加尝试额度；只在同一批次仍是最新 `full` 批次、下一个 `full` 批次尚未开始时允许。不做自动二轮重试 | 已定（刘学奎，2026-11-05 采纳；FS-D16） |
+| 9 | 调度时区 | `Asia/Shanghai` 无夏令时，按固定 UTC+8 计算时点；`sync_settings.timezone` 为其他值时拒绝启动 | 已定（刘学奎，2026-11-05 采纳；FS-D15） |
+| 10 | 视频 / 音频下载方式 | 视频流式写临时文件并边写边算 SHA-256，再分片上传 OSS；音频由 Python 能力服务通过**短期签名 URL** 读取已入库视频并返回 m4a 字节 | 已定（刘学奎，2026-11-05 采纳；FS-D10） |
+| 11 | 按需详情 / 评论 / 视频请求如何拼 `url` | 供应商详情与评论接口要内容 `url`。抖音用列表观察到的 `share_url`，缺失时回退到 `https://www.douyin.com/video/{post_id}`；小红书用 `https://www.xiaohongshu.com/explore/{post_id}`（raw6 评论样本用过）；**快手没有可用样本**，快手详情在 smoke 证实构造方式之前保持 `disabled` | 已知缺口（design §14 第 2 项） |
+| 12 | 运营处置命令是否属于本 spec | 属于：A §7.6「处理归属冲突」、§5.3 改绑、§5.5 确认已删除、§9.4 质量问题状态、§4.3 监控开关五级，路线图里没有别的 spec 拥有它们；页面不做 | 已定（刘学奎，2026-11-05 采纳；FS-D19） |
 
 ### 1.5 已确认事项（刘学奎，2026-11-05，全部采纳建议）
 
@@ -147,6 +158,53 @@
 | 批量写库默认 dry-run | FS-14.6 |
 | 商用 API 无法验证对不对，需要抽样对账 | FS-15.8 |
 
+### 1.8 外部审查修订记录（2026-11-05）
+
+对一份外部审查意见逐条核对原文后的采纳结果（审查基于 requirements / design 的同日初稿）：
+
+| 审查项 | 结论 | 落点 |
+|---|---|---|
+| v2 §12.3 第 2、6 条未进修订清单 | 属实，采纳 | §1.3 R2 扩展、新增 R8 |
+| 列表判定表对 `empty` 锚点、游标异常、`empty` 再返回空的处理 | 属实，采纳 | FS-5.3、FS-5.7；design §7.6 |
+| 按需复用的「永久复用」口子 | 属实，采纳 | FS-8.4；design §7.8 |
+| `purpose NOT NULL` 迁移无回填 | 属实，采纳 | R4；tasks 任务 1 |
+| A PRD §7.3 与 spec 采集分工冲突 | 属实，采纳 | §1.3 P2；tasks 任务 0 |
+| 重试回队尾在混合优先级下 | 部分成立（同优先级内成立），采纳为澄清 | FS-12.2 |
+| 全部取消的批次判 `succeeded` | 属实，采纳 | FS-1.7 |
+| 品牌状态无原因码、`account_unavailable_excluded` 无触发 | 属实，采纳；并补充大区状态（C5 链） | FS-2.1、FS-2.4 |
+| 封面「数组第 2 条」未显式保留 | 实现未丢（解码器不变），文档缺，采纳 | FS-11.1 |
+| 名单导入后立即采集无入口 | 属实，采纳 | FS-13.4 |
+| 页面归属与 ui-foundation 冲突 | 属实（仅「账号与监控」一行），采纳 | ui-foundation §3 |
+| INDEX 与 tasks 状态矛盾；§1.4 与 §1.5 不同步 | 属实，采纳 | INDEX、§1.4 |
+| `terminal` 语义 | 措辞问题，实现不需新列，采纳澄清 | FS-11.7；design §7.10 |
+| tracer 校验类立即重试 vs 回队尾 | 属实，采纳 | FS-12.2 |
+| 种子快照必填列 | 属实，采纳 | design §7.8 |
+| `source_content_snapshot_id` 与 `seeded_from_snapshot_id` 职责重叠 | 属实，采纳（解释区别） | design §7.8 |
+| ADR-0012 二进制 body 例外 | 属实，采纳 | tasks 任务 0；design §7.10 |
+| acceptance 内部不一致（D4 / D10、C3 排序） | 属实，采纳 | acceptance D 组、C3 |
+| `has_more` 缺失进判定表；`empty` 再返回空 | 属实，采纳 | design §7.6 第 1、9 行 |
+| 自比对「上一周」口径 | 属实，采纳 | FS-5.14；design §7.6.2 |
+| 音频无字节上限 | 属实，采纳 | FS-11.7；design §7.10 |
+| 任务 0 分支动作与现状冲突 | 属实，采纳 | tasks 任务 0 |
+
+**第二轮复核（同日）**：
+
+| 审查项 | 结论 | 落点 |
+|---|---|---|
+| `--only profile` 的依据是虚构的 | **部分不成立**：语义在 A §11.2 第 ⑥ 步与要点里（只调主页接口、内容采集不在此刻触发），但本 spec 把出处写成了 §11.5；出处已改正。老账号满一周「立即采」PRD 没说采什么，已注明是本 spec 的默认 | FS-13.4；FS-D30 |
+| v2 §9.2 `skipped` 的语义没改 | 属实，采纳 | §1.3 R8 |
+| design §7.11 / §7.5 仍写「所有未重试任务之后」 | 属实，采纳 | design §7.5、§7.11 |
+| `round_start` 用 `started_at` 而 §1.4 写 `logical_at` | 属实，采纳 `started_at`（理由见 §1.4 第 4 项） | §1.4、术语表 |
+| `informational` 在 `media-failure` 里不存在 | 属实，采纳（任务 7 新增该分类） | design §7.10；tasks 任务 7 |
+| `empty` 模式 `has_more=true` 措辞矛盾 | 属实，采纳 | design §7.6 |
+| `--if-older-than` 的「最近成功同步时间」未定义 | 属实，采纳 | FS-13.4 |
+| acceptance 编号乱序 | 属实，采纳（D 组重排、H14 移位） | acceptance |
+| 品牌 / 大区没有「各自开关」，与宪法 C5 措辞不符 | 属实；刘学奎选 A（改宪法措辞），已执行 | §1.9；constitution v1.1 |
+
+### 1.9 已裁决（刘学奎，2026-11-05）
+
+外部审查发现：宪法 C5 原写「完整归属链的业务状态与**各自开关**」，但 `CONTEXT.md` 与 D-36 只有五级开关，`brands` / `regions` 没有 `monitoring_enabled` 列。**裁决：A**——修订宪法 C5 为「监控开关只有五级，品牌与大区只有业务状态、没有开关」（constitution v1.1 已改，变更记录已登记）；目标集保持现状，对品牌与大区只检查业务状态（`brand_inactive` / `region_inactive`）。不给 `brands` / `regions` 加开关列，D-36 不扩展。
+
 ## 2. 术语
 
 | 术语 | 含义 | 来源 |
@@ -176,7 +234,7 @@
 4. 当没有运行中的 `full` 批次时，新批次 SHALL 进入 `running`；当已有一个运行中批次且队列为空时，新批次 SHALL 进入 `queued`；当队列已有一个等待批次时，新触发 SHALL 创建 `status='skipped'` 的摘要批次（`skip_reason='queue_full'`），SHALL NOT 创建任务。
 5. 当上一个 `full` 批次进入终态时，调度 SHALL 立即把排队批次提升为 `running`；提升时才规划任务（FS-2），SHALL NOT 使用排队期间过期的目标集。
 6. 当排队批次到下一个计划时点仍未开始时，调度 SHALL 将其标记为 `expired` 并让运营可见。
-7. `full` 批次的终态 SHALL 由结构化任务（`fetch_profile` / `fetch_content_list`）决定：全部成功且无连续性缺口为 `succeeded`；有失败、死信或缺口且至少一个成功为 `partial_succeeded`；没有成功且有失败为 `failed`。因监控资格失效而取消的任务 SHALL 计入 `skipped_task_count`，SHALL NOT 影响终态判定。
+7. `full` 批次的终态 SHALL 由结构化任务（`fetch_profile` / `fetch_content_list`）决定：全部成功且无连续性缺口为 `succeeded`；有失败、死信或缺口且至少一个成功为 `partial_succeeded`；没有成功且有失败为 `failed`。因监控资格失效而取消的任务 SHALL 计入 `skipped_task_count`，SHALL NOT 影响终态判定；但规划了任务而**全部**被跳过（没有任何成功与失败）时，批次 SHALL 为 `skipped`、`skip_reason='all_targets_closed'`，SHALL NOT 记为 `succeeded`；规划任务数为 0（没有有效监控目标）的批次同样为 `skipped`、`skip_reason='no_targets'`。
 8. 媒资下载任务 SHALL NOT 决定批次终态；批次终态后媒资继续推进，全部终态时写入 `media_finished_at`（v2 R5）。
 9. 调度器崩溃或重启后，处于 `planned`（任务规划到一半）的批次 SHALL 被恢复并继续规划，已规划的任务不重复。
 10. 同一时刻 SHALL 至多一个 `purpose='full'` 的批次处于 `running`。
@@ -187,10 +245,10 @@
 
 #### 验收标准
 
-1. 批次规划 SHALL 为每个满足下列全部条件的账号生成任务：账号 `status IN ('active','unavailable')`；归属行 `monitoring_enabled=TRUE`；`intake_status='normal'`；对 `watch_type='staff'` 另需专员、门店、经销商、分公司（经板块）的业务状态均为有效且各自 `monitoring_enabled=TRUE`。
+1. 批次规划 SHALL 为每个满足下列全部条件的账号生成任务：账号 `status IN ('active','unavailable')`；归属行 `monitoring_enabled=TRUE`；`intake_status='normal'`；对 `watch_type='staff'` 另需专员、门店、经销商、分公司（经板块）的业务状态均为有效且各自 `monitoring_enabled=TRUE`，并且门店所属**品牌**与分公司所属**大区**的业务状态为有效（C5 的完整归属链；品牌与大区没有监控开关）。
 2. `watch_type='external'` 的账号 SHALL 只受账号状态与自身开关约束，SHALL NOT 受五级开关与「15 天无引用」约束。
 3. `status='deleted'`、`intake_status='suspected_empty'` 的账号 SHALL NOT 被规划；专员或门店停用后其名下账号 SHALL NOT 被规划，归属与历史数据保持不变。
-4. 规划结果 SHALL 能解释每个被排除账号的原因，按「最上级优先」取一个原因码（`branch_off` / `dealer_off` / `store_off` / `staff_off` / `account_off` / `staff_inactive` / `store_closed` / `dealer_inactive` / `branch_inactive` / `deleted` / `suspected_empty` / `account_unavailable_excluded`），供状态查询与「XX 被关闭」展示。
+4. 规划结果 SHALL 能解释每个被排除账号的原因，按「最上级优先」取一个原因码（`branch_off` / `dealer_off` / `store_off` / `staff_off` / `account_off` / `staff_inactive` / `store_closed` / `dealer_inactive` / `branch_inactive` / `region_inactive` / `brand_inactive` / `deleted` / `suspected_empty`），供状态查询与「XX 被关闭」展示。
 5. 上级开关关闭后下级自身开关值 SHALL NOT 被改写；上级恢复后按下级原值继续。
 6. 任务被领取、发出任何付费调用之前，worker SHALL 复核该账号当前是否仍有效监控；失效时任务 SHALL 以 `cancelled` / `monitoring_closed` 结束且不发起调用，并计入 `skipped_task_count`。
 7. 目标集规划 SHALL 在事务外分块（每块至多 500 个账号），SHALL NOT 一个事务写完全部任务。
@@ -235,18 +293,18 @@
 
 1. `fetch_content_list` SHALL 从第一页开始，对每个返回页**整页处理**（内容身份、`building` 快照候选、discovery）后，才判断是否继续；`initial_content_limit` 与任何本地上限 SHALL NOT 截断已返回页（C8）。
 2. 第一页位置 1–3 SHALL 标记为可能置顶并正常入库，SHALL NOT 单独作为停止依据；第一页第 4 条起和后续页所有条目按时间序列判断。
-3. 有旧锚点时，边界判断 SHALL 为：`time` 模式下出现旧高水位 ID，或 `published_at` 严格早于旧高水位时间；`id_window` 模式下出现旧 ID 窗口任一 ID；`empty` 模式没有边界，只抓首个完整页。命中后处理完当前整页，任务 `succeeded`，不再请求下一页。
+3. 有旧锚点时，边界判断 SHALL 为：`time` 模式下出现旧高水位 ID，或 `published_at` 严格早于旧高水位时间；`id_window` 模式下出现旧 ID 窗口任一 ID；`empty` 模式没有边界，只抓首个完整页：本轮有内容时，处理完整页后任务 `succeeded` 并**重建锚点**（`time` 或 `id_window`），SHALL NOT 记缺口（上一次本来就没有内容，不存在被漏掉的区间）。命中后处理完当前整页，任务 `succeeded`，不再请求下一页。
 4. 未命中且 `has_more=true` 时 SHALL 继续翻页；达到 `list_safety_page_limit` 仍未命中时，任务 SHALL 为 `succeeded_with_gap`，`window_overflow_detected=TRUE`、`stop_reason='safety_limit_rebased'`，记质量问题 `continuity_gap`，不自动续跑。
 5. `has_more=false` 仍未命中旧边界时，任务 SHALL 为 `succeeded_with_gap`，`stop_reason='end_of_list_rebased'`，`window_overflow_detected=FALSE`，记 `continuity_gap`。
 6. 缺口发生后 SHALL 用本轮已获取的全部内容重建锚点（有有效发布时间用 `time`，否则用首页内容 ID 作 `id_window`），检查点置 `rebased_after_gap`，下一周不追旧缺口。
-7. 本轮返回空列表而已有非空旧锚点时，SHALL NOT 覆盖旧锚点：检查点置 `blocked`，任务 `succeeded_with_gap`，`stop_reason='empty_window_not_rebased'`；之后仍只抓首页，直到获得可用时间或 ID。首次采集返回空列表且 `has_more=false` 时建立 `empty` 锚点，任务成功。
+7. 本轮返回空列表而已有非空旧锚点时，SHALL NOT 覆盖旧锚点：检查点置 `blocked`，任务 `succeeded_with_gap`，`stop_reason='empty_window_not_rebased'`；之后仍只抓首页，直到获得可用时间或 ID。首次采集（无旧锚点）或旧锚点本身是 `empty` 而本轮仍返回空列表且 `has_more=false` 时，建立 / 保持 `empty` 锚点，任务成功，检查点 `ready`。
 8. 没有旧检查点的账号（例如名单导入后第一次周期同步）SHALL 按首次采集处理：整页处理，累计条目达到 `initial_content_limit` 即停止并建立基线，供应商仍有更多历史 SHALL NOT 算缺口。
 9. 游标 SHALL 类型保真：抖音整数、小红书字符串、快手科学计数法字符串；SHALL NOT 互转。`has_more` 缺失或非法 SHALL 按游标异常处理（停止翻页、记 `cursor_no_more_with_has_more` 或 `has_more_invalid`，按自然结束处理锚点），SHALL NOT 猜测。进程中断后 SHALL 从已提交页的下一游标继续，不重复请求已提交的页。
 10. 检查点 SHALL 仅在该账号本批次全部已返回页的必需投影成功后推进；任一条目投影失败 SHALL NOT 推进检查点；较旧批次或陈旧 worker 的推进 SHALL 被版本比较拒绝。
 11. 跨页重复出现的内容 SHALL 在同一批次同一账号内合并为一条内容、一份快照、一条 discovery，每个出现都被处理且位置证据保留在调用 / 页摘要中。
 12. 小红书列表 SHALL 沿用主导作者策略 `xhs-dominant-author.v1`（首页完整页上计算一次）；抖音 SHALL 沿用 `same_payload` 的第二标识绑定；异作者内容保留但不建账号（沿用 tracer）。
 13. 列表身份交叉校验：已知该账号的作者标识（抖音 `user_id` / `sec_uid`、小红书已绑定的内容作者 ID、快手 `user_id`）且本任务累计条目 ≥ 5 时，若**没有任何一条**由这些标识创作，SHALL 判 `list_author_mismatch`：该账号本批次已投影的 `building` 快照 SHALL 被清除，检查点 SHALL NOT 推进，任务终态失败，记质量问题（带条数与期望标识）；条目不足 5 条或尚无已知作者标识时记为「无法判定」，SHALL NOT 判错。校验结果（`verified` / `unverifiable` / `mismatch`）SHALL 写入任务 `result_summary`，供 FS-15 汇总。
-14. 自比对：列表任务成功后，若本周主页的 `post_value` 比上一周主页快照多 k（k > 0）条，而本批次首次发现的内容少于 k 条，SHALL 记警告级质量问题 `suspected_missing_content`（带 k 与实际发现数）；两周主页任一不是有效值则不比对；负增长不报。该问题 SHALL NOT 使任务失败或改变检查点。
+14. 自比对：列表任务成功后，若本批次主页的 `post_value` 比该账号**上一份更早的主页快照**多 k（k > 0）条，而**自那份快照的接收时间以来**首次发现的内容少于 k 条（不限批次，补抓批次发现的也算），SHALL 记警告级质量问题 `suspected_missing_content`（带 k 与实际发现数）；两周主页任一不是有效值则不比对；负增长不报。该问题 SHALL NOT 使任务失败或改变检查点。
 
 ### 需求 FS-6 · 内容快照定稿与 current
 
@@ -284,7 +342,7 @@
 1. A SHALL 提供 `submitDemand`：输入 `demandKey`（调用方幂等键）、提出方引用（`kind`、`ref`、`version`）、`ruleDecisionId`、`ruleVersion`、至多 5,000 条 `{ contentId, wants[] }`，`wants` 取 `detail` / `comments` / `video` / `audio`；同一 actor + `demandKey` + 相同规范化载荷 SHALL 返回原按需批次，载荷不同 SHALL 以稳定的幂等冲突原因拒绝。
 2. A SHALL 只执行不决定：SHALL NOT 解释圈定条件、阈值或规则语义，SHALL NOT 在 A 域配置业务阈值；`ruleDecisionId` 与 `ruleVersion` SHALL 写入每个任务并随之保留。
 3. 对每个 `{contentId, want}`，提交 SHALL 在创建任务前确定处置：`queued`（新建任务）、`reused`（本轮已有结果）、`already_pending`（已有活动任务，复用）、`unsupported_platform`、`capability_disabled`、`content_not_found`、`out_of_scope`（内容所属账号不在 actor 范围）。
-4. 复用判定 SHALL 为：详情 / 评论 —— 本轮内存在该内容的 `succeeded` 任务（FS-D06）；视频 / 音频 —— 该内容已有已验证正式资产。`audio` SHALL 隐含 `video`，`video` SHALL 隐含 `detail`（需要新鲜下载地址）。
+4. 复用判定 SHALL 为：详情 / 评论 —— 存在该内容的 `succeeded` 任务且其**完成时间 ≥ 本轮起点**（不论任务属于周期、补抓还是按需批次；更早轮次的结果 SHALL NOT 复用，FS-D06）；视频 / 音频 —— 该内容已有已验证正式资产。`audio` SHALL 隐含 `video`，`video` SHALL 隐含 `detail`（需要新鲜下载地址）。
 5. 按需批次 SHALL 是 `purpose='demand'` 的 `manual` 批次，不受全量串行约束，任务优先级高于周期任务；同一内容同一动作的活动任务跨批次 SHALL 复用。
 6. 一次提交 SHALL 在事务外分块创建任务；崩溃后重放 SHALL 补齐缺失任务而不重复。
 7. A SHALL 提供 `getDemand`：返回每个 `{contentId, want}` 的状态（`pending` / `running` / `ready` / `failed` / `unsupported` / `reused_ready`）、稳定失败原因，以及可读取结果的指针（内容快照 ID、评论抓取时间与覆盖口径、正式媒资 ID）。查询 SHALL 只读本地事实，SHALL NOT 调用供应商。
@@ -314,7 +372,7 @@
 3. 评论按 `(content_id, platform_comment_id)` 幂等 upsert；同一评论再次出现 SHALL 恢复 `active` 并清除疑似删除时间。
 4. 仅当本次抓取被判定为**完整**（FS-D08：抖音自然翻完 `has_more=0`，且未触达页数 / 条数上限）时，先前存在而本次未出现的评论 SHALL 标记 `suspected_deleted`；部分抓取、触达上限、传输 / 解析失败、小红书 SHALL NOT 作为删除证据。
 5. `total>0` 而结果为空数组 SHALL 记质量问题 `comments_total_mismatch`，SHALL NOT 记为 0 条评论；小红书 `total` 大于已抓取条数 SHALL 记 `comment_coverage_incomplete`，D / E 不得把小红书评论总数当完整（D-50）。
-6. 小红书评论 `RESULT_VALIDATION_FAILED` 间歇出现 SHALL 在有界策略内重试（raw6）；快手 SHALL 被 FS-7 第 6 条拒绝。
+6. 小红书评论 `RESULT_VALIDATION_FAILED` 间歇出现 SHALL 在有界策略内重试（raw6）：任务回队尾后从已提交页的下一游标继续（FS-12.2），不在进程内原地重试；快手 SHALL 被 FS-7 第 6 条拒绝。
 7. 评论抓取 SHALL NOT 写内容快照结构化字段，SHALL NOT 阻塞快照定稿。
 
 ### 需求 FS-11 · 媒资归档
@@ -323,13 +381,13 @@
 
 #### 验收标准
 
-1. 头像与背景（抖音）SHALL 每批次重新下载并计算 SHA-256；封面 SHALL 在内容**首次入库**时下载（v2 R3）；内容已有 `archived` / `carried_forward` 封面时 SHALL NOT 为新快照再建 `cover` 引用；上一次没有成功的封面 SHALL 在下次出现时用新地址重建引用。
+1. 封面来源沿用 tracer：抖音列表取封面数组**第 2 条**（540 宽），小红书 / 快手取单值；R3 只改变「何时建引用」，SHALL NOT 改变「选哪一条」。头像与背景（抖音）SHALL 每批次重新下载并计算 SHA-256；封面 SHALL 在内容**首次入库**时下载（v2 R3）；内容已有 `archived` / `carried_forward` 封面时 SHALL NOT 为新快照再建 `cover` 引用；上一次没有成功的封面 SHALL 在下次出现时用新地址重建引用。
 2. 媒资下载 SHALL 作为独立 `download_media` 任务异步推进（每账号每批次一个，按需视频 / 音频另有任务），SHALL NOT 阻塞结构化阶段，状态独立可查。
 3. 正式资产 SHALL 按完整字节 SHA-256 判同；同一字节多个引用共享一份资产；临时 URL SHALL NOT 成为身份，SHALL NOT 写入长期业务事实。
 4. 快手封面（KVIF）SHALL 取 CDN `x-oss-process` 转换的 JPEG 作为标准化衍生图的来源，原始字节与衍生图同为独立资产；转换失败 SHALL 标记「封面不可用」并写质量问题 `media_cover_unavailable`，SHALL NOT 阻塞内容（D-62）。
 5. 视频 SHALL 按平台选择来源：抖音优先 `api-play.amemv.com` / `api.amemv.com` 候选，SHALL NOT 用 `video.url`；小红书与快手用详情 `download_urls`（720p h264），快手 SHALL NOT 用列表 `video.url`；候选集 SHALL 全部保留。
 6. 视频 SHALL 流式写临时文件并边写边算 SHA-256，再分片上传正式媒资桶并校验；单文件与单批次总字节受可配置技术上限约束；内存占用 SHALL NOT 随文件大小线性增长。
-7. 音频轨 SHALL 由 Python 能力服务经短期签名 URL 读取已入库视频后抽取为 m4a / AAC 原样，作为独立正式资产保存；视频没有音轨 SHALL 记 `no_audio_track` 终态，SHALL NOT 视为失败重试。
+7. 音频轨 SHALL 由 Python 能力服务经短期签名 URL 读取已入库视频后抽取为 m4a / AAC 原样，作为独立正式资产保存；视频没有音轨 SHALL 记 `no_audio_track` 终态（引用 `failed` + 该错误码，按 `media-failure` 分类为 informational），SHALL NOT 重试、SHALL NOT 计入失败数；音频字节上限 = 源视频字节数（`-c:a copy` 不会比源更大）且不超过 `HBECHO_MEDIA_MAX_BYTES`。
 8. 下载失败 SHALL NOT 影响结构化快照；上一份已验证资产可续用，但 SHALL 标记 `carried_forward` 并记录本轮失败，SHALL NOT 表示为本轮归档成功。
 9. 下载 URL 过期（`source_expired`）SHALL 触发重新获取详情拿新地址再重试（有界），SHALL NOT 复用过期地址；其余失败按 `media-failure` 的分类处理。
 10. 下载受超时、大小、类型、重定向与目标地址（含 DNS 解析后拒绝私网 / 回环 / 链路本地）限制；规则未圈中的视频 SHALL NOT 被下载。
@@ -341,7 +399,7 @@
 #### 验收标准
 
 1. 失败 SHALL 沿用 tracer 的分类并补充：`provider_input_inaccessible`、`cursor_anomaly`、`comment_coverage_incomplete`、`budget_exhausted`、`monitoring_closed`、`capability_disabled`、`unsupported_platform`、`content_url_unavailable`；每个任务终态 SHALL 带稳定的 `last_error_code`。
-2. 可重试失败（限流、5xx、已知未送达的传输失败、间歇 `RESULT_VALIDATION_FAILED`）SHALL **不立即重试**：任务 `attempt_count + 1`，置 `retry_wait` 并回到本批次队尾（FS-3.2 的排序保证它排在所有未重试任务之后），再按退避设置 `next_attempt_at`；因此一个批次先把全部账号采一遍，再依次做第 2、3 轮重试。每次尝试是新的 ProviderCall；达到 `task_max_attempts` SHALL 进入 `dead`；不可重试的稳定失败 SHALL 进入 `failed`。列表与评论任务重试时 SHALL 从已提交页的下一游标继续。
+2. 可重试失败（限流、5xx、已知未送达的传输失败、间歇 `RESULT_VALIDATION_FAILED`）SHALL **不立即重试**：任务 `attempt_count + 1`，置 `retry_wait` 并回到本批次队尾（FS-3.2 的排序保证它排在所有未重试任务之后），再按退避设置 `next_attempt_at`；因此一个批次先把全部账号采一遍，再依次做第 2、3 轮重试（排序在**同优先级**内成立；被补抓提升过优先级的任务重试时仍排在更高优先级一档，这是运营显式要求的）。full-sync 的 Runner SHALL NOT 使用 tracer 的进程内 `attemptLoop` 原地重试；tracer 单账号录入流程保持原行为。每次尝试是新的 ProviderCall；达到 `task_max_attempts` SHALL 进入 `dead`；不可重试的稳定失败 SHALL 进入 `failed`。列表与评论任务重试时 SHALL 从已提交页的下一游标继续。
 3. 已发送但结果不明的只读调用 SHALL 标记 `ambiguous`，最多再发一次，计入调用与点数预算；有副作用的调用不适用（本 spec 没有）。
 4. 技术失败 SHALL NOT 转成空主页、空列表、空评论、真实 `0` 或「账号不存在」。
 5. `batch retry-failed` SHALL 把本批次 `failed` / `dead` 任务放回 `pending` 并重置本轮尝试额度，条件是：该批次是最新 `full` 批次，且下一个 `full` 批次尚未开始；SHALL 记审计，SHALL NOT 重复已成功的任务。
@@ -356,9 +414,10 @@
 1. `supplement` SHALL 对给定账号创建 `purpose='supplement'` 批次，任务与周期任务同类（主页 + 列表），优先级高于周期任务；账号不在有效监控目标集时 SHALL 拒绝并说明原因（FS-2 第 4 条）。
 2. 当有 `full` 批次正在运行时，`supplement` SHALL 支持 `run_now`（默认，与全量批次并行）、`queue`（排到全量批次结束后）、`cancel_current`（取消当前全量批次后开始，需 `--apply`，记审计）；补抓批次 SHALL NOT 计入「同一时刻只允许一个全量批次」（该约束只针对 `purpose='full'`）。
 3. 同账号同动作已有活动任务时，`supplement` SHALL 复用并提升其优先级，返回已有任务引用（FS-3 第 5 条）。
-4. 外部监控账号 SHALL 仅由超管（`monitor.external.manage`）创建，复用 tracer 的解析流程（≤3 次、非主页入口拒绝、成对写入），不要求专员；创建后 `watch_type='external'`，无组织链，owner 快照为空。
-5. 外部监控账号 SHALL 只生成 `fetch_profile`（及头像 / 背景媒资），SHALL NOT 生成列表、内容、详情任务；SHALL 对 `hq_manager` / `branch_manager` 不可见（B-D22）。
-6. 外部账号的启停 SHALL 只改自身开关（`monitoring_closed_reason='manual'`）。
+4. `supplement` SHALL 支持 `--only profile|full`（默认 `full`）与 `--if-older-than <小时>`：后者对每个账号检查「最近一次成功同步」时间，更近的账号 SHALL 被跳过；该时间的定义为：`--only profile` 取最近一份主页快照的接收时间；`full` 取**主页与列表两者中较早的那个**（任一过期就视为过期；从未成功过视为无限久）。被跳过的账号并返回 `not_due`，不创建任务。这是 `a-activity-plan` 实现 A 域 PRD 的调用入口：**§11.2 第 ⑥ 步与要点**规定名单导入后的首次采集「只调主页信息接口、内容采集仍按每周节奏、不在此刻触发」（对应 `--only profile`）；**§11.5 采集触发规则**规定新账号立即（异步）、老账号距上次采集已满一周立即、未满一周不立即（对应 `--if-older-than 168`；PRD 没写老账号立即采什么，本 spec 按完整采集 `full` 处理，是默认而非 PRD 原文）。本 spec 不实现计划联动，只提供该入口与逐账号处置（`queued` / `not_due` / `not_eligible`）。
+5. 外部监控账号 SHALL 仅由超管（`monitor.external.manage`）创建，复用 tracer 的解析流程（≤3 次、非主页入口拒绝、成对写入），不要求专员；创建后 `watch_type='external'`，无组织链，owner 快照为空。
+6. 外部监控账号 SHALL 只生成 `fetch_profile`（及头像 / 背景媒资），SHALL NOT 生成列表、内容、详情任务；SHALL 对 `hq_manager` / `branch_manager` 不可见（B-D22）。
+7. 外部账号的启停 SHALL 只改自身开关（`monitoring_closed_reason='manual'`）。
 
 ### 需求 FS-14 · 运营处置命令
 
@@ -451,4 +510,4 @@
 
 只有当上文每一条 SHALL 都有可执行的离线检查或显式批准的 smoke 检查时，本需求才算满足。HTTP 成功不够：必须观察到整页基数、游标类型、锚点模式、缺口记录、账号级封口、current 不倒退、复用判定、评论完整性口径、媒资续用标记、预算停止点与「不改账号状态」。
 
-§1.3 的七项 v2 修订在落地前不得被实现默认值悄悄冻结；§1.5 的结论已确认，数值配置不得写成代码默认值。
+§1.3 的八项 v2 修订与两处 A PRD 修订在落地前不得被实现默认值悄悄冻结；§1.5 的结论已确认，数值配置不得写成代码默认值。

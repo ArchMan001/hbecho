@@ -34,6 +34,18 @@ C2 档 1 的模板匹配与元素匹配需要本地图像计算（pHash 预筛 +
 - 不调用供应商 API、不调用大模型（模型调用经 H1，在 Node 侧）；
 - 不生成报表（ADR-0011）。
 
+## 补记（2026-11-05，`a-full-sync` 任务 0；决策人：刘学奎）
+
+1. **音频抽取的 OSS 访问方式**：「只读 RAM 子账号」与「Node 传短期签名 URL」二选一，A 域音频抽取先按**后者**实现：Node Worker 为已入库视频生成短期签名 GET URL，Python 经 `ffmpeg -i <url>` 读取并返回 m4a 字节。Python 因此**不持有任何 OSS 凭证**。`c-signals` 沿用这一做法；若 C 域需要不同方式，另修订本 ADR，不在局部实现里各选各的。
+2. **图片标准化接口的传输格式**：`POST /v1/image/normalize` 使用**二进制 body + `Content-Type`**，不用 JSON。原因：JSON 需要 base64，体积膨胀约 33%，而封面是 1.0 里最频繁的调用。这是上表「契约：JSON 请求 / 响应」的例外，**只限输入输出为二进制字节的接口**；错误响应仍是 JSON `{code}`，不靠日志文本。`POST /v1/audio/extract` 的请求是 JSON（只含签名 URL 与上限），响应为二进制字节。
+3. **登记 uvicorn**（FastAPI 的 ASGI 运行服务器，随 FastAPI 一起使用）：
+
+   采用：uvicorn（⭐ 11k+，BSD-3-Clause；2026-11-01 仍有提交，2026-11-05 核对）
+   用途：运行 FastAPI 应用的 HTTP 服务进程，单 worker
+   不用它做什么：不对外暴露端口（只在 compose 内网），不经 Nginx；不承载业务状态；不用来做进程管理（重启靠 compose 的 `restart: unless-stopped`）
+
+   Python 侧除 FastAPI、uvicorn、OpenCV、pytest 外，新依赖仍须先登记。
+
 ## 后果
 
 - 计量：每次调用返回耗时与能力版本，由 Node Worker 记录，供 I 域观测（C §11）；

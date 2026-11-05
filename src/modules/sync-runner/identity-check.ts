@@ -1,6 +1,6 @@
 // 身份与残缺校验（FS-4.3、FS-4.8、FS-5.13；design §7.6.1；design-task5 §8）。纯函数。
 // 旧系统最大的教训：「成功」不等于「对」——采到别人的号、厂商返回 200 但字段残缺，状态仍是 success。
-import type { ListEntry, ProfileData, ValueState } from "../provider-adapter";
+import type { IdentifierNamespace, ListEntry, Platform, ProfileData, ValueState } from "../provider-adapter";
 
 /** 主页标识必须等于已登记的值（文本精确比较，同命名空间）。入参里没有入口（locator）：身份基准是**本次供应商返回值**，不是我们发出去的链接。 */
 export type ProfileIdentity = { state: "verified" } | { state: "mismatch"; expected: readonly string[]; actual: string | null };
@@ -47,3 +47,16 @@ export function countListAuthors(
   }
   return { known, matched };
 }
+
+/** 主页响应里的账号标识所在命名空间（与 decodeProfile 一致）。 */
+export const PROFILE_NAMESPACE: Readonly<Record<Platform, IdentifierNamespace>> = {
+  douyin: "douyin.user_id",
+  xiaohongshu: "xiaohongshu.profile.user_id",
+  kuaishou: "kuaishou.user_id",
+};
+/** 列表条目作者可能落在的命名空间（匹配「是否由登记作者创作」时查这些）。 */
+export const AUTHOR_NAMESPACES: Readonly<Record<Platform, readonly IdentifierNamespace[]>> = {
+  douyin: ["douyin.user_id", "douyin.sec_uid"],
+  xiaohongshu: ["xiaohongshu.content.user_id"],
+  kuaishou: ["kuaishou.user_id"],
+};

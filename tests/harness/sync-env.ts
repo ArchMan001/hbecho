@@ -5,6 +5,7 @@ import type { TestDb } from "./db";
 import { FakeClock } from "./fake-clock";
 import { FakeObjectStore } from "./fake-oss";
 import { FixtureTransport, type FixtureResponse } from "./fixture-transport";
+import type { ProviderResponse } from "../../src/modules/raw-capture";
 import { loadFixtureBytes } from "./fixtures";
 import { sha } from "./factories";
 import { seedOrg, seedSyncSettings, type OrgSeed } from "./seed";
@@ -105,6 +106,23 @@ export async function setupSync(t: TestDb, opts: SyncEnvOptions = {}) {
       if (hit instanceof Uint8Array) return { httpStatus, body: hit };
       return hit;
     });
+  /**
+   * 列表路由：handler 拿到请求里的入口、max_cursor 的 JSON 字面量（整数 `0`、字符串 `"abc"`）和第几次请求，返回字节或响应（可抛 TransportFailure）。
+   * 请求体原文在 transport.calls 里，测试可以直接断言回发的游标。
+   */
+  const routeList = (handler: (r: { url: string; cursor: string; n: number }) => Uint8Array | ProviderResponse) =>
+    transport.register({ path: LIST_PATH, query: { async: "false" } }, (request, i) => {
+      const text = new TextDecoder().decode(request.body!);
+      const url = (JSON.parse(text) as { url: string }).url;
+      const cursor = /"max_cursor":(.*?)\}$/.exec(text)?.[1] ?? "";
+      const out = handler({ url, cursor, n: i });
+      return out instanceof Uint8Array ? { httpStatus: 200, body: out } : out;
+    });
+  /** 本测试里发出的列表请求的 max_cursor 字面量（按发送顺序）。 */
+  const listCursors = () =>
+    transport.calls
+      .filter((c) => c.request.path === LIST_PATH)
+      .map((c) => /"max_cursor":(.*?)\}$/.exec(new TextDecoder().decode(c.request.body!))?.[1] ?? "");
   const locatorOf = (accountId: bigint) => `https://example.test/${accountId}`;
   const tasks = (action?: string) =>
     t.db
@@ -114,7 +132,7 @@ export async function setupSync(t: TestDb, opts: SyncEnvOptions = {}) {
       .then((rows) => (action ? rows.filter((r) => r.requestedAction === action) : rows));
   const task = async (id: bigint) => (await t.db.select().from(syncTasks).where(eq(syncTasks.taskId, id)))[0]!;
 
-  return { clock, store, transport, org, gateway, hooks, runnerHooks, resolver, scheduler, deps, worker, addAccount, serve, routeBy, locatorOf, tasks, task };
+  return { clock, store, transport, org, gateway, hooks, runnerHooks, resolver, scheduler, deps, worker, addAccount, serve, routeBy, routeList, listCursors, locatorOf, tasks, task };
 }
 export type SyncEnv = Awaited<ReturnType<typeof setupSync>>;
 

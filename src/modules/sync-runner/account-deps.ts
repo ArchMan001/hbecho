@@ -4,6 +4,7 @@ import type { Db } from "../../db/client";
 import { platforms } from "../../db/schema";
 import type { Platform } from "../provider-adapter";
 import type { PlatformStrategy } from "../orchestrator";
+import type { ContentListProjector } from "../projection";
 import type { CallEnv } from "./call";
 
 /** 测试用崩溃 / 抢占点：钩子抛出的异常不会被吞掉。 */
@@ -19,6 +20,8 @@ export interface AccountRunnerHooks {
 export interface AccountRunnerDeps extends CallEnv {
   strategies?: Readonly<Record<string, PlatformStrategy>>;
   hooks?: AccountRunnerHooks;
+  /** 默认是真实的整页投影；测试用来注入「第 N 条失败」。 */
+  projector?: ContentListProjector;
 }
 
 export async function platformCodeOf(db: Db, platformId: bigint): Promise<Platform | null> {

@@ -18,7 +18,7 @@ const stopDetailSchema = z.strictObject({
   anchor: z.enum(["rebuild", "keep_old", "empty"]),
   window_overflow: z.boolean(),
 });
-const identitySchema = z.strictObject({
+const identityCheckSchema = z.strictObject({
   /** 任务开始时（第 1 页事务里、绑定之前）该账号在列表作者命名空间下是否已有登记标识。 */
   baseline_has_registered: z.boolean(),
   known_author_entries: z.number().int().nonnegative(),
@@ -36,7 +36,12 @@ export const progressSchema = z.strictObject({
   stop: z.string().min(1).nullable(),
   stop_detail: stopDetailSchema.nullable(),
   anomalies: z.array(anomalySchema),
-  identity: identitySchema,
+  /** 列表作者三态（FS-5.13）：acceptance 要求的 result_summary.identity_check。 */
+  identity_check: identityCheckSchema,
+  /** 末页返回的、可回发的游标（检查点 cursor 列用）；不可用则 null。 */
+  last_cursor: nextCursorSchema.nullable(),
+  /** 封口事务写入的终态摘要（检查点结局、定稿数等）；页进度阶段没有。 */
+  final: z.looseObject({}).optional(),
   last_page_call_id: z.string().nullable(),
 });
 export type ListProgress = z.infer<typeof progressSchema>;
@@ -57,7 +62,8 @@ export const initialProgress = (baselineHasRegistered: boolean): ListProgress =>
   stop: null,
   stop_detail: null,
   anomalies: [],
-  identity: { baseline_has_registered: baselineHasRegistered, known_author_entries: 0, matched_entries: 0, state: "pending" },
+  identity_check: { baseline_has_registered: baselineHasRegistered, known_author_entries: 0, matched_entries: 0, state: "pending" },
+  last_cursor: null,
   last_page_call_id: null,
 });
 
@@ -72,7 +78,7 @@ export function parseProgress(raw: unknown): ListProgress | null {
 /** 一页事务提交后的新进度（纯函数）。 */
 export function afterPage(
   prev: ListProgress,
-  p: { entriesInPage: number; decision: Decision; pinnedIdMatch: boolean; identity: ListProgress["identity"]; callId: bigint; anomalies: readonly Anomaly[] },
+  p: { entriesInPage: number; decision: Decision; pinnedIdMatch: boolean; identity: ListProgress["identity_check"]; lastCursor?: NextCursor | null; callId: bigint; anomalies: readonly Anomaly[] },
 ): ListProgress {
   const stopped = p.decision.action === "stop" ? p.decision : null;
   return {
@@ -84,7 +90,8 @@ export function afterPage(
     stop: stopped ? stopped.stopReason : null,
     stop_detail: stopped ? { outcome: stopped.outcome, stop_reason: stopped.stopReason, anchor: stopped.anchor, window_overflow: stopped.windowOverflow } : null,
     anomalies: [...prev.anomalies, ...p.anomalies],
-    identity: p.identity,
+    identity_check: p.identity,
+    last_cursor: p.lastCursor ?? null,
     last_page_call_id: p.callId.toString(),
   };
 }

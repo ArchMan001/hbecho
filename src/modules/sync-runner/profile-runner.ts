@@ -20,7 +20,7 @@ const paramsSchema = z.looseObject({ schema_version: z.literal(PROFILE_TASK_SCHE
 export const ACCOUNT_INACCESSIBLE = "account_inaccessible_suspected";
 
 /** 该账号入口：优先已解析的主页地址；没有则对当前入口做清洗。只用来**发请求**，不是身份基准（D11）。 */
-async function locatorOf(db: Db, assignmentId: bigint): Promise<string | null> {
+export async function homeLocatorOf(db: Db, assignmentId: bigint): Promise<string | null> {
   const [a] = await db
     .select({ resolved: staffAccountAssignments.resolvedHomeUrl, current: staffAccountAssignments.currentHomeLocator })
     .from(staffAccountAssignments)
@@ -46,7 +46,7 @@ export function createProfileRunner(deps: AccountRunnerDeps): TaskRunner {
 
     const platform = await platformCodeOf(db, task.platformId);
     if (!platform) return { kind: "failure", code: "unsupported_platform" };
-    const locator = await locatorOf(db, assignmentId);
+    const locator = await homeLocatorOf(db, assignmentId);
     if (locator === null) return { kind: "failure", code: "locator_unavailable" };
     const gate = capabilityFailure(deps, platform, "media_user_info", mode);
     if (gate) return { kind: "failure", code: gate };

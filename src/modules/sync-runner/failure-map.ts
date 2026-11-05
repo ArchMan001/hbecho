@@ -50,6 +50,8 @@ export const FAILURE_SPECS = {
   unsupported_platform: noCall,
   content_url_unavailable: noCall,
   unsupported_action: noCall,
+  locator_unavailable: noCall, // 账号没有可用的主页入口：没有东西可发
+  task_parameters_invalid: noCall, // 任务参数不符合 schema：规划代码的问题，重试没有意义
   // 监控资格失效：取消，不是失败
   monitoring_closed: { retry: false, breaker: false, consumesAttempt: false, terminal: "cancelled" },
 } as const satisfies Record<string, FailureSpec>;

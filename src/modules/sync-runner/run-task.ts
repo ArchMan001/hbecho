@@ -10,7 +10,7 @@ import { StaleFenceError, recoverInFlightForTasks, type Clock } from "../raw-cap
 import { checkEligibility } from "./eligibility";
 import { specOf, transitionFor, type FailureCode, type Transition } from "./failure-map";
 import type { RetryConfig } from "./retry";
-import type { RunnerOutcome, RunnerRegistry } from "./types";
+import type { RunnerOutcome, RunnerRegistry, TerminalHook } from "./types";
 
 export type TaskResult = "done" | "retry_wait" | "failed" | "dead" | "cancelled" | "abandoned";
 
@@ -38,28 +38,39 @@ export interface ExecutorDeps {
 }
 
 export function createTaskExecutor(d: ExecutorDeps) {
-  /** 把失败写成任务终态 / retry_wait。fence 失效 → 当作被取代，不写。 */
-  async function applyFailure(c: ClaimedTask, code: FailureCode, retryAfterMs: number | undefined, detail: Record<string, unknown> | undefined): Promise<TaskResult> {
+  /** 把失败写成任务终态 / retry_wait。fence 失效 → 当作被取代，不写。终态时在同一事务里执行 onTerminal。 */
+  async function applyFailure(c: ClaimedTask, code: FailureCode, retryAfterMs: number | undefined, detail: Record<string, unknown> | undefined, onTerminal?: TerminalHook): Promise<TaskResult> {
     const now = d.clock.now();
     const t: Transition = transitionFor(c.task, code, now, d.retry, retryAfterMs);
-    const fenced = await withFences(d.db, d.clock, [{ taskId: c.task.taskId, token: c.token }], async (tx) => {
-      const terminal = t.status !== "retry_wait";
-      await tx
-        .update(syncTasks)
-        .set({
-          status: t.status,
-          attemptCount: t.attemptCount,
-          leaseOwner: null,
-          leaseExpiresAt: null,
-          nextAttemptAt: t.status === "retry_wait" ? t.nextAttemptAt : null,
-          lastErrorCode: code,
-          lastErrorDetail: detail ?? null,
-          ...(t.status === "cancelled" ? { stopReason: code } : {}),
-          ...(terminal ? { finishedAt: now } : {}),
-          updatedAt: now,
-        })
-        .where(eq(syncTasks.taskId, c.task.taskId));
-    });
+    const write = (hook: TerminalHook | undefined) =>
+      withFences(d.db, d.clock, [{ taskId: c.task.taskId, token: c.token }], async (tx) => {
+        const terminal = t.status !== "retry_wait";
+        await tx
+          .update(syncTasks)
+          .set({
+            status: t.status,
+            attemptCount: t.attemptCount,
+            leaseOwner: null,
+            leaseExpiresAt: null,
+            nextAttemptAt: t.status === "retry_wait" ? t.nextAttemptAt : null,
+            lastErrorCode: code,
+            lastErrorDetail: detail ?? null,
+            ...(t.status === "cancelled" ? { stopReason: code } : {}),
+            ...(terminal ? { finishedAt: now } : {}),
+            updatedAt: now,
+          })
+          .where(eq(syncTasks.taskId, c.task.taskId));
+        if (hook && t.status !== "retry_wait") await hook(tx, { status: t.status, now });
+      });
+    let fenced;
+    try {
+      fenced = await write(onTerminal);
+    } catch (e) {
+      if (!onTerminal) throw e;
+      // 钩子抛错：整笔已回滚。不带钩子重写终态，否则任务会停在 running、反复被领取
+      d.log?.({ taskId: c.task.taskId.toString(), code, err: e }, "onTerminal hook failed; rewriting terminal without it");
+      fenced = await write(undefined);
+    }
     return fenced.ok ? t.status : "abandoned";
   }
 
@@ -113,7 +124,7 @@ export function createTaskExecutor(d: ExecutorDeps) {
           return "abandoned";
         case "failure": {
           report(specOf(out.code).breaker ? "provider" : "neutral");
-          return await applyFailure(c, out.code, out.retryAfterMs, out.detail);
+          return await applyFailure(c, out.code, out.retryAfterMs, out.detail, out.onTerminal);
         }
       }
     } finally {

@@ -26,7 +26,7 @@ describe("失败 → 任务去向（FS-12.2）", () => {
     expect(transitionFor(task(3), "profile_uid_mismatch", NOW, RETRY)).toEqual({ status: "failed", attemptCount: 3 });
   });
   it("没有发出调用的失败不消耗额度：预算耗尽、能力未启用、平台不支持、URL 无法构造", () => {
-    for (const code of ["budget_exhausted", "capability_disabled", "unsupported_platform", "content_url_unavailable", "unsupported_action"] as const) {
+    for (const code of ["budget_exhausted", "capability_disabled", "unsupported_platform", "content_url_unavailable", "unsupported_action", "locator_unavailable", "task_parameters_invalid"] as const) {
       expect(transitionFor(task(1), code, NOW, RETRY), code).toEqual({ status: "failed", attemptCount: 1 });
     }
   });

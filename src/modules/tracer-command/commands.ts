@@ -183,6 +183,7 @@ export function createTracerCommands(deps: { db: Db; clock: Clock; audit: AuditS
     const [batch] = await tx.insert(syncBatches).values({
       batchKey: effectKey("tracer_manual_batch"),
       triggerType: "manual",
+      purpose: "intake",
       logicalAt: now,
       status: "running",
       settingsVersion: s.configVersion,

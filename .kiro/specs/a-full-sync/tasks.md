@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0 已完成（2026-11-05）：文档前置通过 `./scripts/verify.sh`；编码命名经刘学奎确认；`a-master-data-import` 已合并 `main`（`fd1dd7d`，本机合并后 verify 全绿），本分支已变基。下一步任务 1。
+> **执行状态**：任务 0、1 已完成（2026-11-05）。任务 0：文档前置、编码命名确认、`a-master-data-import` 已合并 `main`（`fd1dd7d`）、本分支已变基。任务 1：迁移 `0004`、证据登记、本机 `./scripts/verify.sh` 全绿（312 单元 / 330 数据库测试）。下一步任务 2。
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -21,7 +21,7 @@
 ## 进度
 
 - [x] 任务 0 · 文档前置（v2 修订、A PRD §7.1 放宽、CONTEXT、ADR-0012 补记、INDEX、分支与编码命名确认）
-- [ ] 任务 1 · schema 与迁移、证据登记
+- [x] 任务 1 · schema 与迁移、证据登记
 - [ ] 任务 2 · Adapter 扩展（快手、详情、评论）
 - [ ] 任务 3 · 监控目标、批次生命周期与调度
 - [ ] 任务 4 · Worker 运行时（领取、并发、速率、恢复、预算）
@@ -131,12 +131,12 @@
 
 **验证**
 
-- [ ] 空库 migrate → 成功；再跑一次 → 无变更；
-- [ ] **有数据的库**：先迁移到上一版并插入若干 tracer / smoke 批次行，再应用本迁移 → 成功且这些行 `purpose='intake'`（测试 ECS 的 `hbecho` 库同理，演练前先备份）；
-- [ ] 非法 `purpose` / 种子快照组合被 CHECK 拒绝；
-- [ ] tracer 全部既有用例仍通过（`purpose='intake'`）；
-- [ ] manifest 新条目的文件路径都存在，`knownGaps` 非空项如实；
-- [ ] `./scripts/verify.sh` 通过；
+- [x] 空库 migrate → 成功；再跑一次 → 无变更（`migration-0004.db.test.ts`；`drizzle-kit generate` 无新文件）；
+- [x] **有数据的库**：先迁移到 0003 并插入两条 tracer / smoke 形态的批次行，再应用本迁移 → 成功且这些行 `purpose='intake'`、列 NOT NULL 无 DEFAULT（同一文件，独立库 `hbecho_migrate_test`）。**测试 ECS 的 `hbecho` 库未演练**：该库是现有数据，动它需要先备份并得到同意，本机演练已覆盖同一迁移路径；
+- [x] 非法 `purpose` / 种子快照组合被 CHECK 拒绝；种子快照不能被物理删除（`schema.db.test.ts`）；
+- [x] tracer 全部既有用例仍通过（`purpose='intake'`，`commands.db.test.ts` 新增断言）；
+- [x] manifest 新增 51 条，文件路径与 SHA-256 由既有测试逐条校验；新条目均带 `knownGaps`；
+- [x] `./scripts/verify.sh` 通过；
 - [ ] 按推送节奏推第一次，等 CI 绿不阻塞后续任务（只在合并前等）。
 
 **Requirements:** FS-1、FS-7、FS-9、§1.3；**Design:** §6。

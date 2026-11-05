@@ -23,6 +23,7 @@ export async function insertBatch(db: Db, now: Date, key = `batch-${++batchSeq}`
   const [r] = await db.insert(syncBatches).values({
     batchKey: sha(key),
     triggerType: "manual",
+    purpose: "intake",
     logicalAt: now,
     status: "running",
     settingsVersion: 1n,

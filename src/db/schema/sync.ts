@@ -37,12 +37,17 @@ export const syncSettings = mysqlTable(
   ],
 );
 
+/** v2 §9.2（R4）：只有 full 受「全量批次串行」约束；intake 是 tracer 单账号录入与 smoke。 */
+export const SYNC_BATCH_PURPOSES = ["full", "supplement", "demand", "intake"] as const;
+
 export const syncBatches = mysqlTable(
   "sync_batches",
   {
     batchId: id("batch_id").primaryKey().autoincrement(),
     batchKey: sha256("batch_key").notNull(),
     triggerType: varchar("trigger_type", { length: 32 }).notNull(),
+    // 无 DEFAULT：写入方必须显式给值，漏写会被 NOT NULL 拒绝，而不是静默变成 intake
+    purpose: varchar("purpose", { length: 32 }).notNull(),
     logicalAt: utc("logical_at").notNull(),
     status: varchar("status", { length: 32 }).notNull(),
     settingsVersion: id("settings_version").notNull(),
@@ -56,14 +61,18 @@ export const syncBatches = mysqlTable(
     gapTaskCount: counter("gap_task_count").notNull().default(0),
     skipReason: varchar("skip_reason", { length: 128 }),
     startedAt: utc("started_at"),
+    // R5：结构化阶段（主页 / 列表）全部终态的时间；媒资在批次终态后仍可继续，见 mediaFinishedAt
     finishedAt: utc("finished_at"),
+    mediaFinishedAt: utc("media_finished_at"),
     createdAt: utc("created_at").notNull(),
     updatedAt: utc("updated_at").notNull(),
   },
   (t) => [
     uniqueIndex("uq_sync_batches_key").on(t.batchKey),
     index("idx_sync_batches_status_logical").on(t.status, t.logicalAt),
+    index("idx_sync_batches_purpose_status_logical").on(t.purpose, t.status, t.logicalAt),
     check("ck_sync_batches_trigger", inList(t.triggerType, ["scheduled", "manual"])),
+    check("ck_sync_batches_purpose", inList(t.purpose, SYNC_BATCH_PURPOSES)),
     check(
       "ck_sync_batches_status",
       inList(t.status, ["planned", "queued", "running", "succeeded", "partial_succeeded", "failed", "cancelled", "skipped", "expired"]),

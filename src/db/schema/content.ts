@@ -92,6 +92,8 @@ export const contentSnapshots = mysqlTable(
     listResponseReceivedAt: utc("list_response_received_at"),
     detailResponseReceivedAt: utc("detail_response_received_at"),
     snapshotAt: utc("snapshot_at").notNull(),
+    // R1：按需批次以该 finalized 快照为种子建立本行；快照到快照的血缘，不同于 sync_tasks.source_content_snapshot_id
+    seededFromSnapshotId: id("seeded_from_snapshot_id"),
     mergePolicyVersion: varchar("merge_policy_version", { length: 64 }).notNull(),
     listAdapterVersion: varchar("list_adapter_version", { length: 64 }),
     detailAdapterVersion: varchar("detail_adapter_version", { length: 64 }),
@@ -100,6 +102,9 @@ export const contentSnapshots = mysqlTable(
     updatedAt: utc("updated_at").notNull(),
   },
   (t) => [
+    foreignKey({ name: "fk_content_snap_seeded_from", columns: [t.seededFromSnapshotId], foreignColumns: [t.contentSnapshotId] }),
+    index("idx_content_snapshots_seeded_from").on(t.seededFromSnapshotId),
+    check("ck_content_snapshots_seeded", sql`${t.seededFromSnapshotId} IS NULL OR (${t.listObserved} = FALSE AND ${t.detailObserved} = TRUE)`),
     foreignKey({ name: "fk_content_snap_list_call", columns: [t.lastListProviderCallId], foreignColumns: [odsProviderCalls.providerCallId] }).onDelete("set null"),
     foreignKey({ name: "fk_content_snap_detail_call", columns: [t.lastDetailProviderCallId], foreignColumns: [odsProviderCalls.providerCallId] }).onDelete("set null"),
     uniqueIndex("uq_content_snapshots_batch_content").on(t.batchId, t.contentId),

@@ -81,7 +81,7 @@ describe("A1 提交：持久化一条 canonical command，返回十进制字符�
     });
 
     const [batch] = await t.db.select().from(syncBatches).where(eq(syncBatches.batchId, root!.batchId));
-    expect(batch).toMatchObject({ triggerType: "manual", status: "running", settingsVersion: 1n });
+    expect(batch).toMatchObject({ triggerType: "manual", purpose: "intake", status: "running", settingsVersion: 1n });
     expect(batch!.logicalAt.getTime()).toBe(START.getTime());
     expect(batch!.settingsSnapshot).toMatchObject({ initial_content_limit: 20 });
     expect(await counts()).toEqual({ batches: 1, tasks: 1, calls: 0 });

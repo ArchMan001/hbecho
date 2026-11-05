@@ -5,7 +5,7 @@ import type { Db } from "../../db/client";
 import { syncBatches, syncTasks } from "../../db/schema";
 import type { Clock } from "../raw-capture";
 import { loadSettings } from "./settings";
-import { ACTIVE_TASK_STATUSES, STRUCTURED_ACTIONS } from "./task-keys";
+import { ACTIVE_TASK_STATUSES, DEMAND_ACTIONS, STRUCTURED_ACTIONS } from "./task-keys";
 
 export interface StructuredCounts {
   planned: number;
@@ -50,19 +50,20 @@ export interface FinalizeReport {
   mediaFinished: string[];
 }
 
-/** 对所有 running 的全量 / 补抓批次汇总；并给已终态批次补写 media_finished_at。 */
+/** 对所有 running 的全量 / 补抓 / 按需批次汇总；并给已终态批次补写 media_finished_at。 */
 export function createBatchSummarizer(deps: { db: Db; clock: Clock }) {
   const { db, clock } = deps;
 
   async function finalizeOne(batchId: bigint): Promise<FinalizeReport["finalized"][number] | null> {
     return db.transaction(async (tx) => {
       await loadSettings(tx, { lock: true });
-      const [b] = await tx.select({ status: syncBatches.status }).from(syncBatches).where(eq(syncBatches.batchId, batchId)).for("update");
+      const [b] = await tx.select({ status: syncBatches.status, purpose: syncBatches.purpose }).from(syncBatches).where(eq(syncBatches.batchId, batchId)).for("update");
       if (b?.status !== "running") return null;
+      // 周期 / 补抓批次由主页 + 列表任务决定终态（媒资独立）；按需批次的任务就是详情 / 评论 / 媒资本身（FS-8）
       const rows = await tx
         .select({ status: syncTasks.status, err: syncTasks.lastErrorCode, n: sql<number>`COUNT(*)`.mapWith(Number) })
         .from(syncTasks)
-        .where(and(eq(syncTasks.batchId, batchId), inArray(syncTasks.requestedAction, [...STRUCTURED_ACTIONS])))
+        .where(and(eq(syncTasks.batchId, batchId), inArray(syncTasks.requestedAction, [...(b.purpose === "demand" ? DEMAND_ACTIONS : STRUCTURED_ACTIONS)])))
         .groupBy(syncTasks.status, syncTasks.lastErrorCode);
       const c = countStructured(rows);
       if (c.open > 0) return null;
@@ -90,7 +91,7 @@ export function createBatchSummarizer(deps: { db: Db; clock: Clock }) {
     const running = await db
       .select({ id: syncBatches.batchId })
       .from(syncBatches)
-      .where(and(eq(syncBatches.status, "running"), inArray(syncBatches.purpose, ["full", "supplement"])));
+      .where(and(eq(syncBatches.status, "running"), inArray(syncBatches.purpose, ["full", "supplement", "demand"])));
     const finalized: FinalizeReport["finalized"] = [];
     for (const { id } of running) {
       const r = await finalizeOne(id);

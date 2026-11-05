@@ -16,7 +16,8 @@ import { createSyncWorker } from "../../src/worker/sync-worker";
 import { createMonitoringResolver } from "../../src/modules/monitoring";
 import { decodeProfile, type Platform } from "../../src/modules/provider-adapter";
 import { RawCaptureGateway, type GatewayHooks, type SendPolicy } from "../../src/modules/raw-capture";
-import { createSyncScheduler, type SyncRuntime } from "../../src/modules/sync-schedule";
+import { createDemandModule } from "../../src/modules/demand";
+import { createSyncScheduler, memorySyncAuditSink, type SyncRuntime } from "../../src/modules/sync-schedule";
 import { DEFAULT_ASYNC, DEFAULT_RETRY } from "../../src/modules/tracer-command";
 import type { AccountRunnerDeps, AccountRunnerHooks, RunnerRegistry } from "../../src/modules/sync-runner";
 
@@ -24,6 +25,8 @@ import type { AccountRunnerDeps, AccountRunnerHooks, RunnerRegistry } from "../.
 export const SLOT = new Date("2026-11-08T18:00:00Z");
 export const PROFILE_PATH = "/openapi/v1/media_user_info";
 export const LIST_PATH = "/openapi/v1/user_video_list";
+export const DETAIL_PATH = "/openapi/v1/media_stats_number";
+export const COMMENTS_PATH = "/openapi/v1/media/comments/list";
 export const RUNTIME: SyncRuntime = { environment: "test", modes: { media_user_info: "synchronous", user_video_list: "synchronous" } };
 
 export interface SyncEnvOptions {
@@ -64,6 +67,8 @@ export async function setupSync(t: TestDb, opts: SyncEnvOptions = {}) {
     async: DEFAULT_ASYNC,
     hooks: runnerHooks,
   };
+  const demandAudit = memorySyncAuditSink();
+  const demand = createDemandModule({ db: t.db, clock, runtime: { environment: "test", modes: { media_stats_number: "synchronous", post_comments_list: "synchronous" } }, audit: demandAudit });
   const worker = (runners: RunnerRegistry) =>
     createSyncWorker({
       db: t.db,
@@ -110,19 +115,22 @@ export async function setupSync(t: TestDb, opts: SyncEnvOptions = {}) {
    * 列表路由：handler 拿到请求里的入口、max_cursor 的 JSON 字面量（整数 `0`、字符串 `"abc"`）和第几次请求，返回字节或响应（可抛 TransportFailure）。
    * 请求体原文在 transport.calls 里，测试可以直接断言回发的游标。
    */
-  const routeList = (handler: (r: { url: string; cursor: string; n: number }) => Uint8Array | ProviderResponse) =>
-    transport.register({ path: LIST_PATH, query: { async: "false" } }, (request, i) => {
+  const routeAt = (path: string, handler: (r: { url: string; cursor: string; n: number }) => Uint8Array | ProviderResponse) =>
+    transport.register({ path, query: { async: "false" } }, (request, i) => {
       const text = new TextDecoder().decode(request.body!);
       const url = (JSON.parse(text) as { url: string }).url;
-      const cursor = /"max_cursor":(.*?)\}$/.exec(text)?.[1] ?? "";
+      const cursor = /"max_cursor":("(?:[^"\\]|\\.)*"|[^,}]*)/.exec(text)?.[1] ?? "";
       const out = handler({ url, cursor, n: i });
       return out instanceof Uint8Array ? { httpStatus: 200, body: out } : out;
     });
+  const routeList = (handler: (r: { url: string; cursor: string; n: number }) => Uint8Array | ProviderResponse) => routeAt(LIST_PATH, handler);
+  const routeDetail = (handler: (r: { url: string; cursor: string; n: number }) => Uint8Array | ProviderResponse) => routeAt(DETAIL_PATH, handler);
+  const routeComments = (handler: (r: { url: string; cursor: string; n: number }) => Uint8Array | ProviderResponse) => routeAt(COMMENTS_PATH, handler);
   /** 本测试里发出的列表请求的 max_cursor 字面量（按发送顺序）。 */
   const listCursors = () =>
     transport.calls
       .filter((c) => c.request.path === LIST_PATH)
-      .map((c) => /"max_cursor":(.*?)\}$/.exec(new TextDecoder().decode(c.request.body!))?.[1] ?? "");
+      .map((c) => /"max_cursor":("(?:[^"\\]|\\.)*"|[^,}]*)/.exec(new TextDecoder().decode(c.request.body!))?.[1] ?? "");
   const locatorOf = (accountId: bigint) => `https://example.test/${accountId}`;
   const tasks = (action?: string) =>
     t.db
@@ -132,7 +140,7 @@ export async function setupSync(t: TestDb, opts: SyncEnvOptions = {}) {
       .then((rows) => (action ? rows.filter((r) => r.requestedAction === action) : rows));
   const task = async (id: bigint) => (await t.db.select().from(syncTasks).where(eq(syncTasks.taskId, id)))[0]!;
 
-  return { clock, store, transport, org, gateway, hooks, runnerHooks, resolver, scheduler, deps, worker, addAccount, serve, routeBy, routeList, listCursors, locatorOf, tasks, task };
+  return { demand, demandAudit, clock, store, transport, org, gateway, hooks, runnerHooks, resolver, scheduler, deps, worker, addAccount, serve, routeBy, routeAt, routeList, routeDetail, routeComments, listCursors, locatorOf, tasks, task };
 }
 export type SyncEnv = Awaited<ReturnType<typeof setupSync>>;
 

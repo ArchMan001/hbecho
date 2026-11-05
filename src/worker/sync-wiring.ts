@@ -5,6 +5,7 @@ import pino, { type Logger } from "pino";
 import { createDb, createPool, type Db } from "../db/client";
 import type { Clock } from "../modules/raw-capture";
 import { DEFAULT_RETRY } from "../modules/tracer-command";
+import { createDemandModule } from "../modules/demand";
 import { createMonitoringResolver } from "../modules/monitoring";
 import { RUNNERS, type RunnerRegistry } from "../modules/sync-runner";
 import { createSyncCommands, createSyncScheduler, createLogSyncAuditSink } from "../modules/sync-schedule";
@@ -32,6 +33,7 @@ export function buildSyncApp(
   };
   const scheduler = createSyncScheduler({ db, clock, resolver, runtime });
   const commands = createSyncCommands({ db, clock, resolver, planner: scheduler.planner, runtime, audit: createLogSyncAuditSink(logger) });
+  const demand = createDemandModule({ db, clock, runtime: { environment: cfg.environment, modes: cfg.demandModes }, audit: createLogSyncAuditSink(logger) });
   const breakers = createBreakerSet({
     failures: cfg.breaker.failures,
     cooldownMs: cfg.breaker.cooldownMs,
@@ -53,7 +55,7 @@ export function buildSyncApp(
     sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
     log: (e, msg) => logger.error(e, msg),
   });
-  return { db, pool, clock, resolver, scheduler, commands, breakers, worker, logger, close: () => pool.end() };
+  return { db, pool, clock, resolver, scheduler, commands, demand, breakers, worker, logger, close: () => pool.end() };
 }
 export type SyncApp = ReturnType<typeof buildSyncApp>;
 

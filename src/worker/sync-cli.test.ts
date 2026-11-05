@@ -5,7 +5,7 @@ import { runSyncCli } from "./sync-cli";
 
 const actor: ActorContext = { actorId: "service:test", capabilities: new Set([CAP_SYNC_TRIGGER]), scope: { platformCodes: "all", mediaStaffIds: "all" } };
 
-function harness(over: Partial<SyncCommands> = {}) {
+function harness(over: Partial<SyncCommands> = {}, withDemand = true) {
   const calls: Array<[string, unknown[]]> = [];
   const out: string[] = [];
   const err: string[] = [];
@@ -19,6 +19,15 @@ function harness(over: Partial<SyncCommands> = {}) {
     const code = await runSyncCli(argv, {
       scheduler: { tick: async () => (calls.push(["tick", []]), { now: "x" } as never) },
       commands,
+      ...(withDemand
+        ? {
+            demand: {
+              submit: async (...a: unknown[]) => (calls.push(["demand-submit", a]), { kind: "created", batchId: "9", status: "running", dispositions: [], taskCount: 0 }),
+              get: async (...a: unknown[]) => (calls.push(["demand-get", a]), { batchId: "9", status: "running", items: [] }),
+            } as never,
+            readFile: async (p: string) => (p === "/ok.json" ? '{"demandKey":"k"}' : p === "/bad.json" ? "{not json" : Promise.reject(new Error("ENOENT"))),
+          }
+        : {}),
       actor,
       stdout: (s) => void out.push(s),
       stderr: (s) => void err.push(s),
@@ -28,6 +37,25 @@ function harness(over: Partial<SyncCommands> = {}) {
   return { run, calls };
 }
 
+describe("sync CLI · demand", () => {
+  it("demand submit --file：读 JSON 原样交给 Module；demand get <id> 只读查询", async () => {
+    const h = harness();
+    expect(await h.run(["demand", "submit", "--file", "/ok.json"])).toMatchObject({ code: 0, json: { batchId: "9" } });
+    expect(h.calls[0]).toEqual(["demand-submit", [{ demandKey: "k" }, actor]]);
+    expect(await h.run(["demand", "get", "9"])).toMatchObject({ code: 0, json: { status: "running" } });
+    expect(h.calls[1]![0]).toBe("demand-get");
+  });
+  it("文件不可读 / 不是 JSON / 缺参数 / 未启用：退出码 2 和稳定的 invalid_input", async () => {
+    const h = harness();
+    for (const argv of [["demand", "submit", "--file", "/missing.json"], ["demand", "submit", "--file", "/bad.json"], ["demand", "submit"], ["demand", "get"], ["demand", "bogus"]]) {
+      const r = await h.run(argv);
+      expect(r.code, argv.join(" ")).toBe(2);
+      expect(r.json.error.code).toBe("invalid_input");
+    }
+    const off = harness({}, false);
+    expect((await off.run(["demand", "get", "1"])).json.error.message).toContain("未启用");
+  });
+});
 describe("sync CLI", () => {
   it("tick 调用调度器并输出 JSON", async () => {
     const h = harness();

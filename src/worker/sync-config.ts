@@ -13,6 +13,9 @@ const schema = z.object({
   HBECHO_ENV: z.enum(["test", "production"]).default("production"),
   HBECHO_SYNC_PROFILE_MODE: mode,
   HBECHO_SYNC_LIST_MODE: mode,
+  // 按需采集的详情 / 评论模式：同样不写死（按已验证 capability 配置）
+  HBECHO_SYNC_DETAIL_MODE: mode,
+  HBECHO_SYNC_COMMENTS_MODE: mode,
   HBECHO_SYNC_CONCURRENCY: positiveInt,
   HBECHO_SYNC_PROVIDER_QPS: positive,
   HBECHO_SYNC_MEDIA_CONCURRENCY: positiveInt,
@@ -30,6 +33,8 @@ export interface SyncWorkerConfig {
   databaseUrl: string;
   environment: "test" | "production";
   modes: { media_user_info: "synchronous" | "asynchronous"; user_video_list: "synchronous" | "asynchronous" };
+  /** 按需采集：详情（media_stats_number）与评论（post_comments_list）的执行模式。 */
+  demandModes: { media_stats_number: "synchronous" | "asynchronous"; post_comments_list: "synchronous" | "asynchronous" };
   concurrency: number;
   providerQps: number;
   mediaConcurrency: number;
@@ -64,6 +69,7 @@ export function parseSyncWorkerConfig(env: Record<string, string | undefined>): 
     databaseUrl: e.HBECHO_DATABASE_URL,
     environment: e.HBECHO_ENV,
     modes: { media_user_info: e.HBECHO_SYNC_PROFILE_MODE, user_video_list: e.HBECHO_SYNC_LIST_MODE },
+    demandModes: { media_stats_number: e.HBECHO_SYNC_DETAIL_MODE, post_comments_list: e.HBECHO_SYNC_COMMENTS_MODE },
     concurrency: e.HBECHO_SYNC_CONCURRENCY,
     providerQps: e.HBECHO_SYNC_PROVIDER_QPS,
     mediaConcurrency: e.HBECHO_SYNC_MEDIA_CONCURRENCY,

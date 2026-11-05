@@ -5,3 +5,4 @@ export { isNewer, selectCurrentContentSnapshot, selectCurrentProfile } from "./c
 export { mergeEntries, type MergedContent } from "./merge";
 export { projectProfile, type ProjectProfileInput } from "./profile";
 export { recordIssue, type IssueInput } from "./quality";
+export { insertDetailSnapshot, mergeDetail, type DetailMergeContext, type DetailSnapshotInput, type DetailSnapshotResult, type SnapshotRow } from "./detail";

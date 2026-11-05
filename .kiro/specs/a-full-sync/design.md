@@ -303,6 +303,7 @@ sequenceDiagram
 | `content_snapshots` | 加 `seeded_from_snapshot_id BIGINT NULL`，FK → `content_snapshots(content_snapshot_id)` `RESTRICT`；CHECK：非空时 `list_observed=FALSE AND detail_observed=TRUE` | R1 |
 | `sync_batches` | 加 `purpose VARCHAR(32) NOT NULL`，CHECK `full/supplement/demand/intake`；加 `media_finished_at DATETIME(6) NULL`；加 `IDX(purpose, status, logical_at)`。**迁移分三步写进同一个手工修改过的迁移文件**：① `ADD COLUMN purpose VARCHAR(32) NULL`；② `UPDATE sync_batches SET purpose='intake' WHERE purpose IS NULL`（此前所有批次都是 tracer 根批次或 smoke，全是 `intake`）；③ `MODIFY purpose VARCHAR(32) NOT NULL`，不留 DEFAULT。schema 快照仍是 `notNull()`，所以 `drizzle-kit generate` 不应产生新文件 | R4、R5 |
 | `external_account_identifiers` | `namespace_code` CHECK 增加 `kuaishou.user_id` | R6 |
+| `comments` | **补建**（迁移 `0005_full_sync_comments`）：v2 §10.4 已定义，但 tracer 的初始迁移没有建它（评论不在 tracer 范围）。列、约束、索引逐字按 v2 §10.4，不是新设计；`last_provider_call_id` 为 `ON DELETE SET NULL`（一年期调用的长期引用，v2 §5.3） | 任务 6（2026-11-05） |
 | 其余 | 无结构修改 | — |
 
 v2 文字修订：§10.2 第 6、7 条与 **§12.3 第 6 条**改账号级、§10.2 增补第 12 条（R1、R2）；**§12.3 第 2 条**补 `queued` / `expired`（R8）；§11.3 封面范围（R3）；§8.3 / §12.3 外部型只采主页（R7）；§9.2 补 `purpose` 与 `media_finished_at`，并把 `skipped` 的语义放宽为「没有执行任何任务的批次」（R8）。A PRD 同步修订 §7.1（补抓 `run_now`）与 §7.3（周期同步不含详情 / 评论，requirements §1.3 P1、P2）。

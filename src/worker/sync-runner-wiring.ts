@@ -11,7 +11,7 @@ import { DEFAULT_ASYNC } from "../modules/tracer-command";
 import { UnsupportedCapabilityError, capabilityGate, type AiMasterAction, type ExecutionMode, type Platform } from "../modules/provider-adapter";
 import { HttpProviderTransport, OssObjectStore, RawCaptureGateway, type Clock, type ObjectStore, type ProviderTransport } from "../modules/raw-capture";
 import { readSmokeSecrets, type SmokeSecrets } from "../modules/smoke";
-import { createAccountRunners, createBatchBudgetPolicy, type RunnerRegistry } from "../modules/sync-runner";
+import { createAccountRunners, createBatchBudgetPolicy, createDemandRunners, type RunnerRegistry } from "../modules/sync-runner";
 import type { SyncWorkerConfig } from "./sync-config";
 import { createTokenBucket, rateLimitedTransport } from "./token-bucket";
 
@@ -82,5 +82,6 @@ export function buildAccountRunners(o: {
     location: { providerCode: "aliyun-oss", region: secrets.oss.region, bucket: secrets.oss.bucket },
     policy: createBatchBudgetPolicy(o.db, { maxCalls: o.cfg.batchBudget.maxCalls, maxPoints: o.cfg.batchBudget.maxPoints }),
   });
-  return createAccountRunners({ db: o.db, clock: o.clock, gateway, environment: o.cfg.environment, sleep: f.sleep, async: DEFAULT_ASYNC });
+  const deps = { db: o.db, clock: o.clock, gateway, environment: o.cfg.environment, sleep: f.sleep, async: DEFAULT_ASYNC };
+  return Object.freeze({ ...createAccountRunners(deps), ...createDemandRunners(deps) });
 }

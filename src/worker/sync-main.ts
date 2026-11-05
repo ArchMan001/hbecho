@@ -6,6 +6,7 @@
 import pino from "pino";
 import { z } from "zod";
 import { createDb, createPool } from "../db/client";
+import { createDemandModule } from "../modules/demand";
 import { createMonitoringResolver } from "../modules/monitoring";
 import { createLogSyncAuditSink, createSyncCommands, createSyncScheduler } from "../modules/sync-schedule";
 import { CAP_SYNC_TRIGGER, type ActorContext } from "../modules/tracer-command";
@@ -26,6 +27,9 @@ const cliEnv = z
     HBECHO_ENV: z.enum(["test", "production"]).default("production"),
     HBECHO_SYNC_PROFILE_MODE: z.enum(["synchronous", "asynchronous"]),
     HBECHO_SYNC_LIST_MODE: z.enum(["synchronous", "asynchronous"]),
+    // 按需采集（demand submit / get）需要；缺失时这两个子命令明确报「未启用」，其余命令不受影响
+    HBECHO_SYNC_DETAIL_MODE: z.enum(["synchronous", "asynchronous"]).optional(),
+    HBECHO_SYNC_COMMENTS_MODE: z.enum(["synchronous", "asynchronous"]).optional(),
     HBECHO_ACTOR_ID: z.string().min(1).default("service:sync-cli"),
   })
   .safeParse(process.env);
@@ -74,9 +78,14 @@ const runtime = { environment: cfg.HBECHO_ENV, modes: { media_user_info: cfg.HBE
 const scheduler = createSyncScheduler({ db, clock, resolver, runtime });
 const commands = createSyncCommands({ db, clock, resolver, planner: scheduler.planner, runtime, audit: createLogSyncAuditSink(logger) });
 const actor = actorFor(cfg.HBECHO_ACTOR_ID);
+const demand =
+  cfg.HBECHO_SYNC_DETAIL_MODE && cfg.HBECHO_SYNC_COMMENTS_MODE
+    ? createDemandModule({ db, clock, runtime: { environment: cfg.HBECHO_ENV, modes: { media_stats_number: cfg.HBECHO_SYNC_DETAIL_MODE, post_comments_list: cfg.HBECHO_SYNC_COMMENTS_MODE } }, audit: createLogSyncAuditSink(logger) })
+    : undefined;
 const code = await runSyncCli(process.argv.slice(2), {
   scheduler,
   commands,
+  ...(demand ? { demand } : {}),
   actor,
   stdout: (s) => void process.stdout.write(s),
   stderr: (s) => void process.stderr.write(s),

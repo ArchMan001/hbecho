@@ -57,6 +57,8 @@ export interface CallParams<T> {
   seq: number;
   request: ProviderRequest;
   decode(bytes: Uint8Array): DecodeOutcome<T>;
+  /** 响应里的 action 与请求 action 不同时给出（详情：请求 media_stats_number，响应 media_stats）。默认等于 action。 */
+  expectedResponse?: string;
 }
 
 export type CallResult<T> =
@@ -130,7 +132,7 @@ async function exec(env: CallEnv, ctx: TaskContext, spec: CallSpec): Promise<Exe
   }
 }
 
-function specOf(ctx: TaskContext, p: { action: AiMasterAction; seq: number; request: ProviderRequest; requestedAction?: string }): CallSpec {
+function specOf(ctx: TaskContext, p: { action: AiMasterAction; expectedResponse?: string | undefined; seq: number; request: ProviderRequest; requestedAction?: string }): CallSpec {
   return {
     syncTaskId: ctx.task.taskId,
     fencingToken: ctx.token,
@@ -139,7 +141,7 @@ function specOf(ctx: TaskContext, p: { action: AiMasterAction; seq: number; requ
     attemptNo: ctx.task.attemptCount + 1,
     callSequence: p.seq,
     requestedAction: p.requestedAction ?? p.action,
-    expectedResponseAction: p.action,
+    expectedResponseAction: p.expectedResponse ?? p.action,
     request: p.request,
   };
 }
@@ -189,7 +191,7 @@ async function poll<T>(env: CallEnv, ctx: TaskContext, p: CallParams<T>, submit:
       const g = await beat(ctx);
       if (g) return { kind: "abandoned", reason: g.stop };
     }
-    const spec = specOf(ctx, { action: p.action, seq, requestedAction: "task_lookup", request: { method: "GET", path: `/openapi/v1/tasks/${providerTaskId}`, query: {}, body: null } });
+    const spec = specOf(ctx, { action: p.action, expectedResponse: p.expectedResponse, seq, requestedAction: "task_lookup", request: { method: "GET", path: `/openapi/v1/tasks/${providerTaskId}`, query: {}, body: null } });
     const r = await exec(env, ctx, spec);
     if ("end" in r) return r.end;
     if (r.ex.kind !== "captured") {

@@ -8,6 +8,7 @@ const cfg = (over: Partial<SyncWorkerConfig> = {}): SyncWorkerConfig => ({
   databaseUrl: "mysql://x",
   environment: "production",
   modes: { media_user_info: "synchronous", user_video_list: "synchronous" },
+  demandModes: { media_stats_number: "synchronous", post_comments_list: "synchronous" },
   concurrency: 1,
   providerQps: 2,
   mediaConcurrency: 1,
@@ -67,10 +68,10 @@ describe("buildAccountRunners", () => {
     expect(calls).toEqual({ store: 0, transport: 0 });
   });
 
-  it("配置齐全且已批准：注册 fetch_profile 与 fetch_content_list；构造阶段不发任何请求", () => {
+  it("配置齐全且已批准：注册 fetch_profile、fetch_content_list 与按需的 fetch_content_detail、fetch_comments；构造阶段不发任何请求", () => {
     const { calls, f } = counting();
     const runners = buildAccountRunners({ db: {} as never, clock: { now: () => new Date() }, cfg: cfg(), env: ENV, gate: approveAll, factories: f });
-    expect(Object.keys(runners).sort()).toEqual(["fetch_content_list", "fetch_profile"]);
+    expect(Object.keys(runners).sort()).toEqual(["fetch_comments", "fetch_content_detail", "fetch_content_list", "fetch_profile"]);
     expect(calls).toEqual({ store: 1, transport: 1 });
   });
 });

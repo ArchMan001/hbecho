@@ -32,3 +32,29 @@ export function listBytes(entries: SyntheticEntry[], o: { hasMore?: boolean; cur
   const cursor = o.cursorJson === undefined ? "" : `,"max_cursor":${o.cursorJson}`;
   return envelope("user_video_list", `{"result":[${entries.map(entryJson).join(",")}],"has_more":${o.hasMore ?? false}${cursor}}`);
 }
+
+export interface SyntheticComment {
+  id: string;
+  postId?: string;
+  content?: string | null;
+  authorId?: string;
+  like?: number | null;
+  /** 非空 = 回复（扁平，带 parent_id）：解码层忽略并计数。 */
+  parentId?: string;
+  createdMs?: number;
+}
+export function commentJson(c: SyntheticComment): string {
+  const parts = [`"id":${JSON.stringify(c.id)}`, `"post_id":${JSON.stringify(c.postId ?? "P")}`];
+  if (c.content !== null) parts.push(`"content":${JSON.stringify(c.content ?? "评论")}`);
+  parts.push(`"author":{"id":${JSON.stringify(c.authorId ?? "A1")},"name":"某用户"}`);
+  parts.push(`"stats":{"like_count":${c.like === null ? "null" : (c.like ?? 1)},"reply_count":0}`);
+  if (c.parentId !== undefined) parts.push(`"parent_id":${JSON.stringify(c.parentId)}`);
+  parts.push(`"created":${c.createdMs ?? 1791150742000}`);
+  return `{${parts.join(",")}}`;
+}
+/** 合成的 post_comments_list 响应（结构取自 raw4.C07）：合成，不是供应商样本。 */
+export function commentsBytes(entries: SyntheticComment[], o: { hasMore?: boolean; cursorJson?: string; total?: number } = {}): Uint8Array {
+  const cursor = o.cursorJson === undefined ? "" : `,"max_cursor":${o.cursorJson}`;
+  const total = o.total === undefined ? "" : `,"total":${o.total}`;
+  return envelope("post_comments_list", `{"result":[${entries.map(commentJson).join(",")}],"has_more":${o.hasMore ? 1 : 0}${cursor}${total},"post_id":"P"}`);
+}

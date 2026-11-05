@@ -4,7 +4,7 @@ import type { Logger } from "pino";
 export interface SyncAuditEvent {
   at: string;
   event: "sync.command";
-  action: "supplement" | "batch_cancel";
+  action: "supplement" | "batch_cancel" | "demand_submit";
   outcome: "accepted" | "previewed" | "rejected" | "cancelled" | "noop";
   actorId: string;
   code?: string;

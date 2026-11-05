@@ -42,11 +42,11 @@ const NOW = new Date("2026-11-04T08:00:00.123456Z");
 const t = useTestDb();
 
 describe("迁移与参考数据", () => {
-  it("28 张业务表全部建成，没有 ENUM 列，没有 ON DELETE CASCADE", async () => {
+  it("29 张业务表全部建成，没有 ENUM 列，没有 ON DELETE CASCADE", async () => {
     const [tables] = await t.pool.query(
       "SELECT table_name n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type='BASE TABLE' AND table_name <> '__drizzle_migrations'",
     );
-    expect((tables as unknown[]).length).toBe(28);
+    expect((tables as unknown[]).length).toBe(29);
     const [enums] = await t.pool.query("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND data_type = 'enum'");
     expect(enums).toEqual([]);
     const [rules] = await t.pool.query(
@@ -55,7 +55,7 @@ describe("迁移与参考数据", () => {
     const byRule = Object.fromEntries((rules as Array<{ r: string; c: number | string }>).map((x) => [x.r, Number(x.c)]));
     expect(byRule.CASCADE).toBeUndefined();
     // 只有「指向一年期调用/任务的长期引用」使用 SET NULL（v2 §5.3）
-    expect(byRule["SET NULL"]).toBe(9);
+    expect(byRule["SET NULL"]).toBe(10); // 含 comments.last_provider_call_id
   });
 
   it("迁移种入四个平台和 aimaster 供应商；不种 sync_settings（取值未定，不静默冻结）", async () => {

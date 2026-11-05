@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0 进行中（2026-11-05）：文档动作已完成并通过 `./scripts/verify.sh`（v2 R1–R8、A PRD v1.11、D-33 澄清、CONTEXT、ADR-0012 补记、INDEX）；**分支动作未做**，等刘学奎确认品牌 / 板块编码命名后，才能合并 `a-master-data-import` 并把本分支变基到 `main`。任务 1 起的代码在变基完成前不开工。
+> **执行状态**：任务 0 已完成（2026-11-05）：文档前置通过 `./scripts/verify.sh`；编码命名经刘学奎确认；`a-master-data-import` 已合并 `main`（`fd1dd7d`，本机合并后 verify 全绿），本分支已变基。下一步任务 1。
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -20,7 +20,7 @@
 
 ## 进度
 
-- [ ] 任务 0 · 文档前置（v2 修订、A PRD §7.1 放宽、CONTEXT、ADR-0012 补记、INDEX、分支与编码命名确认）
+- [x] 任务 0 · 文档前置（v2 修订、A PRD §7.1 放宽、CONTEXT、ADR-0012 补记、INDEX、分支与编码命名确认）
 - [ ] 任务 1 · schema 与迁移、证据登记
 - [ ] 任务 2 · Adapter 扩展（快手、详情、评论）
 - [ ] 任务 3 · 监控目标、批次生命周期与调度
@@ -104,7 +104,7 @@
 - [x] INDEX 两处登记完成（A PRD 版本与本 spec 行同步为 v1.11），链接检查通过；
 - [x] A PRD 升版并补版本记录，`prd-platform.md` D-33 加澄清并升 v1.0.9；
 - [x] §1.5 第 1–7 项的结论已写回 requirements / design（已于 2026-11-05 完成）；
-- [ ] **分支**：确认编码命名 → 合并 `a-master-data-import` 到 `main`（CI 绿）→ `a-full-sync` 变基到 `main`。**待刘学奎确认，未执行。**
+- [x] **分支**：编码命名已确认（刘学奎，2026-11-05）→ `a-master-data-import` 合并 `main`（分支 CI run 41965348342 绿；合并后本机 verify 全绿：311 单元 / 325 数据库测试）→ `a-full-sync` 已变基到 `main`。
 
 **Requirements:** §1.3、§1.5；**Design:** §6.1、§10、§13。
 

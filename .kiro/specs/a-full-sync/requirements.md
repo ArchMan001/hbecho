@@ -43,7 +43,7 @@
 | 依赖 | 当前状态（2026-11-05 核对） | 对本 spec 的影响 |
 |---|---|---|
 | `a-data-foundation-tracer` | 任务 1–9 已合并 `main` | 复用 `RawCaptureGateway`、`provider-adapter`、`identity`、`projection`、`media-archive`、`orchestrator`（claim/fence）、`cost-guard`、`tests/harness`。其中 `projection/content-list` 的封面规则与 `tracer-flow` 的外部账号分支需要修改（§1.3 R3、R7；design §10） |
-| `a-master-data-import` | 任务 0–8 已实现，分支 `a-master-data-import` 未合并 | 组织七表与监控开关列（`monitoring_enabled`）来自它之前的 tracer 迁移；本 spec 开工前必须先合并该分支到 `main`，再从 `main` 切 `a-full-sync`（dev-ci-cadence 第 4、10 条） |
+| `a-master-data-import` | 任务 0–8 已实现，2026-11-05 已合并 `main`（`fd1dd7d`） | 组织七表与监控开关列（`monitoring_enabled`）来自它之前的 tracer 迁移；`a-full-sync` 已变基到合并后的 `main` |
 | 活动计划（`a-activity-plan`） | 路线图第 5 位，未开始 | 本 spec **不**实现 15 天无引用停采、计划删除联动、名单导入、疑似空账号人工确认；只读取已存在的 `monitoring_enabled` 与 `intake_status`，并提供改开关的命令（FS-14） |
 | D 域（规则与考核） | PRD v1.1；实现路线图第 7 位 | D 是按需采集的提出方。本 spec 只定义**接入契约**（FS-8）与测试用的假提出方，不实现任何圈定、判定逻辑 |
 | C 域（识别） | PRD v0.4；实现路线图第 6 位 | C 读取 finalized 快照与正式媒资字节。本 spec 保证 finalized 状态、媒资读取方式（短期签名 URL）与音频轨可用，不实现信号 |

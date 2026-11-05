@@ -34,6 +34,7 @@
 - `.kiro/specs/`：spec 集；当前纵向切片是 `a-data-foundation-tracer`
 - `.kiro/steering/`：自动加载的精简规则
 - `aimaster接口文档/`：供应商合同、探针脚本与 raw3 证据
+- `ui-lab/`：可点击界面原型（不进生产构建、不进 `src/app/`；ADR-0013）
 - `scripts/`：`verify.sh`（唯一验证入口）与文档/密钥门禁
 - `.github/workflows/ci.yml`：CI
 - `.githooks/pre-commit`：提交前密钥扫描
@@ -64,6 +65,7 @@ gh run watch <run-id> --exit-status   # 合并前等 CI
 - 未验证的 capability 不得启用；默认测试离线，CI 禁止真实付费调用
 - 生产 ECS 永不跑测试；服务器只走 Workbench
 - 未决项不得被默认值静默冻结
+- 带页面的 spec：界面设计（含线框 / 原型）必须经刘学奎明确确认后才能写页面任务与页面代码；见 `.kiro/steering/structure.md` 与 `HBECHO设计方案/ui/ui-foundation.md` §1
 
 ## SDD 适配
 

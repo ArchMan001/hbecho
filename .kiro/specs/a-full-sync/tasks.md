@@ -26,7 +26,7 @@
 - [x] 任务 3 · 监控目标、批次生命周期与调度
 - [x] 任务 4 · Worker 运行时（领取、并发、速率、恢复、预算）
 - [x] 任务 5 · 账号采集（主页、多页列表、检查点、封口）
-- [ ] 任务 6 · 按需采集（需求、详情、评论）
+- [x] 任务 6 · 按需采集（需求、详情、评论）
 - [ ] 任务 7 · 媒资（封面首次、快手、视频、音频）
 - [ ] 任务 8 · Python 能力服务 HTTP 外壳与 Node 客户端
 - [ ] 任务 9 · 运营命令、查询与定时清理
@@ -358,15 +358,26 @@
 - 评论：一级过滤、幂等 upsert、完整性口径（抖音自然翻完为完整，小红书与触达上限不完整）；疑似删除只在完整抓取后；重新出现恢复；`total>0` 与空结果、`total` 大于已抓 → 质量问题；
 - `get` 只读本地，返回读取指针；预算耗尽的项如实展示。
 
-**验证**
+**验证**（证据：`./scripts/verify.sh` 全绿，553 单元 / 522 数据库测试）
 
-- [ ] 提交处置矩阵：七类处置各一个用例；幂等与冲突；
-- [ ] 复用：同一轮内两个计划先后提交同一内容，只有一次详情 ProviderCall；下一个 `full` 批次开始后再提交，重新抓取（**包括上一轮由按需批次产生的详情**，不得永久复用）；
-- [ ] 种子快照：`snapshot_at`、`merge_policy_version` 取值符合 design §7.8；`source_content_snapshot_id` 指向种子；详情只覆盖详情有的字段，列表独有字段（例如小红书正文）不丢；current 切到详情快照后，列表字段仍可读；
-- [ ] 详情失败：无种子快照残留，内容状态未变，质量问题存在；
-- [ ] 评论：抖音两页翻完 → 标记疑似删除并可恢复；小红书 `total=28` 只返回 2 → 不标记、记 `comment_coverage_incomplete`；触达 `page_limit` → 不标记；`parent_id` 条目被忽略并计数；
-- [ ] 按需批次不受全量串行约束，优先级高于周期任务（断言领取顺序）；
-- [ ] `./scripts/verify.sh` 通过。
+- [x] 提交处置矩阵：七类处置各一个用例；幂等（含 items / wants 顺序不同）与冲突；崩溃重放补齐缺失任务不重复；越权 / 非法输入（`demand/demand.db.test.ts`）；
+- [x] 复用：同一轮内两个计划先后提交同一内容，只有一次详情 ProviderCall；下一个 `full` 批次开始后再提交，重新抓取（**包括上一轮由按需批次产生的详情**）；
+- [x] 种子快照：`snapshot_at` = 详情响应接收时间、`merge_policy_version` = `list-merge.v1`；`source_content_snapshot_id` 指向种子；列表独有字段（正文、分享页地址）不丢；current 切到详情快照后列表字段仍可读；小红书 `play_number=null` → `explicit_null`（`projection/detail.test.ts` 覆盖合并规则）；
+- [x] 详情失败：`RESULT_VALIDATION_FAILED` 耗尽 → `failed/detail_inaccessible`，无种子快照残留，内容状态未变，质量问题存在；post_id 不符不合并；预算封口 `budget_exhausted` 在 `get` 里如实展示；
+- [x] 评论（`comments/comments.db.test.ts`、`comments/policy.test.ts`）：抖音两页翻完 → 完整；下一轮少一条 → 疑似删除，再下一轮出现 → 恢复；小红书 `total=28` 只返回 2 → 不标记、`comment_coverage_incomplete`；触达 `page_limit` → 不标记；`total>0` 而空 → `comments_total_mismatch` 且不标记；`parent_id` 条目被忽略并计数；间歇 `RESULT_VALIDATION_FAILED` 回队尾后重试成功；崩溃后从已提交页的下一游标继续；
+- [x] 按需批次不受全量串行约束，优先级高于周期任务（断言领取顺序）；`tick` 汇总按需批次（`succeeded` / `partial_succeeded`）；
+- [x] `./scripts/verify.sh` 通过。
+
+**视频 / 音频的需求侧（依赖展开、复用、后续媒资任务）已在本任务实现，端到端验证在任务 7**（那里才有 `download_media` Runner）。
+
+**实施中的判断（自行决定项）**
+
+- **`comments` 表补建**（迁移 `0005_full_sync_comments`）：v2 §10.4 已定义，tracer 的初始迁移没建。逐字按 v2，不是新设计；按 tasks「必须停下来问」第 3 条，这一点需要你知道——如果你认为它应先单独评审，回退这个迁移即可（它是纯新增表，无数据迁移）。
+- **详情的种子快照直接以 `finalized` 写入**：种子拷贝 → 合并 → 定稿 → current 比较在同一个 fenced 事务里，`building` 的中间态外部不可见，所以不单独落一个 `building` 行。
+- **按需任务的 `mode`**（详情 / 评论）来自新增的必填配置 `HBECHO_SYNC_DETAIL_MODE` / `HBECHO_SYNC_COMMENTS_MODE`，不写死；评论翻页的 `call_sequence` 是页号，所以评论和周期列表一样只走同步（异步 → `capability_disabled`）。
+- **视频 / 音频任务由详情成功时创建**（下载地址是详情带来的）：详情任务参数里带 `followups.roles`，成功的终态事务里同时写 `video` 引用并建 `download_media` 任务（有序候选来源放进任务参数）；本轮已有带下载地址的详情则提交时直接建媒资任务。别的计划的活动详情不借用（`ponytail:` 极少数并发下可能多一次详情调用）。
+- 完整性边界：恰好在上限页自然翻完（`has_more=0`）算完整——读完了就是读完了；只有「还有更多却停了」才算触达上限。
+- `url_form` 任务参数省略（运行时按内容重新构造 URL）。
 
 **Requirements:** FS-8、FS-9、FS-10；**Design:** §5.4、§7.8、§7.9。
 

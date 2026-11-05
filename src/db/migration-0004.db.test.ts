@@ -33,8 +33,10 @@ describe("0004 迁移在有数据的库上", () => {
     const journalPath = join(dir, "meta", "_journal.json");
     const journal = JSON.parse(readFileSync(journalPath, "utf8")) as { entries: Array<{ tag: string }> };
     const full = journal.entries.length;
-    journal.entries = journal.entries.filter((e) => !e.tag.startsWith("0004_"));
-    expect(journal.entries.length).toBe(full - 1);
+    // 只保留 0000–0003（0004 之后的迁移，例如 0005 comments，也一并拿掉）
+    journal.entries = journal.entries.filter((e) => Number(e.tag.slice(0, 4)) < 4);
+    expect(journal.entries.length).toBe(4);
+    expect(full).toBeGreaterThanOrEqual(5);
     writeFileSync(journalPath, JSON.stringify(journal));
 
     const pool = createPool(scratchUrl());

@@ -22,7 +22,8 @@ const isWorkerCommand = sub === "worker" || sub === "run-once";
 const cliEnv = z
   .object({
     HBECHO_DATABASE_URL: z.string().min(1),
-    HBECHO_ENV: z.enum(["test", "staging", "production"]).default("production"),
+    // staging 没有任何 capability 行：tick 能建批次但没有 worker 能消费，所以运营命令也一样拒绝（与 sync-config.ts 一致）
+    HBECHO_ENV: z.enum(["test", "production"]).default("production"),
     HBECHO_SYNC_PROFILE_MODE: z.enum(["synchronous", "asynchronous"]),
     HBECHO_SYNC_LIST_MODE: z.enum(["synchronous", "asynchronous"]),
     HBECHO_ACTOR_ID: z.string().min(1).default("service:sync-cli"),

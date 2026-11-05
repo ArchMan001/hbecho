@@ -338,6 +338,7 @@
 
 **行为**
 
+- **按需任务必须写 `account_id`**（从内容反查所属账号，同时写 `content_id`）：领取时的监控资格复核靠它；缺 `account_id` 的详情 / 评论任务会被 worker 以 `monitoring_closed`（`no_account_reference`）取消，不会调用供应商（fail closed）；
 - **批次终态**：`sync-schedule/summary.ts` 当前只汇总 `purpose IN ('full','supplement')`，按需批次有任务后会永远停在 `running`。本任务必须扩展汇总到 `demand`（按其详情 / 评论 / 媒资任务的终态判定，规则见 FS-8），并有测试；
 - 提交：逐项处置七类全部可达；同键同载荷返回原批次，同键异载荷冲突；范围外内容 `out_of_scope`；快手评论 `unsupported_platform`；快手详情 `capability_disabled`；
 - 复用：本轮已有 → `reused`；活动任务 → `already_pending`；视频 / 音频已有资产 → `reused`；`audio` 隐含 `video`，`video` 隐含 `detail`；
@@ -373,6 +374,7 @@
 
 **行为**
 
+- **媒资失败分流**：`failure-map` 只有可重试的 `media_download_failed`。`classifyMediaFailure` 判为 terminal 的原因（`too_large`、`url_rejected`、`content_type_not_allowed` 等）必须映射成不可重试的稳定失败码（在 `FAILURE_SPECS` 里新增），不能走 `media_download_failed` 被重试到 `dead`；
 - **视频多候选**：`rankVideoSources` 返回全部可用候选；下载必须按顺序逐个尝试，一个失败（含过期）换下一个，全部失败才算失败，不能只取第一个；
 - 同一内容连续两个批次出现：第一次建并下载封面，第二次不建新引用；第一次下载失败，第二次用新地址重建引用；
 - 快手封面：原始 KVIF 为原始资产；CDN JPEG 经 `ImageConverter` 生成 JPEG q80 / 540 宽衍生资产；转换失败标记「封面不可用」，内容不受影响；
@@ -475,6 +477,7 @@
 - 回填 INDEX 与本 spec 状态；
 - 按推送节奏推第二次，**合并前**等 CI 绿（`gh run watch --exit-status`），合并提交写 run id 与本机 verify 结果。
 
+- 规模演练同时记录：`claimNext` 的 `EXPLAIN`（是否需要新索引）；批次预算「实际花费 / 上限」的比值（`spentForBatch` 把在途调用也按保守口径计入，并发 C 时多占最多 C−1 次调用的额度，是瞬时占用，不是永久损耗）；
 **验证**
 
 - [ ] acceptance 自动项全部有对应测试且通过；

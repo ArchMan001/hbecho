@@ -92,6 +92,7 @@ export async function claimNext(db: Db, o: ClaimNextOptions): Promise<ClaimedTas
       SELECT t.task_id AS task_id FROM sync_tasks t
       WHERE ((t.status IN ('pending','retry_wait') AND (t.next_attempt_at IS NULL OR t.next_attempt_at <= ${o.now}))
           OR (t.status IN ('leased','running') AND t.lease_expires_at <= ${o.now}))
+        AND t.expires_at > ${o.now}
         AND t.requested_action IN (${list(o.actions)})
         ${o.excludeActions?.length ? sql`AND t.requested_action NOT IN (${list(o.excludeActions)})` : sql``}
         ${o.excludeProviderIds?.length ? sql`AND (t.requested_action = 'download_media' OR t.provider_id NOT IN (${list(o.excludeProviderIds)}))` : sql``}

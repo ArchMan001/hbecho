@@ -8,7 +8,9 @@ const CHECKED_ACTIONS = new Set(["fetch_profile", "fetch_content_list", "fetch_c
 export type Eligibility = { ok: true } | { ok: false; reason: string };
 
 export async function checkEligibility(resolver: Pick<MonitoringResolver, "explain">, task: Pick<TaskRow, "requestedAction" | "accountId">): Promise<Eligibility> {
-  if (!CHECKED_ACTIONS.has(task.requestedAction) || task.accountId === null) return { ok: true };
+  if (!CHECKED_ACTIONS.has(task.requestedAction)) return { ok: true };
+  // fail closed：需要复核却不知道复核哪个账号，就不能调用供应商（FS-2.6）。按需任务创建时必须写 account_id。
+  if (task.accountId === null) return { ok: false, reason: "no_account_reference" };
   const e = await resolver.explain(task.accountId);
   return e.effective ? { ok: true } : { ok: false, reason: e.reason ?? "unknown" };
 }

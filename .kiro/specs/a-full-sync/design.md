@@ -657,7 +657,7 @@ B 域接入后只替换 `ActorContext` 的来源，不改调用方。审计沿�
 | `HBECHO设计方案/…/adr/0012-python-capability-service.md` | 补记签名 URL 决定与 uvicorn | 任务 0 |
 | `scripts/verify.sh` | 若 Python 外壳需要，扩展第 9 步 | 任务 8 |
 
-**配置（环境变量，zod 校验，缺失即启动失败；写入批次 `settings_snapshot.runtime` 供审计）**：`HBECHO_DATABASE_URL`、`HBECHO_SYNC_CONCURRENCY`、`HBECHO_SYNC_PROVIDER_QPS`、`HBECHO_SYNC_MEDIA_CONCURRENCY`、`HBECHO_SYNC_BREAKER_FAILURES`、`HBECHO_SYNC_BREAKER_COOLDOWN_MS`、`HBECHO_SYNC_BATCH_MAX_CALLS`、`HBECHO_SYNC_BATCH_MAX_POINTS`、`HBECHO_MEDIA_TMP_DIR`、`HBECHO_MEDIA_MAX_BYTES`、`HBECHO_MEDIA_BATCH_MAX_BYTES`、`HBECHO_CAPABILITY_URL`。`sync_settings` 里 `list_safety_page_limit`、`task_max_attempts`、`comment_page_limit` / `comment_item_limit` 同样**没有默认值**，迁移不种入（`drizzle/0001` 已声明）。
+**配置（环境变量，zod 校验，缺失即启动失败；写入批次 `settings_snapshot.runtime` 供审计）**：`HBECHO_DATABASE_URL`、`HBECHO_SYNC_CONCURRENCY`、`HBECHO_SYNC_PROVIDER_QPS`、`HBECHO_SYNC_MEDIA_CONCURRENCY`、`HBECHO_SYNC_BREAKER_FAILURES`、`HBECHO_SYNC_BREAKER_COOLDOWN_MS`、`HBECHO_SYNC_BATCH_MAX_CALLS`、`HBECHO_SYNC_BATCH_MAX_POINTS`、`HBECHO_MEDIA_TMP_DIR`、`HBECHO_MEDIA_MAX_BYTES`、`HBECHO_MEDIA_BATCH_MAX_BYTES`、`HBECHO_CAPABILITY_URL`。重试退避沿用 tracer 的 `DEFAULT_RETRY`（5 秒起、300 秒封顶），不作为必填配置（只影响恢复速度，不影响花费；§7.11）；`HBECHO_ENV` 只允许 `test` / `production`（`staging` 没有 capability 行）。`sync_settings` 里 `list_safety_page_limit`、`task_max_attempts`、`comment_page_limit` / `comment_item_limit` 同样**没有默认值**，迁移不种入（`drizzle/0001` 已声明）。
 
 ## 11. Testing strategy
 

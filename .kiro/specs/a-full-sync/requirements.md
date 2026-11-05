@@ -203,6 +203,18 @@
 | `staging` 没有 capability 行 | 非缺陷：tracer 起就是「test + production」两行，staging 一律 `unregistered`，即 fail closed；任务 4 的 worker 配置决定是否拒绝 `HBECHO_ENV=staging` | tasks 任务 4 |
 | 非抖音多候选视频默认取第一个 | 部分成立：小红书 / 快手的候选在样本里没有可区分的优先级依据（同主机、无分辨率标记）；`rankVideoSources` 返回全部可用候选，任务 7 的下载必须按顺序逐个尝试，失败换下一个，不能只取第一个 | FS-11.5；tasks 任务 7 |
 
+**任务 4 之后的复核（同日）**：对第二份外部评审意见逐条核对后的结论：
+
+| 评审意见 | 结论 | 落点 |
+|---|---|---|
+| CLI 仍允许 `staging`，只有 worker 拒绝 | 属实，采纳：运营命令也拒绝 | `sync-main.ts` |
+| 按需详情 / 评论缺 `account_id` 时资格复核直接放行 | 属实，采纳：框架 fail closed；任务 6 必须写 `account_id` | `eligibility.ts`；tasks 任务 6 |
+| `claimNext` 没有过滤 `expires_at` | 采纳（一行） | `claim.ts` |
+| 媒资 terminal 失败会被重试到 dead | 属实，登记到任务 7 | tasks 任务 7 |
+| 预算保守口径使并发 4 时实际可用约 1/4 | **夸大**：在途调用只占用最多 C−1 次调用的额度，是瞬时的；任务 10 记录比值即可 | tasks 任务 10 |
+| 重试退避没有环境变量 | design §7.11 已写沿用 `DEFAULT_RETRY`；§10 补一句 | design §10 |
+| 令牌桶 `acquire` 不能被停机中断 | 接受，QPS 很低时最多等一个间隔 | — |
+
 **第二轮复核（同日）**：
 
 | 审查项 | 结论 | 落点 |

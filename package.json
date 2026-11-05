@@ -11,6 +11,7 @@
     "test": "vitest --run --project unit",
     "test:db": "./scripts/with-test-mysql.sh vitest --run --project db",
     "tracer": "tsx src/worker/tracer-cli.ts",
+    "sync": "tsx src/worker/sync-main.ts",
     "master-data": "tsx src/worker/master-data-main.ts",
     "smoke": "tsx src/worker/smoke-main.ts",
     "db:generate": "drizzle-kit generate",

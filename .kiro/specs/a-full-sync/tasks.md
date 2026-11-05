@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（2026-11-05）。任务 0：文档前置、编码命名确认、`a-master-data-import` 已合并 `main`（`fd1dd7d`）、本分支已变基。任务 1：迁移 `0004`、证据登记、本机 `./scripts/verify.sh` 全绿（312 单元 / 330 数据库测试）。任务 2：Adapter 扩展完成（见下文「实施中的判断」）。下一步任务 3。
+> **执行状态**：任务 0、1 已完成（2026-11-05）。任务 0：文档前置、编码命名确认、`a-master-data-import` 已合并 `main`（`fd1dd7d`）、本分支已变基。任务 1：迁移 `0004`、证据登记、本机 `./scripts/verify.sh` 全绿（312 单元 / 330 数据库测试）。任务 2：Adapter 扩展完成。任务 3：监控目标集、批次生命周期、调度、补抓、取消完成。下一步任务 4。
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -23,7 +23,7 @@
 - [x] 任务 0 · 文档前置（v2 修订、A PRD §7.1 放宽、CONTEXT、ADR-0012 补记、INDEX、分支与编码命名确认）
 - [x] 任务 1 · schema 与迁移、证据登记
 - [x] 任务 2 · Adapter 扩展（快手、详情、评论）
-- [ ] 任务 3 · 监控目标、批次生命周期与调度
+- [x] 任务 3 · 监控目标、批次生命周期与调度
 - [ ] 任务 4 · Worker 运行时（领取、并发、速率、恢复、预算）
 - [ ] 任务 5 · 账号采集（主页、多页列表、检查点、封口）
 - [ ] 任务 6 · 按需采集（需求、详情、评论）
@@ -209,14 +209,21 @@
 
 **验证**
 
-- [ ] 时点计算：跨周、两个时点、周日 23:59 与周一 00:00 边界、错过不补跑；
-- [ ] 队列语义（fake clock）：第一个运行、第二个排队、第三个跳过、上一个结束后晋升、排队过期；
-- [ ] 目标集：构造一棵组织树，逐级关闭 / 停用，断言目标集与原因码（最上级优先）；专员停用、门店撤店、`deleted`、`suspected_empty`、`unavailable` 仍采；external 不受五级影响；
-- [ ] 规划崩溃恢复：在第 N 块之后终止，再 `tick`，任务总数正确且无重复；
-- [ ] `supplement` 四种路径（空闲 / `run_now` 并行 / `queue` / `cancel_current`），`cancel_current` 不带 `--apply` 只预览；
-- [ ] `--only profile` 只建 `fetch_profile`；`--if-older-than`：近期同步过 → `not_due`，不在目标集 → `not_eligible`，其余 `queued`；
-- [ ] 批次终态：全部任务被跳过 → `skipped/all_targets_closed`；没有目标 → `skipped/no_targets`；
-- [ ] `./scripts/verify.sh` 通过。
+- [x] 时点计算：跨周、两个时点、周日 23:59 与周一 00:00 边界、错过不补跑（`slots.test.ts`、`scheduler.db.test.ts`）；
+- [x] 队列语义（fake clock）：第一个运行、第二个排队、上一个结束后同一次 tick 晋升、排队过期；**「第三个跳过」见下方「实施中发现」**；
+- [x] 目标集：逐级关闭 / 停用，断言目标集与原因码（最上级优先）；专员停用、门店撤店、`deleted`、`suspected_empty`、`unavailable` 仍采；external 不受五级影响；`targets` 与 `explain` 逐项一致（`resolver.db.test.ts`、`reasons.test.ts`）；
+- [x] 规划崩溃恢复：在第 2 块之前终止，再 `tick`，任务总数正确且无重复；规划到一半的批次仍占运行名额；
+- [x] `supplement` 路径：空闲 / `run_now` 并行 / 活动任务复用 / `queue` / `cancel_current` 预览与 apply；
+- [x] `--only profile` 只建 `fetch_profile`；`--if-older-than`：近期同步过 → `not_due`，不在目标集 → `not_eligible`，其余 `queued`；
+- [x] 批次终态：全部任务被跳过 → `skipped/all_targets_closed`；没有目标 → `skipped/no_targets`；媒资不决定终态、`media_finished_at` 独立写入；
+- [x] `./scripts/verify.sh` 通过。
+
+**实施中发现（需要你知道）**
+
+- **`queue_full` 在正常时点序列里几乎不可达。** A PRD §7.1 同时写了「队列里已有 1 个在等 → 本次触发跳过」和「排队到下一个时点仍未开始 → 过期，由新的触发接替」。排队批次的「下一个时点」恰好就是下一次触发的时点，所以 tick 按「先过期、再创建」处理时，新触发总是接替过期的批次并排队，不会跳过。我选择了这个顺序（符合「由新的触发接替」，也比两个批次都落空更有用）；跳过路径保留为防御，用手工放置的未过期排队批次验证。若你希望 acceptance A6 的字面行为（第三个触发被跳过、排队批次同时过期），把 `scheduler.ts` 里「创建」挪到「过期」前即可，一行调整。
+- tick 的顺序是「汇总 → 过期 / 晋升 / 创建 → 规划」：先汇总，上一批次进入终态的同一次 tick 就能晋升排队批次（FS-1.5「立即」）。
+- 补抓的任务全部复用了已有活动任务时，补抓批次本身没有任务，状态为 `skipped / no_targets`。
+- `run_now` 并行时，若账号在全量批次里仍有活动任务，补抓只是把它们提升到优先级 100 并返回任务引用，不重复建任务。
 
 **Requirements:** FS-1、FS-2、FS-13（补抓与取消）；**Design:** §5.1、§5.3、§7.1–§7.4、§7.12。
 

@@ -28,7 +28,7 @@
 - [x] 任务 5 · 账号采集（主页、多页列表、检查点、封口）
 - [x] 任务 6 · 按需采集（需求、详情、评论）
 - [x] 任务 7 · 媒资（封面首次、快手、视频、音频）
-- [ ] 任务 8 · Python 能力服务 HTTP 外壳与 Node 客户端
+- [x] 任务 8 · Python 能力服务 HTTP 外壳与 Node 客户端
 - [ ] 任务 9 · 运营命令、查询与定时清理
 - [ ] 任务 10 · 全量离线验收、故障注入与规模演练
 - [ ] 任务 11 · 批准式 smoke（人工批准，付费）
@@ -447,11 +447,18 @@
 - `HttpCapabilityClient` 在服务不可用时抛出可重试错误；
 - 默认测试用 fake，不起 Python 服务。
 
-**验证**
+**验证**（证据：`./scripts/verify.sh` 全绿，583 单元 / 540 数据库测试，Python 17 例，第 9 步「已验证」，ffmpeg 8.1）
 
-- [ ] `pytest`：外壳契约、图片标准化（沿用 HEIC 样本）、音频抽取（有音轨 / 无音轨 / 非法 URL）；
-- [ ] Node 侧：`HttpCapabilityClient` 对本地 fake HTTP 服务器的契约测试（回环地址，允许）；
-- [ ] `./scripts/verify.sh` 第 9 步在 ffmpeg ≥ 7.1 环境下通过；环境不满足时明确打印「未验证」。
+- [x] `pytest`（`tests/test_app.py` 10 例 + 既有图片 7 例）：外壳契约（成功响应头、全部错误 `code`）、HEIC 标准化、音频有音轨 / 无音轨 / 输出超限 / 来源 404 / 非媒体 / 非 http 协议 / 非法请求；
+- [x] Node 侧 `capability-client.unit.test.ts`：对回环假服务验证请求格式、成功解析、错误分类（4xx 终态、5xx / 502 / 超时 / 连接被拒可重试、`no_audio_track` 是事实）、缺响应头不被当成 0；
+- [x] `./scripts/verify.sh` 第 9 步在 ffmpeg ≥ 7.1 下通过。
+
+**任务内追加（计划里没写明，但生产装配必需）**
+
+- **真实媒资 HTTP transport**（`media-archive/http-transport.ts`，`node:http(s)`，无新依赖）：`MediaTransport` 与 `VideoTransport` 之前只有 fake。连接前用 `lookup` 回调校验解析结果（校验过的地址就是连接用的地址，没有 DNS 重绑定窗口），拒绝私网 / 回环 / 链路本地 / CGNAT / 保留 / 组播及 IPv4 映射内网；字面量 IP 单独检查；不跟随重定向；图片整体读入有上限，视频按块流出、消费方停止时关连接。K18 的 DNS 部分在此覆盖。
+- **生产装配**（`worker/sync-runner-wiring.ts`）：`download_media` Runner 接入真实 transport、`HttpCapabilityClient`、独立的媒资桶 store；新增必填配置 `HBECHO_MEDIA_TMP_DIR`、`HBECHO_MEDIA_MAX_BYTES`、`HBECHO_MEDIA_BATCH_MAX_BYTES`、`HBECHO_CAPABILITY_URL`（占盘 / 花钱的上限，无默认值）与环境变量 `OSS_BUCKET_MEDIA`（运维手册 §8.5 已有的名字，缺失时只报变量名）。worker 启动时清理超过 24 小时的 `.part`。生产 capability 仍全部 disabled，所以真实 worker 依然不会启动。
+- **判断**：Python 测试不用 `TestClient`（它需要未登记的 `httpx`），改为真实 uvicorn 监听回环端口 + 标准库 `urllib`；任务 8 计划里写的 `TestClient` 据此改为本方案。`ponytail:` 服务不限并发，依赖 Node 侧 `mediaConcurrency`；ffmpeg 子进程多到拖慢同机服务时加 Semaphore。
+- 本地 `.venv` 装了 `fastapi`、`uvicorn`（ADR-0012 已登记）；`pyproject.toml` 已声明。CI 当前不跑 Python（`verify.sh` 在没有 pytest / ffmpeg 时明确打印「未验证」）。
 
 **Requirements:** FS-11.4、FS-11.7；**Design:** §7.10。
 

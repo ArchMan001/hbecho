@@ -7,6 +7,7 @@ import pino from "pino";
 import { z } from "zod";
 import { createDb, createPool } from "../db/client";
 import { createDemandModule } from "../modules/demand";
+import { cleanStaleTmp } from "../modules/media-archive";
 import { createMonitoringResolver } from "../modules/monitoring";
 import { createLogSyncAuditSink, createSyncCommands, createSyncScheduler } from "../modules/sync-schedule";
 import { CAP_SYNC_TRIGGER, type ActorContext } from "../modules/tracer-command";
@@ -52,6 +53,9 @@ if (isWorkerCommand) {
     process.stderr.write(`${e instanceof Error ? e.message : String(e)}\n`);
     process.exit(1);
   }
+  // 启动清理：上次崩溃留下的超过 24 小时的视频临时文件（FS-17.4）
+  const cleaned = await cleanStaleTmp(cfg.media.tmpDir, 24 * 3600_000, Date.now());
+  if (cleaned > 0) app.logger.warn({ cleaned }, "removed stale media tmp files");
   if (sub === "run-once") {
     await app.scheduler.tick();
     const stats = await app.worker.run({ untilIdle: true });

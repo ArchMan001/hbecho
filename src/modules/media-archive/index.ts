@@ -6,3 +6,5 @@ export { sniffImage, type ImageMime } from "./sniff";
 export type { AudioExtraction, CapabilityClient, VideoStreamResponse, VideoTransport } from "./ports";
 export { DEFAULT_VIDEO_POLICY, cleanStaleTmp, downloadVideoToFile, sniffVideo, type DownloadedVideo, type VideoMime } from "./video";
 export { kuaishouCoverTransformUrl, ensureAsset, hex as sha256Hex, mediaKey, needsWork, loadRefs, priorVerified, processOriginal, assetBySha, putVerified, type Ctx as ArchiveCtx, type RefRow, type StepOutcome } from "./archive";
+export { HttpCapabilityClient, type HttpCapabilityOptions } from "./capability-client";
+export { HttpMediaTransport, guardedLookup, isPublicAddress, type HttpMediaOptions } from "./http-transport";

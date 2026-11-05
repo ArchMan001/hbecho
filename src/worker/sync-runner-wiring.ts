@@ -9,9 +9,10 @@
 import type { Db } from "../db/client";
 import { DEFAULT_ASYNC } from "../modules/tracer-command";
 import { UnsupportedCapabilityError, capabilityGate, type AiMasterAction, type ExecutionMode, type Platform } from "../modules/provider-adapter";
-import { HttpProviderTransport, OssObjectStore, RawCaptureGateway, type Clock, type ObjectStore, type ProviderTransport } from "../modules/raw-capture";
+import { HttpCapabilityClient, HttpMediaTransport } from "../modules/media-archive";
+import { HttpProviderTransport, OssObjectStore, RawCaptureGateway, type Clock, type MediaObjectStore, type ObjectStore, type ProviderTransport } from "../modules/raw-capture";
 import { readSmokeSecrets, type SmokeSecrets } from "../modules/smoke";
-import { createAccountRunners, createBatchBudgetPolicy, createDemandRunners, type RunnerRegistry } from "../modules/sync-runner";
+import { createAccountRunners, createBatchBudgetPolicy, createDemandRunners, createMediaRunners, type RunnerRegistry } from "../modules/sync-runner";
 import type { SyncWorkerConfig } from "./sync-config";
 import { createTokenBucket, rateLimitedTransport } from "./token-bucket";
 
@@ -49,14 +50,29 @@ export function assertWorkerCanRun(cfg: Pick<SyncWorkerConfig, "environment" | "
   }
 }
 
+export class MediaBucketConfigError extends Error {
+  constructor(readonly variable: string) {
+    super(`环境变量 ${variable} 缺失或不合法`);
+    this.name = "MediaBucketConfigError";
+  }
+}
+/** 正式媒资桶（ADR-0001：与 ODS 桶分开）。凭证与区域沿用 ODS 的；只错误报变量名。 */
+export function readMediaBucket(env: Record<string, string | undefined>): string {
+  const v = env.OSS_BUCKET_MEDIA?.trim();
+  if (!v || !/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(v)) throw new MediaBucketConfigError("OSS_BUCKET_MEDIA");
+  return v;
+}
 export interface RunnerWiringFactories {
   createStore(oss: SmokeSecrets["oss"]): ObjectStore;
+  /** 正式媒资桶的 store（putFile / signedGetUrl）。 */
+  createMediaStore(oss: SmokeSecrets["oss"]): MediaObjectStore;
   createTransport(input: { apiKey: string; baseUrl: string }): ProviderTransport;
   sleep(ms: number): Promise<void>;
   nowMs(): number;
 }
 export const defaultRunnerFactories = (): RunnerWiringFactories => ({
   createStore: (oss) => new OssObjectStore(oss),
+  createMediaStore: (oss) => new OssObjectStore(oss),
   createTransport: ({ apiKey, baseUrl }) => new HttpProviderTransport({ baseUrl, apiKey }),
   sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
   nowMs: () => Date.now(),
@@ -73,6 +89,7 @@ export function buildAccountRunners(o: {
   assertWorkerCanRun(o.cfg, o.gate); // 先于读 secret
   const f = o.factories ?? defaultRunnerFactories();
   const secrets = readSmokeSecrets(o.env); // 缺失即失败，错误只报变量名
+  const mediaBucket = readMediaBucket(o.env);
   const bucket = createTokenBucket({ ratePerSec: o.cfg.providerQps, nowMs: f.nowMs, sleep: f.sleep });
   const gateway = new RawCaptureGateway({
     db: o.db,
@@ -83,5 +100,20 @@ export function buildAccountRunners(o: {
     policy: createBatchBudgetPolicy(o.db, { maxCalls: o.cfg.batchBudget.maxCalls, maxPoints: o.cfg.batchBudget.maxPoints }),
   });
   const deps = { db: o.db, clock: o.clock, gateway, environment: o.cfg.environment, sleep: f.sleep, async: DEFAULT_ASYNC };
-  return Object.freeze({ ...createAccountRunners(deps), ...createDemandRunners(deps) });
+  // 媒资：真实 HTTP transport（连接前拒绝非公网地址）+ Python 能力服务客户端（同一个对象实现图片转换与音频抽取）
+  const transport = new HttpMediaTransport();
+  const capability = new HttpCapabilityClient({ baseUrl: o.cfg.media.capabilityUrl });
+  const media = createMediaRunners({
+    ...deps,
+    mediaStore: f.createMediaStore({ ...secrets.oss, bucket: mediaBucket }),
+    location: { providerCode: "aliyun-oss", region: secrets.oss.region, bucket: mediaBucket },
+    imageTransport: transport,
+    videoTransport: transport,
+    converter: capability,
+    capability,
+    tmpDir: o.cfg.media.tmpDir,
+    mediaMaxBytes: o.cfg.media.maxBytes,
+    batchMaxBytes: o.cfg.media.batchMaxBytes,
+  });
+  return Object.freeze({ ...createAccountRunners(deps), ...createDemandRunners(deps), ...media });
 }

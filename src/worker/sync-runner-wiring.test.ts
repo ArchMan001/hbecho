@@ -14,6 +14,7 @@ const cfg = (over: Partial<SyncWorkerConfig> = {}): SyncWorkerConfig => ({
   mediaConcurrency: 1,
   breaker: { failures: 10, cooldownMs: 1000 },
   batchBudget: { maxCalls: 100, maxPoints: 1000 },
+  media: { tmpDir: "/tmp/m", maxBytes: 1000, batchMaxBytes: 10_000, capabilityUrl: "http://capability:8080" },
   actorId: "service:sync-worker",
   leaseMs: 60_000,
   graceMs: 1000,
@@ -26,11 +27,12 @@ const approveNone = {
     throw new UnsupportedCapabilityError("disabled", k as never);
   },
 };
-const ENV = { AIMASTER_API_KEY: "k", AIMASTER_BASE_URL: "https://api.example.test", OSS_ACCESS_KEY_ID: "i", OSS_ACCESS_KEY_SECRET: "s", OSS_REGION: "cn-beijing", OSS_BUCKET_ODS: "hbecho-ods" };
+const ENV = { AIMASTER_API_KEY: "k", AIMASTER_BASE_URL: "https://api.example.test", OSS_ACCESS_KEY_ID: "i", OSS_ACCESS_KEY_SECRET: "s", OSS_REGION: "cn-beijing", OSS_BUCKET_ODS: "hbecho-ods", OSS_BUCKET_MEDIA: "hbecho-media" };
 const counting = () => {
   const calls = { store: 0, transport: 0 };
   const f: RunnerWiringFactories = {
     createStore: () => (calls.store++, {} as never),
+    createMediaStore: () => (calls.store++, {} as never),
     createTransport: () => (calls.transport++, { send: async () => { throw new Error("不应发送") } }),
     sleep: async () => {},
     nowMs: () => 0,
@@ -68,10 +70,15 @@ describe("buildAccountRunners", () => {
     expect(calls).toEqual({ store: 0, transport: 0 });
   });
 
+  it("媒资桶变量缺失：失败并只报变量名", () => {
+    const { f } = counting();
+    const run = () => buildAccountRunners({ db: {} as never, clock: { now: () => new Date() }, cfg: cfg(), env: { ...ENV, OSS_BUCKET_MEDIA: "" }, gate: approveAll, factories: f });
+    expect(run).toThrow(/OSS_BUCKET_MEDIA/);
+  });
   it("配置齐全且已批准：注册 fetch_profile、fetch_content_list 与按需的 fetch_content_detail、fetch_comments；构造阶段不发任何请求", () => {
     const { calls, f } = counting();
     const runners = buildAccountRunners({ db: {} as never, clock: { now: () => new Date() }, cfg: cfg(), env: ENV, gate: approveAll, factories: f });
-    expect(Object.keys(runners).sort()).toEqual(["fetch_comments", "fetch_content_detail", "fetch_content_list", "fetch_profile"]);
-    expect(calls).toEqual({ store: 1, transport: 1 });
+    expect(Object.keys(runners).sort()).toEqual(["download_media", "fetch_comments", "fetch_content_detail", "fetch_content_list", "fetch_profile"]);
+    expect(calls).toEqual({ store: 2, transport: 1 }); // ODS 桶与媒资桶各一个 store
   });
 });

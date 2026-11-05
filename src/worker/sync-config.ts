@@ -23,6 +23,11 @@ const schema = z.object({
   HBECHO_SYNC_BREAKER_COOLDOWN_MS: z.coerce.number().int().nonnegative(),
   HBECHO_SYNC_BATCH_MAX_CALLS: positiveInt,
   HBECHO_SYNC_BATCH_MAX_POINTS: positiveInt,
+  // 媒资：临时目录、单个视频 / 单批次总字节上限、Python 能力服务地址（花钱 / 占盘的上限，没有默认值）
+  HBECHO_MEDIA_TMP_DIR: z.string().min(1),
+  HBECHO_MEDIA_MAX_BYTES: positiveInt,
+  HBECHO_MEDIA_BATCH_MAX_BYTES: positiveInt,
+  HBECHO_CAPABILITY_URL: z.url({ protocol: /^https?$/ }),
   HBECHO_ACTOR_ID: z.string().min(1).default("service:sync-worker"),
   HBECHO_SYNC_LEASE_MS: positiveInt.default(120_000),
   HBECHO_SYNC_GRACE_MS: z.coerce.number().int().nonnegative().default(30_000),
@@ -40,6 +45,7 @@ export interface SyncWorkerConfig {
   mediaConcurrency: number;
   breaker: { failures: number; cooldownMs: number };
   batchBudget: { maxCalls: number; maxPoints: number };
+  media: { tmpDir: string; maxBytes: number; batchMaxBytes: number; capabilityUrl: string };
   actorId: string;
   leaseMs: number;
   graceMs: number;
@@ -75,6 +81,7 @@ export function parseSyncWorkerConfig(env: Record<string, string | undefined>): 
     mediaConcurrency: e.HBECHO_SYNC_MEDIA_CONCURRENCY,
     breaker: { failures: e.HBECHO_SYNC_BREAKER_FAILURES, cooldownMs: e.HBECHO_SYNC_BREAKER_COOLDOWN_MS },
     batchBudget: { maxCalls: e.HBECHO_SYNC_BATCH_MAX_CALLS, maxPoints: e.HBECHO_SYNC_BATCH_MAX_POINTS },
+    media: { tmpDir: e.HBECHO_MEDIA_TMP_DIR, maxBytes: e.HBECHO_MEDIA_MAX_BYTES, batchMaxBytes: e.HBECHO_MEDIA_BATCH_MAX_BYTES, capabilityUrl: e.HBECHO_CAPABILITY_URL },
     actorId: e.HBECHO_ACTOR_ID,
     leaseMs: e.HBECHO_SYNC_LEASE_MS,
     graceMs: e.HBECHO_SYNC_GRACE_MS,

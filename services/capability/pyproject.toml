@@ -3,7 +3,8 @@ name = "hbecho-capability"
 version = "0.0.0"
 description = "hbecho Python 能力服务（ADR-0012）：图像 / 音视频辅助计算，不持有业务状态、不连业务库"
 requires-python = ">=3.11"
-dependencies = []
+# 运行依赖均已在 ADR-0012 登记（FastAPI；uvicorn 见 2026-11-05 补记 3）
+dependencies = ["fastapi>=0.115", "uvicorn>=0.30"]
 
 [project.optional-dependencies]
 # 开发依赖：只用于离线单测（ADR-0012，2026-11-04 批准）

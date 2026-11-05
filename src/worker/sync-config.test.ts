@@ -14,6 +14,10 @@ const FULL = {
   HBECHO_SYNC_BREAKER_COOLDOWN_MS: "300000",
   HBECHO_SYNC_BATCH_MAX_CALLS: "25000",
   HBECHO_SYNC_BATCH_MAX_POINTS: "210000",
+  HBECHO_MEDIA_TMP_DIR: "/var/tmp/hbecho-media",
+  HBECHO_MEDIA_MAX_BYTES: "2147483648",
+  HBECHO_MEDIA_BATCH_MAX_BYTES: "53687091200",
+  HBECHO_CAPABILITY_URL: "http://capability:8080",
 };
 const without = (...keys: string[]) => Object.fromEntries(Object.entries(FULL).filter(([k]) => !keys.includes(k)));
 const problems = (env: Record<string, string | undefined>) => {
@@ -36,6 +40,7 @@ describe("worker 配置（缺失即启动失败）", () => {
       mediaConcurrency: 2,
       breaker: { failures: 10, cooldownMs: 300000 },
       batchBudget: { maxCalls: 25000, maxPoints: 210000 },
+      media: { tmpDir: "/var/tmp/hbecho-media", maxBytes: 2147483648, batchMaxBytes: 53687091200, capabilityUrl: "http://capability:8080" },
       leaseMs: 120_000,
       graceMs: 30_000,
       idlePollMs: 5_000,
@@ -52,7 +57,7 @@ describe("worker 配置（缺失即启动失败）", () => {
   });
   it("空字符串等同缺失；非法值标为 invalid（0 并发、负 QPS、非整数）", () => {
     expect(problems({ ...FULL, HBECHO_SYNC_CONCURRENCY: "" })).toEqual([expect.objectContaining({ name: "HBECHO_SYNC_CONCURRENCY", problem: "missing" })]);
-    for (const [k, v] of [["HBECHO_SYNC_CONCURRENCY", "0"], ["HBECHO_SYNC_PROVIDER_QPS", "-1"], ["HBECHO_SYNC_BATCH_MAX_POINTS", "1.5"], ["HBECHO_SYNC_PROFILE_MODE", "batch"]] as const) {
+    for (const [k, v] of [["HBECHO_SYNC_CONCURRENCY", "0"], ["HBECHO_SYNC_PROVIDER_QPS", "-1"], ["HBECHO_SYNC_BATCH_MAX_POINTS", "1.5"], ["HBECHO_SYNC_PROFILE_MODE", "batch"], ["HBECHO_CAPABILITY_URL", "ftp://x"], ["HBECHO_MEDIA_MAX_BYTES", "0"]] as const) {
       expect(problems({ ...FULL, [k]: v })?.[0], k).toMatchObject({ name: k, problem: "invalid" });
     }
   });

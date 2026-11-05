@@ -40,11 +40,11 @@ const NOW = new Date("2026-11-04T08:00:00.123456Z");
 const t = useTestDb();
 
 describe("迁移与参考数据", () => {
-  it("26 张业务表全部建成，没有 ENUM 列，没有 ON DELETE CASCADE", async () => {
+  it("28 张业务表全部建成，没有 ENUM 列，没有 ON DELETE CASCADE", async () => {
     const [tables] = await t.pool.query(
       "SELECT table_name n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type='BASE TABLE' AND table_name <> '__drizzle_migrations'",
     );
-    expect((tables as unknown[]).length).toBe(26);
+    expect((tables as unknown[]).length).toBe(28);
     const [enums] = await t.pool.query("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND data_type = 'enum'");
     expect(enums).toEqual([]);
     const [rules] = await t.pool.query(

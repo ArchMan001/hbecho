@@ -29,6 +29,7 @@
 | [0011](0011-report-export-exceljs-write-only.md) | 报表导出用 exceljs 4.4.0，仅写入；导入仍只用 CSV | accepted | 2026-11-04 | 刘学奎 |
 | [0012](0012-python-capability-service.md) | Python 能力服务：FastAPI + OpenCV + ffmpeg，compose 内网、无数据库凭证 | accepted | 2026-11-04 | 刘学奎 |
 | [0013](0013-repository-layout.md) | 仓库目录：单应用，TypeScript 全在 `src/`，Python 服务在 `services/capability/` | accepted | 2026-11-04 | 刘学奎 |
+| [0014](0014-csv-parser-dependency.md) | CSV 解析用 csv-parse（严格模式）；编码判定仍用 `TextDecoder`；星标线下调为 3,000 | accepted | 2026-11-05 | 刘学奎 |
 
 ## 未决选型登记
 

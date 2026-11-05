@@ -180,6 +180,7 @@ export async function runSmoke(deps: SmokeDeps, auth: SmokeAuthorized): Promise<
   };
   const tuples: SmokeSummary["tuples"] = [];
   const taskIds: bigint[] = [];
+  const notOk = new Map<bigint, { status: "failed" | "cancelled"; code: string }>(); // 没成功的条目：失败（传输 / ambiguous / 业务 / 未解码 / 轮询未到终态）或被上限封口
 
   for (const [i, e] of plan.allowlist.entries()) {
     const base = { platform: e.platform, action: e.action, mode: e.mode, locatorSha256Prefix: createHash("sha256").update(e.locator).digest("hex").slice(0, 16) };
@@ -229,6 +230,7 @@ export async function runSmoke(deps: SmokeDeps, auth: SmokeAuthorized): Promise<
         if (r.providerTaskId === null) break;
       }
     }
+    if (!(r.category === "none" && r.decoded)) notOk.set(taskId, r.category.startsWith("stopped:") ? { status: "cancelled", code: r.category } : { status: "failed", code: r.category === "none" ? "not_decoded" : r.category });
     const rows = await db.select().from(odsProviderCalls).where(and(eq(odsProviderCalls.syncTaskId, taskId), ne(odsProviderCalls.callStatus, "prepared")));
     const sent = rows.filter((c) => c.outcome !== "not_sent");
     tuples.push({
@@ -241,12 +243,25 @@ export async function runSmoke(deps: SmokeDeps, auth: SmokeAuthorized): Promise<
     });
   }
 
-  // 收尾：任务标记完成（让一年清理可以回收），批次状态如实反映是否被上限截断
+  // 收尾：任务终态如实反映每个条目的结果（让一年清理可以回收）；批次反映「全成功 / 部分成功 / 全失败」，被上限截断也算部分
   const finishedAt = clock.now();
-  await db.update(syncTasks).set({ status: "succeeded", leaseOwner: null, leaseExpiresAt: null, finishedAt, updatedAt: finishedAt }).where(inArray(syncTasks.taskId, [rootId, ...taskIds]));
+  const done = { leaseOwner: null, leaseExpiresAt: null, finishedAt, updatedAt: finishedAt };
+  const okIds = taskIds.filter((id) => !notOk.has(id));
+  const failedCount = [...notOk.values()].filter((v) => v.status === "failed").length;
+  if (okIds.length) await db.update(syncTasks).set({ status: "succeeded", ...done }).where(inArray(syncTasks.taskId, okIds));
+  for (const [id, v] of notOk) await db.update(syncTasks).set({ status: v.status, lastErrorCode: v.code.slice(0, 128), ...done }).where(eq(syncTasks.taskId, id));
+  const rootFailed = failedCount > 0;
+  await db.update(syncTasks).set(rootFailed ? { status: "failed", lastErrorCode: "child_failed", ...done } : { status: "succeeded", ...done }).where(eq(syncTasks.taskId, rootId));
   await db
     .update(syncBatches)
-    .set({ status: stoppedBy === null ? "succeeded" : "partial_succeeded", succeededTaskCount: taskIds.length + 1, finishedAt, updatedAt: finishedAt })
+    .set({
+      status: notOk.size === 0 && stoppedBy === null ? "succeeded" : okIds.length > 0 ? "partial_succeeded" : "failed",
+      succeededTaskCount: okIds.length + (rootFailed ? 0 : 1),
+      failedTaskCount: failedCount + (rootFailed ? 1 : 0),
+      skippedTaskCount: plan.allowlist.length - taskIds.length + (notOk.size - failedCount),
+      finishedAt,
+      updatedAt: finishedAt,
+    })
     .where(eq(syncBatches.batchId, batchId));
 
   // 汇总：全部来自落库的 ProviderCall / payload，而不是内存里的响应

@@ -8,7 +8,7 @@ import { useTestDb } from "../../../tests/harness/db";
 import { FakeImageConverter, FakeMediaTransport, heicBytes, jpegBytes, webpBytes } from "../../../tests/harness/fake-media";
 import { FakeObjectStore } from "../../../tests/harness/fake-oss";
 import { XHS_LOCATOR, setupTracer, type TracerEnv } from "../../../tests/harness/tracer-env";
-import { accountProfileSnapshots, contentSnapshots, contents, mediaAssets, mediaReferences, ossObjects, syncCheckpoints, syncTasks } from "../../db/schema";
+import { accountProfileSnapshots, contentSnapshots, contents, dataQualityIssues, mediaAssets, mediaReferences, ossObjects, syncCheckpoints, syncTasks } from "../../db/schema";
 import { runTracerRoot } from "../orchestrator";
 import { runMediaArchive, type MediaArchiveHooks } from "./index";
 import type { MediaPolicy } from "./index";
@@ -200,6 +200,13 @@ describe("失败：保留结构化快照，单独分类，有界重试", () => {
 
     expect((await m.run()).kind).toBe("nothing_to_do");
     expect(m.transport.callsTo(avatar.sourceLocator!)).toBe(1);
+    // R19.4 / I3：媒资失败留一条可按账号与批次查询的质量问题，不改账号状态；重放不重复
+    const issues = await t.db.select().from(dataQualityIssues);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ issueCode: "media_archive_failed", severity: "warning", status: "open", entityType: "media_reference", entityId: avatar.mediaReferenceId });
+    expect(issues[0]!.accountId).not.toBeNull();
+    expect(issues[0]!.batchId).not.toBeNull();
+    expect(issues[0]!.detail).toMatchObject({ role: "avatar", error_code: "source_expired", carried_forward: false });
   });
 
   it("下载被截断（Content-Length 不符）：同一次运行内重试一次，第二次成功", async () => {
@@ -288,6 +295,10 @@ describe("失败：保留结构化快照，单独分类，有界重试", () => {
     expect(bgNorm).toHaveLength(1);
     const s = await m.env.status(second);
     expect(s.media).toMatchObject({ carriedForward: 2, failed: 0 });
+    // 续用旧资产的本轮失败同样留一条质量问题（本轮失败必须可见，不能表示为归档成功）
+    const issues = await t.db.select().from(dataQualityIssues);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]!.detail).toMatchObject({ role: "background", error_code: "source_expired", carried_forward: true });
     expect(s.media.archived).toBe(42);
     expect(s.state).toBe("succeeded_with_warnings");
     expect(await assets()).toHaveLength(6);
@@ -307,6 +318,9 @@ describe("衍生图转换", () => {
     const calls = m.converter.inputs.length;
     await m.run();
     expect(m.converter.inputs.length).toBe(calls);
+    const issues = await t.db.select().from(dataQualityIssues);
+    expect(issues).toHaveLength(22); // 每个衍生引用一条；第二次运行没有新增
+    expect(issues.every((i) => i.issueCode === "media_archive_failed" && (i.detail as { derivative?: boolean }).derivative === true)).toBe(true);
   });
 
   it("转换服务返回的不是 JPEG：不当作衍生图，记 convert_failed，不产生衍生资产", async () => {

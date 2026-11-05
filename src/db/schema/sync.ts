@@ -1,10 +1,11 @@
-// v2 §9 同步控制、ODS 与质量问题（import_batches / import_row_results 属于 a-master-data-import，不在本 spec）。
+// v2 §9 同步控制、ODS 与质量问题（import_batches / import_row_results 在 ./import.ts）。
 import { sql } from "drizzle-orm";
 import { type AnyMySqlColumn, boolean, check, decimal, foreignKey, index, int, json, mysqlTable, smallint, tinyint, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { counter, id, inList, sha256, utc } from "../columns";
 import { contents } from "./content";
 import { externalAccounts, staffAccountAssignments } from "./accounts";
 import { dataProviders, platforms } from "./reference";
+import { importBatches } from "./import";
 import { ossObjects } from "./media";
 
 export const syncSettings = mysqlTable(
@@ -393,6 +394,8 @@ export const dataQualityIssues = mysqlTable(
     entityType: varchar("entity_type", { length: 32 }),
     entityId: id("entity_id"),
     batchId: id("batch_id").references((): AnyMySqlColumn => syncBatches.batchId),
+    // R4：导入类问题（如待确认撤店）引用导入批次，与同步批次引用互斥
+    importBatchId: id("import_batch_id"),
     accountId: id("account_id").references((): AnyMySqlColumn => externalAccounts.accountId),
     contentId: id("content_id").references((): AnyMySqlColumn => contents.contentId),
     assignmentId: id("assignment_id"),
@@ -403,17 +406,20 @@ export const dataQualityIssues = mysqlTable(
     firstSeenAt: utc("first_seen_at").notNull(),
     lastSeenAt: utc("last_seen_at").notNull(),
     resolvedAt: utc("resolved_at"),
+    resolvedByActor: varchar("resolved_by_actor", { length: 128 }),
     resolutionNote: varchar("resolution_note", { length: 1024 }),
     createdAt: utc("created_at").notNull(),
     updatedAt: utc("updated_at").notNull(),
   },
   (t) => [
+    foreignKey({ name: "fk_issues_import_batch", columns: [t.importBatchId], foreignColumns: [importBatches.importBatchId] }),
     foreignKey({ name: "fk_issues_assignment", columns: [t.assignmentId], foreignColumns: [staffAccountAssignments.assignmentId] }),
     foreignKey({ name: "fk_issues_call", columns: [t.providerCallId], foreignColumns: [odsProviderCalls.providerCallId] }).onDelete("set null"),
     uniqueIndex("uq_issues_fingerprint").on(t.issueFingerprint),
     index("idx_issues_status_severity").on(t.status, t.severity, t.lastSeenAt),
     index("idx_issues_code").on(t.issueCode, t.lastSeenAt),
     index("idx_issues_batch").on(t.batchId),
+    index("idx_issues_import_batch").on(t.importBatchId),
     index("idx_issues_account").on(t.accountId),
     index("idx_issues_content").on(t.contentId),
     index("idx_issues_assignment").on(t.assignmentId),
@@ -421,5 +427,6 @@ export const dataQualityIssues = mysqlTable(
     check("ck_issues_severity", inList(t.severity, ["info", "warning", "error", "critical"])),
     check("ck_issues_status", inList(t.status, ["open", "acknowledged", "resolved", "ignored"])),
     check("ck_issues_occurrence", sql`${t.occurrenceCount} >= 1`),
+    check("ck_issues_one_batch_kind", sql`${t.batchId} IS NULL OR ${t.importBatchId} IS NULL`),
   ],
 );

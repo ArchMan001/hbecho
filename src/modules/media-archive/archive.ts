@@ -14,6 +14,7 @@ import { accountProfileSnapshots, contentSnapshots, contents, mediaAssets, media
 import { jcsSha256 } from "../canonical-json";
 import { MediaFailure, classifyMediaFailure, type MediaFailureCode } from "../media-failure";
 import { claimTask, isDuplicateKey, withFences, type Fenced, type TaskRow } from "../orchestrator";
+import { recordIssue } from "../projection/quality";
 import type { Clock, ObjectStore } from "../raw-capture";
 import { downloadBounded } from "./download";
 import { DEFAULT_MEDIA_POLICY, type MediaPolicy } from "./guard";
@@ -325,6 +326,7 @@ async function processOriginal(ctx: Ctx, ref: RefRow): Promise<StepOutcome> {
     }
     if ("failure" in derived) {
       await upsertNormalized(tx, ref, { status: "failed", assetId: null, error: derived.failure, carried: false }, now);
+      await recordMediaIssue(tx, ctx, ref, derived.failure, { derivative: true });
     } else {
       const assetId = await ensureAsset(tx, deps, { sha: derived.sha, byteLength: derived.bytes?.byteLength ?? 0, mime: "image/jpeg", width: derived.width, height: derived.height, now, knownOnly: derived.bytes === null });
       await upsertNormalized(tx, ref, { status: "archived", assetId, error: null, carried: false }, now);
@@ -336,6 +338,21 @@ async function processOriginal(ctx: Ctx, ref: RefRow): Promise<StepOutcome> {
 }
 
 const fenceOutcome = (r: Extract<Fenced<unknown>, { ok: false }>): StepOutcome => (r.reason === "cancelled" ? "cancelled" : "stale");
+
+/** R19.4：媒资失败（含续用旧资产的本轮失败）留一条可查询的质量问题；指纹含引用 ID 与错误码，同批次重放不重复。 */
+async function recordMediaIssue(tx: DbTx, ctx: Ctx, ref: RefRow, code: string, extra: Record<string, unknown>): Promise<void> {
+  await recordIssue(tx, {
+    code: "media_archive_failed",
+    severity: "warning",
+    batchId: ctx.root.batchId,
+    accountId: ctx.root.accountId,
+    entityType: "media_reference",
+    entityId: ref.mediaReferenceId,
+    discriminator: `${ref.mediaReferenceId}:${ref.role}:${code}`,
+    detail: { role: ref.role, slot_index: ref.slotIndex, error_code: code, ...extra },
+    now: ctx.deps.clock.now(),
+  });
+}
 
 /** 下载失败：有上一快照的已验证资产就续用，否则标记失败。 */
 async function commitFailure(ctx: Ctx, ref: RefRow, code: MediaFailureCode): Promise<StepOutcome> {
@@ -350,11 +367,13 @@ async function commitFailure(ctx: Ctx, ref: RefRow, code: MediaFailureCode): Pro
         .set({ archiveStatus: "carried_forward", mediaAssetId: prior.mediaAssetId, isCarriedForward: true, lastErrorCode: code, updatedAt: now })
         .where(eq(mediaReferences.mediaReferenceId, ref.mediaReferenceId));
       if (priorNorm) await upsertNormalized(tx, ref, { status: "carried_forward", assetId: priorNorm.mediaAssetId, error: code, carried: true }, now);
+      await recordMediaIssue(tx, ctx, ref, code, { carried_forward: true });
     } else {
       await tx
         .update(mediaReferences)
         .set({ archiveStatus: "failed", mediaAssetId: null, isCarriedForward: false, lastErrorCode: code, updatedAt: now })
         .where(eq(mediaReferences.mediaReferenceId, ref.mediaReferenceId));
+      await recordMediaIssue(tx, ctx, ref, code, { carried_forward: false });
     }
   });
   if (!r.ok) return fenceOutcome(r);
@@ -364,9 +383,10 @@ async function commitFailure(ctx: Ctx, ref: RefRow, code: MediaFailureCode): Pro
 
 async function commitDerivativeFailure(ctx: Ctx, ref: RefRow, code: MediaFailureCode): Promise<StepOutcome> {
   const { deps } = ctx;
-  const r = await withFences(deps.db, deps.clock, [{ taskId: ctx.child.taskId, token: ctx.token }], (tx) =>
-    upsertNormalized(tx, ref, { status: "failed", assetId: null, error: code, carried: false }, deps.clock.now()),
-  );
+  const r = await withFences(deps.db, deps.clock, [{ taskId: ctx.child.taskId, token: ctx.token }], async (tx) => {
+    await upsertNormalized(tx, ref, { status: "failed", assetId: null, error: code, carried: false }, deps.clock.now());
+    await recordMediaIssue(tx, ctx, ref, code, { derivative: true });
+  });
   return r.ok ? "ok" : fenceOutcome(r);
 }
 

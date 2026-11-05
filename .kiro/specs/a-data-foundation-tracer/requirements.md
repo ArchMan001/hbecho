@@ -1,6 +1,6 @@
 # A 数据底座 Tracer（a-data-foundation-tracer）· 需求
 
-> **状态**：`draft`
+> **状态**：`draft`（任务 1–9 已实现并合并 main；离线验收结果见 acceptance.md，待确认后升 `current`）
 >
 > **模式**：Design-First
 >

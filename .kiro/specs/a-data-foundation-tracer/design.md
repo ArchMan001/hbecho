@@ -1,9 +1,9 @@
 # A Data Foundation Tracer Design
 
-> **状态**：`draft`  
+> **状态**：`draft`（任务 1–9 已实现并合并 main；离线验收结果见 acceptance.md，待确认后升 `current`）  
 > **模式**：Design-First  
 > **需求**：[`requirements.md`](requirements.md)  
-> **实施计划**：[`tasks.md`](tasks.md)（仅规划，尚未执行）  
+> **实施计划**：[`tasks.md`](tasks.md)（任务 1–9 已实现；进度以其勾选与完成记录为准）  
 > **验收**：[`acceptance.md`](acceptance.md)  
 > **所属域**：A 数据底座 · **目录命名**：`a-data-foundation-tracer`，符合 `<代号>-<切片>`  
 > **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.10（2026-11-04，定稿候选）  
@@ -389,7 +389,7 @@ sequenceDiagram
   D-->>O: typed result + ValueState + lineage
 ```
 
-`prepared` 可安全恢复而不发送重复调用；若取消、预算或本地策略在发送前封口，持久化为 `terminal/not_sent`。进入 `in_flight` 后，有证据确认未送达的 transport failure 进入 `terminal/transport_error`；进程失联、timeout/reset 等导致远端结果不明时进入 `ambiguous`，并永久保持。本 spec 的三个 action 都是**只读查询**，重发不产生供应商侧副作用，业务事实按幂等键去重，所以 ambiguous 后允许在有界重试内发起**一次**新的 ProviderCall（计入预算），不实现对账（requirements 2.7，2026-11-04）。有副作用的供应商调用不适用这条例外，仍按 v2 §9.5 的对账规则。
+`prepared` 可安全恢复而不发送重复调用；若取消、预算或本地策略在发送前封口，持久化为 `terminal/not_sent`。进入 `in_flight` 后，有证据确认未送达的 transport failure 进入 `terminal/transport_error`；进程失联、请求发出后的 timeout / reset 等导致远端结果不明时进入 `ambiguous`（**连接阶段**的超时 `UND_ERR_CONNECT_TIMEOUT` 例外：undici 在连接建立前不写请求字节，按 `delivered=no` 处理，2026-11-04 首轮真实 smoke 暴露），并永久保持。本 spec 的三个 action 都是**只读查询**，重发不产生供应商侧副作用，业务事实按幂等键去重，所以 ambiguous 后允许在有界重试内发起**一次**新的 ProviderCall（计入预算），不实现对账（requirements 2.7，2026-11-04）。有副作用的供应商调用不适用这条例外，仍按 v2 §9.5 的对账规则。
 
 ### 8.4 Asynchronous sequence
 

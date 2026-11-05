@@ -24,6 +24,11 @@
   12. §9.5 `reconciled_by_provider_call_id` 的外键由 `ON DELETE SET NULL` 改为 `RESTRICT`（MySQL 禁止 CHECK 引用 SET NULL 列，错误 3823），「不等于自身」由触发器 `trg_calls_reconciled_not_self` 保证（CHECK 不能引用自增列，错误 3818）；
   13. §11.1 `oss_objects` 唯一键五列用 `ascii_bin`（utf8mb4 下 7548 字节超过 3072 字节索引上限，错误 1071）；
   14. §8.3 `resolved_home_url` 注明当前存清洗后的入口，不是供应商确认的主页 URL。
+- **2026-11-05 修订（`a-master-data-import` 评审，已在正文改完；名单导入共用的列一律保留）**：
+  15. §9.9 `import_row_results` 增加 `precheck_class`（可空，CHECK 五值）与 `resolved_by_actor`；`outcome` 与 `resolved_by_user_id` 改为可空；
+  16. §9.8 `import_batches` 增加 `uploaded_by_actor/confirmed_by_actor`、`summary JSON`、确认租约 `writing_token/heartbeat_at`；`uploaded_by_user_id/confirmed_by_user_id` 改为可空；原有四个计数列不变（名单导入使用）；
+  17. §9.7 `data_quality_issues` 增加 `import_batch_id`（FK）与 `resolved_by_actor`，与同步批次引用互斥；
+  18. §12.1 同步：上游真实列名（门店所属商家 / 门店所属商家渠道编码）、撤店情况只会是「无撤销」、六类、已撤店恢复、结构边界。
 
 ---
 
@@ -701,13 +706,14 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 - `issue_code VARCHAR(128) NOT NULL`；`severity VARCHAR(16) NOT NULL`；`status VARCHAR(16) NOT NULL`；
 - `entity_type VARCHAR(32) NULL`；`entity_id BIGINT NULL`；
 - `batch_id/account_id/content_id/assignment_id BIGINT NULL`；
+- `import_batch_id BIGINT NULL FK → import_batches`：导入类问题（如待确认撤店）引用导入批次，**不复用** `batch_id`（那是同步批次）；
 - `provider_call_id BIGINT NULL`；`json_path VARCHAR(1024) NULL`；
 - `detail JSON NOT NULL`；`occurrence_count BIGINT NOT NULL DEFAULT 1`；
 - `first_seen_at/last_seen_at DATETIME(6) NOT NULL`；
-- `resolved_at DATETIME(6) NULL`；`resolution_note VARCHAR(1024) NULL`；
+- `resolved_at DATETIME(6) NULL`；`resolved_by_actor VARCHAR(128) NULL`；`resolution_note VARCHAR(1024) NULL`；
 - `created_at/updated_at DATETIME(6) NOT NULL`。
 
-约束/索引：`UQ(issue_fingerprint)`；severity 为 `info/warning/error/critical`；status 为 `open/acknowledged/resolved/ignored`；`IDX(status, severity, last_seen_at)`；`IDX(issue_code, last_seen_at)`；各业务 FK 索引。问题不自动删除；ODS 来源到期后可置空。
+约束/索引：`CHECK (batch_id IS NULL OR import_batch_id IS NULL)`（两种批次引用不得同时非空）；`IDX(import_batch_id)`；`UQ(issue_fingerprint)`；severity 为 `info/warning/error/critical`；status 为 `open/acknowledged/resolved/ignored`；`IDX(status, severity, last_seen_at)`；`IDX(issue_code, last_seen_at)`；各业务 FK 索引。问题不自动删除；ODS 来源到期后可置空。
 
 ### 9.8 `import_batches`
 
@@ -718,12 +724,14 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 - `import_batch_id BIGINT PK`；
 - `import_kind VARCHAR(16) NOT NULL`：`master_data`（权威主档）/ `roster`（活动计划名单）；
 - `plan_id BIGINT NULL`：`roster` 时必填，逻辑引用 A 域活动计划；`master_data` 时为空；
-- `uploaded_by_user_id BIGINT NOT NULL`；`uploaded_at DATETIME(6) NOT NULL`；
+- `uploaded_by_actor VARCHAR(128) NOT NULL`（与 `sync_tasks.submitted_by_actor` 同形）；`uploaded_by_user_id BIGINT NULL`（B 域接入后回填，不得造假用户 ID）；`uploaded_at DATETIME(6) NOT NULL`；
 - `file_name VARCHAR(512) NULL`；`file_sha256 BINARY(32) NULL`；`template_version VARCHAR(32) NULL`；
 - `brand_scope JSON NULL`：本次可写入的品牌集合，用于解释被跳过的行；
-- `total_rows INT NOT NULL`；`new_rows/skipped_rows/error_rows/conflict_rows INT NOT NULL DEFAULT 0`；
+- `total_rows INT NOT NULL`（表头之后的数据行数）；`new_rows/skipped_rows/error_rows/conflict_rows INT NOT NULL DEFAULT 0`（名单导入使用；主数据导入不写，保持 0）；
+- `summary JSON NULL`：按 `import_kind` 存放的分类汇总。`master_data` 预检时 `{new, update, unchanged, error, needs_superadmin, pending_closure_stores, suspect_incomplete_export}`，确认完成时追加 `{imported, unchanged_written, conflict}`；
 - `status VARCHAR(16) NOT NULL`：`prechecking / precheck_failed / awaiting_confirm / writing / completed / failed`；
-- `confirmed_by_user_id BIGINT NULL`；`confirmed_at DATETIME(6) NULL`；
+- `writing_token VARCHAR(36) NULL`；`heartbeat_at DATETIME(6) NULL`：确认写入的租约与 fencing，每个块的事务开头核对 token，陈旧租约可被接手；
+- `confirmed_by_actor VARCHAR(128) NULL`；`confirmed_by_user_id BIGINT NULL`；`confirmed_at DATETIME(6) NULL`；
 - `created_at/updated_at DATETIME(6) NOT NULL`。
 
 约束/索引：`IDX(import_kind, uploaded_at)`；`IDX(plan_id, uploaded_at)`；status 取值受 CHECK 约束；批次不物理删除，失败批次保留以便重试与追责。
@@ -740,13 +748,14 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 - `import_batch_id BIGINT NOT NULL FK`；
 - `row_no INT NOT NULL`：文件内行号，从 1 开始，不含表头；
 - `raw_row JSON NOT NULL`：原始单元格按模板列名的快照，不做规范化；
-- `outcome VARCHAR(32) NOT NULL`：`imported / unchanged / conflict / invalid`；
+- `precheck_class VARCHAR(32) NULL`：预检分类，`new / update / unchanged / error / needs_superadmin`（CHECK 允许 NULL）。主数据导入的行必填（由应用保证）；名单导入由 `a-activity-plan` 扩展自己的分类；
+- `outcome VARCHAR(32) NULL`：`imported / unchanged / conflict / invalid`；预检阶段为空，确认写入后才有值；`error` / `needs_superadmin` 行没有写入，确认后仍为空；
 - `reason_code VARCHAR(64) NULL`；`reason_detail VARCHAR(1024) NULL`；
 - `store_id/account_id/staff_id BIGINT NULL`：命中对象；
-- `resolved_at DATETIME(6) NULL`；`resolved_by_user_id BIGINT NULL`；
+- `resolved_at DATETIME(6) NULL`；`resolved_by_actor VARCHAR(128) NULL`；`resolved_by_user_id BIGINT NULL`（B 域接入后回填）；
 - `created_at DATETIME(6) NOT NULL`。
 
-约束/索引：`UQ(import_batch_id, row_no)`；`IDX(outcome, created_at)`；`IDX(store_id)`；`IDX(account_id)`；行结果与批次同寿命保留，不随业务数据删除。
+约束/索引：`UQ(import_batch_id, row_no)`；`IDX(precheck_class, created_at)`；`IDX(outcome, created_at)`；`IDX(store_id)`；`IDX(account_id)`；行结果与批次同寿命保留，不随业务数据删除。
 
 | `outcome` | 含义 | 是否需要人处理 |
 |---|---|---|
@@ -921,7 +930,7 @@ CHECK 约束必须保证上述 asset/error/carried 组合。新快照创建新�
 
 ### 12.1 权威主档导入
 
-**输入**：一份「在营、非数字门店」的权威导出，11 列——门店名称、撤店情况、是否数字门店、门店编码、经销商名称、经销商编码、所属分公司、分公司编码、主营业务、主营业务编码、店面标准。
+**输入**：一份「在营、非数字门店」的权威导出，11 列（列名以上游系统导出为准；业务转 CSV 前删去上游多出的「负责人」列）——门店名称、撤店情况、是否数字门店、门店编码、门店所属商家（经销商）、门店所属商家渠道编码（经销商编码）、所属分公司、分公司编码、主营业务、主营业务编码、店面标准。表头逐列完全一致才接受。
 
 品牌与板块**不在文件中**，由 `主营业务编码` 经映射产生：13/15 → 日立、23/25 → 海信、33 → 约克VRF；15/25 → 水机、其余 → 家装。大区由 42 行「分公司 → 大区」对照表解析。
 
@@ -929,19 +938,23 @@ CHECK 约束必须保证上述 asset/error/carried 组合。新快照创建新�
 
 1. 建 `import_batches`（`import_kind='master_data'`），逐行写 `import_row_results`；此时只写导入审计表，不动业务表；
 2. 文件级预检：模板列齐全、编码可识别、表头行检测、非空；
-3. 只处理 `撤店情况='无撤销'` 且 `是否数字门店='否'` 的行；其余行记 `invalid` 并写明原因；
-4. 按 `(brand_id, store_code)` 匹配门店：命中则更新属性，未命中则新建；
-5. 经销商按经销商编码匹配；编码为空、`--`、`#N/A` 的行记 `invalid` 并回流，不静默丢弃；
-6. 品牌、板块、大区、分公司由映射解析；未命中记 `invalid`；
+3. 只处理 `撤店情况='无撤销'` 且 `是否数字门店='否'` 的行；其余行记 `error` 并写明原因（最终导出的「撤店情况」只会是「无撤销」，出现其他值是异常，按行级错误处理，不触发关店）；
+4. 按 `(brand_id, store_code)` 匹配门店：命中则更新属性，未命中则新建；已 `closed` 的门店再次出现且本行合法 → 恢复 `active`，记审计，`store_id` 不变；
+5. 经销商按经销商编码（门店所属商家渠道编码）匹配；编码为空、`--`、`#N/A` 的行记 `error` 并回流，不静默丢弃；
+6. 品牌、板块、大区、分公司由映射解析；映射未命中记 `error`；品牌 / 分公司 / 板块 / 经销商不存在或已停用，以及门店换经销商或板块，记 `needs_superadmin`；
 7. 名称、等级、经销商、板块更新当前值，不保留变化历史；
-8. **本期未出现的门店不自动关闭**：生成待确认项，由有权限的人确认「已撤店」后置 `status='closed'`；
-9. 展示「新增 N / 更新 M / 未变 K / 错误 J / 待确认撤店 P」，确认后才写入业务表。
+8. **本期未出现的门店不自动关闭**：只对「文件中出现的品牌」且在操作者授权范围内的 `active` 门店生成待确认项，由有权限的人确认「已撤店」后置 `status='closed'`；
+9. 展示「新增 N / 更新 M / 未变 K / 错误 J / 待确认撤店 P / 需超管处理 Q」，确认后才写入业务表。
+
+**结构边界**：普通批量导入不新建或修改品牌、大区、分公司、板块、经销商，也不给门店换经销商或板块；这些行记 `needs_superadmin`。结构由超管经 `structure` 模式（新建经销商、经销商改名与启用、门店换关系）、`bootstrap`（品牌、大区、分公司、板块）和门店改码命令完成。
+
+**确认写入**：同步、分块、可续跑。批次用 `writing_token` 做租约与 fencing，只处理 `outcome` 为空的行；详见 `a-master-data-import` design §7.6。
 
 **幂等**：同一文件重复导入时，所有行都是 `unchanged`，不产生业务副作用。
 
 **失败语义**：单行失败不影响其他行；整批拒绝只发生在文件级预检。
 
-**品牌范围**：总部人员只能写入其授权品牌的行；其余品牌的行记 `invalid` 并说明「不在授权品牌内」。大区、分公司是跨品牌共享对象，只有超管可在主数据修正中修改。
+**品牌范围**：总部人员只能写入其授权品牌的行；其余品牌的行记 `error`（`brand_not_authorized`）并说明「不在授权品牌内」。大区、分公司是跨品牌共享对象，只有超管可在主数据修正中修改。
 
 ### 12.2 新账号录入
 

@@ -188,7 +188,7 @@ flowchart LR
 | 目录 | 域 | 命名 | 文件齐全度 | 上游 PRD | 已知偏差 |
 |---|---|---|---|---|---|
 | `a-data-foundation-tracer` | A | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | A v1.10（定稿候选） | 已按 A v1.9 与 raw4/raw5/raw8 校准；v2 六项基线冲突已于 2026-11-04 修订，见 requirements §1.2 |
-| `a-master-data-import` | A | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | A v1.10（定稿候选） | 2026-11-04 初建，2026-11-05 审查修订；六项 v2 修订已于 2026-11-05 落回 v2（`import_row_results.precheck_class`、`import_batches.summary` 与确认租约、三个 actor 字段、`data_quality_issues.import_batch_id/resolved_by_actor`、§12.1 同步；`stores.source_batch_id` 外键待任务 1 的迁移），ADR-0014 已接受，见 requirements §1.3；不新增 `store_code_match`；任务 0–8 已实现，本机 verify 通过（2026-11-05，未合并）；测试 ECS 运行与人工验收项未做 |
+| `a-master-data-import` | A | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | A v1.10（定稿候选） | 2026-11-04 初建，2026-11-05 审查修订；六项 v2 修订已于 2026-11-05 落回 v2（`import_row_results.precheck_class`、`import_batches.summary` 与确认租约、三个 actor 字段、`data_quality_issues.import_batch_id/resolved_by_actor`、§12.1 同步；`stores.source_batch_id` 外键待任务 1 的迁移），ADR-0014 已接受，见 requirements §1.3；不新增 `store_code_match`；任务 0–8 已实现，本机 verify、CI 与测试 ECS 运行通过（2026-11-05，分支 `a-master-data-import`，未合并）；人工验收项 M1/M2/M4/M5 待业务/超管 |
 | `access-control` | B | 旧名，应为 `b-access-control` | 仅 design | B v1.21（current） | design 待按 B v1.21 重写：Capability 清单、资源谓词、10 个出口、MediaStaff 自动停用均未同步 |
 | `rule-engine` | D | 旧名，应为 `d-rule-engine` | 仅 design（`requirements.md` 已移除） | D v1.0（定稿候选） | 已改：3 个评论刷量算子改「搁置」；requirements / tasks 仍缺；design 的 AssessmentItem 模型待与考核项模型对齐 |
 | `metrics-and-dashboard` | E | 旧名，应为 `e-metrics` | 仅 design | E v1.0（定稿候选） | 已改：`n_day` 降为 2.0、投影自动激活；design 待同步分项列与两层分母 |

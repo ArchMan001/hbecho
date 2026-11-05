@@ -76,7 +76,7 @@ export type ExecuteOutcome =
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 /** 这些 action 都是只读查询，重发不产生供应商侧副作用（requirements 2.7、v2 §9.5 只读查询例外）。 */
-const READ_ONLY_ACTIONS = new Set(["media_user_info", "user_video_list", "task_lookup"]);
+const READ_ONLY_ACTIONS = new Set(["media_user_info", "user_video_list", "media_stats_number", "post_comments_list", "task_lookup"]);
 const COMPLETE_RESPONSE_OUTCOMES = new Set(["succeeded", "http_error", "provider_error", "invalid_response"]);
 const MAX_PARTIAL_BODY = 64 * 1024;
 

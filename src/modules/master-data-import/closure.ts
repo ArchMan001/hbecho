@@ -103,7 +103,7 @@ export async function pendingStoreIds(db: Db | DbTx, batchId: bigint): Promise<b
 export async function closeStores(tx: DbTx, batchId: bigint, storeIds: readonly bigint[], actor: string, now: Date): Promise<AuditEvent[]> {
   const events: AuditEvent[] = [];
   for (const id of storeIds) {
-    const [s] = await tx.select({ status: stores.status }).from(stores).where(eq(stores.storeId, id)).for("update");
+    const [s] = await tx.select({ status: stores.status, code: stores.storeCode }).from(stores).where(eq(stores.storeId, id)).for("update");
     if (!s) continue;
     if (s.status === "active") {
       await tx.update(stores).set({ status: "closed", updatedAt: now }).where(eq(stores.storeId, id));
@@ -113,6 +113,7 @@ export async function closeStores(tx: DbTx, batchId: bigint, storeIds: readonly 
         occurred_at: now.toISOString(),
         target_type: "store",
         target_id: String(id),
+        target_code: s.code,
         batch_id: String(batchId),
         before: { status: "active" },
         after: { status: "closed" },

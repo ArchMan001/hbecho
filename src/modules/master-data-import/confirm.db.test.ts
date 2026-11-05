@@ -56,7 +56,7 @@ describe("确认写入（import 模式）", () => {
     await env.md.imports.confirm(p.batchId, {}, env.importer);
     const after = (await storeBy("S1"))!;
     expect(after).toMatchObject({ status: "active", storeId: before.storeId });
-    expect(env.audit.of("store_reactivated")).toMatchObject([{ target_id: String(before.storeId), batch_id: p.batchId }]);
+    expect(env.audit.of("store_reactivated")).toMatchObject([{ target_id: String(before.storeId), target_code: "S1", batch_id: p.batchId }]);
   });
 
   it("同一批次连续 confirm 两次：第二次不再写，返回同一汇总，审计不重复", async () => {

@@ -18,6 +18,8 @@ export interface AuditEvent {
   reason_code?: string;
   target_type?: string;
   target_id?: string;
+  /** 对象的业务编码（例如门店编码），让事件自身可读，不必回库关联。 */
+  target_code?: string;
   batch_id?: string;
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;

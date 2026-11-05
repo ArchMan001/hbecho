@@ -280,7 +280,7 @@ async function applyRow(
           ...(plan.store.relationChange ? { dealerId: dealerId!, sectorId: plan.sectorId } : {}),
         })
         .where(eq(stores.storeId, plan.store.storeId!));
-      const base = { actor: actorId, occurred_at: now.toISOString(), target_type: "store", target_id: String(storeId), batch_id: String(batchId) };
+      const base = { actor: actorId, occurred_at: now.toISOString(), target_type: "store", target_id: String(storeId), target_code: plan.storeCode, batch_id: String(batchId) };
       if (plan.store.reactivate) rowEvents.push({ event_type: "store_reactivated", ...base, before: { status: "closed" }, after: { status: "active" } });
       if (plan.store.relationChange) rowEvents.push({ event_type: "structure_changed", reason_code: "change_store_relation", ...base });
     }

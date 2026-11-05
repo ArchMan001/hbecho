@@ -49,7 +49,7 @@ describe("预检不关店；确认才关", () => {
     expect(issues[0]!.resolvedAt).not.toBeNull();
     const ev = env.audit.of("store_closed");
     expect(ev).toHaveLength(2);
-    expect(ev[0]).toMatchObject({ batch_id: p.batchId, before: { status: "active" }, after: { status: "closed" } });
+    expect(ev[0]).toMatchObject({ batch_id: p.batchId, target_code: expect.stringMatching(/^S[456]$/), before: { status: "active" }, after: { status: "closed" } });
     expect(JSON.stringify(ev)).not.toContain("raw"); // 审计不含整行原文
   });
 

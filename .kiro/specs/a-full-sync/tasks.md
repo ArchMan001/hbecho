@@ -29,7 +29,7 @@
 - [x] 任务 6 · 按需采集（需求、详情、评论）
 - [x] 任务 7 · 媒资（封面首次、快手、视频、音频）
 - [x] 任务 8 · Python 能力服务 HTTP 外壳与 Node 客户端
-- [ ] 任务 9 · 运营命令、查询与定时清理（代码与测试已写；全量 `verify.sh` 待 Docker 恢复后重跑）
+- [x] 任务 9 · 运营命令、查询与定时清理
 - [ ] 任务 10 · 全量离线验收、故障注入与规模演练
 - [ ] 任务 11 · 批准式 smoke（人工批准，付费）
 
@@ -498,7 +498,7 @@
 - [x] `maintain`（`maintenance/maintenance.db.test.ts`）：一年后清理 ODS，快照保留，第二次运行无新增删除；有界（`maxPerRun`）多次清完；孤儿清扫覆盖 `ods/` 与 `smoke/ods/`，宽限期内的不动，媒资桶不参与；北京时间 04:00 之前不跑、每日一次；某步失败不抛出、其它步骤照常、退避后重试；
 - [x] `sample`：N 超过成功账号数时返回全部，失败的账号不抽，输出白名单字段、不含临时 URL / 对象 key；
 - [x] CLI（`worker/sync-cli.ops.test.ts`）：参数解析、透传、`--apply` 默认关闭、退出码（授权 2 / 冲突 3 / 不存在 4 / 未装配 2 / `maintain` 失败 1）；
-- [ ] `./scripts/verify.sh` 通过（见验证记录）。
+- [x] `./scripts/verify.sh` 通过（593 单元 / 562 数据库 / 17 Python）。
 
 **实施中的判断（自行决定项）**
 
@@ -510,7 +510,7 @@
 - **每日维护的挂接**：worker 常驻时每次 tick 后调用 `runDaily`（它自己判断北京时间 04:00 与「今天是否已跑」）；OSS 配置不全时 worker 仍可运行，只是日志里提示「daily maintenance disabled」。
 - **运营 CLI 的身份**：`HBECHO_ACTOR_PLATFORM_ADMIN=true` 才带 `monitor.external.manage` 与超管标记（B 域接入前，由持有数据库凭证的运维显式声明）。
 
-**验证记录（2026-11-05 夜）**：任务 9 的新增测试在最后一轮小改动之前全部通过（`sync-ops` 13、`sync-status` 4、`maintenance` 5 个数据库用例，`orchestrator` / `identity` 回归 97 例）；最后一轮改动（CLI 装配、`retention.ts` 有界参数、`readOssSecrets`）之后，`verify.sh` 的单元测试 591 例通过、类型检查通过，**数据库测试因本机 Docker Desktop 存储报 `input/output error`（镜像 blob 读取失败，容器无法创建 / 删除）未能重跑**。Docker 恢复后需要重跑 `./scripts/verify.sh`，全绿后再勾选本任务。
+**验证记录**：Docker Desktop 存储故障（本机 193 个泄漏的匿名卷占满虚拟磁盘）清理后重跑，`./scripts/verify.sh` 全绿。同时修了泄漏根因：`scripts/with-test-mysql.sh` 的清理改为 `docker rm -f -v`（`--rm` 的自动清理会被 trap 里不带 `-v` 的 `rm -f` 抢先，匿名卷因此留下）；改后一次完整 verify 没有新增悬空卷。
 
 **Requirements:** FS-13、FS-14、FS-15、FS-17、FS-20；**Design:** §7.13、§9、§15。
 

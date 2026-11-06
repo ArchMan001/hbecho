@@ -41,7 +41,7 @@
 
 | # | 现象 | 处置 |
 |---|---|---|
-| 1 | **快手详情的内容 URL 构造**（design §14 第 2 项，tasks 必须停下来问第 10 项）有了结论：`https://www.kuaishou.com/short-video/{post_id}` 与 `https://v.m.chenzhongtech.com/fw/photo/{post_id}` 被接受；`c.kuaishou.com/fw/photo/…`、`m.gifshow.com/fw/photo/…` 被拒（`RESULT_VALIDATION_FAILED`） | `ContentUrlBuilder` 对快手返回 `short-video` 形式；快手详情**同步**tuple 放行；异步 tuple 没用该形式验证过，仍 disabled。 production 不动 |
+| 1 | **快手详情的内容 URL 构造**（design §14 第 2 项，tasks 必须停下来问第 10 项）有了结论：`https://www.kuaishou.com/short-video/{post_id}` 与 `https://v.m.chenzhongtech.com/fw/photo/{post_id}` 被接受；`c.kuaishou.com/fw/photo/…`、`m.gifshow.com/fw/photo/…` 被拒（`RESULT_VALIDATION_FAILED`） | `ContentUrlBuilder` 对快手返回 `short-video` 形式；快手详情同步 tuple 放行。异步 tuple 同日补测：脏文案原样 6/6、规范 URL 6/6 均成功，也放行（见 §5.1）。production 不动 |
 | 2 | 抖音视频下载被拒：`v9.douyinvod.com` 不在视频 CDN 白名单。没有 `api-play.amemv.com` 候选时，`douyinvod.com` 是唯一来源（`api-hl.amemv.com` 会 302 到它） | 白名单加 `douyinvod.com` |
 | 3 | **16 张抖音 HEIC 封面转换失败**（约 13%）：能力服务把图片经 `pipe:0` 喂给 ffmpeg，HEIF 的元数据在文件里的位置因文件而异，不可 seek 的管道会报 `partial file` | 改为写临时文件再转换；加了能复现的真实样本和回归用例 |
 | 4 | 快手同步调用有 19–48 秒的，30 秒超时下 6 次变成 `ambiguous`（可能已计费但结果丢失） | `HttpProviderTransport` 默认超时 30 → 90 秒；`smoke` 里用环境变量可调 |
@@ -87,6 +87,10 @@
 | 按需批次（详情 + 评论 + 视频） | 17 次调用，185 点 |
 | 单次延迟（均值 / 最大，成功） | 抖音 3–10 / 20 秒；小红书 4–6 / 12 秒；快手 7–21 / 48 秒 |
 
+### 5.1 补测：快手详情异步（同日）
+
+12 次提交（脏文案 6 + 规范 URL 6）全部成功，轮询 51 次。提交均值 0.3–0.5 秒（最长 2.6 秒），每次轮询 0.1–0.2 秒，两次轮询间隔约 2 秒，一条作品从提交到拿到结果 5–25 秒。点数 120（轮询不计点）≈ ¥2.4，本报告其他数字不含这一笔。
+
 ## 6. 对 capability 登记的建议
 
 | tuple | 建议 | 说明 |
@@ -95,7 +99,7 @@
 | 快手 主页（同步） | `smoke_verified`，加 `knownGaps`: `vanity_id_unsupported_by_provider`、`user_id_form_unstable` | §4.1、§4.2 |
 | 快手 列表（同步） | `smoke_verified`，加 `knownGaps`: `intermittent_validation_failed`、`slow_responses` | §4.3 |
 | 快手 详情（同步） | **已放行**（本次修改） | §3 第 1 项 |
-| 快手 详情（异步） | 保持 disabled | 没跑过 |
+| 快手 详情（异步） | **已放行**（补测 12/12 成功） | §5.1 |
 | 全部 production | **仍然 disabled** | 启用另走人工批准；快手在 §4.2 解决前不建议启用 |
 
 ## 7. 清理

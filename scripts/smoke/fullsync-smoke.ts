@@ -324,7 +324,11 @@ async function probe() {
   const now = new Date();
   const [b] = await c.db.insert(syncBatches).values({ batchKey: Buffer.from(`probe-${Date.now()}`.padEnd(32, "0")).subarray(0, 32), triggerType: "manual", purpose: "intake", logicalAt: now, status: "running", settingsVersion: 1n, settingsSnapshot: { probe: true }, createdAt: now, updatedAt: now, startedAt: now });
   const results: unknown[] = [];
-  for (const l of links().filter((x) => x.kind === "work")) {
+  // SMOKE_PROBE_MODE=asynchronous 走异步（提交 + 轮询）；SMOKE_PROBE_PLATFORM 限定平台
+  // SMOKE_PROBE_CANONICAL=1：用上一次 probe-async 解出的 post_id 拼规范 URL（只用于快手），验证规范 URL 形式在该模式下可用
+  const canonical = new Map<number, string>(process.env.SMOKE_PROBE_CANONICAL ? (load<Array<{ idx: number; postId: string }>>("probe-async")).map((r) => [r.idx, r.postId]) : []);
+  const probeMode = process.env.SMOKE_PROBE_MODE === "asynchronous" ? "asynchronous" : "synchronous";
+  for (const l of links().filter((x) => x.kind === "work" && (!process.env.SMOKE_PROBE_PLATFORM || x.platform === process.env.SMOKE_PROBE_PLATFORM))) {
     const [pl] = await c.db.select({ id: platforms.platformId }).from(platforms).where(eq(platforms.platformCode, l.platform));
     const [t] = await c.db.insert(syncTasks).values({
       batchId: BigInt(b.insertId),
@@ -350,9 +354,9 @@ async function probe() {
       platform: l.platform,
       action: "media_stats_number",
       expectedResponse: "media_stats",
-      mode: "synchronous",
+      mode: probeMode,
       seq: 1,
-      request: buildRequest({ action: "media_stats_number", mode: "synchronous", locator: l.text }),
+      request: buildRequest({ action: "media_stats_number", mode: probeMode, locator: process.env.SMOKE_PROBE_CANONICAL ? `https://www.kuaishou.com/short-video/${canonical.get(l.idx)}` : l.text }),
       decode: (bytes) => decodeDetail(l.platform, bytes),
     });
     const row =
@@ -363,7 +367,7 @@ async function probe() {
     console.log("probe", l.idx, l.platform, js(row).slice(0, 220));
     await c.db.update(syncTasks).set({ status: "succeeded", finishedAt: new Date(), leaseOwner: null, leaseExpiresAt: null }).where(eq(syncTasks.taskId, BigInt(t.insertId)));
   }
-  save("probe", results);
+  save(probeMode === "asynchronous" ? "probe-async" : "probe", results);
   await c.pool.end();
 }
 

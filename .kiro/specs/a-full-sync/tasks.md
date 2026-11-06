@@ -533,7 +533,7 @@
 - [x] acceptance 自动项逐组对照完成：补了 H5、I8、J6、K3、K17、F5、A17、O4、R8、R5、R9、N7、B11、Q5、R7 共 15 条缺口的用例（A17 用 `reuse.ts` 改成 `logical_at` 的变异检查确认会失败）；仍有已登记的部分覆盖项（E23 数据库层、G2 快手运行期、P5、R2、R6 只读查询无 Capability）写在 acceptance「逐条结果」与「覆盖不了」；
 - [x] 规模演练：6,000 账号 / 三平台，规划 1.06 秒、执行 229 秒、峰值 RSS 403 MB、零重复任务，数字已回填 design §12.1；**演练发现并行 worker 下页投影事务死锁（多付费风险），已修**（`db/deadlock.ts`），见 acceptance「验收中发现并修复的缺口」；
 - [x] `./scripts/verify.sh` 通过（598 单元 / 569 数据库 + 1 个默认跳过的演练 / 17 Python）；
-- [ ] 测试 ECS 一次性 MySQL 容器上跑本 spec 的 `*.db.test.ts` 与演练（需要刘学奎授权，server-access 第 5 条）；
+- [x] 测试 ECS 一次性 MySQL 容器上跑本 spec 的 `*.db.test.ts` 与演练（刘学奎 2026-11-06 授权，之后测试机上的测试不再逐次征求）：569 个通过 / 含演练 570 个通过，数字见 design §12.1；入口 `./scripts/ecs-test.sh`；
 - [ ] 推送（按节奏第二次）、CI 绿、合并（合并提交写 run id 与 verify 结果）。
 
 **实施中的判断（自行决定项）**

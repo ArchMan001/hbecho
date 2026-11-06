@@ -714,6 +714,8 @@ B 域接入后只替换 `ActorContext` 的来源，不改调用方。审计沿�
 | 终态 | 12,000 个全部 `succeeded`；批次 `succeeded` |
 | 批次预算 实际 / 上限 | 调用数 12,000 / 25,000 = 0.48 |
 
+**测试 ECS（`ecs.g9i.2xlarge`，8 vCPU / 32 GiB，一次性 MySQL 8.4 容器 + `node:24-slim` 容器，同样的 6,000 账号演练）**：规划 1.36 秒（13 块，每块 ≤ 500）；12,000 个任务执行 253 秒（47.4 任务 / 秒）；vitest 进程 RSS 436 MB；node 容器内存峰值约 696 MiB、MySQL 容器约 692 MiB；12,000 个任务全部 `succeeded`，零重复；本 spec 的全部数据库测试 570 个通过（不含演练 569 个，用时 92 秒）。运行方式：`./scripts/ecs-test.sh start [--drill]`。
+
 **观察与处置**
 
 1. **并发 worker 下页投影事务死锁（已修）**：并发 4 时，约 5–9% 的列表页事务因 `ER_LOCK_DEADLOCK` 回滚（`contents` 与 `content_snapshots` 在唯一索引上「先 `SELECT … FOR UPDATE` 再 `INSERT`」，两个账号各持一把间隙锁后互等插入意向锁）。没有重试时整页作废、任务回队尾，**下一次尝试要重新请求供应商，多付一次钱**，而响应早已落在 ODS。修复：`src/db/deadlock.ts` 的 `retryOnDeadlock`，列表页事务整笔回滚后原样重跑（≤ 4 次，带抖动）；页事务本身是幂等的整笔操作。修复后 6,000 账号演练零死锁失败。**没有改成 `INSERT … ON DUPLICATE KEY UPDATE`**：试过只改 `contents` 一处，死锁转移到 `content_snapshots`；整页重试覆盖所有这类热点，改动更小。

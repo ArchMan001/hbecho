@@ -1,6 +1,6 @@
 # A 全量周期同步（a-full-sync）· 验收
 
-> **状态**：`implemented`（任务 0–10 本机离线验收完成；环境项与推送 / 合并待授权）
+> **状态**：`implemented`（任务 0–10 本机离线验收与测试 ECS 运行完成；真实供应商 / 真实 OSS 的环境项待批准式 smoke）
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -48,7 +48,8 @@
 | Q 组（FS-17） | 通过（Q1–Q5；Q5 的启动调用是静态检查，函数本身有单测） | `maintenance/maintenance.db.test.ts`、`raw-capture/retention.db.test.ts`、`media-archive/video.unit.test.ts`、`acceptance-boundaries.test.ts` |
 | R 组（FS-18、FS-20） | R1、R4–R9 通过；R2 只有 tuple 级登记，没有「三平台 × 动作」覆盖清单的机器断言；R3 见下方故障矩阵映射；R6 对写操作与按需入口成立，只读查询（`status` / `freshness` / `sample`）没有 Capability 校验（见「覆盖不了」） | `acceptance-boundaries.test.ts`、`tests/harness/fixtures.test.ts`、`sync-runner/scale-drill.db.test.ts`（手动）、`sync-ops/ops.db.test.ts` |
 | 手工项 MAN1–MAN6 | 待实施 | — |
-| 环境项 ENV-1～ENV-5 | 待实施 | — |
+| 环境项 ENV-1 | 通过（测试 ECS） | `scripts/ecs-test.sh`、design §12.1 |
+| 环境项 ENV-2～ENV-5 | 待实施（需批准预算 / 授权；ENV-5 保持 disabled） | — |
 
 故障矩阵（R3，FS-18.3）与现有用例的对应：
 
@@ -379,7 +380,7 @@
 
 | # | 需求 | 依赖 | 当前状态 |
 |---|---|---|---|
-| ENV-1 | FS-18 | 测试 ECS 一次性 MySQL 容器：本 spec 的 `*.db.test.ts` 与 6,000 账号演练 | 待实施（需刘学奎授权） |
+| ENV-1 | FS-18 | 测试 ECS 一次性 MySQL 容器：本 spec 的 `*.db.test.ts` 与 6,000 账号演练 | **已完成（2026-11-06，刘学奎授权）**：569 个数据库测试通过（92 秒），含演练 570 个通过；演练数字见 design §12.1；入口 `./scripts/ecs-test.sh` |
 | ENV-2 | FS-19 | 真实 AI Master：快手主页 / 列表 / 详情、三平台详情与评论、两页以上列表 | 待实施（需批准预算与 allowlist） |
 | ENV-3 | FS-11.7 | ffmpeg ≥ 7.1 + 真实 FastAPI 外壳：图片标准化与音频抽取 | 待实施（本机有则 `verify` 第 9 步覆盖；CI 不验 Python 侧） |
 | ENV-4 | FS-11.6 | 真实 OSS（测试桶）：分片上传与签名 URL 读取 | 待实施（需授权；`media` 桶不设过期规则） |

@@ -355,6 +355,7 @@
 
 1. 系统 SHALL 在 capability 表中登记快手 × `media_user_info` / `user_video_list` / `media_stats_number` 的同步模式与 `media_user_info` / `media_stats_number` 的异步模式为 `smoke_verified`（raw12、raw13、raw14），快手 × `user_video_list` 异步 SHALL 登记为 provider-failed 并保持 disabled；快手 × `post_comments_list` SHALL 不登记，任何调用在发请求前被拒绝。
 2. 账号标识命名空间 SHALL 为 `kuaishou.user_id`（主页与列表作者同一空间），SHALL NOT 做第二标识绑定，昵称与主页链接不是绑定证据。
+   > **待决（2026-11-06 smoke）**：该前提被真实数据推翻——同一快手账号的主页响应会在数字 ID（`2904903906`）与 `3x…` ID 之间变化。4 个成功入库的快手账号里 2 个出现 `profile_uid_mismatch`（主页与列表被拦下）。本条在决定前保持原样（不默认冻结任何别名绑定方案），按本条运行时约一半的快手账号会被反复拦下，见 [smoke 报告](smoke-report-2026-11-06.md) §4.2。
 3. 快手列表游标 SHALL 作为字符串保真保存与回发（如 `1.785394950371E12`）。
 4. 当快手列表返回 `max_cursor='no_more'` 且 `has_more=true`（raw12 K3、K6）时，系统 SHALL 停止翻页、记质量问题 `cursor_no_more_with_has_more`（D-53），并按「列表自然结束」处理锚点与缺口；SHALL NOT 回发 `no_more`。空列表 + `no_more` SHALL 等价于空窗口（FS-5 第 7 条）。
 5. 快手主页 SHALL NOT 产生头像、背景引用；快手列表 `video.url` / `audio.url` SHALL NOT 作为视频或音频下载来源（D-48）。

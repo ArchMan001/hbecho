@@ -162,4 +162,4 @@ ls /tmp/fullsync-smoke/          # intake-*.json、round.json、probe*.json、re
 docker exec hbecho-fullsync-smoke-mysql ...   # 库 hbecho_fullsync_smoke，表 ods_provider_calls / sync_tasks
 ```
 
-`/tmp/fullsync-smoke/` 与 smoke 数据库不进仓库，会随本机清理消失；smoke 报告里的数字是当时从该库查询所得。审查者需要原始调用级证据时，应在清理之前查询 `ods_provider_calls`（含 `call_status`、`outcome`、`elapsed_seconds`）。
+调用级证据已导出到 [`smoke-calls-2026-11-06.tsv`](smoke-calls-2026-11-06.tsv)（249 行，不含 URL / 密钥 / 载荷）。`/tmp/fullsync-smoke/` 与 smoke 数据库仍不进仓库（其中 `.pw`、`db.env` 是一次性本机测试库的口令，清理容器时一并删除）。

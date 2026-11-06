@@ -7,8 +7,9 @@ export type EvidenceLabel = "fixture_observed" | "smoke_verified" | "provider_fa
 
 export interface ManifestEntry {
   id: string;
-  platform: "douyin" | "xiaohongshu";
-  action: "media_user_info" | "user_video_list";
+  platform: "douyin" | "xiaohongshu" | "kuaishou";
+  /** 请求动作（capability 的键）；详情的响应动作是 media_stats，见 observed.action */
+  action: "media_user_info" | "user_video_list" | "media_stats_number" | "post_comments_list";
   mode: "sync" | "async";
   role: "response" | "submit" | "poll";
   source: string;
@@ -17,6 +18,8 @@ export interface ManifestEntry {
   evidenceLabel: EvidenceLabel;
   use: "decoder_input" | "capability_evidence" | "failure_sample";
   observed: { httpStatus: number | null; taskStatus: string | null; action: string | null; errorCode: string | null };
+  /** 已知但尚未关闭的证据缺口；不能被实现默认值静默填平。 */
+  knownGaps?: string[];
 }
 
 export interface Manifest {

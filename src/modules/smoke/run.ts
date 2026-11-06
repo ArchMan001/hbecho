@@ -138,6 +138,7 @@ export async function runSmoke(deps: SmokeDeps, auth: SmokeAuthorized): Promise<
   const [batch] = await db.insert(syncBatches).values({
     batchKey: jcsSha256({ kind: "smoke", plan_sha256: auth.planSha256, started_at: startedAt.toISOString() } as JcsValue),
     triggerType: "manual",
+    purpose: "intake",
     logicalAt: startedAt,
     status: "running",
     settingsVersion: 0n,

@@ -29,6 +29,11 @@ export class FixtureTransport implements ProviderTransport {
     this.routes.push({ matcher, response });
   }
 
+  /** 清空已登记的路由（换一周的响应）；calls / rejected 保留，便于累计断言。 */
+  clearRoutes(): void {
+    this.routes.length = 0;
+  }
+
   async send(request: ProviderRequest): Promise<ProviderResponse> {
     const route = this.routes.find(
       ({ matcher }) =>

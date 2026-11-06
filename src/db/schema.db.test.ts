@@ -22,6 +22,7 @@ import { BIG_STAFF_ID, platformIdOf, providerIdOf, seedOrg } from "../../tests/h
 import {
   accountProfileSnapshots,
   contentDiscoveries,
+  contentSnapshots,
   contents,
   externalAccountIdentifiers,
   externalAccounts,
@@ -33,6 +34,7 @@ import {
   ossObjects,
   platforms,
   staffAccountAssignments,
+  syncBatches,
   syncTasks,
 } from "./schema";
 
@@ -40,11 +42,11 @@ const NOW = new Date("2026-11-04T08:00:00.123456Z");
 const t = useTestDb();
 
 describe("迁移与参考数据", () => {
-  it("28 张业务表全部建成，没有 ENUM 列，没有 ON DELETE CASCADE", async () => {
+  it("29 张业务表全部建成，没有 ENUM 列，没有 ON DELETE CASCADE", async () => {
     const [tables] = await t.pool.query(
       "SELECT table_name n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type='BASE TABLE' AND table_name <> '__drizzle_migrations'",
     );
-    expect((tables as unknown[]).length).toBe(28);
+    expect((tables as unknown[]).length).toBe(29);
     const [enums] = await t.pool.query("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND data_type = 'enum'");
     expect(enums).toEqual([]);
     const [rules] = await t.pool.query(
@@ -53,7 +55,7 @@ describe("迁移与参考数据", () => {
     const byRule = Object.fromEntries((rules as Array<{ r: string; c: number | string }>).map((x) => [x.r, Number(x.c)]));
     expect(byRule.CASCADE).toBeUndefined();
     // 只有「指向一年期调用/任务的长期引用」使用 SET NULL（v2 §5.3）
-    expect(byRule["SET NULL"]).toBe(9);
+    expect(byRule["SET NULL"]).toBe(10); // 含 comments.last_provider_call_id
   });
 
   it("迁移种入四个平台和 aimaster 供应商；不种 sync_settings（取值未定，不静默冻结）", async () => {
@@ -707,5 +709,68 @@ describe("质量问题与批次", () => {
   it("查询与 SQL 一致：用 drizzle 读回 bigint 与 sql 表达式可用", async () => {
     const [r] = await t.db.select({ one: sql<number>`1` }).from(platforms).limit(1);
     expect(Number(r!.one)).toBe(1);
+  });
+});
+
+describe("a-full-sync：批次用途、媒资完成时间、种子快照、快手标识（v2 R1 / R4 / R5 / R6）", () => {
+  it("purpose 只接受四个值，且没有默认值：漏写被 NOT NULL 拒绝，不会静默变成 intake", async () => {
+    for (const purpose of ["full", "supplement", "demand", "intake"]) {
+      await insertBatch(t.db, NOW, `purpose-${purpose}`).then(async (id) => {
+        await t.db.update(syncBatches).set({ purpose }).where(eq(syncBatches.batchId, id));
+      });
+    }
+    const id = await insertBatch(t.db, NOW, "purpose-bad");
+    await expectRejected(t.db.update(syncBatches).set({ purpose: "scheduled" }).where(eq(syncBatches.batchId, id)), "ck_sync_batches_purpose");
+    await expect(
+      t.pool.query(
+        "INSERT INTO sync_batches (batch_key, trigger_type, logical_at, status, settings_version, settings_snapshot, created_at, updated_at) VALUES (UNHEX(SHA2('no-purpose',256)), 'manual', ?, 'running', 1, '{}', ?, ?)",
+        [NOW, NOW, NOW],
+      ),
+    ).rejects.toThrow(/purpose/);
+    const [col] = await t.pool.query("SELECT column_default d, is_nullable n FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sync_batches' AND column_name = 'purpose'");
+    expect(col).toEqual([{ d: null, n: "NO" }]);
+  });
+  it("media_finished_at 可空，写入后与 finished_at 互不影响", async () => {
+    const id = await insertBatch(t.db, NOW, "media-finished");
+    const [before] = await t.db.select().from(syncBatches).where(eq(syncBatches.batchId, id));
+    expect(before!.mediaFinishedAt).toBeNull();
+    const later = new Date(NOW.getTime() + 3600_000);
+    await t.db.update(syncBatches).set({ mediaFinishedAt: later }).where(eq(syncBatches.batchId, id));
+    const [after] = await t.db.select().from(syncBatches).where(eq(syncBatches.batchId, id));
+    expect(after!.mediaFinishedAt!.getTime()).toBe(later.getTime());
+    expect(after!.finishedAt).toBeNull();
+  });
+  it("种子快照：非空时必须 list_observed=FALSE 且 detail_observed=TRUE；指向的种子不能被物理删除", async () => {
+    const b1 = await insertBatch(t.db, NOW, "seed-b1");
+    const b2 = await insertBatch(t.db, NOW, "seed-b2");
+    const acc = await insertAccount(t.db, "douyin", NOW);
+    const c = await insertContent(t.db, { platform: "douyin", accountId: acc, platformContentId: "seed-1", now: NOW });
+    const seed = await insertContentSnapshot(t.db, { batchId: b1, contentId: c, now: NOW, status: "finalized" });
+    const demand = await insertContentSnapshot(t.db, { batchId: b2, contentId: c, now: NOW });
+    const setSeed = (extra: object) =>
+      t.db.update(contentSnapshots).set({ seededFromSnapshotId: seed, ...extra }).where(eq(contentSnapshots.contentSnapshotId, demand));
+    await expectRejected(setSeed({}), "ck_content_snapshots_seeded"); // detail_observed 仍是 FALSE
+    await expectRejected(setSeed({ listObserved: true, detailObserved: true }), "ck_content_snapshots_seeded");
+    await setSeed({ listObserved: false, detailObserved: true });
+    const [row] = await t.db.select().from(contentSnapshots).where(eq(contentSnapshots.contentSnapshotId, demand));
+    expect(row!.seededFromSnapshotId).toBe(seed);
+    await expectRejected(t.db.delete(contentSnapshots).where(eq(contentSnapshots.contentSnapshotId, seed)), "fk_content_snap_seeded_from");
+  });
+  it("kuaishou.user_id 可以登记为账号标识，同 namespace 同文本唯一", async () => {
+    const accountId = await insertAccount(t.db, "kuaishou", NOW);
+    const ins = (v: string) =>
+      t.db.insert(externalAccountIdentifiers).values({
+        accountId,
+        namespaceCode: "kuaishou.user_id",
+        identifierValue: v,
+        identifierSha256: sha(v),
+        bindingMethod: "same_payload",
+        confidence: "observed",
+        firstSeenAt: NOW,
+        lastSeenAt: NOW,
+        createdAt: NOW,
+      });
+    await ins("3xabcdef0123456");
+    await expectRejected(ins("3xabcdef0123456"), "uq_identifiers_namespace_sha");
   });
 });

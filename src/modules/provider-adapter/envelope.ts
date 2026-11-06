@@ -9,10 +9,12 @@ import {
 import { isJsonObject, parseJson, type JsonObject } from "./lossless-json";
 import { readText, type ValueState } from "./value-state";
 
-/** 请求 action 与期望的响应 action。media_stats_number 才会不同，不在本 spec 范围。 */
-const EXPECTED_RESPONSE_ACTION: Record<AiMasterAction, string> = {
+/** 请求 action 与期望的响应 action。只有详情不同：请求 media_stats_number，响应 media_stats（requested / expected / actual 分列）。 */
+export const EXPECTED_RESPONSE_ACTION: Record<AiMasterAction, string> = {
   media_user_info: "media_user_info",
   user_video_list: "user_video_list",
+  media_stats_number: "media_stats",
+  post_comments_list: "post_comments_list",
 };
 
 type Opened =

@@ -41,7 +41,7 @@
 | M1 | 通过：业务确认可接受（含回流文件里 `'--` 的公式前缀），2026-11-05 | `tmp/md-demo/`（本机，不入库） |
 | M2 | 通过：AI 评审（刘学奎授权，审计与待办由 AI 阅读）——待确认列表含门店编码/名称/品牌/经销商/板块，`open`/`resolved` 与 `resolution_note` 一目了然，疑似不完整提示清楚 | 同上 |
 | M4 | 通过：AI 评审——每条事件含 actor、时间、对象、批次、前后状态，无整行原文与文件内容；评审中发现 `store_closed` 只有内部 ID，已补 `target_code`（门店编码）使事件自身可读 | `closure.db.test.ts`、`confirm.db.test.ts` |
-| M5 | 部分通过：3 / 4 / 42 / 84 与种子一致（自动测试与演练均已核对）；品牌 / 板块编码命名（`hitachi/hisense/york_vrf`、`{分公司}-water/home`）仍待刘学奎确认 | design §14 第 1 项 |
+| M5 | 通过：3 / 4 / 42 / 84 与种子一致（自动测试与演练均已核对）；品牌 / 板块编码命名（`hitachi/hisense/york_vrf`、`{分公司}-water/home`）已由刘学奎确认（2026-11-05） | design §14 第 1 项 |
 | ENV-1 / ENV-2 | 通过（2026-11-05，测试 ECS 一次性容器） | tasks 实施记录 |
 
 ## 自动项

@@ -1,5 +1,6 @@
 // 调用 / 轮询 / 点数的硬上限与成本估算（design §15.2、R17）。达到上限在下一次调用**前**封口，不是调用后告警。
-// 点数表取自 A v1.10 §6.2（抖音主页 10、列表 10/页；小红书主页 15、列表 15/页）；失败、超时、429 与异步轮询不计点；
+// 点数表取自 A §6.2 / 计费点数表.md（抖音：主页 10、列表 10/页、详情 10/条、评论 5/页；小红书：均为 15；快手：主页 10、列表 10/页、详情 10/条，评论不支持）；
+// 失败、超时、429 与异步轮询不计点；
 // 单价 0.02 元/点（2026-11-04）。QPS 未知。
 import { and, eq, inArray, ne, or } from "drizzle-orm";
 import type { Db } from "../../db/client";
@@ -7,8 +8,10 @@ import { odsProviderCalls, platforms, syncTasks } from "../../db/schema";
 import type { PolicyContext, SendPolicy } from "../raw-capture";
 
 export const POINTS: Readonly<Record<string, Readonly<Record<string, number>>>> = Object.freeze({
-  douyin: Object.freeze({ media_user_info: 10, user_video_list: 10 }),
-  xiaohongshu: Object.freeze({ media_user_info: 15, user_video_list: 15 }),
+  douyin: Object.freeze({ media_user_info: 10, user_video_list: 10, media_stats_number: 10, post_comments_list: 5 }),
+  xiaohongshu: Object.freeze({ media_user_info: 15, user_video_list: 15, media_stats_number: 15, post_comments_list: 15 }),
+  // 快手评论不支持：不登记，pointsOf 为 0 只是「没有价目」，真正的拒绝在 capability 门控（D-51）
+  kuaishou: Object.freeze({ media_user_info: 10, user_video_list: 10, media_stats_number: 10 }),
 });
 export const YUAN_PER_POINT = 0.02;
 

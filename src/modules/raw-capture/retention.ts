@@ -36,6 +36,8 @@ export async function cleanupExpired(deps: {
   store: ObjectStore;
   clock: Clock;
   batchLimit?: number;
+  /** 本次运行最多清理多少个 payload / 任务（定时清理有界，剩余留给下一次；缺省不限）。 */
+  maxPerRun?: number;
   onEvent?: (e: CleanupEvent) => void;
 }): Promise<CleanupReport> {
   const { db, store, clock } = deps;
@@ -52,7 +54,9 @@ export async function cleanupExpired(deps: {
   };
   const skip = new Set<bigint>(); // 本次运行内不再尝试的调用（被引用、或远端删除失败）
 
+  const cap = deps.maxPerRun ?? Number.POSITIVE_INFINITY;
   for (;;) {
+    if (report.payloadsDeleted >= cap) break;
     // 1) 候选调用：自身到期，且它的全部 payload 都已到期（多 payload 按整体判断）
     const candidates = await db
       .select({ id: odsProviderCalls.providerCallId })
@@ -65,7 +69,7 @@ export async function cleanupExpired(deps: {
         ),
       )
       .orderBy(odsProviderCalls.providerCallId)
-      .limit(limit);
+      .limit(Number.isFinite(cap) ? Math.max(1, Math.min(limit, cap - report.payloadsDeleted)) : limit);
     let ids = candidates.map((c) => c.id);
     if (ids.length === 0) break;
 
@@ -131,7 +135,7 @@ export async function cleanupExpired(deps: {
   // 6) 任务：到期、终态、且已没有任何调用
   const expiredTasks = await db.select({ id: syncTasks.taskId, status: syncTasks.status }).from(syncTasks).where(lte(syncTasks.expiresAt, now));
   report.skippedNonTerminalTasks = expiredTasks.filter((t) => !TERMINAL.includes(t.status)).length;
-  const terminalIds = expiredTasks.filter((t) => TERMINAL.includes(t.status)).map((t) => t.id);
+  const terminalIds = expiredTasks.filter((t) => TERMINAL.includes(t.status)).map((t) => t.id).slice(0, Number.isFinite(cap) ? cap : undefined);
   for (let i = 0; i < terminalIds.length; i += limit) {
     const chunk = terminalIds.slice(i, i + limit);
     const [td] = await db
@@ -152,7 +156,7 @@ export async function cleanupExpired(deps: {
  * ODS orphan sweeper：上传成功但数据库短事务失败时遗留的对象。只扫描 ods/ 前缀（用途限定，正式媒资不受影响），
  * 回收「超过宽限期且没有 oss_objects 记录」的对象。宽限期保护正在上传、事务尚未提交的对象。
  */
-export async function sweepOrphans(deps: { db: Db; store: ObjectStore; clock: Clock; graceMs: number; prefix?: string }): Promise<{ deleted: number; kept: number }> {
+export async function sweepOrphans(deps: { db: Db; store: ObjectStore; clock: Clock; graceMs: number; prefix?: string; /** 本次最多删多少个（定时清扫有界）；ponytail: 仍会列出前缀下全部对象，对象数过万时改成按页清扫。 */ maxDelete?: number }): Promise<{ deleted: number; kept: number }> {
   const cutoff = deps.clock.now().getTime() - deps.graceMs;
   const listed = await deps.store.list(deps.prefix ?? ODS_PREFIX);
   const old = listed.filter((o) => o.createdAt.getTime() <= cutoff);
@@ -163,6 +167,7 @@ export async function sweepOrphans(deps: { db: Db; store: ObjectStore; clock: Cl
     const knownKeys = new Set(known.map((k) => k.key));
     for (const o of chunk) {
       if (knownKeys.has(o.key)) continue;
+      if (deps.maxDelete !== undefined && deleted >= deps.maxDelete) break;
       await deps.store.delete(o.key);
       deleted++;
     }

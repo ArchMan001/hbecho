@@ -5,7 +5,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { Db, DbTx } from "../../db/client";
 import { mediaStaff, platforms, syncBatches, syncSettings, syncTasks } from "../../db/schema";
-import { jcsSha256Hex } from "../canonical-json";
+import { jcsSha256, jcsSha256Hex } from "../canonical-json";
 import { UnsupportedCapabilityError, capabilityGate, type Platform } from "../provider-adapter";
 import type { Clock } from "../raw-capture";
 import { inScope, requireCapability, type ActorContext } from "./actor";
@@ -33,9 +33,20 @@ export interface SubmitOutcome {
 
 export interface TracerCommands {
   submit(input: unknown, actor: ActorContext): Promise<SubmitOutcome>;
+  /**
+   * 外部监控账号的入口根任务（FS-13.5；没有 MediaStaff，subject_type='external'）。**不做授权**：调用方（sync-ops.externalAdd）
+   * 必须先校验 monitor.external.manage 与超管。只校验输入、平台与主页 capability，再走和 submit 同一套幂等 / 去重。
+   */
+  submitExternal(input: { platform: string; homeLocator: string; idempotencyKey: string; actorId: string }): Promise<SubmitOutcome>;
   cancel(rootTaskId: string, actor: ActorContext): Promise<TracerStatusFound>;
 }
 
+const externalInput = z.strictObject({
+  platform: z.string().min(1).max(64),
+  homeLocator: z.string().min(1).max(2048).refine((s) => s.isWellFormed(), "含孤立代理项"),
+  idempotencyKey: z.string().min(1).max(200),
+  actorId: z.string().min(1).max(128),
+});
 const TERMINAL = ["succeeded", "succeeded_with_gap", "failed", "dead", "cancelled"] as const;
 const isTerminal = (s: string) => (TERMINAL as readonly string[]).includes(s);
 
@@ -134,7 +145,8 @@ export function createTracerCommands(deps: { db: Db; clock: Clock; audit: AuditS
       callerKeySha: Buffer;
       commandSha: Buffer;
       platformId: bigint;
-      staffId: bigint;
+      /** null = 外部监控账号。 */
+      staffId: bigint | null;
       locator: string;
       effectiveLimit: number;
       settings: typeof syncSettings.$inferSelect;
@@ -183,6 +195,7 @@ export function createTracerCommands(deps: { db: Db; clock: Clock; audit: AuditS
     const [batch] = await tx.insert(syncBatches).values({
       batchKey: effectKey("tracer_manual_batch"),
       triggerType: "manual",
+      purpose: "intake",
       logicalAt: now,
       status: "running",
       settingsVersion: s.configVersion,
@@ -211,7 +224,7 @@ export function createTracerCommands(deps: { db: Db; clock: Clock; audit: AuditS
       providerId: providerRow.providerId,
       platformId: p.platformId,
       requestedAction: "resolve_account",
-      subjectType: "media_staff",
+      subjectType: p.staffId === null ? "external" : "media_staff",
       subjectId: p.staffId,
       subjectKey: p.locator,
       subjectKeySha256: sha256Of(p.locator),
@@ -274,7 +287,35 @@ export function createTracerCommands(deps: { db: Db; clock: Clock; audit: AuditS
     }
   }
 
-  return { submit, cancel };
+  async function submitExternal(i: { platform: string; homeLocator: string; idempotencyKey: string; actorId: string }): Promise<SubmitOutcome> {
+    const parsed = externalInput.safeParse(i);
+    if (!parsed.success) throw new TracerError("invalid_input", parsed.error.issues.map((x) => `${x.path.join(".") || "$"}: ${x.message}`).join("; "));
+    const input = parsed.data;
+    try {
+      capabilityGate.require({ platform: input.platform as Platform, action: "media_user_info", mode: config.modes.media_user_info, environment: config.environment });
+    } catch (e) {
+      if (e instanceof UnsupportedCapabilityError) throw new TracerError("unsupported_capability", e.message);
+      throw e;
+    }
+    const [platform] = await db.select().from(platforms).where(eq(platforms.platformCode, input.platform));
+    if (!platform) throw new TracerError("unsupported_capability", `平台 ${input.platform} 未登记`);
+    const [settings] = await db.select().from(syncSettings).where(eq(syncSettings.settingsId, 1));
+    if (!settings) throw new TracerError("sync_settings_missing", "sync_settings 未配置");
+    // 外部型的命令摘要没有专员字段，用自己的 closed schema（版本号不同，不会和专员型命令碰撞）
+    const commandSha = jcsSha256({ v: "sync-external-add.v1", platform_id_decimal: platform.platformId.toString(), home_locator_exact_utf8: input.homeLocator });
+    const callerKeySha = sha256Of(input.idempotencyKey);
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await db.transaction((tx) =>
+          insertOrReuse(tx, { actorId: input.actorId, callerKeySha, commandSha, platformId: platform.platformId, staffId: null, locator: input.homeLocator, effectiveLimit: settings.initialContentLimit, settings }),
+        );
+      } catch (e) {
+        if (attempt === 0 && isDuplicateKey(e)) continue;
+        throw e;
+      }
+    }
+  }
+  return { submit, submitExternal, cancel };
 }
 
 function pick(meta: Partial<AuditEvent>): Partial<AuditEvent> {

@@ -29,6 +29,20 @@
       "when": 1793847865822,
       "tag": "0003_import_batches_and_row_results",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1793870131037,
+      "tag": "0004_full_sync_batch_purpose_and_seed",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1793887243043,
+      "tag": "0005_full_sync_comments",
+      "breakpoints": true
     }
   ]
 }

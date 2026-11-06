@@ -14,7 +14,7 @@ docker info >/dev/null 2>&1 || { echo "✗ docker daemon 没有运行" >&2; exit
 name="hbecho-test-mysql-$$"
 pw="$(openssl rand -hex 12)" # 一次性口令，容器删除即失效
 
-cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
+cleanup() { docker rm -f -v "$name" >/dev/null 2>&1 || true; }
 trap cleanup EXIT INT TERM
 
 docker run -d --rm --name "$name" \

@@ -39,3 +39,32 @@ export interface NormalizedImage {
 export interface ImageConverter {
   toNormalizedJpeg(input: { bytes: Uint8Array; mimeType: string }): Promise<NormalizedImage>;
 }
+
+// ── 视频 / 音频（a-full-sync 任务 7）──
+
+export interface VideoStreamResponse {
+  status: number;
+  contentType: string | null;
+  contentLength: number | null;
+  /** 3xx 的目标地址。 */
+  location: string | null;
+  /** 2xx 的响应体：按块产出，调用方边收边写临时文件，内存不随文件大小增长。 */
+  body: AsyncIterable<Uint8Array> | null;
+}
+/**
+ * 单跳流式 GET：**不跟随重定向**（由 downloadVideoToFile 逐跳校验后再请求）。
+ * 真实实现必须：① 连接前解析 DNS 并拒绝私网 / 回环 / 链路本地地址；② 超时抛 MediaFailure("timeout")；
+ * ③ 消费方停止迭代（超限中止）时关闭连接。
+ */
+export interface VideoTransport {
+  stream(url: string, opts: { timeoutMs: number; maxBytes: number }): Promise<VideoStreamResponse>;
+}
+
+export type AudioExtraction = { kind: "ok"; bytes: Uint8Array; durationMs: number | null } | { kind: "no_audio_track" };
+/**
+ * Python 能力服务的音频抽取（ADR-0012，FS-11.7）。sourceUrl 是已入库视频的短期签名 URL（服务不持有 OSS 凭证）。
+ * 服务不可用抛 ConverterError("unavailable")（可重试）；无法抽取抛 ConverterError("unsupported")。
+ */
+export interface CapabilityClient {
+  extractAudio(input: { sourceUrl: string; maxBytes: number }): Promise<AudioExtraction>;
+}

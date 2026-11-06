@@ -1,6 +1,6 @@
 // 完整返回页投影（R9）：已返回的每条条目都处理，不按本地 limit 截断；内容按被观察账号保存；
 // 整页在调用方给定的同一个事务里完成，所以「全部终态之后才推进检查点」天然成立。
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { DbTx } from "../../db/client";
 import { contentDiscoveries, contentSnapshots, contents, mediaReferences } from "../../db/schema";
 import type { ListData, ListEntry } from "../provider-adapter";
@@ -30,6 +30,16 @@ export interface ProjectPageInput {
   pageNo: number;
   page: ListData;
   now: Date;
+  /**
+   * final（默认，tracer 单页路径）：写 finalized 并立刻选 current。
+   * building（a-full-sync 多页）：写 building、不选 current；同一批次同一内容跨页重复时合并，discovery 保留首次出现。
+   * 定稿与 current 由账号级封口负责（sync-runner/seal.ts）。
+   */
+  mode?: "final" | "building";
+  /** building 模式：此前各页已返回的条目数，absolute_position = positionOffset + 页内位置。默认 0。 */
+  positionOffset?: number;
+  /** building 模式的封面钩子（任务 7 的「封面首次入库」规则）：返回 true 则不为该内容建 cover 引用。默认不跳过。 */
+  skipCover?: (tx: DbTx, contentId: bigint) => Promise<boolean>;
 }
 
 export interface ProjectPageResult {
@@ -55,19 +65,22 @@ export async function projectContentPage(tx: DbTx, p: ProjectPageInput): Promise
   const processedEntries = merged.reduce((n, m) => n + m.positions.length, 0) + unprojectable.length;
   const base = { returnedEntries: p.page.entries.length, processedEntries, unprojectable, duplicates };
 
+  const building = p.mode === "building";
+  const offset = p.positionOffset ?? 0;
   const contentIds: bigint[] = [];
   for (const m of merged) {
     const contentId = await upsertContent(tx, p, m);
     contentIds.push(contentId);
-    const snapshotId = await insertSnapshot(tx, p, contentId, m);
-    await insertCover(tx, p, snapshotId, m);
-    await tx.insert(contentDiscoveries).values({
+    const snapshotId = building ? await upsertBuildingSnapshot(tx, p, contentId, m) : await insertSnapshot(tx, p, contentId, m, "finalized");
+    if (!building) await insertCover(tx, p, snapshotId, m);
+    else if (!(await p.skipCover?.(tx, contentId)) && !(await hasCover(tx, snapshotId))) await insertCover(tx, p, snapshotId, m);
+    const discovery = {
       batchId: p.batchId,
       assignmentId: p.assignmentId,
       contentId,
       pageNo: p.pageNo,
       positionInPage: m.firstPosition,
-      absolutePosition: m.firstPosition,
+      absolutePosition: offset + m.firstPosition,
       isPotentiallyPinned: p.pageNo === 0 && m.firstPosition < PINNED_POSITIONS,
       discoveredAt: p.receivedAt,
       sourceProviderCallId: p.sourceProviderCallId,
@@ -75,8 +88,11 @@ export async function projectContentPage(tx: DbTx, p: ProjectPageInput): Promise
       ownerStoreId: p.owner?.storeId ?? null,
       ownerBrandId: p.owner?.brandId ?? null,
       createdAt: p.now,
-    });
-    await selectCurrentContentSnapshot(tx, contentId, snapshotId, p.now);
+    };
+    // building：跨页重复保留首次出现的发现（FS-5.11）
+    if (building) await tx.insert(contentDiscoveries).values(discovery).onDuplicateKeyUpdate({ set: { discoveryId: sql`discovery_id` } });
+    else await tx.insert(contentDiscoveries).values(discovery);
+    if (!building) await selectCurrentContentSnapshot(tx, contentId, snapshotId, p.now);
   }
   return { ...base, projectedContents: merged.length, contentIds };
 }
@@ -115,7 +131,9 @@ async function upsertContent(tx: DbTx, p: ProjectPageInput, m: MergedContent): P
   return BigInt(res.insertId);
 }
 
-async function insertSnapshot(tx: DbTx, p: ProjectPageInput, contentId: bigint, m: MergedContent): Promise<bigint> {
+type SnapshotValues = typeof contentSnapshots.$inferInsert;
+
+function snapshotValues(p: ProjectPageInput, contentId: bigint, m: MergedContent, status: "building" | "finalized"): SnapshotValues {
   const e: ListEntry = m.entry;
   const like = countColumns(e.metrics.like);
   const comment = countColumns(e.metrics.comment);
@@ -125,10 +143,10 @@ async function insertSnapshot(tx: DbTx, p: ProjectPageInput, contentId: bigint, 
   const duration = decimalColumns(e.durationSeconds);
   const authorId = e.author.id.state === "value" ? e.author.id.value : null;
   const shareUrl = textOrNull(e.shareUrl);
-  const [res] = await tx.insert(contentSnapshots).values({
+  return {
     batchId: p.batchId,
     contentId,
-    snapshotStatus: "finalized",
+    snapshotStatus: status,
     returnedAuthorNamespaceCode: authorId === null ? null : e.author.namespace,
     returnedAuthorIdentifier: authorId,
     returnedAuthorName: fit(textOrNull(e.authorName), 512),
@@ -163,11 +181,84 @@ async function insertSnapshot(tx: DbTx, p: ProjectPageInput, contentId: bigint, 
     snapshotAt: p.receivedAt,
     mergePolicyVersion: MERGE_POLICY_VERSION,
     listAdapterVersion: p.adapterVersion,
-    finalizedAt: p.now,
+    finalizedAt: status === "finalized" ? p.now : null,
     createdAt: p.now,
     updatedAt: p.now,
-  });
+  };
+}
+
+async function insertSnapshot(tx: DbTx, p: ProjectPageInput, contentId: bigint, m: MergedContent, status: "building" | "finalized"): Promise<bigint> {
+  const [res] = await tx.insert(contentSnapshots).values(snapshotValues(p, contentId, m, status));
   return BigInt(res.insertId);
+}
+
+type CountPair = { value: bigint | null; state: string };
+/** 后到的有效值（含真实 0）覆盖；后到的非有效值不擦除先到的有效值（与 merge.ts 的 later 同一规则）。 */
+const laterPair = (prev: CountPair, next: CountPair): CountPair => (next.state === "value" || prev.state !== "value" ? next : prev);
+
+/** building 模式：同一批次同一内容的快照只有一行，跨页重复时按 FS-6.6 合并；已定稿的行不改写。 */
+async function upsertBuildingSnapshot(tx: DbTx, p: ProjectPageInput, contentId: bigint, m: MergedContent): Promise<bigint> {
+  const [prev] = await tx
+    .select()
+    .from(contentSnapshots)
+    .where(and(eq(contentSnapshots.batchId, p.batchId), eq(contentSnapshots.contentId, contentId)))
+    .for("update");
+  if (!prev) return insertSnapshot(tx, p, contentId, m, "building");
+  if (prev.snapshotStatus !== "building") return prev.contentSnapshotId;
+
+  const next = snapshotValues(p, contentId, m, "building");
+  const pair = (v: keyof SnapshotValues, s: keyof SnapshotValues, pv: bigint | null, ps: string) =>
+    laterPair({ value: pv, state: ps }, { value: next[v] as bigint | null, state: next[s] as string });
+  const play = pair("playValue", "playState", prev.playValue, prev.playState);
+  const like = pair("likeValue", "likeState", prev.likeValue, prev.likeState);
+  const comment = pair("commentValue", "commentState", prev.commentValue, prev.commentState);
+  const collect = pair("collectValue", "collectState", prev.collectValue, prev.collectState);
+  const share = pair("shareValue", "shareState", prev.shareValue, prev.shareState);
+  const durationNext = next.durationState === "value" || prev.durationState !== "value";
+  const author = next.returnedAuthorIdentifier != null ? next : prev; // 标识成对更新
+  const shareUrl = next.shareUrl != null ? next : prev;
+  await tx
+    .update(contentSnapshots)
+    .set({
+      returnedAuthorNamespaceCode: author.returnedAuthorNamespaceCode ?? null,
+      returnedAuthorIdentifier: author.returnedAuthorIdentifier ?? null,
+      returnedAuthorName: next.returnedAuthorName ?? prev.returnedAuthorName,
+      publishedAt: next.publishedAt ?? prev.publishedAt,
+      title: next.title ?? prev.title,
+      body: next.body ?? prev.body,
+      tagText: next.tagText ?? prev.tagText,
+      publishLocation: next.publishLocation ?? prev.publishLocation,
+      relatedSearchTerms: next.relatedSearchTerms ?? prev.relatedSearchTerms,
+      shareUrl: shareUrl.shareUrl ?? null,
+      shareUrlSha256: shareUrl.shareUrlSha256 ?? null,
+      durationValue: durationNext ? (next.durationValue ?? null) : prev.durationValue,
+      durationState: durationNext ? next.durationState : prev.durationState,
+      playValue: play.value,
+      playState: play.state,
+      likeValue: like.value,
+      likeState: like.state,
+      commentValue: comment.value,
+      commentState: comment.state,
+      collectValue: collect.value,
+      collectState: collect.state,
+      shareValue: share.value,
+      shareState: share.state,
+      lastListProviderCallId: p.sourceProviderCallId,
+      listResponseReceivedAt: p.receivedAt,
+      listAdapterVersion: p.adapterVersion,
+      updatedAt: p.now,
+    })
+    .where(and(eq(contentSnapshots.contentSnapshotId, prev.contentSnapshotId), eq(contentSnapshots.snapshotStatus, "building")));
+  return prev.contentSnapshotId;
+}
+
+async function hasCover(tx: DbTx, contentSnapshotId: bigint): Promise<boolean> {
+  const rows = await tx
+    .select({ id: mediaReferences.mediaReferenceId })
+    .from(mediaReferences)
+    .where(and(eq(mediaReferences.contentSnapshotId, contentSnapshotId), eq(mediaReferences.role, "cover")))
+    .limit(1);
+  return rows.length > 0;
 }
 
 async function insertCover(tx: DbTx, p: ProjectPageInput, contentSnapshotId: bigint, m: MergedContent): Promise<void> {
@@ -195,3 +286,17 @@ export interface ContentListProjector {
 }
 
 export const contentListProjector: ContentListProjector = { projectCompletePage: projectContentPage };
+
+/**
+ * 封面首次规则（FS-D09、v2 R3）：内容已有 archived / carried_forward 的封面时，新快照不再建 cover 引用；
+ * 此前没有成功过（pending / failed）则照常建，下一次出现就用新地址重建。ListWalker 把它作为 skipCover 钩子传入。
+ */
+export async function hasArchivedCover(tx: DbTx, contentId: bigint): Promise<boolean> {
+  const [row] = await tx
+    .select({ id: mediaReferences.mediaReferenceId })
+    .from(mediaReferences)
+    .innerJoin(contentSnapshots, eq(contentSnapshots.contentSnapshotId, mediaReferences.contentSnapshotId))
+    .where(and(eq(contentSnapshots.contentId, contentId), eq(mediaReferences.role, "cover"), inArray(mediaReferences.archiveStatus, ["archived", "carried_forward"])))
+    .limit(1);
+  return row !== undefined;
+}

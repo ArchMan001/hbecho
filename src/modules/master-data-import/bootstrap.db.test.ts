@@ -152,6 +152,6 @@ describe("bootstrap（任务 2）", () => {
     const { createDb } = await import("../../db/client");
     await runMigrations(createDb(t.pool));
     const [tables] = await t.pool.query("SELECT COUNT(*) n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type='BASE TABLE' AND table_name <> '__drizzle_migrations'");
-    expect(Number((tables as Array<{ n: string }>)[0]!.n)).toBe(28);
+    expect(Number((tables as Array<{ n: string }>)[0]!.n)).toBe(29);
   });
 });

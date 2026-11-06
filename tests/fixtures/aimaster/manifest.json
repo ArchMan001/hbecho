@@ -341,6 +341,1345 @@
         "action": null,
         "errorCode": "RESULT_VALIDATION_FAILED"
       }
+    },
+    {
+      "id": "raw3.xiaohongshu.media_stats_number.hitachi-1",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_日立中央空调_派生详情1_6a706a35_media_stats_number.json",
+      "sourceSha256": "a2fc2a97d1f7dff75abb64f3823aaad6c39a709204d6f27e252e0bcd4f60bc48",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.post_comments_list.hitachi-1",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_日立中央空调_派生详情1_6a706a35_post_comments_list.json",
+      "sourceSha256": "1901052b5e6e84e02ea134f0f3f5a487aadba12f7428faf507a2229e630d9044",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.media_stats_number.hitachi-2",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_日立中央空调_派生详情2_69ca0adc_media_stats_number.json",
+      "sourceSha256": "1b8c8a103fb9ca9b2ac8dde7f5bd09e62ed250990c25ba0dd96b302b53ee2905",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.post_comments_list.hitachi-2",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_日立中央空调_派生详情2_69ca0adc_post_comments_list.json",
+      "sourceSha256": "556b12f6b725a45576da648dcf58ee4031d92e3aea0fad8a10b799c459d57a69",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.media_stats_number.hitachi-3",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_日立中央空调_派生详情3_6a9000b3_media_stats_number.json",
+      "sourceSha256": "806f4050ae9cf5f3b629241ea8eed282a92ba1412b0d67faa5e056f00b564dd5",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.post_comments_list.hitachi-3",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_日立中央空调_派生详情3_6a9000b3_post_comments_list.json",
+      "sourceSha256": "e64ed4d62e03680696475e1671103e10d5899bbdb07ba90cda2f33dbdbebeb9a",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.media_stats_number.hisense-1",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_海信中央空调_派生详情1_6a94e3c6_media_stats_number.json",
+      "sourceSha256": "2687061fce196beb1d478d00551f2df4feb3f03fd7c1504042aef41dd8bb3b9c",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.post_comments_list.hisense-1",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_海信中央空调_派生详情1_6a94e3c6_post_comments_list.json",
+      "sourceSha256": "74efe9d7e33b7e6a427806f6bd535789fcaeb60efa6a6f3d14da9768c007a976",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.media_stats_number.hisense-2",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_海信中央空调_派生详情2_6a94e0c9_media_stats_number.json",
+      "sourceSha256": "a3607a2877274fb4c8cea5a3a900ec3335dbec9ca5d2f7918be49f2470b0d922",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.post_comments_list.hisense-2",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_海信中央空调_派生详情2_6a94e0c9_post_comments_list.json",
+      "sourceSha256": "92b4ac8c8d393a3350e664329310e1a9eed02c2e778376d0bbb6ed1851265064",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.media_stats_number.hisense-3",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_海信中央空调_派生详情3_6a8c047a_media_stats_number.json",
+      "sourceSha256": "01e0588f3215c678e6efdc0efb0859acd354569b57c277d25adb391e01004a10",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.post_comments_list.hisense-3",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书主页_海信中央空调_派生详情3_6a8c047a_post_comments_list.json",
+      "sourceSha256": "906729643e580f4f1279cc77f18db7afd93573639532bd601fc345325d555614",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.media_stats_number.chufu",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书笔记_出伏倒计时_media_stats_number.json",
+      "sourceSha256": "35cdfe1a681800173f44add65d59596aa2449ec2c551ed36451b311cce794067",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.post_comments_list.chufu",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书笔记_出伏倒计时_post_comments_list.json",
+      "sourceSha256": "58f746479b224a3d7720826e73e22dab181f861e6e7a69a66b9d064df6540bf1",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.media_stats_number.mofu",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书笔记_末伏状态检查_media_stats_number.json",
+      "sourceSha256": "e5fcff35654bb179badbc5bac9ece3b1e443cfd0042add5be2323c25a4dd378b",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.xiaohongshu.post_comments_list.mofu",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_小红书笔记_末伏状态检查_post_comments_list.json",
+      "sourceSha256": "99fee9b3c58888b065fa62f0eb3c98d4fb3511dde442287342e5e801a6561272",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.douyin.media_stats_number.video",
+      "platform": "douyin",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_抖音视频_中国人能飞_media_stats_number.json",
+      "sourceSha256": "15070840febe9ddd57c6675a61eed63c8ff971a53bdead5e4e2bb91fb143c882",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw3.douyin.post_comments_list.video",
+      "platform": "douyin",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw3/V1.2_raw3_抖音视频_中国人能飞_post_comments_list.json",
+      "sourceSha256": "1991638b436a399ce605bed4e1cfbd2bd622410b142f4648e873a1620ee9be76",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "decoder_input",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "raw3 是解析后包络，不是供应商原始字节"
+      ]
+    },
+    {
+      "id": "raw4.C05",
+      "platform": "douyin",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw4-2026-10-28/C05-douyin-media_stats_number-sync-attempt1.json",
+      "sourceSha256": "a8a8614ece908b44472910bde9703b05ded7701650629cc8226cacd2c5b8a656",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同"
+      ]
+    },
+    {
+      "id": "raw4.C06",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw4-2026-10-28/C06-xiaohongshu-media_stats_number-sync-attempt1.json",
+      "sourceSha256": "37b7173d57038de6aef8c59847104e490704e4e023d2c473135f96bdd0dc5c62",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同"
+      ]
+    },
+    {
+      "id": "raw4.C07",
+      "platform": "douyin",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw4-2026-10-28/C07-douyin-post_comments_list-sync-attempt1.json",
+      "sourceSha256": "3199ab91bf491100fd1d990886162f800129a812d31319d6ccf820774a8a6120",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到"
+      ]
+    },
+    {
+      "id": "raw4.C08.attempt1.http500",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw4-2026-10-28/C08-xiaohongshu-post_comments_list-sync-attempt1.json",
+      "sourceSha256": "13573d7137828faea6336e33a99f4f55497a9a1fec5cb2bb7e24d49e699cf68e",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "failure_sample",
+      "observed": {
+        "httpStatus": 500,
+        "taskStatus": null,
+        "action": null,
+        "errorCode": "RESULT_VALIDATION_FAILED"
+      },
+      "knownGaps": [
+        "同一请求第二次成功（raw4.C08.attempt2）：小红书评论存在间歇性 RESULT_VALIDATION_FAILED"
+      ]
+    },
+    {
+      "id": "raw4.C08.attempt2",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw4-2026-10-28/C08-xiaohongshu-post_comments_list-sync-attempt2.json",
+      "sourceSha256": "0096f3d561aba4f6e0af3db9f510150ad9f3406fb2bc5ac14d319886f6dbc4b1",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "小红书 total>0 而 has_more=0（见 raw9.A4 的 total=28、返回 2 条），不能把评论总数当完整"
+      ]
+    },
+    {
+      "id": "raw6.C02",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw6-2026-10-28/C02-xiaohongshu-post_comments_list-sync-attempt1.json",
+      "sourceSha256": "c5f62088a0711d3d153ecafc695ac82be7606eee5be01e841e1b7c3214e7d7b4",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到"
+      ]
+    },
+    {
+      "id": "raw10.V4",
+      "platform": "douyin",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw10-2026-10-28/V4-video-comments.json",
+      "sourceSha256": "e03b6b68ab1ae8c43edbf8517de8c017219f35d76a4afd36ee3be1e728082df4",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "该样本 total=0、返回 0 条，只证明空评论形态"
+      ]
+    },
+    {
+      "id": "raw11.reply-count-sample2",
+      "platform": "douyin",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw11-2026-10-28/reply-count-sample2.json",
+      "sourceSha256": "c4b6ed0e35727d0d430df0f9205f4c25ffbc013f101f2f35bd6e12481b8f5df2",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "带 parent_id 的回复与一级评论混排，total=125、has_more=1"
+      ]
+    },
+    {
+      "id": "raw5.C06.submit",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "async",
+      "role": "submit",
+      "source": "aimaster接口文档/测试结果/raw5-2026-10-28/C06-xiaohongshu-media_stats_number-async-attempt1.json",
+      "sourceSha256": "47e4557df8da89cc8c856bd0e41a489b208adfd1ca853378c466b5d867227037",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 202,
+        "taskStatus": "running",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同",
+        "异步任务 TTL 未验证"
+      ]
+    },
+    {
+      "id": "raw5.C06.poll1",
+      "platform": "xiaohongshu",
+      "action": "media_stats_number",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw5-2026-10-28/C06-xiaohongshu-poll1.json",
+      "sourceSha256": "0d80fd7b8bb530a3145be68fdfa4027173cab9cf7ff9d440ba03ab6d842cfc5d",
+      "envelope": {
+        "responseKey": "response_body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同",
+        "异步任务 TTL 未验证"
+      ]
+    },
+    {
+      "id": "raw9.A4.submit",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "async",
+      "role": "submit",
+      "source": "aimaster接口文档/测试结果/raw9-2026-10-28/A4-xhs-comments-async-submit.json",
+      "sourceSha256": "859df5410eb885e88f8fafa2e7394feacdade8467bed977d88afb8aaf82abacf",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 202,
+        "taskStatus": "running",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "异步任务 TTL 未验证；抖音评论异步 raw7 / raw8 稳定失败，不可推广"
+      ]
+    },
+    {
+      "id": "raw9.A4.poll1",
+      "platform": "xiaohongshu",
+      "action": "post_comments_list",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw9-2026-10-28/A4-xhs-comments-async-poll1.json",
+      "sourceSha256": "72f8837c96aee78eb3cd91e8272396fd81f48018b9a2ee86b528bed4de5d02c1",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "QPS、429、超时未验证",
+        "回复是否扁平并带 parent_id 只在已保存样本中观察到",
+        "异步任务 TTL 未验证；抖音评论异步 raw7 / raw8 稳定失败，不可推广"
+      ]
+    },
+    {
+      "id": "raw9.A5.submit",
+      "platform": "douyin",
+      "action": "media_stats_number",
+      "mode": "async",
+      "role": "submit",
+      "source": "aimaster接口文档/测试结果/raw9-2026-10-28/A5-dy-detail-async-submit.json",
+      "sourceSha256": "e99da03d249d693ed340813ff28b064704042a8d65c912789baa250dcaf2ee60",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 202,
+        "taskStatus": "running",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同",
+        "异步任务 TTL 未验证；抖音评论异步 raw7 / raw8 稳定失败，不可推广"
+      ]
+    },
+    {
+      "id": "raw9.A5.poll1",
+      "platform": "douyin",
+      "action": "media_stats_number",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw9-2026-10-28/A5-dy-detail-async-poll1.json",
+      "sourceSha256": "fe03bdbb6385e74da19883f7da58dabf905d477989f9d565bf7c73afbca01772",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "下载地址与封面地址的有效期未验证",
+        "QPS、429、超时、异步任务 TTL 未验证",
+        "*_count 全为 null、*_number 有值是 raw3 / raw4 的观察，不是供应商合同",
+        "异步任务 TTL 未验证；抖音评论异步 raw7 / raw8 稳定失败，不可推广"
+      ]
+    },
+    {
+      "id": "raw12.K1",
+      "platform": "kuaishou",
+      "action": "media_user_info",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw12-2026-10-28/K1.json",
+      "sourceSha256": "f942fc60fa50b28dc44e81b16c1f04b1e18202a3ac484f90e06b1cf3d3900065",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_user_info",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证"
+      ]
+    },
+    {
+      "id": "raw12.K2",
+      "platform": "kuaishou",
+      "action": "media_user_info",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw12-2026-10-28/K2.json",
+      "sourceSha256": "388c2dcadee6e3f99abed91655a1092a5410fc6f2f3ee5ff0f021e9c963b0813",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_user_info",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证"
+      ]
+    },
+    {
+      "id": "raw12.K3",
+      "platform": "kuaishou",
+      "action": "user_video_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw12-2026-10-28/K3.json",
+      "sourceSha256": "1ad71cfd2a6ecdfb74b610bcaccfd52a086a9bd110c1e298b5382b9712f59854",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "user_video_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证",
+        "max_cursor='no_more' 与 has_more=true 同时出现（D-53 游标异常）"
+      ]
+    },
+    {
+      "id": "raw12.K6",
+      "platform": "kuaishou",
+      "action": "user_video_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw12-2026-10-28/K6.json",
+      "sourceSha256": "0164b562809f7d025e650489c036f13aa294234517bb74d6fceb99f550f575b8",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "user_video_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证",
+        "max_cursor='no_more' 与 has_more=true 同时出现（D-53 游标异常）"
+      ]
+    },
+    {
+      "id": "raw12.K4",
+      "platform": "kuaishou",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw12-2026-10-28/K4.json",
+      "sourceSha256": "56f26cd19a3e93f907279720cd2d6d7534463d7a1a7298967b712f29e72c09d1",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证"
+      ]
+    },
+    {
+      "id": "raw13.L3",
+      "platform": "kuaishou",
+      "action": "user_video_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw13-2026-10-28/L3.json",
+      "sourceSha256": "a075554006073d7a07e749948ddcb8798828607ca08dd9ddb0e8f90ce3dd705c",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "user_video_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证",
+        "列表游标是科学计数法字符串（1.785394950371E12），必须按字符串保真",
+        "本页 23 条，has_more=true"
+      ]
+    },
+    {
+      "id": "raw13.L4",
+      "platform": "kuaishou",
+      "action": "user_video_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw13-2026-10-28/L4.json",
+      "sourceSha256": "9a9b4b9b8b14b7eacd8cfc2dc227f8d12eaf7674edeaaca7386c7b1e78bf3e5e",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "user_video_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证",
+        "列表游标是科学计数法字符串（1.779437949568E12）",
+        "本页 20 条，has_more=true；第三页之后的行为未验证"
+      ]
+    },
+    {
+      "id": "raw13.V1",
+      "platform": "kuaishou",
+      "action": "media_stats_number",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw13-2026-10-28/V1.json",
+      "sourceSha256": "98d79cf533454ac133d0db4115df5f6ecf81142b719f518e2a9761bc67025f82",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证"
+      ]
+    },
+    {
+      "id": "raw12.K5.http500",
+      "platform": "kuaishou",
+      "action": "post_comments_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw12-2026-10-28/K5.json",
+      "sourceSha256": "dd7d969bd44e44be12ed9418289a1eb5b97273d12b53e65bcc5955b225f9253b",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "failure_sample",
+      "observed": {
+        "httpStatus": 500,
+        "taskStatus": null,
+        "action": null,
+        "errorCode": "RESULT_VALIDATION_FAILED"
+      },
+      "knownGaps": [
+        "快手评论调用返回 500 RESULT_VALIDATION_FAILED；快手评论不登记 capability（D-51）"
+      ]
+    },
+    {
+      "id": "raw13.L1.http500",
+      "platform": "kuaishou",
+      "action": "user_video_list",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw13-2026-10-28/L1.json",
+      "sourceSha256": "42bd0dddab2a207c7aed2a593d83f3e3bfbf193ca80b35f47ffac2275f50af77",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "failure_sample",
+      "observed": {
+        "httpStatus": 500,
+        "taskStatus": null,
+        "action": null,
+        "errorCode": "RESULT_VALIDATION_FAILED"
+      },
+      "knownGaps": [
+        "无效输入的 500 与已删除 / 私密无法区分（D-54）"
+      ]
+    },
+    {
+      "id": "raw13.P1.http500",
+      "platform": "kuaishou",
+      "action": "media_user_info",
+      "mode": "sync",
+      "role": "response",
+      "source": "aimaster接口文档/测试结果/raw13-2026-10-28/P1.json",
+      "sourceSha256": "cc4256c1f983a0faf5063c112d3a66dd63bb7fb503c9124d8c3725e160e1c8bc",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "fixture_observed",
+      "use": "failure_sample",
+      "observed": {
+        "httpStatus": 500,
+        "taskStatus": null,
+        "action": null,
+        "errorCode": "RESULT_VALIDATION_FAILED"
+      },
+      "knownGaps": [
+        "无效输入的 500 与已删除 / 私密无法区分（D-54）",
+        "耗时 135 秒，超时预算未验证"
+      ]
+    },
+    {
+      "id": "raw14.A1.submit",
+      "platform": "kuaishou",
+      "action": "media_user_info",
+      "mode": "async",
+      "role": "submit",
+      "source": "aimaster接口文档/测试结果/raw14-2026-10-28/A1-kuaishou-profile-async-submit.json",
+      "sourceSha256": "5cba39a64e9ee29bf08d6e66a3f7b3ccd679ce9a564e3f6ce8b09718667fc094",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 202,
+        "taskStatus": "running",
+        "action": "media_user_info",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证",
+        "异步任务 TTL 未验证；两次轮询 running → succeeded"
+      ]
+    },
+    {
+      "id": "raw14.A1.poll1",
+      "platform": "kuaishou",
+      "action": "media_user_info",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw14-2026-10-28/A1-kuaishou-profile-async-poll1.json",
+      "sourceSha256": "333655f2f24a1687923b4f757e5cc4d58b3cd796ca26defd0d20934b3bddee0d",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "running",
+        "action": "media_user_info",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证",
+        "异步任务 TTL 未验证；两次轮询 running → succeeded"
+      ]
+    },
+    {
+      "id": "raw14.A1.poll2",
+      "platform": "kuaishou",
+      "action": "media_user_info",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw14-2026-10-28/A1-kuaishou-profile-async-poll2.json",
+      "sourceSha256": "c61b29725f7b9cb4c52743d6caab656c19201e8fcb7f654982e780e7f4780afc",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_user_info",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证",
+        "异步任务 TTL 未验证；两次轮询 running → succeeded"
+      ]
+    },
+    {
+      "id": "raw14.A3.submit",
+      "platform": "kuaishou",
+      "action": "media_stats_number",
+      "mode": "async",
+      "role": "submit",
+      "source": "aimaster接口文档/测试结果/raw14-2026-10-28/A3-kuaishou-detail-async-submit.json",
+      "sourceSha256": "21ea567a8212cd081fe477dc0ba0a769f67965c90059623b5bad789c234c57e8",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 202,
+        "taskStatus": "running",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证",
+        "异步任务 TTL 未验证；两次轮询 running → succeeded"
+      ]
+    },
+    {
+      "id": "raw14.A3.poll1",
+      "platform": "kuaishou",
+      "action": "media_stats_number",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw14-2026-10-28/A3-kuaishou-detail-async-poll1.json",
+      "sourceSha256": "43df3e7da9b7b7b20d1eefba8579defcbb32b91fe649be476e3a0011f750a9c7",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "running",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证",
+        "异步任务 TTL 未验证；两次轮询 running → succeeded"
+      ]
+    },
+    {
+      "id": "raw14.A3.poll2",
+      "platform": "kuaishou",
+      "action": "media_stats_number",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw14-2026-10-28/A3-kuaishou-detail-async-poll2.json",
+      "sourceSha256": "68d39c3e234b694b69726b0db49c880658914af6b196262a1c20dd841b613783",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "succeeded",
+        "action": "media_stats",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证",
+        "异步任务 TTL 未验证；两次轮询 running → succeeded"
+      ]
+    },
+    {
+      "id": "raw14.A2.submit",
+      "platform": "kuaishou",
+      "action": "user_video_list",
+      "mode": "async",
+      "role": "submit",
+      "source": "aimaster接口文档/测试结果/raw14-2026-10-28/A2-kuaishou-list-async-submit.json",
+      "sourceSha256": "06c1e439fedae6bf143f8c3a322d3d39364a4bc56004037eab00bce51ace3fce",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "provider_failed",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 202,
+        "taskStatus": "running",
+        "action": "user_video_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证",
+        "快手列表异步任务稳定 failed，不可使用"
+      ]
+    },
+    {
+      "id": "raw14.A2.poll1",
+      "platform": "kuaishou",
+      "action": "user_video_list",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw14-2026-10-28/A2-kuaishou-list-async-poll1.json",
+      "sourceSha256": "a45d55c35b0a8d3d310abd0401494d575d59e6d2bec8f9ba6b244066b94cf0ba",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "provider_failed",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "failed",
+        "action": "user_video_list",
+        "errorCode": "RESULT_VALIDATION_FAILED"
+      },
+      "knownGaps": [
+        "快手内容 URL 的构造方式没有样本（详情样本用 v.kuaishou.com 短链）；在 smoke 证实前详情 capability 保持 disabled",
+        "供应商文档对认证头自相矛盾（说明写 Bearer，示例用 X-Api-Key）；以 A PRD §6.4 与实测的 X-Api-Key 为准",
+        "QPS、429、超时未验证",
+        "快手列表异步任务稳定 failed，不可使用"
+      ]
+    },
+    {
+      "id": "raw8.A3.submit",
+      "platform": "douyin",
+      "action": "post_comments_list",
+      "mode": "async",
+      "role": "submit",
+      "source": "aimaster接口文档/测试结果/raw8-2026-10-28/A3-dy-comments-async-submit.json",
+      "sourceSha256": "4c75f4fc2746f7dc84be70d79c3a27e76ba8394d413b745792fff55c15b947e1",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "smoke_verified",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 202,
+        "taskStatus": "running",
+        "action": "post_comments_list",
+        "errorCode": null
+      },
+      "knownGaps": [
+        "抖音评论异步任务稳定 failed（RESULT_VALIDATION_FAILED），raw7 C18 同样；不可使用"
+      ]
+    },
+    {
+      "id": "raw8.A3.poll1",
+      "platform": "douyin",
+      "action": "post_comments_list",
+      "mode": "async",
+      "role": "poll",
+      "source": "aimaster接口文档/测试结果/raw8-2026-10-28/A3-dy-comments-async-poll1.json",
+      "sourceSha256": "a8132283b7c7ef4e2a30b5a7474c5b214f947690ca1376953bcbfd3828b2a3a9",
+      "envelope": {
+        "responseKey": "body"
+      },
+      "evidenceLabel": "provider_failed",
+      "use": "capability_evidence",
+      "observed": {
+        "httpStatus": 200,
+        "taskStatus": "failed",
+        "action": "post_comments_list",
+        "errorCode": "RESULT_VALIDATION_FAILED"
+      },
+      "knownGaps": [
+        "抖音评论异步任务稳定 failed（RESULT_VALIDATION_FAILED），raw7 C18 同样；不可使用"
+      ]
     }
   ],
   "mediaSamples": [

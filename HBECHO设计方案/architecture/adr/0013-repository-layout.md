@@ -1,5 +1,7 @@
 # ADR-0013 · 仓库目录约定
 
+> **修订（2026-11-05，刘学奎）**：增补 `ui-lab/` 一级目录，见「决定」。
+
 - **状态**：accepted
 - **日期**：2026-11-04
 - **决策人**：刘学奎
@@ -21,6 +23,7 @@ src/worker/              Worker 进程入口（领取 MySQL 任务表）
 drizzle/                 drizzle-kit 生成的迁移 SQL（只走 db:migrate）
 services/capability/     Python 能力服务（ADR-0012），自带 pyproject 与离线测试
 tests/fixtures/          离线 fixture：供应商原始响应的脱敏副本
+ui-lab/                  可点击界面原型（2026-11-05 增补）：不进生产构建，不属于 tsconfig 的 include
 ```
 
 规则：
@@ -28,6 +31,7 @@ tests/fixtures/          离线 fixture：供应商原始响应的脱敏副本
 - `src/modules/*` 之间只通过各自的 `index.ts` 导出互相引用；模块名用领域词（`raw-capture`、`provider-adapter`、`identity`、`projection`、`media` 等），以 CONTEXT.md 为准；
 - `src/app` 与 `src/worker` 只调用 `src/modules`，不直接写 SQL；
 - fixture 只放脱敏后的副本，原始证据仍在 `aimaster接口文档/测试结果/`，不搬家；
+- `ui-lab/` 只放界面原型（线框、可点击页面、截图），不放生产代码，不被 `src/` 引用；其依赖（若有）自带 `package.json`，不进根 `package.json`，也不进 CI 构建；原型通过后，页面由对应 spec 在 `src/app/` 重新实现；
 - 新增一级目录需要改本 ADR。
 
 ## 备选与不选原因

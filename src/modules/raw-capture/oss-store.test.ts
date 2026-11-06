@@ -1,6 +1,9 @@
 // OSS ObjectStore 的单元测试：假客户端，不联网。证明 put 的摘要来自实际提交的字节、
 // 读回与删除的「不存在」语义、list 的分页与时间映射，以及错误信息不夹带凭证。
 import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { OssObjectStore, type OssClientLike } from "./oss-store";
 
@@ -97,5 +100,47 @@ describe("OssObjectStore", () => {
     });
     await expect(store.put("k", enc("x"))).rejects.toThrow("OSS put 失败（InvalidAccessKeyId）");
     await expect(store.put("k", enc("x"))).rejects.not.toThrow(/secretvalue/);
+  });
+});
+
+describe("putFile / signedGetUrl（视频用）", () => {
+  it("putFile：摘要和长度来自本地文件（流式计算），用分片上传；失败只留错误码", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "oss-test-"));
+    try {
+      const path = join(dir, "v.part");
+      const bytes = enc("video-bytes-".repeat(1000));
+      writeFileSync(path, bytes);
+      const calls: Array<{ name: string; file: string; partSize?: number }> = [];
+      const { store } = fake({
+        async multipartUpload(name, file, options) {
+          calls.push({ name, file, ...(options?.partSize ? { partSize: options.partSize } : {}) });
+          return {};
+        },
+      });
+      expect(await store.putFile("m/v", path)).toEqual({ sha256: sha(bytes), byteLength: bytes.byteLength });
+      expect(calls).toEqual([{ name: "m/v", file: path, partSize: 8 * 1024 * 1024 }]);
+      const bad = fake({
+        async multipartUpload() {
+          throw Object.assign(new Error("secretvalue"), { code: "RequestTimeout" });
+        },
+      });
+      await expect(bad.store.putFile("m/v", path)).rejects.toThrow("OSS multipartUpload 失败（RequestTimeout）");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+  it("signedGetUrl：以 GET 和给定秒数签名；客户端不支持时明确报错", async () => {
+    const seen: unknown[] = [];
+    const { store } = fake({
+      signatureUrl(name, options) {
+        seen.push([name, options]);
+        return `https://signed.test/${name}`;
+      },
+    });
+    expect(await store.signedGetUrl("m/v", 600)).toBe("https://signed.test/m/v");
+    expect(seen).toEqual([["m/v", { expires: 600, method: "GET" }]]);
+    const none = fake();
+    await expect(none.store.putFile("k", "/nope")).rejects.toThrow("不支持分片上传");
+    await expect(none.store.signedGetUrl("k", 1)).rejects.toThrow("不支持签名 URL");
   });
 });

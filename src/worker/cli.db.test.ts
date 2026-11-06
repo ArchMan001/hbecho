@@ -60,7 +60,7 @@ describe("submit", () => {
     expect(conflict.code).toBe(3);
     expect(conflict.json).toMatchObject({ ok: false, error: { code: "idempotency_conflict" } });
 
-    const unsupported = await run(["submit", "--platform", "kuaishou", "--staff", org.staffA.toString(), "--locator", "x", "--key", "k9"]);
+    const unsupported = await run(["submit", "--platform", "wechat_channels", "--staff", org.staffA.toString(), "--locator", "x", "--key", "k9"]);
     expect(unsupported.code).toBe(2);
     expect(unsupported.json).toMatchObject({ error: { code: "unsupported_capability" } });
   });

@@ -92,6 +92,8 @@ export const contentSnapshots = mysqlTable(
     listResponseReceivedAt: utc("list_response_received_at"),
     detailResponseReceivedAt: utc("detail_response_received_at"),
     snapshotAt: utc("snapshot_at").notNull(),
+    // R1：按需批次以该 finalized 快照为种子建立本行；快照到快照的血缘，不同于 sync_tasks.source_content_snapshot_id
+    seededFromSnapshotId: id("seeded_from_snapshot_id"),
     mergePolicyVersion: varchar("merge_policy_version", { length: 64 }).notNull(),
     listAdapterVersion: varchar("list_adapter_version", { length: 64 }),
     detailAdapterVersion: varchar("detail_adapter_version", { length: 64 }),
@@ -100,6 +102,9 @@ export const contentSnapshots = mysqlTable(
     updatedAt: utc("updated_at").notNull(),
   },
   (t) => [
+    foreignKey({ name: "fk_content_snap_seeded_from", columns: [t.seededFromSnapshotId], foreignColumns: [t.contentSnapshotId] }),
+    index("idx_content_snapshots_seeded_from").on(t.seededFromSnapshotId),
+    check("ck_content_snapshots_seeded", sql`${t.seededFromSnapshotId} IS NULL OR (${t.listObserved} = FALSE AND ${t.detailObserved} = TRUE)`),
     foreignKey({ name: "fk_content_snap_list_call", columns: [t.lastListProviderCallId], foreignColumns: [odsProviderCalls.providerCallId] }).onDelete("set null"),
     foreignKey({ name: "fk_content_snap_detail_call", columns: [t.lastDetailProviderCallId], foreignColumns: [odsProviderCalls.providerCallId] }).onDelete("set null"),
     uniqueIndex("uq_content_snapshots_batch_content").on(t.batchId, t.contentId),
@@ -171,5 +176,48 @@ export const contentDiscoveries = mysqlTable(
     index("idx_discoveries_content_batch").on(t.contentId, t.batchId),
     index("idx_discoveries_batch_pinned").on(t.batchId, t.isPotentiallyPinned),
     check("ck_discoveries_positions", sql`${t.pageNo} >= 0 AND ${t.positionInPage} >= 0 AND ${t.absolutePosition} >= 0`),
+  ],
+);
+
+/**
+ * v2 §10.4 `comments`：一级评论最新态。tracer 的初始迁移没有建它（comments 不在 tracer 范围），a-full-sync 任务 6 按 v2 原文补建，
+ * 不是新设计：不建作者账号、作者历史、头像媒资或回复树；只有完整抓取才能把缺失的旧评论置 suspected_deleted。
+ */
+export const comments = mysqlTable(
+  "comments",
+  {
+    commentId: id("comment_id").primaryKey().autoincrement(),
+    contentId: id("content_id")
+      .notNull()
+      .references((): AnyMySqlColumn => contents.contentId),
+    platformCommentId: binText("platform_comment_id", { length: 2048 }).notNull(),
+    platformCommentIdSha256: sha256("platform_comment_id_sha256").notNull(),
+    status: varchar("status", { length: 32 }).notNull().default("active"),
+    authorIdentifier: binText("author_identifier", { length: 2048 }),
+    authorName: varchar("author_name", { length: 512 }),
+    contentText: longtext("content_text"),
+    likeValue: id("like_value"),
+    likeState: varchar("like_state", { length: 32 }).notNull(),
+    replyValue: id("reply_value"),
+    replyState: varchar("reply_state", { length: 32 }).notNull(),
+    platformCreatedAt: utc("platform_created_at"),
+    providerUpdatedAt: utc("provider_updated_at"),
+    firstSeenAt: utc("first_seen_at").notNull(),
+    lastSeenAt: utc("last_seen_at").notNull(),
+    suspectedDeletedAt: utc("suspected_deleted_at"),
+    deletedAt: utc("deleted_at"),
+    lastProviderCallId: id("last_provider_call_id"),
+    createdAt: utc("created_at").notNull(),
+    updatedAt: utc("updated_at").notNull(),
+  },
+  (t) => [
+    foreignKey({ name: "fk_comments_call", columns: [t.lastProviderCallId], foreignColumns: [odsProviderCalls.providerCallId] }).onDelete("set null"),
+    // 命中后复核原文（platform_comment_id 为 utf8mb4_bin）
+    uniqueIndex("uq_comments_content_comment").on(t.contentId, t.platformCommentIdSha256),
+    index("idx_comments_content_status_created").on(t.contentId, t.status, t.platformCreatedAt),
+    index("idx_comments_last_seen").on(t.lastSeenAt),
+    check("ck_comments_status", inList(t.status, ["active", "suspected_deleted", "deleted"])),
+    check("ck_comments_like", valueStateCheck(t.likeValue, t.likeState)),
+    check("ck_comments_reply", valueStateCheck(t.replyValue, t.replyState)),
   ],
 );

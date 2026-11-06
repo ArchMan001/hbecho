@@ -6,10 +6,16 @@ import { sniffImage, type ImageMime } from "./sniff";
 
 export interface Downloaded {
   bytes: Uint8Array;
-  mimeType: ImageMime;
+  mimeType: ImageMime | "application/octet-stream";
 }
 
-export async function downloadBounded(transport: MediaTransport, url: string, policy: MediaPolicy): Promise<Downloaded> {
+/**
+ * opaque=true：快手封面的原始格式（KVIF）没有受支持的魔数，按不透明字节保存（D-62）。仍拒绝 HTML / JSON 文本——
+ * 过期的签名 URL 常返回 200 + 错误页，不能把错误页当资产。
+ */
+const looksLikeText = (b: Uint8Array) => b.length === 0 || b[0] === 0x3c /* < */ || b[0] === 0x7b /* { */ || b[0] === 0x20 || b[0] === 0x0a;
+
+export async function downloadBounded(transport: MediaTransport, url: string, policy: MediaPolicy, opts: { opaque?: boolean } = {}): Promise<Downloaded> {
   let current = checkMediaUrl(url, policy).toString();
   for (let hop = 0; hop <= policy.maxRedirects; hop++) {
     let res;
@@ -34,7 +40,7 @@ export async function downloadBounded(transport: MediaTransport, url: string, po
     if (res.body.byteLength > policy.maxBytes) throw new MediaFailure("too_large");
     if (res.contentLength !== null && res.contentLength !== res.body.byteLength) throw new MediaFailure("truncated");
 
-    const mimeType = sniffImage(res.body);
+    const mimeType = sniffImage(res.body) ?? (opts.opaque && !looksLikeText(res.body) ? "application/octet-stream" : null);
     if (mimeType === null) throw new MediaFailure("content_type_not_allowed", "字节不是受支持的图片");
     return { bytes: res.body, mimeType };
   }

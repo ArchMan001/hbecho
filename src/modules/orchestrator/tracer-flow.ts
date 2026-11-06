@@ -152,7 +152,9 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
   const platform = plat?.platformCode as Platform | undefined;
   const strategy = platform ? strategies[platform] : undefined;
   if (!platform || !strategy) return failRoot("unsupported_capability", "platform_strategy_unavailable");
-  for (const action of ["media_user_info", "user_video_list"] as const) {
+  // 外部监控账号（FS-13.5）只采主页：不要求列表 capability
+  const isExternal = root.subjectType === "external";
+  for (const action of isExternal ? (["media_user_info"] as const) : (["media_user_info", "user_video_list"] as const)) {
     try {
       capabilityGate.require({ platform, action, mode: config.modes[action], environment: config.environment });
     } catch (e) {
@@ -168,7 +170,7 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
   // ── 入口检查：不发任何请求，不产生任何业务身份 ─────────────────
   const original = root.subjectKey;
   const staffId = root.subjectId;
-  if (original === null || staffId === null) return failRoot("internal", "root_task_incomplete");
+  if (original === null || (staffId === null && !isExternal)) return failRoot("internal", "root_task_incomplete");
   const decision = classifyLocator(original);
   if (decision.action === "reject") {
     return terminateRoot({ status: "failed", stopReason: "invalid_link", errorCode: "non_home_locator", category: "input", entryOutcome: "invalid_link", summary: { locator_kind: decision.kind } }, "failed");
@@ -382,8 +384,8 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
           accountId: r.accountId,
           assignmentId: r.assignmentId,
           providerCallId: profile.captured.providerCallId,
-          discriminator: staffId.toString(),
-          detail: { submitted_media_staff_id: staffId.toString(), current_owner_media_staff_id: r.ownerStaffId?.toString() ?? null, current_owner_watch_type: r.ownerWatchType },
+          discriminator: staffId?.toString() ?? "external",
+          detail: { submitted_media_staff_id: staffId?.toString() ?? null, current_owner_media_staff_id: r.ownerStaffId?.toString() ?? null, current_owner_watch_type: r.ownerWatchType },
           now,
         });
         await finishRoot(tx, rootRow, { status: "failed", stopReason: "assignment_conflict", accountId: r.accountId }, now);
@@ -396,8 +398,8 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
           batchId: root.batchId,
           assignmentId: r.existingAssignmentId,
           providerCallId: profile.captured.providerCallId,
-          discriminator: staffId.toString(),
-          detail: { submitted_media_staff_id: staffId.toString(), platform_id: root.platformId.toString(), occupied_by_account_id: r.existingAccountId.toString() },
+          discriminator: staffId?.toString() ?? "external",
+          detail: { submitted_media_staff_id: staffId?.toString() ?? null, platform_id: root.platformId.toString(), occupied_by_account_id: r.existingAccountId.toString() },
           now,
         });
         await finishRoot(tx, rootRow, { status: "failed", stopReason: "staff_platform_slot_taken" }, now);
@@ -437,6 +439,10 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
   const intake: IntakeResult = intakeTx.value;
   if (intake.kind !== "ready") return result("blocked");
   if (intake.intakeStatus === "suspected_empty") return result("succeeded");
+  // 外部监控账号只有主页快照：不建列表子任务、不请求列表
+  if (isExternal) {
+    return terminateRoot({ status: "succeeded", entryOutcome: "normal", stopReason: "external_profile_only", summary: { profile_only: true }, accountId: intake.accountId, assignmentId: intake.assignmentId }, "succeeded");
+  }
 
   // ── 首个完整返回页（子任务 fetch_content_list，同步） ───────────────
   const child = await ensureListTask(db, clock, root, intake.accountId, intake.assignmentId);

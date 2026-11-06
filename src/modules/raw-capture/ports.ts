@@ -57,3 +57,10 @@ export interface ObjectStore {
   /** 列出前缀下的对象与创建时间（orphan sweeper 用）。 */
   list(prefix: string): Promise<Array<{ key: string; createdAt: Date }>>;
 }
+
+/** 正式媒资桶：在 ObjectStore 之上加两件视频需要的事——从本地文件分片上传（不整文件进内存）、短期签名下载 URL（给能力服务读）。 */
+export interface MediaObjectStore extends ObjectStore {
+  /** 分片上传本地文件；返回对象的 SHA-256（按实际上传的字节流计算）与长度。 */
+  putFile(key: string, path: string): Promise<StoredObject>;
+  signedGetUrl(key: string, ttlSeconds: number): Promise<string>;
+}

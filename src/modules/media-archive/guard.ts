@@ -12,7 +12,7 @@ export interface MediaPolicy {
 }
 
 export const DEFAULT_MEDIA_POLICY: MediaPolicy = Object.freeze({
-  allowedHostSuffixes: Object.freeze(["douyinpic.com", "rednotecdn.com"]),
+  allowedHostSuffixes: Object.freeze(["douyinpic.com", "rednotecdn.com", "kwimgs.com"]), // kwimgs.com：快手封面（raw12 / raw13）
   maxBytes: 20 * 1024 * 1024,
   maxRedirects: 3,
   timeoutMs: 15_000,

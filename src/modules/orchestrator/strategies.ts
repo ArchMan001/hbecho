@@ -85,7 +85,16 @@ export const xiaohongshuStrategy: PlatformStrategy = {
   },
 };
 
+/**
+ * 快手：主页与列表作者同一命名空间（kuaishou.user_id），没有第二官方标识，昵称与主页链接不是绑定证据 → 不绑定任何第二标识。
+ * 列表里的异作者内容保留，不建账号。
+ */
+export const kuaishouStrategy: PlatformStrategy = {
+  platform: "kuaishou",
+  listBindings: () => ({ bindings: [], issues: [] }),
+};
 export const DEFAULT_STRATEGIES: Readonly<Record<string, PlatformStrategy>> = Object.freeze({
   douyin: douyinStrategy,
   xiaohongshu: xiaohongshuStrategy,
+  kuaishou: kuaishouStrategy,
 });

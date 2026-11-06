@@ -5,14 +5,20 @@
 // 判同仍归调用方（RawCaptureGateway 会在 put 之后回读并比对 SHA-256）；本实现不吞任何异常，
 // 也不在错误信息里带 AccessKey、签名串或完整请求头。
 import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
 import OSS from "ali-oss";
-import type { ObjectStore, StoredObject } from "./ports";
+import type { MediaObjectStore, StoredObject } from "./ports";
 
 /** ali-oss 客户端里本模块用到的那部分形状；单测注入同形的假客户端时不必构造真实 SDK。 */
 export interface OssClientLike {
   put(name: string, file: Uint8Array, options?: { timeout?: number; mime?: string }): Promise<unknown>;
   get(name: string): Promise<{ content?: unknown }>;
   delete(name: string, options?: { timeout?: number }): Promise<unknown>;
+  /** 分片上传本地文件（ali-oss multipartUpload）。 */
+  multipartUpload?(name: string, file: string, options?: { partSize?: number; timeout?: number }): Promise<unknown>;
+  /** 签名下载 URL（ali-oss signatureUrl）。 */
+  signatureUrl?(name: string, options?: { expires?: number; method?: string }): string;
   list(
     query: { prefix?: string; marker?: string; "max-keys": number },
     options?: { timeout?: number },
@@ -51,7 +57,7 @@ function wrap(e: unknown, op: string): Error {
 const DEFAULT_TIMEOUT_MS = 30_000;
 const LIST_PAGE = 1000;
 
-export class OssObjectStore implements ObjectStore {
+export class OssObjectStore implements MediaObjectStore {
   private readonly client: OssClientLike;
   private readonly timeoutMs: number;
 
@@ -78,6 +84,29 @@ export class OssObjectStore implements ObjectStore {
       throw wrap(e, "put");
     }
     return { sha256: createHash("sha256").update(bytes).digest("hex"), byteLength: bytes.byteLength };
+  }
+
+  async putFile(key: string, path: string): Promise<StoredObject> {
+    if (!this.client.multipartUpload) throw new Error("OSS 客户端不支持分片上传");
+    // 先流式算摘要与长度（不整文件进内存），再分片上传；调用方还会对照下载时算出的摘要
+    const hash = createHash("sha256");
+    for await (const chunk of createReadStream(path)) hash.update(chunk as Buffer);
+    const byteLength = (await stat(path)).size;
+    try {
+      await this.client.multipartUpload(key, path, { partSize: 8 * 1024 * 1024, timeout: this.timeoutMs * 10 });
+    } catch (e) {
+      throw wrap(e, "multipartUpload");
+    }
+    return { sha256: hash.digest("hex"), byteLength };
+  }
+
+  async signedGetUrl(key: string, ttlSeconds: number): Promise<string> {
+    if (!this.client.signatureUrl) throw new Error("OSS 客户端不支持签名 URL");
+    try {
+      return this.client.signatureUrl(key, { expires: ttlSeconds, method: "GET" });
+    } catch (e) {
+      throw wrap(e, "signatureUrl");
+    }
   }
 
   async get(key: string): Promise<Uint8Array | null> {

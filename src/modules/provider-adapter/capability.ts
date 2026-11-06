@@ -72,10 +72,16 @@ interface Tuple {
   mode: ExecutionMode;
   outcome: CapabilityProfile["observedOutcome"];
   evidenceRef: string[];
+  /** 额外的已知缺口。 */
+  gaps?: string[];
+  /** 即使 smoke_verified 也不在 test 环境放行（例如快手详情的内容 URL 构造方式未验证，FS-7.7）。 */
+  disabledInTest?: boolean;
 }
 
+const KS_DETAIL_GAP = "content_url_construction_unverified"; // 快手内容 URL 无样本，smoke 证实前详情不放行（FS-7.7）
 const TUPLES: Tuple[] = [
-  // 同步主页 / 列表：两平台 smoke_verified（raw4）
+  // ── 主页 / 列表（tracer）──
+  // 同步主页 / 列表：抖音、小红书 smoke_verified（raw4）
   { platform: "douyin", action: "media_user_info", mode: "synchronous", outcome: "succeeded", evidenceRef: ["raw4.C01"] },
   { platform: "xiaohongshu", action: "media_user_info", mode: "synchronous", outcome: "succeeded", evidenceRef: ["raw4.C02"] },
   { platform: "douyin", action: "user_video_list", mode: "synchronous", outcome: "succeeded", evidenceRef: ["raw4.C03"] },
@@ -83,14 +89,32 @@ const TUPLES: Tuple[] = [
   // 异步主页：抖音 raw4 C09，小红书 raw5 C02
   { platform: "douyin", action: "media_user_info", mode: "asynchronous", outcome: "succeeded", evidenceRef: ["raw4.C09.submit", "raw4.C09.poll1"] },
   { platform: "xiaohongshu", action: "media_user_info", mode: "asynchronous", outcome: "succeeded", evidenceRef: ["raw5.C02.submit", "raw5.C02.poll1"] },
-  // 异步列表：两平台 provider-failed（RESULT_VALIDATION_FAILED），保持 disabled
+  // 异步列表：抖音、小红书 provider-failed（RESULT_VALIDATION_FAILED），保持 disabled
   { platform: "douyin", action: "user_video_list", mode: "asynchronous", outcome: "provider_failed", evidenceRef: ["raw8.A2.poll1"] },
   { platform: "xiaohongshu", action: "user_video_list", mode: "asynchronous", outcome: "provider_failed", evidenceRef: ["raw4.C10.poll1", "raw5.C04.poll1"] },
+  // ── 快手主页 / 列表（a-full-sync；raw12 / raw13 / raw14）──
+  { platform: "kuaishou", action: "media_user_info", mode: "synchronous", outcome: "succeeded", evidenceRef: ["raw12.K1", "raw12.K2"] },
+  { platform: "kuaishou", action: "user_video_list", mode: "synchronous", outcome: "succeeded", evidenceRef: ["raw12.K3", "raw13.L3"] },
+  { platform: "kuaishou", action: "media_user_info", mode: "asynchronous", outcome: "succeeded", evidenceRef: ["raw14.A1.submit", "raw14.A1.poll1", "raw14.A1.poll2"] },
+  { platform: "kuaishou", action: "user_video_list", mode: "asynchronous", outcome: "provider_failed", evidenceRef: ["raw14.A2.poll1"] },
+  // ── 详情 media_stats_number（响应动作 media_stats）──
+  { platform: "douyin", action: "media_stats_number", mode: "synchronous", outcome: "succeeded", evidenceRef: ["raw4.C05"] },
+  { platform: "xiaohongshu", action: "media_stats_number", mode: "synchronous", outcome: "succeeded", evidenceRef: ["raw4.C06"] },
+  { platform: "kuaishou", action: "media_stats_number", mode: "synchronous", outcome: "succeeded", evidenceRef: ["raw13.V1", "raw12.K4"], gaps: [KS_DETAIL_GAP], disabledInTest: true },
+  { platform: "douyin", action: "media_stats_number", mode: "asynchronous", outcome: "succeeded", evidenceRef: ["raw9.A5.submit", "raw9.A5.poll1"] },
+  { platform: "xiaohongshu", action: "media_stats_number", mode: "asynchronous", outcome: "succeeded", evidenceRef: ["raw5.C06.submit", "raw5.C06.poll1"] },
+  { platform: "kuaishou", action: "media_stats_number", mode: "asynchronous", outcome: "succeeded", evidenceRef: ["raw14.A3.submit", "raw14.A3.poll1", "raw14.A3.poll2"], gaps: [KS_DETAIL_GAP], disabledInTest: true },
+  // ── 评论 post_comments_list：快手不登记（D-51）；抖音异步 provider-failed ──
+  { platform: "douyin", action: "post_comments_list", mode: "synchronous", outcome: "succeeded", evidenceRef: ["raw4.C07"] },
+  { platform: "xiaohongshu", action: "post_comments_list", mode: "synchronous", outcome: "succeeded", evidenceRef: ["raw4.C08.attempt2", "raw6.C02"], gaps: ["intermittent_result_validation_failed"] },
+  { platform: "xiaohongshu", action: "post_comments_list", mode: "asynchronous", outcome: "succeeded", evidenceRef: ["raw9.A4.submit", "raw9.A4.poll1"] },
+  { platform: "douyin", action: "post_comments_list", mode: "asynchronous", outcome: "provider_failed", evidenceRef: ["raw8.A3.poll1"] },
 ];
 
 function rowsFor(t: Tuple): CapabilityProfile[] {
   const knownGaps = [
     "auth_header_doc_contradiction", // 文档写 Bearer，raw4 实测 X-Api-Key；保存的样本头里不含认证头，生产前仍需批准式 smoke
+    ...(t.gaps ?? []),
     ...(t.action === "media_user_info"
       ? [
           "non_home_locator_response_unobserved", // 没有把视频/笔记链接传给主页接口的样本
@@ -111,7 +135,7 @@ function rowsFor(t: Tuple): CapabilityProfile[] {
   };
   return [
     // test：只用于 fixture transport，不代表可以访问真实供应商
-    { ...common, environment: "test", activation: t.outcome === "succeeded" ? "approved" : "disabled" },
+    { ...common, environment: "test", activation: t.outcome === "succeeded" && !t.disabledInTest ? "approved" : "disabled" },
     // production：全部 disabled，直到对应 tuple 完成批准式 smoke 与人工批准（任务 9）
     { ...common, environment: "production", activation: "disabled" },
   ];

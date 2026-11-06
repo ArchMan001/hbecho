@@ -11,6 +11,7 @@ import type { Db, DbTx } from "../../db/client";
 import { externalAccountIdentifiers, odsProviderCalls, staffAccountAssignments, syncTasks } from "../../db/schema";
 import { bindDominantListAuthor, bindSecondaryIdentifier, loadOwnerSnapshot, type IdentifierRef } from "../identity";
 import { DEFAULT_STRATEGIES, withFences } from "../orchestrator";
+import { retryOnDeadlock } from "../../db/deadlock";
 import { contentListProjector, hasArchivedCover, recordIssue, validPublishedAtMs } from "../projection";
 import { buildRequest, decodeVideoList, type ListData, type RequestCursor, type TypedCursor } from "../provider-adapter";
 import { platformCodeOf, type AccountRunnerDeps } from "./account-deps";
@@ -252,10 +253,13 @@ export function createListWalker(deps: AccountRunnerDeps): TaskRunner {
       const receivedAt = (await callReceivedAt(db, r.captured.providerCallId)) ?? clock.now();
       let committed;
       try {
-        committed = await pageTx(pageNo, r.data, r.captured.providerCallId, receivedAt);
+        committed = await retryOnDeadlock(() => pageTx(pageNo, r.data, r.captured.providerCallId, receivedAt)); // 死锁时整页回滚，原样重跑（响应已在 ODS，不需要再请求）
       } catch (e) {
         // 整页事务已回滚：技术失败不会变成空列表，进度不前进
-        return fail("page_projection_failed", { reason: e instanceof PageIncompleteError ? "page_incomplete" : "page_projection_failed", page_no: pageNo });
+        // 只记错误类型与数据库错误码（不记消息：Drizzle 的消息带完整 SQL 与参数）
+        const cause = (e as { cause?: { code?: unknown; errno?: unknown } }).cause ?? (e as { code?: unknown; errno?: unknown });
+        const dbCode = typeof cause.code === "string" ? cause.code : null;
+        return fail("page_projection_failed", { reason: e instanceof PageIncompleteError ? "page_incomplete" : "page_projection_failed", page_no: pageNo, error: e instanceof Error ? e.name : typeof e, db_code: dbCode, db_errno: typeof cause.errno === "number" ? cause.errno : null });
       }
       if (!committed.ok) return abandon(committed.reason);
       progress = committed.value;

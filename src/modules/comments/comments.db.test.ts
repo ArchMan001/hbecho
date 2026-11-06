@@ -206,3 +206,24 @@ describe("崩溃恢复与门禁", () => {
   });
 });
 
+
+describe("技术失败不标记任何评论（J6、FS-10.4）", () => {
+  it("上一轮完整抓取后，这一轮传输失败（5xx）/ 解析失败：已有评论一条都不被标 suspected_deleted，也不写出新的最终覆盖口径", async () => {
+    const { env, cid, source } = await world();
+    douyinTwoPages(env, [c("p2-a"), c("p2-b")]);
+    await source.request([{ contentId: cid.dy, wants: ["comments"] }]);
+    await runAll(env);
+    expect(await rows(cid.dy)).toHaveLength(22);
+    for (const bytes of [{ httpStatus: 500, body: loadFixtureBytes("raw7.C20.http500") }, { httpStatus: 200, body: new TextEncoder().encode("not json at all") }]) {
+      await nextRound(t, env);
+      env.transport.clearRoutes();
+      env.routeComments(() => bytes);
+      await source.request([{ contentId: cid.dy, wants: ["comments"] }]);
+      await runAll(env);
+      const task = await commentsTask();
+      expect(["retry_wait", "failed", "dead"]).toContain(task.status);
+      expect((await rows(cid.dy)).filter((x) => x.status === "suspected_deleted")).toHaveLength(0);
+      expect(await rows(cid.dy)).toHaveLength(22);
+    }
+  });
+});

@@ -1,6 +1,6 @@
 # A 全量周期同步（a-full-sync）· 验收
 
-> **状态**：`draft`
+> **状态**：`implemented`（任务 0–10 本机离线验收完成；环境项与推送 / 合并待授权）
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -29,15 +29,39 @@
 
 | 组 | 结果 | 测试文件 |
 |---|---|---|
+| A 组（FS-1） | 通过（A1–A18；A16 的「`drizzle-kit generate` 无新文件」由 `verify.sh` 第 4 步保证；A17 用 `started_at` / `logical_at` 对调的变异检查验证） | `sync-schedule/scheduler.db.test.ts`、`sync-schedule/slots.test.ts`、`db/migration-0004.db.test.ts`、`demand/acceptance-gaps.db.test.ts` |
+| B 组（FS-2） | 通过（B1–B12；B11 的 6,000 账号 13 块 ≤500 见规模演练，默认套件只断言块大小上限） | `monitoring/resolver.db.test.ts`、`monitoring/reasons.test.ts`、`worker/sync-worker.db.test.ts`、`sync-schedule/scheduler.db.test.ts`、`acceptance-boundaries.test.ts`、`sync-runner/scale-drill.db.test.ts`（手动） |
+| C 组（FS-3） | 通过（C1–C15）；C8「网络期间无事务」覆盖 ODS 网关与图片下载，视频 / 能力服务 / 列表翻页路径靠结构（这些路径没有 `db.transaction` 包住网络调用）而非专用断言 | `sync-worker.db.test.ts`、`sync-schedule/commands.db.test.ts`、`sync-runner/seal.db.test.ts`、`raw-capture/gateway.db.test.ts` |
 | D 组（FS-4，任务 5） | 通过（D1–D11） | `profile-runner.db.test.ts`、`identity-check.test.ts` |
-| E 组（FS-5，任务 5） | 通过（E1–E22、E24–E26；E23 仅纯函数层） | `decide-after-page.test.ts`、`list-walker.db.test.ts`、`list-walker.recovery.db.test.ts`、`self-check.db.test.ts` |
-| F 组（FS-6，任务 5） | 部分（F1、F2、F4、F6、F7 通过；F3 无读取接口、F5 等任务 6/7） | `list-walker.recovery.db.test.ts`、`seal.db.test.ts`、`full-sync-projection.db.test.ts`、`projection.db.test.ts` |
-| G 组（FS-7，任务 5 部分） | 部分（G3–G6 通过；G7 的列表 `video.url` 部分等任务 7；G8、G9 等任务 6） | `list-walker.db.test.ts`、`account-sync.db.test.ts` |
-| H–J 组（FS-8～10，任务 6） | 已落地，逐条对照待任务 10 补齐（代表性用例已通过：处置七类、幂等与重放、复用与「本轮」、种子快照、详情失败、评论完整性口径、`get`） | `demand/demand.db.test.ts`、`comments/comments.db.test.ts`、`comments/policy.test.ts` |
-| K 组（FS-11，任务 7） | 部分（K1、K2、K4、K7、K8、K11–K14、K16、K20 通过；K5、K6 由 tracer 的 `archive.db.test.ts` 与本任务的「相同字节复用」共同覆盖；K3、K9、K10、K15 的视频路径、K17、K18 的 DNS 解析部分、K19 待任务 10 对照补证） | `sync-runner/media.db.test.ts`、`media-archive/video.unit.test.ts`、`raw-capture/oss-store.test.ts`、`media-archive/archive.db.test.ts` |
-| 其余自动项 | 待实施 | — |
+| E 组（FS-5，任务 5） | 通过（E1–E22、E24–E26；E12 由三平台首次基线用例间接覆盖；E23 仅纯函数层，数据库层没有 `has_more` 非法值的用例） | `decide-after-page.test.ts`、`list-walker.db.test.ts`、`list-walker.recovery.db.test.ts`、`self-check.db.test.ts` |
+| F 组（FS-6） | 通过（F1、F2、F4–F7）；**F3 无读取接口**（本 spec 没有下游读取入口，`finalized` 约束由 `demand get` 与 current 指针体现） | `list-walker.recovery.db.test.ts`、`seal.db.test.ts`、`projection/full-sync-projection.db.test.ts`、`sync-runner/media.db.test.ts`（F5：媒资任务未跑时 current 已切换） |
+| G 组（FS-7） | 通过（G1、G3–G9）；G2 的快手列表异步 / 评论「发请求前拒绝」只在 capability 表层覆盖，没有运行期零调用断言 | `provider-adapter/capability.test.ts`、`list-walker.db.test.ts`、`demand/demand.db.test.ts` |
+| H 组（FS-8） | 通过（H1–H14；H5 为新补） | `demand/demand.db.test.ts`、`demand/acceptance-gaps.db.test.ts` |
+| I 组（FS-9） | 通过（I1–I9；I8 为新补：详情作者不建账号、不新增标识） | `demand/demand.db.test.ts`、`projection/detail.test.ts`、`provider-adapter/decode-detail.test.ts`、`demand/acceptance-gaps.db.test.ts` |
+| J 组（FS-10） | 通过（J1–J11；J6 为新补） | `comments/comments.db.test.ts`、`comments/policy.test.ts` |
+| K 组（FS-11） | 通过（K1–K14、K16–K20）；K3、K17 为新补；**K15 的视频路径按设计不可达**：已有视频资产时直接复用、从不重新下载，所以不存在「视频下载失败且有旧资产」；图片路径的 `carried_forward` 由 `archive.db.test.ts` 覆盖 | `sync-runner/media.db.test.ts`、`media-archive/archive.db.test.ts`、`media-archive/video.unit.test.ts`、`media-archive/http-transport.unit.test.ts`、`sync-runner/media-map.test.ts` |
+| L 组（FS-12） | 通过（L1–L8）；L1 逐类「触发每个失败类别」靠 `failure-map.test.ts` 的码表完整性与各 Runner 用例分散覆盖 | `sync-runner/failure-map.test.ts`、`sync-worker.db.test.ts`、`raw-capture/gateway.db.test.ts`、`sync-ops/ops.db.test.ts` |
+| M 组（FS-13） | 通过（M1–M11）；M6 的「短链」入口只有 tracer 阶段的解析用例 | `sync-schedule/commands.db.test.ts`、`sync-ops/external-add.db.test.ts`、`sync-ops/ops.db.test.ts` |
+| N 组（FS-14） | 通过（N1–N9；N7 为静态检查） | `sync-ops/ops.db.test.ts`、`acceptance-boundaries.test.ts`、`worker/sync-cli.ops.test.ts` |
+| O 组（FS-15） | 通过（O1–O7；O4 为新补；O6 的 `account` 逐任务给出身份校验状态，`batch` 汇总三类） | `sync-status/status.db.test.ts`、`worker/sync-cli.ops.test.ts` |
+| P 组（FS-16） | 通过（P1–P6）；P5 针对 ambiguous 的上界没有专用用例；P6「没有写死的全局模式」靠 `mode` 取自任务参数的用例，不是静态扫描 | `provider-adapter/capability.test.ts`、`cost-guard/cost-guard.test.ts`、`sync-runner/budget.db.test.ts` |
+| Q 组（FS-17） | 通过（Q1–Q5；Q5 的启动调用是静态检查，函数本身有单测） | `maintenance/maintenance.db.test.ts`、`raw-capture/retention.db.test.ts`、`media-archive/video.unit.test.ts`、`acceptance-boundaries.test.ts` |
+| R 组（FS-18、FS-20） | R1、R4–R9 通过；R2 只有 tuple 级登记，没有「三平台 × 动作」覆盖清单的机器断言；R3 见下方故障矩阵映射；R6 对写操作与按需入口成立，只读查询（`status` / `freshness` / `sample`）没有 Capability 校验（见「覆盖不了」） | `acceptance-boundaries.test.ts`、`tests/harness/fixtures.test.ts`、`sync-runner/scale-drill.db.test.ts`（手动）、`sync-ops/ops.db.test.ts` |
 | 手工项 MAN1–MAN6 | 待实施 | — |
 | 环境项 ENV-1～ENV-5 | 待实施 | — |
+
+故障矩阵（R3，FS-18.3）与现有用例的对应：
+
+| 故障 | 用例 |
+|---|---|
+| ODS 写失败 | `raw-capture/gateway.db.test.ts`「请求意图写 ODS 失败」「响应写 ODS 失败 / 哈希不一致 / 截断」 |
+| `in_flight` 后进程丢失 | `worker/sync-worker.db.test.ts`「接手自失联 worker 的任务…标为 ambiguous」、`sync-runner/list-walker.recovery.db.test.ts` |
+| 租约过期被抢 | `sync-worker.db.test.ts`「租约过期后被另一个 worker 接手」 |
+| 陈旧 token 提交 | 同上（`withFences` 整笔失败）、`sync-runner/seal.db.test.ts` |
+| 页投影中途失败 | `list-walker.recovery.db.test.ts`「第 N 条投影抛错」 |
+| 媒资下载失败 / URL 过期 | `sync-runner/media.db.test.ts`（多来源、全部过期重取详情、截断、超限） |
+| 预算耗尽 | `sync-runner/budget.db.test.ts`、`demand/demand.db.test.ts`「预算封口」 |
+| 批次取消 | `sync-worker.db.test.ts`「批次取消后，在途任务…」、`sync-schedule/commands.db.test.ts` |
 
 实施完成后，把每组的测试文件名与「通过」写在这里，并在下方「验收中发现并修复的缺口」登记差异。
 
@@ -379,4 +403,10 @@
 
 ## 验收中发现并修复的缺口
 
-实施完成后在此登记（编号、现象、修复、对应测试）。当前为空。
+| # | 现象 | 修复 | 对应测试 |
+|---|---|---|---|
+| 1 | 并发 worker 下约 5–9% 的列表页事务因 `ER_LOCK_DEADLOCK` 回滚，任务回队尾后重新请求供应商（多付费） | `db/deadlock.ts` 的 `retryOnDeadlock` 包住整页事务（响应已在 ODS，原样重跑）；演练里 6,000 账号零死锁失败 | `sync-runner/scale-drill.db.test.ts`（手动，`HBECHO_SCALE_DRILL=1`） |
+| 2 | `downloadVideoToFile` 中止时 `createWriteStream` 尚未打开就删文件，随后文件被打开而残留 | 先等句柄关闭再删 | `media-archive/video.unit.test.ts` |
+| 3 | `HttpCapabilityClient` 把缺失的 `X-Duration-Ms` / `X-Width` 头当成 0 | 缺失或非非负整数 → `null` / 拒绝 | `media-archive/capability-client.unit.test.ts` |
+| 4 | 无音轨的音频需求在 `get` 里显示 `ready` | 媒资任务成功但没有资产时，报引用上的稳定原因（`no_audio_track`） | `sync-runner/media.db.test.ts` |
+| 5 | 本机测试脚本每次泄漏一个匿名 MySQL 数据卷（`docker rm -f` 缺 `-v`），两天攒了 193 个、占满 Docker 虚拟磁盘 | `scripts/with-test-mysql.sh` 的清理改为 `docker rm -f -v` | 一次完整 `verify.sh` 后悬空卷数不增长 |

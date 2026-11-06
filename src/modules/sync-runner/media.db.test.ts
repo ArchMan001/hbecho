@@ -11,7 +11,7 @@ import { loadFixtureBytes } from "../../../tests/harness/fixtures";
 import { setupMedia, type MediaEnv } from "../../../tests/harness/media-env";
 import { nextRound, runPeriodic } from "../../../tests/harness/periodic";
 import { DETAIL_PATH, setupSync, type SyncEnv } from "../../../tests/harness/sync-env";
-import { dataQualityIssues, mediaAssets, mediaReferences, syncBatches, syncTasks } from "../../db/schema";
+import { contents, dataQualityIssues, mediaAssets, mediaReferences, syncBatches, syncTasks } from "../../db/schema";
 import { decodeDetail, rankVideoSources } from "../provider-adapter";
 import { mediaKey } from "../media-archive";
 
@@ -295,6 +295,8 @@ describe("周期媒资：账号级 download_media（FS-11.1–11.4）", () => {
     expect(batch).toMatchObject({ status: "succeeded", mediaFinishedAt: null });
     const media = await env.tasks("download_media");
     expect(media).toHaveLength(1);
+    // F5：媒资任务还没跑，快照已定稿、current 已切换
+    expect((await t.db.select().from(contents)).every((c) => c.currentSnapshotId !== null)).toBe(true);
     expect(media[0]!.taskParameters).toEqual({ schema_version: "sync-media-task.v1", scope: "account_batch" });
     await env.scheduler.tick(env.clock.now()); // 再汇总一次不会重复建任务
     expect(await env.tasks("download_media")).toHaveLength(1);
@@ -302,6 +304,9 @@ describe("周期媒资：账号级 download_media（FS-11.1–11.4）", () => {
 
     await settle();
     expect((await env.tasks("download_media"))[0]).toMatchObject({ status: "succeeded" });
+    // K17：规则没有圈中任何内容 → 视频从不被下载，也没有视频 / 音频引用
+    expect(me.videoTransport.requested).toEqual([]);
+    expect(await refsOf(VIDEO_ROLES)).toEqual([]);
     const refs = await t.db.select().from(mediaReferences);
     expect(refs.filter((r) => ["avatar", "background", "cover"].includes(r.role)).every((r) => r.archiveStatus === "archived")).toBe(true);
     expect(refs.filter((r) => r.role.endsWith("_normalized")).length).toBeGreaterThanOrEqual(3);
@@ -395,3 +400,22 @@ describe("快手封面（D-62）：原始 KVIF 作为不透明字节入库，标
   });
 });
 void and;
+
+describe("K3：头像 / 背景每个批次各重新下载一次", () => {
+  it("两个批次：每批次一个新的头像引用，各自下载并计算 SHA-256（同一 URL 下载两次）", async () => {
+    const w = await periodicWorld();
+    await w.settle();
+    const avatars = () => t.db.select().from(mediaReferences).where(eq(mediaReferences.role, "avatar")).orderBy(mediaReferences.mediaReferenceId);
+    expect(await avatars()).toHaveLength(1);
+    const url = (await avatars())[0]!.sourceLocator!;
+    expect(w.me.imageTransport.callsTo(url)).toBe(1);
+    await nextRound(t, w.env);
+    await w.me.run();
+    await w.settle();
+    const after = await avatars();
+    expect(after).toHaveLength(2);
+    expect(after.every((r) => r.archiveStatus === "archived" && r.mediaAssetId !== null)).toBe(true);
+    expect(after[0]!.mediaAssetId).toBe(after[1]!.mediaAssetId); // 字节相同 → 同一份资产，两个引用
+    expect(w.me.imageTransport.callsTo(url)).toBe(2);
+  });
+});

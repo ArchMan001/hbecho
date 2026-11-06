@@ -695,9 +695,31 @@ B 域接入后只替换 `ActorContext` 的来源，不改调用方。审计沿�
 - 小红书评论永远视为覆盖不完整（保守口径）：下游不得把小红书评论总数当完整；
 - 快手详情的内容 URL 构造未验证：在 smoke 之前快手详情 disabled；
 - `unavailable` 在 1.0 无自动设置路径：供应商无法区分私密 / 删除 / 无效；账号长期失败只产生质量问题，由运营处置；
-- 规模演练的数字（待任务 10 回填）：规划耗时、峰值内存、DB 行数——**未测量前不写**；
+- 规模演练的数字见下方「12.1 规模演练」（2026-11-06 实测，本机、fake transport）；
 - 单账号补抓默认 `run_now` 与全量批次并行（A PRD §7.1 已在任务 0 放宽）；
 - 没有页面；运营只能用 CLI（§15）。
+
+### 12.1 规模演练（FS-18.4，2026-11-06）
+
+条件：本机一次性 MySQL 8.4 容器；6,000 个自有账号 = 三平台各 2,000 个，每专员一个账号；每账号主页 1 次 + 列表 1 页（3 条）；fake transport（离线、不付费）；worker 并发 4，进程内单 worker；批次预算按示例配置（调用数上限 25,000、点数上限 210,000）。复现：`HBECHO_SCALE_DRILL=1 HBECHO_SCALE_ACCOUNTS=6000 ./scripts/with-test-mysql.sh pnpm exec vitest --run --project db src/modules/sync-runner/scale-drill.db.test.ts`（默认跳过）。
+
+| 指标 | 数值 |
+|---|---|
+| 规划（`tick`：创建批次 + 规划全部任务） | 1.06 秒，13 块（每块 ≤ 500） |
+| 任务数 | 12,000 个结构化任务（每账号主页 + 列表）；汇总后另建 6,000 个账号级媒资任务（本演练不跑媒资 Runner） |
+| 执行（12,000 个任务全部跑完） | 229 秒，52 任务 / 秒（300 账号时 88 任务 / 秒，见下） |
+| 峰值 RSS（含测试进程与 fake 数据） | 403 MB |
+| 行数 | `sync_tasks` 12,000、`content_snapshots` 18,000、`ods_provider_calls` 12,000 |
+| 重复任务 | 0（幂等键重复 0；`(batch, account, action)` 重复 0） |
+| 终态 | 12,000 个全部 `succeeded`；批次 `succeeded` |
+| 批次预算 实际 / 上限 | 调用数 12,000 / 25,000 = 0.48 |
+
+**观察与处置**
+
+1. **并发 worker 下页投影事务死锁（已修）**：并发 4 时，约 5–9% 的列表页事务因 `ER_LOCK_DEADLOCK` 回滚（`contents` 与 `content_snapshots` 在唯一索引上「先 `SELECT … FOR UPDATE` 再 `INSERT`」，两个账号各持一把间隙锁后互等插入意向锁）。没有重试时整页作废、任务回队尾，**下一次尝试要重新请求供应商，多付一次钱**，而响应早已落在 ODS。修复：`src/db/deadlock.ts` 的 `retryOnDeadlock`，列表页事务整笔回滚后原样重跑（≤ 4 次，带抖动）；页事务本身是幂等的整笔操作。修复后 6,000 账号演练零死锁失败。**没有改成 `INSERT … ON DUPLICATE KEY UPDATE`**：试过只改 `contents` 一处，死锁转移到 `content_snapshots`；整页重试覆盖所有这类热点，改动更小。
+2. **`claimNext` 的 `EXPLAIN`**：驱动表是 `sync_batches`（`idx_sync_batches_status_logical`，`Using temporary; Using filesort`），内表走 `idx_sync_tasks_batch_status`。`ORDER BY priority DESC, attempt_count, task_id` 需要对候选任务排序，候选数随未领取任务线性增长；吞吐从 88 任务 / 秒（600 个任务）降到 52 任务 / 秒（12,000 个）。同一趋势里还包含批次预算每次调用的聚合查询（`spentForBatch` 随已发调用数线性增长）。**1.0 规模（每周 12,000 个任务，约 4 分钟）不需要新索引**；单批次超过约 10 万个待领取任务时再评估 `(status, priority, attempt_count, task_id)` 复合索引与预算计数改为增量。
+3. **执行耗时只是下限**：fake transport 零延迟；真实供应商每次调用的延迟另算（并发 4、QPS 受令牌桶限制，总耗时由 QPS 配置决定，不由本机处理能力决定）。
+4. **内存**：403 MB 是整个 vitest 进程（含 6,000 条 fake 路由与 fixture），不是生产 worker 的数字；生产 worker 的内存要在测试 ECS 上单独量（任务 10「测试 ECS 运行」，需要授权）。
 
 ## 13. Decision records
 

@@ -235,3 +235,25 @@ describe("batch retry-failed（FS-12.5）", () => {
     void syncTasks;
   });
 });
+
+describe("R8：审计事件内容", () => {
+  it("含 actor、时间、对象、前后状态；不含 secret、原始载荷、临时 URL；拒绝也写审计", async () => {
+    const { env, audit, ops, sw } = await world();
+    const a = await env.addAccount("douyin", env.org.staffA);
+    await ops.rebind({ accountId: a.accountId.toString(), staffId: env.org.staffC.toString() }, opsActor({ actorId: "service:ops-9" }));
+    await sw.set({ level: "account", id: a.accountId.toString(), enabled: false }, opsActor({ actorId: "service:ops-9" }));
+    await code(ops.rebind({ accountId: a.accountId.toString(), staffId: env.org.staffC.toString() }, serviceActor()));
+    const events = audit.events;
+    expect(events.length).toBeGreaterThanOrEqual(3);
+    for (const e of events) {
+      expect(e.actorId).toMatch(/^service:/);
+      expect(Date.parse(e.at)).not.toBeNaN();
+      expect(e.action).toBeTruthy();
+      expect(e.outcome).toBeTruthy();
+    }
+    expect(events.find((e) => e.action === "account_rebind" && e.outcome === "applied")?.detail).toMatchObject({ account_id: a.accountId.toString(), from_staff_id: env.org.staffA.toString(), to_staff_id: env.org.staffC.toString() });
+    expect(events.find((e) => e.action === "monitoring_set" && e.outcome === "applied")?.detail).toMatchObject({ enabled: false, previous_enabled: true });
+    expect(events.some((e) => e.outcome === "rejected" && e.code === "forbidden")).toBe(true);
+    expect(JSON.stringify(events)).not.toMatch(/https?:\/\/|secret|password|token|authorization/i);
+  });
+});

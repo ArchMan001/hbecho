@@ -113,3 +113,12 @@ describe("freshness / sample（FS-15.3、15.8）", () => {
     expect(env.transport.calls.length).toBe(calls0);
   });
 });
+
+describe("O4：全部查询输出脱敏", () => {
+  it("status / batch / account / freshness / sample 的输出不含凭证、完整对象 key、签名或临时 URL 参数", async () => {
+    const { st, dy, batchId } = await world();
+    const all = JSON.stringify([await st.status(), await st.batch(batchId), await st.account(dy.accountId.toString()), await st.freshness({ olderThanHours: 24 }), await st.sample({ n: 10 })]);
+    // 主页入口（homepage）可以出现；对象存储 key、签名、凭证、过期参数不可以
+    expect(all).not.toMatch(/x-signature|signature=|expires=|accesskey|secret|password|authorization|bearer|\bods\/|\bmedia\/|objectKey|\.part\b/i);
+  });
+});

@@ -14,7 +14,9 @@ export interface HttpTransportOptions {
   fetchImpl?: typeof fetch;
 }
 
-const DEFAULT_TIMEOUT_MS = 30_000;
+// 90 秒：2026-11-06 真实 smoke 里快手同步的主页 / 列表调用有 19–27 秒的，30 秒时有 6 次超时变成 ambiguous（可能已计费但结果丢失）；
+// 超时后调用只能当作结果不明，所以宁可多等，也不要让慢响应变成不明调用
+const DEFAULT_TIMEOUT_MS = 90_000;
 
 /** 有证据表明请求没到远端：可以安全地当作新 attempt 重试。 */
 const NOT_DELIVERED_CODES = new Set([

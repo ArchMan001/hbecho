@@ -49,7 +49,8 @@
 | R 组（FS-18、FS-20） | R1、R4–R9 通过；R2 只有 tuple 级登记，没有「三平台 × 动作」覆盖清单的机器断言；R3 见下方故障矩阵映射；R6 对写操作与按需入口成立，只读查询（`status` / `freshness` / `sample`）没有 Capability 校验（见「覆盖不了」） | `acceptance-boundaries.test.ts`、`tests/harness/fixtures.test.ts`、`sync-runner/scale-drill.db.test.ts`（手动）、`sync-ops/ops.db.test.ts` |
 | 手工项 MAN1–MAN6 | 待实施 | — |
 | 环境项 ENV-1 | 通过（测试 ECS） | `scripts/ecs-test.sh`、design §12.1 |
-| 环境项 ENV-2～ENV-5 | 待实施（需批准预算 / 授权；ENV-5 保持 disabled） | — |
+| 环境项 ENV-2 | 已执行，快手有未决问题 | [smoke 报告](smoke-report-2026-11-06.md) |
+| 环境项 ENV-3～ENV-5 | ENV-3 本机已验证（`verify.sh` 第 9 步）；ENV-4 未做（smoke 的媒资放在 ODS 桶前缀，没有写 `hbecho-media`）；ENV-5 保持 disabled | — |
 
 故障矩阵（R3，FS-18.3）与现有用例的对应：
 
@@ -199,7 +200,7 @@
 | G6 | FS-7.4 | raw12 K6：0 条 + `has_more=true` + `no_more` | 等价于空窗口：首次建 `empty`（记游标异常）；有旧锚点则 `blocked` |
 | G7 | FS-7.5 | 快手主页 / 列表 `video.url` / `audio.url` | 无头像 / 背景引用；视频来源选择不取列表 `video.url` |
 | G8 | FS-7.6 | 对快手内容提交 `comments` 需求 | `unsupported_platform`；不生成任务 |
-| G9 | FS-7.7 | 对快手内容提交 `detail` 需求（smoke 前） | `capability_disabled`；不生成任务 |
+| G9 | FS-7.7 | 对快手内容提交 `detail` 需求 | 同步模式：排队（2026-11-06 smoke 验证了内容 URL 构造）；异步模式：`capability_disabled`，不生成任务 |
 
 ### H. 按需采集需求（FS-8）
 
@@ -381,7 +382,7 @@
 | # | 需求 | 依赖 | 当前状态 |
 |---|---|---|---|
 | ENV-1 | FS-18 | 测试 ECS 一次性 MySQL 容器：本 spec 的 `*.db.test.ts` 与 6,000 账号演练 | **已完成（2026-11-06，刘学奎授权）**：569 个数据库测试通过（92 秒），含演练 570 个通过；演练数字见 design §12.1；入口 `./scripts/ecs-test.sh` |
-| ENV-2 | FS-19 | 真实 AI Master：快手主页 / 列表 / 详情、三平台详情与评论、两页以上列表 | 待实施（需批准预算与 allowlist） |
+| ENV-2 | FS-19 | 真实 AI Master：快手主页 / 列表 / 详情、三平台详情与评论、两页以上列表 | **已执行（2026-11-06，刘学奎授权）**：见 [smoke 报告](smoke-report-2026-11-06.md)；快手有 3 项未决问题 |
 | ENV-3 | FS-11.7 | ffmpeg ≥ 7.1 + 真实 FastAPI 外壳：图片标准化与音频抽取 | 待实施（本机有则 `verify` 第 9 步覆盖；CI 不验 Python 侧） |
 | ENV-4 | FS-11.6 | 真实 OSS（测试桶）：分片上传与签名 URL 读取 | 待实施（需授权；`media` 桶不设过期规则） |
 | ENV-5 | FS-16.2 | production activation | 保持 `disabled`；启用另走人工批准，不在本 spec 完成时发生 |
@@ -390,7 +391,7 @@
 
 - **供应商的真实限流、超时与 5xx 行为**：429、真实 5xx、超时没有样本；只用故障注入验证我方处理，不证明供应商表现；
 - **视频 URL 有效期、异步任务 TTL、QPS**：只有 smoke 能给线索，且线索不是合同；
-- **快手详情的内容 URL 构造**：smoke 前无证据，快手详情与快手视频按需归档保持 disabled；
+- ~~**快手详情的内容 URL 构造**：smoke 前无证据，快手详情与快手视频按需归档保持 disabled；~~ 已由 2026-11-06 smoke 验证（同步模式）；快手详情**异步**模式仍未用规范 URL 验证；
 - **小红书评论的真实覆盖率**：口径是保守的「永不完整」，实际能抓到多少取决于供应商；
 - **规模数字的外推**：演练在测试机上用 fake transport；真实供应商延迟下的总耗时无法离线得到；
 - **多 worker 进程**：1.0 单进程；跨进程限流、跨进程公平性未覆盖；

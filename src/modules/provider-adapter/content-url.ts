@@ -27,6 +27,8 @@ export function buildContentUrl(platform: Platform, c: ContentUrlInput): Content
     case "xiaohongshu":
       return { ok: true, url: `https://www.xiaohongshu.com/explore/${id}`, form: "canonical" };
     case "kuaishou":
-      return UNAVAILABLE;
+      // 2026-11-06 真实 smoke 验证：www.kuaishou.com/short-video/{id} 与 v.m.chenzhongtech.com/fw/photo/{id} 可用，
+      // c.kuaishou.com/fw/photo/{id}、m.gifshow.com/fw/photo/{id} 被供应商拒绝（RESULT_VALIDATION_FAILED）
+      return { ok: true, url: `https://www.kuaishou.com/short-video/${id}`, form: "canonical" };
   }
 }

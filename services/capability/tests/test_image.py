@@ -95,3 +95,15 @@ def test_garbage_input_is_a_conversion_error_not_an_empty_image():
 def test_truncated_heic_is_rejected():
     with pytest.raises(ConversionError):
         to_normalized_jpeg(HEIC.read_bytes()[:500])
+
+
+SEEKABLE_HEIC = REPO / "tests" / "fixtures" / "media" / "douyin-cover-540-seekable.heic"
+
+
+def test_heic_that_cannot_be_decoded_from_a_pipe_converts_from_a_file():
+    """真实 smoke（2026-11-06）里约 13% 的抖音 HEIC 封面，ffmpeg 经 pipe:0 输入解不开、给文件路径就能解。
+    这个样本就是其中之一；转换必须走可 seek 的文件输入。"""
+    out = to_normalized_jpeg(SEEKABLE_HEIC.read_bytes())
+    assert out.width == 540 and out.data.startswith(b"\xff\xd8\xff")
+    piped = subprocess.run(["ffmpeg", "-v", "error", "-i", "pipe:0", "-frames:v", "1", "-vf", "scale=540:-2", "-q:v", "6", "-f", "mjpeg", "pipe:1"], input=SEEKABLE_HEIC.read_bytes(), capture_output=True)
+    assert piped.returncode != 0, "样本不再复现管道输入失败：换一个能复现的样本，否则这个用例失去意义"

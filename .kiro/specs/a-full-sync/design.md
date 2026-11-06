@@ -583,6 +583,7 @@ interface CommentsPolicy { platform: 'douyin'|'xiaohongshu'; completeWhen: 'natu
 ### 7.11 重试、死信与补跑（FS-12）
 
 - **退避与队尾**：沿用 tracer 的 `decideRetry`、`backoffMs`（`DEFAULT_RETRY`）；失败后 `attempt_count + 1`、置 `retry_wait` 并写 `next_attempt_at`；因 §7.5 的排序键，重试任务排在**同优先级内所有**未重试任务之后，**不立即重试**；
+- **同步 → 异步兜底**（FS-12.7）：`provider-adapter/mode-fallback.ts` 的 `effectiveMode` 决定本次尝试的模式。只作用于主页与详情；第 1 次尝试按任务参数里的 `mode`；上一次失败码是 `transport_timeout`、`ambiguous_unresolved` 或 `provider_validation_failed`，或者上一次已经在用异步（Runner 在失败的 `last_error_detail.mode_used` 里记下所用模式，所以不会在第 3 次退回同步），就改走异步；异步 capability 没放行则保持配置的模式。tracer 的根任务（`resolve_account`）在进程内的 `attemptLoop` 里做同样的事，触发条件对应 `Step.fallback`（结果不明、确认是超时的传输失败）与 `validation` 步骤；重放时第 1 次尝试仍是同步，网关对已存在的调用原样返回，所以重新运行会按同样顺序走到同样的模式。「排队尾」不需要新机制：§7.5 的排序键 `attempt_count ASC` 已经把重试任务排在未重试任务之后。已知局限：快手自定义 ID 的主页异步也失败（2026-11-06 补测 2/2 `ACTION_EXECUTION_FAILED`），兜底对它们没有收益，只是同样的调用数；
 - **不使用进程内重试**：tracer 的 `attemptLoop` 为单账号录入流程在一次运行里原地重试（交互式、单账号）；full-sync 的 Runner 只复用它的分类与退避函数（`decideRetry`、`backoffMs`），每次失败都返回调度层变成 `retry_wait`。tracer 流程本身保持原行为；
 - **尝试额度**：每次调用失败消耗一次额度（熔断期间不领取，不消耗）；`attempt_count` 到 `max_attempts`（= `settings_snapshot.task_max_attempts`）→ `dead`；不可重试稳定失败 → `failed`；
 - **`retry-failed`**：校验批次为最新 `full`、下一个 `full` 未开始；把 `failed/dead` 任务置 `pending`，`max_attempts += task_max_attempts`，`last_error_*` 保留，`result_summary.retry_rounds += 1`；列表任务保留已提交的进度（不重复已提交页）；批次从终态回到 `running`，`finished_at` 清空，结束后重算终态。记审计。

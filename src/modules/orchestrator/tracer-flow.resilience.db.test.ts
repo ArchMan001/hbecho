@@ -335,6 +335,7 @@ describe("崩溃与恢复", () => {
   it("crash-after-send-before-terminal-capture：原调用保持 ambiguous 且不被改写；最多再发一次新调用；业务事实只有一份", async () => {
     const env = await setupTracer(t);
     env.serve.profile("douyin");
+    env.transport.register({ path: PROFILE_PATH, query: { async: "true" } }, { httpStatus: 200, body: loadFixtureBytes("raw3.douyin.media_user_info") }); // 结果不明之后的重发改走异步
     env.serve.list("douyin");
     const rootId = await env.submit();
     env.hooks.afterNetwork = () => {
@@ -353,6 +354,7 @@ describe("崩溃与恢复", () => {
       ["user_video_list", 1, "terminal", "succeeded"],
     ]);
     expect(env.transport.calls).toHaveLength(3); // 主页 2 次（含 1 次重发）+ 列表 1 次
+    expect(env.transport.calls.map((c) => c.request.query.async)).toEqual(["false", "true", "false"]); // 重发是异步，列表仍是同步
     expect(await entities()).toMatchObject({ accounts: 1, assignments: 1, profiles: 1, discoveries: 20, checkpoints: 1 });
   });
 

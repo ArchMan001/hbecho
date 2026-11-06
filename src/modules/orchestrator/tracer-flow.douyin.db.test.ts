@@ -270,9 +270,12 @@ describe("入口：非主页 / 平台错配 / 三次失败都不产生业务身�
   it("连续三次 RESULT_VALIDATION_FAILED：三条独立 ProviderCall，终态 invalid_link，库里没有账号 / 归属 / 快照 / 检查点", async () => {
     const env = await setupTracer(t);
     env.serve.profile("douyin", VALIDATION_FAILED(), 500);
+    // 第 1 次同步失败后，第 2、3 次改走异步；异步提交同样被供应商校验失败拒绝
+    env.transport.register({ path: PROFILE_PATH, query: { async: "true" } }, { httpStatus: 500, body: VALIDATION_FAILED() });
     const rootId = await env.submit();
     const result = await run(env, rootId);
     expect(result.kind).toBe("failed");
+    expect(env.transport.calls.map((c) => c.request.query.async)).toEqual(["false", "true", "true"]);
     const calls = await t.db.select().from(odsProviderCalls).orderBy(odsProviderCalls.attemptNo);
     expect(calls.map((c) => [c.attemptNo, c.callSequence, c.callStatus, c.outcome, c.httpStatus])).toEqual([
       [1, 1, "terminal", "http_error", 500],
@@ -288,9 +291,10 @@ describe("入口：非主页 / 平台错配 / 三次失败都不产生业务身�
   it("前两次校验失败、第三次成功：继续完成整条链路", async () => {
     const env = await setupTracer(t);
     const ok = loadFixtureBytes("raw3.douyin.media_user_info");
-    env.transport.register({ path: PROFILE_PATH, query: { async: "false" } }, (_req, i) =>
-      i < 2 ? { httpStatus: 500, body: VALIDATION_FAILED() } : { httpStatus: 200, body: ok },
-    );
+    // 第 1 次（同步）与第 2 次（异步）失败，第 3 次（异步）提交直接返回完整结果
+    env.transport.register({ path: PROFILE_PATH, query: { async: "false" } }, { httpStatus: 500, body: VALIDATION_FAILED() });
+    let asyncCalls = 0;
+    env.transport.register({ path: PROFILE_PATH, query: { async: "true" } }, () => (asyncCalls++ < 1 ? { httpStatus: 500, body: VALIDATION_FAILED() } : { httpStatus: 200, body: ok }));
     env.serve.list("douyin");
     const rootId = await env.submit();
     expect((await run(env, rootId)).kind).toBe("succeeded");

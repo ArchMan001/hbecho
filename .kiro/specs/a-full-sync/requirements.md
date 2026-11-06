@@ -432,6 +432,7 @@
 4. 技术失败 SHALL NOT 转成空主页、空列表、空评论、真实 `0` 或「账号不存在」。
 5. `batch retry-failed` SHALL 把本批次 `failed` / `dead` 任务放回 `pending` 并重置本轮尝试额度，条件是：该批次是最新 `full` 批次，且下一个 `full` 批次尚未开始；SHALL 记审计，SHALL NOT 重复已成功的任务。
 6. 批次取消 SHALL 使未开始任务 `cancelled`、在途任务因租约失效而停止，已落 ODS 与已提交事实保留。
+7. **同步 → 异步兜底**（刘学奎 2026-11-06 确认）：对**主页**（`media_user_info`）与**详情**（`media_stats_number`），配置为同步的任务在第 1 次尝试因超时、结果不明（`ambiguous`）或 `RESULT_VALIDATION_FAILED` 失败后，第 2、3 次尝试 SHALL 改走异步（提交 + 轮询各自是独立 ProviderCall），前提是该平台 × 动作的异步 capability 在当前环境已放行，否则保持配置的模式。其它失败（429、5xx、已知未送达的传输失败）SHALL 保持原模式。列表与评论 SHALL NOT 兜底（`call_sequence` 是页号；三平台异步列表稳定失败）。兜底之后的尝试沿用既有排序（`attempt_count` 升序），所以排在同优先级未重试任务之后。
 
 ### 需求 FS-13 · 手工补抓、批次取消与外部监控账号
 

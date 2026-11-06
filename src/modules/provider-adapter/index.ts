@@ -11,4 +11,5 @@ export * from "./strategy";
 export { pickVideoSource, rankVideoSources } from "./video-source";
 export type { CountState, ValueState } from "./value-state";
 export { classifyResponse, decideRetry, profileAttemptOutcomeOf, type CallOutcome, type FailureCategory, type FailureClassification, type RetryDecision } from "./failure";
+export { asyncApproved, effectiveMode } from "./mode-fallback";
 export { peekResponseMeta, type ResponseMeta } from "./peek";

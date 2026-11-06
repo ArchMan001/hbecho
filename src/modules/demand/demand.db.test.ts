@@ -215,11 +215,14 @@ describe("详情执行（FS-9）", () => {
     const { env, cid, source } = await world();
     env.transport.clearRoutes();
     env.routeDetail(() => ({ httpStatus: 500, body: loadFixtureBytes("raw7.C20.http500") }));
+    // 第 1 次同步失败后，第 2、3 次改走异步（sync-runner/mode-fallback.db.test.ts）；异步提交同样被供应商校验失败拒绝
+    env.transport.register({ path: DETAIL_PATH, query: { async: "true" } }, { httpStatus: 500, body: loadFixtureBytes("raw7.C20.http500") });
     const r = await source.request([{ contentId: cid.dy, wants: ["detail"] }]);
     for (let i = 0; i < 3; i++) {
       await runAll(env);
       env.clock.advance(10 * 60_000);
     }
+    expect(env.transport.calls.filter((c) => c.request.path === DETAIL_PATH).map((c) => c.request.query.async)).toEqual(["false", "true", "true"]);
     const [task] = await tasksOf("fetch_content_detail");
     expect(task).toMatchObject({ status: "failed", lastErrorCode: "detail_inaccessible", attemptCount: 3 });
     expect(await t.db.select().from(contentSnapshots).where(eq(contentSnapshots.contentId, cid.dy))).toHaveLength(1); // 只有列表快照

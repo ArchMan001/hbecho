@@ -19,6 +19,7 @@ import {
   MAX_RESOLVE_ATTEMPTS,
   UnsupportedCapabilityError,
   afterProfileAttempt,
+  asyncApproved,
   buildRequest,
   capabilityGate,
   checkLocatorPlatform,
@@ -235,10 +236,10 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
     if (ex.kind === "in_progress") return { kind: "fail", category: "provider_outcome_unknown", code: "in_progress" };
     if (ex.kind === "transport_failed" && ex.callStatus === "terminal") {
       // 有证据确认未送达：可以安全地按新 attempt 重试，退避之后
-      return { kind: "again", category: "transport", waitUntil: new Date((await finishedAtOf(ex.providerCallId)).getTime() + backoffMs(retryCfg, attempt)) };
+      return { kind: "again", category: "transport", fallback: ex.failure.kind === "timeout", waitUntil: new Date((await finishedAtOf(ex.providerCallId)).getTime() + backoffMs(retryCfg, attempt)) };
     }
     // ambiguous / 送达未知的传输失败 / 终态证据没能落地：结果不明
-    return (await ambiguousCount(taskId, action)) >= 2 ? { kind: "fail", category: "provider_outcome_unknown", code: "provider_outcome_unknown" } : { kind: "again", category: "provider_outcome_unknown" };
+    return (await ambiguousCount(taskId, action)) >= 2 ? { kind: "fail", category: "provider_outcome_unknown", code: "provider_outcome_unknown" } : { kind: "again", category: "provider_outcome_unknown", fallback: true };
   };
   /** captured 但业务上失败 → 下一步。 */
   const failureStep = async (cls: FailureClassification, providerCallId: bigint, attempt: number): Promise<Step<never>> => {
@@ -254,12 +255,21 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
 
   // ── 主页 ─────────────────────────────────────────────────────────
   const profileMode = config.modes.media_user_info;
+  // 同步失败（超时 / 结果不明 / RESULT_VALIDATION_FAILED）之后的尝试改走异步（刘学奎 2026-11-06 确认）。
+  // 重放安全：第 1 次尝试永远按配置；已存在的调用被网关原样返回，所以重新运行时会按相同顺序走到同样的模式。
+  let fallbackToAsync = false;
+  const asyncOk = profileMode === "synchronous" && asyncApproved(platform, "media_user_info", config.environment);
   const profileOnce = async (attempt: number): Promise<Step<ProfileOk>> => {
+    const step = await profileAttempt(attempt, fallbackToAsync ? "asynchronous" : profileMode);
+    if (asyncOk && (step.kind === "validation" || (step.kind === "again" && step.fallback === true))) fallbackToAsync = true;
+    return step;
+  };
+  const profileAttempt = async (attempt: number, mode: ExecutionMode): Promise<Step<ProfileOk>> => {
     const stop = await beat({ taskId: rootId, token });
     if (stop) return { kind: "end", result: stop };
     await db.update(syncTasks).set({ attemptCount: attempt, updatedAt: clock.now() }).where(eq(syncTasks.taskId, rootId));
 
-    const r = await exec(specFor(rootId, token, attempt, 1, "media_user_info", profileMode));
+    const r = await exec(specFor(rootId, token, attempt, 1, "media_user_info", mode));
     if ("end" in r) return { kind: "end", result: r.end };
     if (r.ex.kind !== "captured") return nonCaptured(r.ex, rootId, "media_user_info", attempt);
     if (!r.ex.fenceValid) return fenceEnd();
@@ -273,7 +283,7 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
       if (out.data.account.id.state !== "value") return { kind: "fail", category: "schema_drift", code: "account_id_unavailable" };
       return { kind: "ok", value: { captured, submit: null, interpreted, data: out.data, adapterVersion: out.adapterVersion, attempt } };
     }
-    if (profileMode === "asynchronous" && out.outcome === "not_succeeded" && PENDING_TASK_STATUSES.has(out.taskStatus)) return pollProfile(attempt, captured);
+    if (mode === "asynchronous" && out.outcome === "not_succeeded" && PENDING_TASK_STATUSES.has(out.taskStatus)) return pollProfile(attempt, captured);
     // 业务成功的信封却解不出账号：合同漂移，不重试、不当作账号不存在
     return { kind: "fail", category: "schema_drift", code: out.outcome };
   };

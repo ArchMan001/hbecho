@@ -288,6 +288,11 @@
 | L6 | FS-12.5 | `batch retry-failed`（最新 `full` 批次） | `failed/dead` 任务回到 `pending`；成功任务不重复；列表任务不重复已提交页；记审计 |
 | L7 | FS-12.5 | 下一个 `full` 批次已开始，或非最新批次 | 被拒绝，原因明确 |
 | L8 | FS-12.6 | 批次取消 | 未开始任务 `cancelled`；已落 ODS 与已提交事实保留 |
+| L9 | FS-12.7 | 主页同步超时（结果不明）→ 重试 | 第 2 次尝试是异步提交 + 轮询并成功；第 1 次的 `ambiguous` 记录保留（`mode-fallback.db.test.ts`） |
+| L10 | FS-12.7 | 主页同步 `RESULT_VALIDATION_FAILED` 三次尝试 | 调用模式依次为同步、异步、异步（`mode-fallback.db.test.ts`、`profile-runner.db.test.ts`、`tracer-flow.*.db.test.ts`） |
+| L11 | FS-12.7 | 同步 429 | 重试仍同步，不碰异步 |
+| L12 | FS-12.7 | 详情同步 `RESULT_VALIDATION_FAILED` | 详情路径的模式依次为同步、异步、异步（`demand.db.test.ts`） |
+| L13 | FS-12.7 | 列表 / 评论 | 不兜底（`mode-fallback.test.ts` 纯函数断言） |
 
 ### M. 补抓、取消与外部监控账号（FS-13）
 

@@ -64,11 +64,11 @@ describe("提交处置矩阵（FS-8.3）：七类全部可达", () => {
     expect(dispositionOf(ks, cid.ks, "comments")).toBe("unsupported_platform");
     expect(dispositionOf(ks, cid.ks, "detail")).toBe("queued");
     expect(ks.taskCount).toBe(1);
-    // capability_disabled：快手详情的异步模式没有用规范 URL 验证过，仍不放行（能力门控先于复用 / 排队判断）
-    const asyncDemand = createDemandModule({ db: t.db, clock: env.clock, runtime: { environment: "test", modes: { media_stats_number: "asynchronous", post_comments_list: "synchronous" } }, audit: memorySyncAuditSink() });
-    const ksAsync = await new FakeRuleSource(asyncDemand, serviceActor(), "fake-async").request([{ contentId: cid.ks, wants: ["detail"] }]);
-    expect(dispositionOf(ksAsync, cid.ks, "detail")).toBe("capability_disabled");
-    expect(ksAsync.taskCount).toBe(0);
+    // capability_disabled：抖音评论异步稳定失败（provider-failed），不放行（能力门控先于复用 / 排队判断）
+    const asyncDemand = createDemandModule({ db: t.db, clock: env.clock, runtime: { environment: "test", modes: { media_stats_number: "synchronous", post_comments_list: "asynchronous" } }, audit: memorySyncAuditSink() });
+    const dyAsync = await new FakeRuleSource(asyncDemand, serviceActor(), "fake-async").request([{ contentId: cid.dy, wants: ["comments"] }]);
+    expect(dispositionOf(dyAsync, cid.dy, "comments")).toBe("capability_disabled");
+    expect(dyAsync.taskCount).toBe(0);
 
     // content_not_found：不存在的内容
     const nf = await source.request([{ contentId: 999999999n, wants: ["detail"] }]);

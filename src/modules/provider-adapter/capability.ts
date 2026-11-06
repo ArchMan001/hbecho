@@ -74,12 +74,8 @@ interface Tuple {
   evidenceRef: string[];
   /** 额外的已知缺口。 */
   gaps?: string[];
-  /** 即使 smoke_verified 也不在 test 环境放行（例如快手详情异步模式尚未用规范 URL 验证）。 */
-  disabledInTest?: boolean;
 }
 
-// 快手详情的内容 URL 构造已于 2026-11-06 真实 smoke 验证（见 content-url.ts）；异步模式没有用该 URL 形式跑过，仍不放行
-const KS_DETAIL_ASYNC_GAP = "async_not_smoke_verified_with_canonical_url";
 const TUPLES: Tuple[] = [
   // ── 主页 / 列表（tracer）──
   // 同步主页 / 列表：抖音、小红书 smoke_verified（raw4）
@@ -104,7 +100,7 @@ const TUPLES: Tuple[] = [
   { platform: "kuaishou", action: "media_stats_number", mode: "synchronous", outcome: "succeeded", evidenceRef: ["raw13.V1", "raw12.K4"] },
   { platform: "douyin", action: "media_stats_number", mode: "asynchronous", outcome: "succeeded", evidenceRef: ["raw9.A5.submit", "raw9.A5.poll1"] },
   { platform: "xiaohongshu", action: "media_stats_number", mode: "asynchronous", outcome: "succeeded", evidenceRef: ["raw5.C06.submit", "raw5.C06.poll1"] },
-  { platform: "kuaishou", action: "media_stats_number", mode: "asynchronous", outcome: "succeeded", evidenceRef: ["raw14.A3.submit", "raw14.A3.poll1", "raw14.A3.poll2"], gaps: [KS_DETAIL_ASYNC_GAP], disabledInTest: true },
+  { platform: "kuaishou", action: "media_stats_number", mode: "asynchronous", outcome: "succeeded", evidenceRef: ["raw14.A3.submit", "raw14.A3.poll1", "raw14.A3.poll2"] },
   // ── 评论 post_comments_list：快手不登记（D-51）；抖音异步 provider-failed ──
   { platform: "douyin", action: "post_comments_list", mode: "synchronous", outcome: "succeeded", evidenceRef: ["raw4.C07"] },
   { platform: "xiaohongshu", action: "post_comments_list", mode: "synchronous", outcome: "succeeded", evidenceRef: ["raw4.C08.attempt2", "raw6.C02"], gaps: ["intermittent_result_validation_failed"] },
@@ -136,7 +132,7 @@ function rowsFor(t: Tuple): CapabilityProfile[] {
   };
   return [
     // test：只用于 fixture transport，不代表可以访问真实供应商
-    { ...common, environment: "test", activation: t.outcome === "succeeded" && !t.disabledInTest ? "approved" : "disabled" },
+    { ...common, environment: "test", activation: t.outcome === "succeeded" ? "approved" : "disabled" },
     // production：全部 disabled，直到对应 tuple 完成批准式 smoke 与人工批准（任务 9）
     { ...common, environment: "production", activation: "disabled" },
   ];

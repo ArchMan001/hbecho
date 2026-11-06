@@ -104,6 +104,10 @@
 | 快手 详情（异步） | **已放行**（补测 12/12 成功） | §5.1 |
 | 全部 production | **仍然 disabled** | 启用另走人工批准；快手在 §4.2 解决前不建议启用 |
 
+## 6.1 调用级证据
+
+[`smoke-calls-2026-11-06.tsv`](smoke-calls-2026-11-06.tsv)：smoke 数据库 `ods_provider_calls` 的逐调用导出（批次、任务、平台、动作、模式、尝试号、序号、状态、结果、HTTP 状态、耗时、时间），共 249 行。不含 URL、密钥、载荷。行数大于 §5 的 186，因为它还包含异步轮询（`task_lookup`，不计点）以及后续补测（快手详情异步 12 次、快手自定义 ID 主页异步 2 次）。
+
 ## 7. 清理
 
 OSS 上 `smoke/fullsync-ods/` 与 `smoke/fullsync-media/` 前缀下共约 1,100 个对象（约 56 MB）保留，供复核；本机 MySQL 容器和卷保留（`docker rm -f -v hbecho-fullsync-smoke-mysql` 并 `docker volume rm hbecho-fullsync-smoke-data` 可清理）。

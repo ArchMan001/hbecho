@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0–10 已完成并合并 `main`（`dab689f`，2026-11-06；本机 `verify.sh` 598 单元 / 569 数据库 / 17 Python 全绿，测试 ECS 570 数据库测试通过），任务 11（批准式 smoke，需要书面预算、allowlist 与凭证）未开始。以下为早期记录：任务 0、1 已完成（2026-11-05）。任务 0：文档前置、编码命名确认、`a-master-data-import` 已合并 `main`（`fd1dd7d`）、本分支已变基。任务 1：迁移 `0004`、证据登记、本机 `./scripts/verify.sh` 全绿（312 单元 / 330 数据库测试）。任务 2：Adapter 扩展完成。任务 3：监控目标集、批次生命周期、调度、补抓、取消完成。任务 4：worker 运行时完成（Runner 注册表为空，worker 暂不领取任何任务）。下一步任务 5。
+> **执行状态**（2026-11-06）：任务 0–11 已执行并合并 `main`（本机 `verify.sh` 603 单元 / 573 数据库 / 18 Python 全绿，测试 ECS 573 数据库测试通过，CI 绿）。任务 11 的真实 smoke 已执行（[报告](smoke-report-2026-11-06.md)），之后又合并了两项变更：快手详情异步放行、主页与详情同步失败后改走异步兜底（FS-12.7）。**不等于可上线**：真实 worker 在任何环境都不会启动（`assertWorkerCanRun` 拒绝 `HBECHO_ENV=test`，production capability 全部 `disabled`），没有部署形态；快手有 4 项未决问题（见任务 11）。交付审查见 [review-report](review-report-2026-11-06.md)。以下为早期记录：任务 0、1 已完成（2026-11-05）。任务 0：文档前置、编码命名确认、`a-master-data-import` 已合并 `main`（`fd1dd7d`）、本分支已变基。任务 1：迁移 `0004`、证据登记、本机 `./scripts/verify.sh` 全绿（312 单元 / 330 数据库测试）。任务 2：Adapter 扩展完成。任务 3：监控目标集、批次生命周期、调度、补抓、取消完成。任务 4：worker 运行时完成（Runner 注册表为空，worker 暂不领取任何任务）。下一步任务 5。
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -14,9 +14,9 @@
 >
 > **上游 PRD**：[`prd-domain-a-data-foundation.md`](../../../HBECHO设计方案/prd-domain-a-data-foundation.md) v1.11（2026-11-05，定稿候选）
 >
-> **最近核对**：2026-11-05
+> **最近核对**：2026-11-06
 >
-> **更新日期**：2026-11-05（初建；同日闸门通过；外部审查后修订（requirements §1.8）；吸收旧系统经验：队尾重试、provider 熔断、身份与残缺校验、自比对、默认预览、抽样对账）
+> **更新日期**：2026-11-06（回填任务 11、快手详情异步、同步转异步兜底；2026-11-05 初建；同日闸门通过；外部审查后修订（requirements §1.8）；吸收旧系统经验：队尾重试、provider 熔断、身份与残缺校验、自比对、默认预览、抽样对账）
 
 ## 进度
 
@@ -31,7 +31,7 @@
 - [x] 任务 8 · Python 能力服务 HTTP 外壳与 Node 客户端
 - [x] 任务 9 · 运营命令、查询与定时清理
 - [x] 任务 10 · 全量离线验收、故障注入与规模演练
-- [ ] 任务 11 · 批准式 smoke（人工批准，付费）
+- [x] 任务 11 · 批准式 smoke（已于 2026-11-06 执行；快手 4 项未决问题见该任务的验证项，production 仍 disabled）
 
 ## Planning rules
 
@@ -566,7 +566,7 @@
 - [x] 预算 / 调用上限在发出下一次调用前生效：由 `budget.db.test.ts` 离线证明；本次 smoke 按授权放宽到远高于需要的数（防死循环用），所以没有触达；
 - [x] 摘要不含 secret 与完整载荷：报告只含计数、稳定码、ID 与时间；
 - [x] 快手内容 URL 构造方式有结论：`https://www.kuaishou.com/short-video/{post_id}` 可用（`v.m.chenzhongtech.com/fw/photo/{id}` 也可用，`c.kuaishou.com` / `m.gifshow.com` 不可用），已写入 design / requirements 并更新 `ContentUrlBuilder` 与 capability；
-- [x] 未执行的 tuple 仍为 disabled（快手详情异步、全部 production）；
+- [x] 未执行的 tuple 仍为 disabled（全部 production；快手详情异步已在同日补测 12/12 后放行，见 smoke 报告 §5.1）；
 - [x] 覆盖范围：快手主页 + 列表（翻页走到 3 页）、三平台详情（作品链接原样直探 + Runner）、抖音 / 小红书评论、三平台各一次视频下载 + 音频抽取、两页以上列表的检查点命中与翻页；
 - [ ] **未决**：快手 `user_id` 不稳定（报告 §4.2）、快手自定义 ID 主页不支持（§4.1）、快手列表对部分账号稳定失败（§4.3）、媒资吞吐（§4.4）——需要决定后才能把快手推进到 production 审批。
 

@@ -118,8 +118,8 @@ describe("a-full-sync 扩展后的 capability 表（FS-16.1、FS-7.1、FS-7.7）
     ["kuaishou", "user_video_list", "synchronous", "approved"],
     ["kuaishou", "media_user_info", "asynchronous", "approved"],
     ["kuaishou", "user_video_list", "asynchronous", "provider_failed"],
-    // 快手详情：内容 URL 构造方式无样本，smoke 前即使在 test 也保持 disabled（FS-7.7）
-    ["kuaishou", "media_stats_number", "synchronous", "disabled"],
+    // 快手详情：同步已由 2026-11-06 真实 smoke 验证内容 URL 构造；异步未用规范 URL 验证，保持 disabled
+    ["kuaishou", "media_stats_number", "synchronous", "approved"],
     ["kuaishou", "media_stats_number", "asynchronous", "disabled"],
     // 快手评论不登记（D-51）
     ["kuaishou", "post_comments_list", "synchronous", "unregistered"],
@@ -148,10 +148,11 @@ describe("a-full-sync 扩展后的 capability 表（FS-16.1、FS-7.1、FS-7.7）
       expect(reason, `${platform}/${action}/${mode}`).toBe(expected === "unregistered" ? "unregistered" : expected === "provider_failed" ? "provider_failed" : "disabled");
     }
   });
-  it("快手详情的缺口显式写出内容 URL 构造方式未验证", () => {
+  it("快手详情：同步已由 2026-11-06 真实 smoke 验证内容 URL 构造（放行）；异步仍写明缺口且不放行", () => {
     const ks = CAPABILITY_PROFILES.filter((p) => p.platform === "kuaishou" && p.action === "media_stats_number");
     expect(ks).toHaveLength(4);
-    expect(ks.every((p) => p.knownGaps.includes("content_url_construction_unverified"))).toBe(true);
+    for (const p of ks.filter((x) => x.mode === "synchronous")) expect(p.knownGaps).not.toContain("content_url_construction_unverified");
+    expect(ks.filter((x) => x.mode === "asynchronous").every((p) => p.knownGaps.includes("async_not_smoke_verified_with_canonical_url"))).toBe(true);
   });
   it("三平台列表异步都是 provider-failed 且 disabled；抖音评论异步同样", () => {
     for (const p of CAPABILITY_PROFILES.filter((x) => x.mode === "asynchronous" && (x.action === "user_video_list" || (x.platform === "douyin" && x.action === "post_comments_list")))) {

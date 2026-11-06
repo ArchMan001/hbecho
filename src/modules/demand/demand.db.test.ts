@@ -10,6 +10,8 @@ import { nextRound, runPeriodic } from "../../../tests/harness/periodic";
 import { DETAIL_PATH, SLOT, setupSync, type SyncEnv } from "../../../tests/harness/sync-env";
 import { contentSnapshots, contents, dataQualityIssues, syncBatches, syncTasks } from "../../db/schema";
 import { createAccountRunners, createDemandRunners } from "../sync-runner";
+import { createDemandModule } from "./index";
+import { memorySyncAuditSink } from "../sync-schedule";
 import { SyncError } from "../sync-schedule";
 
 const t = useTestDb();
@@ -57,11 +59,16 @@ describe("提交处置矩阵（FS-8.3）：七类全部可达", () => {
     const third = await source.request([{ contentId: cid.dy, wants: ["detail"] }]);
     expect(dispositionOf(third, cid.dy, "detail")).toBe("reused");
 
-    // unsupported_platform：快手评论；capability_disabled：快手详情（内容 URL 构造方式未验证）
+    // unsupported_platform：快手评论；快手详情同步已由 2026-11-06 真实 smoke 验证内容 URL 构造 → 正常排队
     const ks = await source.request([{ contentId: cid.ks, wants: ["comments", "detail"] }]);
     expect(dispositionOf(ks, cid.ks, "comments")).toBe("unsupported_platform");
-    expect(dispositionOf(ks, cid.ks, "detail")).toBe("capability_disabled");
-    expect(ks.taskCount).toBe(0);
+    expect(dispositionOf(ks, cid.ks, "detail")).toBe("queued");
+    expect(ks.taskCount).toBe(1);
+    // capability_disabled：快手详情的异步模式没有用规范 URL 验证过，仍不放行（能力门控先于复用 / 排队判断）
+    const asyncDemand = createDemandModule({ db: t.db, clock: env.clock, runtime: { environment: "test", modes: { media_stats_number: "asynchronous", post_comments_list: "synchronous" } }, audit: memorySyncAuditSink() });
+    const ksAsync = await new FakeRuleSource(asyncDemand, serviceActor(), "fake-async").request([{ contentId: cid.ks, wants: ["detail"] }]);
+    expect(dispositionOf(ksAsync, cid.ks, "detail")).toBe("capability_disabled");
+    expect(ksAsync.taskCount).toBe(0);
 
     // content_not_found：不存在的内容
     const nf = await source.request([{ contentId: 999999999n, wants: ["detail"] }]);

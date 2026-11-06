@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import tempfile
 from dataclasses import dataclass
 
 TARGET_WIDTH = 540
@@ -55,15 +56,19 @@ def to_normalized_jpeg(data: bytes, width: int = TARGET_WIDTH) -> Normalized:
         raise ConversionError("空输入")
     if len(data) > MAX_INPUT_BYTES:
         raise ConversionError("输入超过大小上限")
-    try:
-        proc = subprocess.run(
-            ["ffmpeg", "-v", "error", "-i", "pipe:0", "-frames:v", "1", "-vf", f"scale={width}:-2", "-q:v", str(QSCALE), "-f", "mjpeg", "pipe:1"],
-            input=data,
-            capture_output=True,
-            timeout=TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired as e:
-        raise ConversionError("转换超时") from e
+    # 输入必须是可 seek 的文件，不能走 pipe:0：HEIF 的元数据与图像数据位置因文件而异，
+    # 真实 smoke（2026-11-06）里约 13% 的抖音 HEIC 封面经管道输入时 ffmpeg 解不开，写临时文件后全部成功。
+    with tempfile.NamedTemporaryFile(prefix="cap-img-", suffix=".bin") as tmp:
+        tmp.write(data)
+        tmp.flush()
+        try:
+            proc = subprocess.run(
+                ["ffmpeg", "-v", "error", "-i", tmp.name, "-map", "0:v:0", "-frames:v", "1", "-vf", f"scale={width}:-2", "-q:v", str(QSCALE), "-f", "mjpeg", "pipe:1"],
+                capture_output=True,
+                timeout=TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired as e:
+            raise ConversionError("转换超时") from e
     if proc.returncode != 0 or not proc.stdout.startswith(b"\xff\xd8\xff"):
         raise ConversionError(f"ffmpeg 无法解码输入：{proc.stderr.decode('utf-8', 'replace')[:200]}")
     w, h = _jpeg_size(proc.stdout)

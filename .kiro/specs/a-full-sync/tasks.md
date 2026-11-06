@@ -561,12 +561,16 @@
 - 输出审计摘要，回填 design §14 第 2、5、7 项与 capability `knownGaps`；
 - production activation 保持 `disabled`，启用另走人工批准。
 
-**验证**
+**验证**（执行记录见 [smoke 报告](smoke-report-2026-11-06.md)；2026-11-06 刘学奎授权不限预算、不逐项确认）
 
-- [ ] 预算 / 调用上限在发出下一次调用前生效；
-- [ ] 摘要不含 secret 与完整载荷；
-- [ ] 快手内容 URL 构造方式有结论（可用 / 不可用 / 需要别的形式），写入 ADR 或 design 并更新 `ContentUrlBuilder`；
-- [ ] 未执行的 tuple 仍为 disabled。
+- [x] 预算 / 调用上限在发出下一次调用前生效：由 `budget.db.test.ts` 离线证明；本次 smoke 按授权放宽到远高于需要的数（防死循环用），所以没有触达；
+- [x] 摘要不含 secret 与完整载荷：报告只含计数、稳定码、ID 与时间；
+- [x] 快手内容 URL 构造方式有结论：`https://www.kuaishou.com/short-video/{post_id}` 可用（`v.m.chenzhongtech.com/fw/photo/{id}` 也可用，`c.kuaishou.com` / `m.gifshow.com` 不可用），已写入 design / requirements 并更新 `ContentUrlBuilder` 与 capability；
+- [x] 未执行的 tuple 仍为 disabled（快手详情异步、全部 production）；
+- [x] 覆盖范围：快手主页 + 列表（翻页走到 3 页）、三平台详情（作品链接原样直探 + Runner）、抖音 / 小红书评论、三平台各一次视频下载 + 音频抽取、两页以上列表的检查点命中与翻页；
+- [ ] **未决**：快手 `user_id` 不稳定（报告 §4.2）、快手自定义 ID 主页不支持（§4.1）、快手列表对部分账号稳定失败（§4.3）、媒资吞吐（§4.4）——需要决定后才能把快手推进到 production 审批。
+
+**smoke 中发现并已修**：抖音视频 CDN 白名单缺 `douyinvod.com`；能力服务经管道喂 ffmpeg 导致约 13% 抖音 HEIC 封面转换失败（改为临时文件）；供应商 HTTP 默认超时 30 → 90 秒（快手 19–48 秒的响应让 30 秒超时变成 ambiguous）。
 
 **Requirements:** FS-19；**Design:** §14。
 

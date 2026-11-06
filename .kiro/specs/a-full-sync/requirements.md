@@ -359,7 +359,7 @@
 4. 当快手列表返回 `max_cursor='no_more'` 且 `has_more=true`（raw12 K3、K6）时，系统 SHALL 停止翻页、记质量问题 `cursor_no_more_with_has_more`（D-53），并按「列表自然结束」处理锚点与缺口；SHALL NOT 回发 `no_more`。空列表 + `no_more` SHALL 等价于空窗口（FS-5 第 7 条）。
 5. 快手主页 SHALL NOT 产生头像、背景引用；快手列表 `video.url` / `audio.url` SHALL NOT 作为视频或音频下载来源（D-48）。
 6. 依赖评论的需求落在快手内容上 SHALL 在提交时返回 `unsupported_platform`，不生成评论任务（D-51）。
-7. 快手详情请求的内容 `url` 构造方式未验证（§1.4 第 11 项）：在 smoke 证实前，快手详情 capability SHALL 保持 disabled，需求返回 `capability_disabled`。
+7. ~~快手详情请求的内容 `url` 构造方式未验证（§1.4 第 11 项）：在 smoke 证实前，快手详情 capability SHALL 保持 disabled，需求返回 `capability_disabled`。~~ 由 2026-11-06 真实 smoke 修订：`https://www.kuaishou.com/short-video/{post_id}` 被供应商接受（`https://v.m.chenzhongtech.com/fw/photo/{post_id}` 同样可用；`c.kuaishou.com/fw/photo/…`、`m.gifshow.com/fw/photo/…` 被拒绝），快手详情**同步**模式已放行；**异步**模式没有用该形式跑过，仍保持 disabled。见 [smoke 报告](smoke-report-2026-11-06.md)。
 
 ### 需求 FS-8 · 按需采集需求（Demand）
 

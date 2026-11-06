@@ -8,9 +8,9 @@ import { MediaFailure } from "../media-failure";
 import { checkMediaUrl, type MediaPolicy } from "./guard";
 import type { VideoTransport } from "./ports";
 
-/** 视频 CDN 域名取自 fixture 里出现的 download_urls（抖音 amemv / zjcdn，小红书 rednotecdn，快手 kwaicdn / ndcimgs）。 */
+/** 视频 CDN 域名取自真实 download_urls（抖音 amemv / zjcdn / douyinvod——后者在没有 api-play 候选时是唯一来源，2026-11-06 smoke 发现；小红书 rednotecdn；快手 kwaicdn / ndcimgs）。 */
 export const DEFAULT_VIDEO_POLICY: MediaPolicy = Object.freeze({
-  allowedHostSuffixes: Object.freeze(["amemv.com", "zjcdn.com", "douyinpic.com", "rednotecdn.com", "kwaicdn.com", "ndcimgs.com"]),
+  allowedHostSuffixes: Object.freeze(["amemv.com", "zjcdn.com", "douyinvod.com", "douyinpic.com", "rednotecdn.com", "kwaicdn.com", "ndcimgs.com"]),
   maxBytes: 2 * 1024 * 1024 * 1024,
   maxRedirects: 3,
   timeoutMs: 60_000,

@@ -8,7 +8,7 @@ import type { Db, DbTx } from "../../db/client";
 import { dataQualityIssues, externalAccountIdentifiers, odsProviderCalls, staffAccountAssignments, syncTasks } from "../../db/schema";
 import { withFences } from "../orchestrator";
 import { projectProfile, recordIssue } from "../projection";
-import { buildRequest, classifyLocator, decodeProfile, profileAttemptOutcomeOf } from "../provider-adapter";
+import { buildRequest, classifyLocator, decodeProfile, effectiveMode, profileAttemptOutcomeOf } from "../provider-adapter";
 import { platformCodeOf, type AccountRunnerDeps } from "./account-deps";
 import { callDecoded, capabilityFailure } from "./call";
 import { checkProfileFields, checkProfileIdentity } from "./identity-check";
@@ -41,7 +41,6 @@ export function createProfileRunner(deps: AccountRunnerDeps): TaskRunner {
     const task = ctx.task;
     const params = paramsSchema.safeParse(task.taskParameters);
     if (!params.success || task.accountId === null || task.assignmentId === null) return { kind: "failure", code: "task_parameters_invalid" };
-    const mode = params.data.mode;
     const accountId = task.accountId;
     const assignmentId = task.assignmentId;
 
@@ -49,6 +48,8 @@ export function createProfileRunner(deps: AccountRunnerDeps): TaskRunner {
     if (!platform) return { kind: "failure", code: "unsupported_platform" };
     const locator = await homeLocatorOf(db, assignmentId);
     if (locator === null) return { kind: "failure", code: "locator_unavailable" };
+    // 同步失败（超时 / 结果不明 / RESULT_VALIDATION_FAILED）之后的重试改走异步（刘学奎 2026-11-06 确认）
+    const mode = effectiveMode({ configured: params.data.mode, platform, action: "media_user_info", environment: deps.environment, attemptCount: task.attemptCount, lastErrorCode: task.lastErrorCode, lastErrorDetail: task.lastErrorDetail });
     const gate = capabilityFailure(deps, platform, "media_user_info", mode);
     if (gate) return { kind: "failure", code: gate };
 
@@ -75,9 +76,9 @@ export function createProfileRunner(deps: AccountRunnerDeps): TaskRunner {
             detail: { category: r.cls!.category, attempts: task.maxAttempts, terminal_status: t.status },
             now: t.now,
           });
-        return { kind: "failure", code: "provider_input_inaccessible", detail: { category: r.cls.category }, onTerminal };
+        return { kind: "failure", code: "provider_input_inaccessible", detail: { category: r.cls.category, mode_used: mode }, onTerminal };
       }
-      return { kind: "failure", code: r.code, ...(r.detail ? { detail: r.detail } : {}) };
+      return { kind: "failure", code: r.code, detail: { ...r.detail, mode_used: mode } };
     }
 
     const data = r.data;
@@ -123,7 +124,7 @@ export function createProfileRunner(deps: AccountRunnerDeps): TaskRunner {
         }),
       );
       if (!noted.ok) return abandonedOf(noted.reason);
-      return { kind: "failure", code: "profile_fields_missing" };
+      return { kind: "failure", code: "profile_fields_missing", detail: { mode_used: mode } };
     }
 
     // ── 终态事务 ──

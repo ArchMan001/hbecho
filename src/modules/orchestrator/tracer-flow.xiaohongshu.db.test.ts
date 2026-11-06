@@ -322,6 +322,7 @@ describe("入口与归属：与抖音同一语义，且没有错误 owner 或后
   it("连续三次 RESULT_VALIDATION_FAILED：invalid_link，三条独立调用，无业务身份", async () => {
     const env = await setupTracer(t);
     env.serve.profile("xiaohongshu", VALIDATION_FAILED(), 500);
+    env.transport.register({ path: PROFILE_PATH, query: { async: "true" } }, { httpStatus: 500, body: VALIDATION_FAILED() }); // 第 2、3 次改走异步
     const rootId = await env.submit({ platform: "xiaohongshu", locator: XHS_LOCATOR });
     expect((await run(env, rootId)).kind).toBe("failed");
     expect(await t.db.select().from(odsProviderCalls)).toHaveLength(3);

@@ -162,6 +162,8 @@ describe("RESULT_VALIDATION_FAILED 耗尽（D5、D6）", () => {
     const d = await env.addAccount("douyin", env.org.staffA);
     const bad = { [env.locatorOf(d.accountId)]: { httpStatus: 500, body: loadFixtureBytes("raw7.C20.http500") } };
     env.routeBy(PROFILE_PATH, bad);
+    // 第 1 次同步失败后，第 2、3 次改走异步（mode-fallback.db.test.ts）；异步提交同样被供应商校验失败拒绝
+    env.transport.register({ path: PROFILE_PATH, query: { async: "true" } }, bad[env.locatorOf(d.accountId)]!);
     await env.scheduler.tick(SLOT);
     // 3 次尝试：每次失败后退避，推进 fake clock 再领取
     for (let i = 0; i < 3; i++) {

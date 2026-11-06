@@ -6,8 +6,8 @@ import type { RunResult } from "./tracer-flow";
 
 export type Step<T> =
   | { kind: "ok"; value: T }
-  /** 可重试的失败。waitUntil 为空表示立即重试；否则在该时间之前不创建新调用（进入 retry_wait）。 */
-  | { kind: "again"; category: string; waitUntil?: Date }
+  /** 可重试的失败。waitUntil 为空表示立即重试；否则在该时间之前不创建新调用（进入 retry_wait）。fallback：超时 / 结果不明，下一次尝试改走异步（主页）。 */
+  | { kind: "again"; category: string; waitUntil?: Date; fallback?: boolean }
   /** RESULT_VALIDATION_FAILED 一类：可能是无效主页，也可能是供应商间歇失败；耗尽后才由业务层判 invalid_link。 */
   | { kind: "validation"; category: string }
   /** 取消 / 被取代 / 其他需要立刻结束运行的情形。 */

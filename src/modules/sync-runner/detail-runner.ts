@@ -8,7 +8,7 @@ import { sha256Utf8 } from "../canonical-json";
 import { MEDIA_VIDEO_TASK_SCHEMA, insertDemandTask } from "../demand/tasks";
 import { withFences } from "../orchestrator";
 import { insertDetailSnapshot, recordIssue } from "../projection";
-import { buildContentUrl, buildRequest, decodeDetail, profileAttemptOutcomeOf, rankVideoSources, type DetailData, type ExecutionMode, type Platform } from "../provider-adapter";
+import { buildContentUrl, buildRequest, decodeDetail, effectiveMode, profileAttemptOutcomeOf, rankVideoSources, type DetailData, type ExecutionMode, type Platform } from "../provider-adapter";
 import { platformCodeOf, type AccountRunnerDeps } from "./account-deps";
 import { callDecoded, capabilityFailure, type CallResult } from "./call";
 import type { RunnerOutcome, TaskContext, TaskRunner, TerminalHook } from "./types";
@@ -39,16 +39,18 @@ export function createDetailRunner(deps: AccountRunnerDeps): TaskRunner {
     const [content] = await db.select().from(contents).where(eq(contents.contentId, contentId));
     if (!content || content.accountId !== accountId) return { kind: "failure", code: "task_parameters_invalid", detail: { reason: "content_account_mismatch" } };
 
-    const r = await requestDetail(deps, ctx, { platform, mode, content });
+    // 同步失败（超时 / 结果不明 / RESULT_VALIDATION_FAILED）之后的重试改走异步（刘学奎 2026-11-06 确认）；后续视频任务仍带配置的模式
+    const callMode = effectiveMode({ configured: mode, platform, action: "media_stats_number", environment: deps.environment, attemptCount: task.attemptCount, lastErrorCode: task.lastErrorCode, lastErrorDetail: task.lastErrorDetail });
+    const r = await requestDetail(deps, ctx, { platform, mode: callMode, content });
     if (r.kind === "abandoned") return { kind: "abandoned", reason: r.reason };
     if (r.kind === "failed") {
       // RESULT_VALIDATION_FAILED 一类耗尽：详情不可访问。只记问题，不改内容 status（D-54）
       if (r.cls && profileAttemptOutcomeOf(r.cls) === "result_validation_failed" && task.attemptCount + 1 >= task.maxAttempts) {
         const onTerminal: TerminalHook = (tx, t) =>
           recordIssue(tx, { code: "detail_inaccessible", severity: "warning", batchId: task.batchId, accountId, contentId, providerCallId: r.providerCallId ?? null, detail: { category: r.cls!.category, attempts: task.maxAttempts, terminal_status: t.status }, now: t.now });
-        return { kind: "failure", code: "detail_inaccessible", detail: { category: r.cls.category }, onTerminal };
+        return { kind: "failure", code: "detail_inaccessible", detail: { category: r.cls.category, mode_used: callMode }, onTerminal };
       }
-      return { kind: "failure", code: r.code, ...(r.detail ? { detail: r.detail } : {}) };
+      return { kind: "failure", code: r.code, detail: { ...r.detail, mode_used: callMode } };
     }
 
     // 响应是不是这条内容的：post_id 必须是有效值且与内容身份文本一致，否则不合并（旧系统教训：成功不等于对）

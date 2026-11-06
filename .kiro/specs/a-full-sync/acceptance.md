@@ -411,3 +411,4 @@
 | 3 | `HttpCapabilityClient` 把缺失的 `X-Duration-Ms` / `X-Width` 头当成 0 | 缺失或非非负整数 → `null` / 拒绝 | `media-archive/capability-client.unit.test.ts` |
 | 4 | 无音轨的音频需求在 `get` 里显示 `ready` | 媒资任务成功但没有资产时，报引用上的稳定原因（`no_audio_track`） | `sync-runner/media.db.test.ts` |
 | 5 | 本机测试脚本每次泄漏一个匿名 MySQL 数据卷（`docker rm -f` 缺 `-v`），两天攒了 193 个、占满 Docker 虚拟磁盘 | `scripts/with-test-mysql.sh` 的清理改为 `docker rm -f -v` | 一次完整 `verify.sh` 后悬空卷数不增长 |
+| 6 | 测试 ECS 上全套件偶发失败：`worker.run({ untilIdle: true })` 在领取查询期间在途任务刚好结束并产生后续任务（详情成功时建的媒资任务）时，因「此刻没有在途任务」提前退出，留下 pending 的后续任务（常驻模式本来会轮询，只影响 run-once 与测试） | 退出条件改为「查询前就没有在途任务」才算空闲，否则再查一次 | `sync-runner/media.db.test.ts`（偶发项：本机 25 次循环不复现，ECS 上 3 次里出现 1 次；没有确定性单测） |

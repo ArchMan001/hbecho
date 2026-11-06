@@ -93,6 +93,9 @@ export function createSyncWorker(d: WorkerDeps) {
     const stats = emptyStats();
     await loadProviders();
     while (!stopping) {
+      // 领取查询期间在途任务可能刚好结束并产生后续任务（例如详情成功时建的媒资任务）：那次查询看不到它。
+      // 所以「查询前就没有在途任务」才算真正空闲；否则再查一次（常驻模式本来就会轮询，只有 run-once / 测试会因此漏掉后续任务）
+      const hadInflight = inflight.size > 0;
       const c = await claimOne(stats);
       if (c === "released") continue;
       if (c) {
@@ -100,7 +103,9 @@ export function createSyncWorker(d: WorkerDeps) {
         continue;
       }
       if (inflight.size > 0) await nextCompletion(); // 槽位满或暂无可领：等一个在途任务结束再看
-      else if (opts.untilIdle) break;
+      else if (opts.untilIdle) {
+        if (!hadInflight) break;
+      }
       else await d.sleep(d.idlePollMs);
     }
     if (!stopping) while (inflight.size > 0) await nextCompletion();

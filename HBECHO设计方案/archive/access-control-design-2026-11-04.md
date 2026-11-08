@@ -1,11 +1,18 @@
-# Access Control Design
+# Access Control Design（旧草案）
 
-> **状态**：`draft`  
+> **状态**：`superseded` / `archived`（2026-11-06）
+>
+> **替代文档**：[`.kiro/specs/b-access-control/`](../../.kiro/specs/b-access-control/design.md)（requirements / design / tasks / acceptance 四件套）
+>
+> **禁止用途**：不得作为实现依据；其 Grant / RoleProfile 表、Access / Refresh token family、外部用户有效期、手机号字段脱敏等设计均已被 B 域 PRD v1.21 取代或舍弃。继承与舍弃的逐项清单见新 design §2.3。保留只为追溯 2026-11-04 的技术思路。
+>
+> 以下为原文（2026-11-04 版），未改正文；相对链接已随文件位置修正。
+
+> **原状态**：`draft`  
 > **模式**：Design-First；当前只有设计草案，不代表实现已冻结  
 > **适用范围**：平台用户、会话认证、Capability、DataScope、用户与授权管理、异步任务及最终出口授权  
-> **所属域**：B 访问控制 · **目录命名**：旧名 `access-control`，按域代号应为 `b-access-control`（重命名在 B 域 spec 开工前执行）  
-> **最近核对**：2026-11-04（与 B 域 PRD v1.21 的偏差见文末附录；`b-access-control` 开工前必须按 v1.21 重写，不得直接作为实现依据）  
-> **更新日期**：2026-11-04
+> **原所属域**：B 访问控制 · 旧目录名 `access-control`  
+> **原最近核对**：2026-11-04  
 
 ## 1. Overview
 
@@ -36,14 +43,14 @@ flowchart LR
 
 冲突时按以下顺序裁决：
 
-1. [`CONTEXT.md`](../../../CONTEXT.md)：`MediaStaff`、`ExternalAccount`、组织、历史归属与监控语义；
-2. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座当前主档和引用路径；
+1. [`CONTEXT.md`](../../CONTEXT.md)：`MediaStaff`、`ExternalAccount`、组织、历史归属与监控语义；
+2. [`database-design-v2.md`](../domains/data-foundation/database-design-v2.md)：数据底座当前主档和引用路径；
 3. 本设计：访问控制域的 User、Session、Capability、Grant 与 DataScope；
 4. 历史输入：
-   - [`HBECHO设计方案/archive/legacy/域E-用户与权限详细设计.md`](../../../HBECHO设计方案/archive/legacy/域E-用户与权限详细设计.md)
-   - [`HBECHO设计方案/archive/legacy/域E-用户与权限详细设计-评审意见.md`](../../../HBECHO设计方案/archive/legacy/域E-用户与权限详细设计-评审意见.md)
-   - [`hbecho-模块设计-权限中心.md`](../../../HBECHO设计方案/prd-drafts-子PRD草案/hbecho-模块设计-权限中心.md)
-   - [`平台底座首版产品设计`](../../../HBECHO设计方案/prd-drafts-子PRD草案/hbecho-平台底座首版产品设计.md)
+   - [`HBECHO设计方案/archive/legacy/域E-用户与权限详细设计.md`](legacy/域E-用户与权限详细设计.md)
+   - [`HBECHO设计方案/archive/legacy/域E-用户与权限详细设计-评审意见.md`](legacy/域E-用户与权限详细设计-评审意见.md)
+   - [`hbecho-模块设计-权限中心.md`](../prd-drafts-子PRD草案/hbecho-模块设计-权限中心.md)
+   - [`平台底座首版产品设计`](../prd-drafts-子PRD草案/hbecho-平台底座首版产品设计.md)
 
 历史文档只提供候选经验；与前两项冲突的角色、组织或账号模型不被继承。
 

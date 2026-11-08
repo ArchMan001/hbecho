@@ -51,7 +51,7 @@ flowchart LR
 
 1. [`CONTEXT.md`](../../../CONTEXT.md)：身份、归属、发现、快照、ValueState 和媒资不变量；
 2. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座实体、状态、事务和当前接入契约；
-3. [`access-control/design.md`](../access-control/design.md)：Capability、DataScope、异步范围交集与当前查询授权语义；
+3. [`b-access-control/design.md`](../b-access-control/design.md)：Capability、DataScope、异步范围交集与当前查询授权语义；
 4. 本设计：规则域拥有的规则、运行、证据和 outcome；
 5. 历史输入：[`hbecho-模块设计-规则引擎.md`](../../../HBECHO设计方案/prd-drafts-子PRD草案/hbecho-模块设计-规则引擎.md)。
 

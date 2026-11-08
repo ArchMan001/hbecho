@@ -108,7 +108,7 @@ hbdam 已在生产前验证了一套 Node / TypeScript 栈，其中认证、ORM�
 | 2 | `defaultRole` 默认 `user`、`adminRoles` 默认 `["admin"]` | 必须显式改成项目四类角色；不改则静默得到无效角色 |
 | 3 | 管理员改密码不会自动撤销该用户会话 | 改密流程必须单独调撤销 |
 | 4 | `/phone-number/reset-password` 在无 credential account 时会自动建行 | 激活与忘记密码是同一条库路径，激活无需额外端点 |
-| 5 | 登录失败限流不由 better-auth 承担 | 自建限流（IP + 账号双维度） |
+| 5 | 登录失败限流不由 better-auth 承担 | 自建限流，**只保留账号维度**（2026-11-06 订正：原写「IP + 账号双维度」，已被 B-D14 取代，去掉 IP 维度以免公司 NAT 出口误伤；请求洪水由 better-auth 的全局请求限流兜底） |
 | 6 | 多租户组织插件不适用于本项目 | 组织归属用业务表，不用租户模型 |
 | 7 | drizzle-kit 能否生成 v2 需要的 CHECK、复合外键、生成列与受限写入过程 | **已验证（2026-11-04，tracer 任务 2，MySQL 8.4.11）**：CHECK、复合与循环外键、STORED 生成列唯一键、`ON DELETE SET NULL`、自定义列类型（含 `collate`）**都能生成且被 MySQL 强制**；触发器、种子数据、受限写入过程**不支持，写手写 SQL 迁移**（`drizzle-kit generate --custom`）。限制与绕法见下方「已知坑 7 的验证结论」 |
 

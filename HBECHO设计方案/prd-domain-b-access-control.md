@@ -6,9 +6,9 @@
 >
 > **本文档的范围**：只写"谁在用、怎么进来、能做什么、能看什么、撤权之后怎样"。**不含数据表、Token 实现、接口定义**——那些属于 B 域 spec 与技术设计。
 >
-> **产品语义的唯一真相源是本文档。** `access-control/design.md` 是技术草案，若与本文冲突，以本文为准。
+> **产品语义的唯一真相源是本文档。** 对应的技术 spec 是 [`b-access-control`](../.kiro/specs/b-access-control/requirements.md)（2026-11-06）；它取代的旧 `access-control/design.md` 已归档为 `superseded`（[`archive/access-control-design-2026-11-04.md`](archive/access-control-design-2026-11-04.md)）。若与本文冲突，以本文为准。
 >
-> **来源说明**：本域没有现成的独立 PRD 草稿。结构参考 hbdam 域 E PRD；产品语义取自 `prd-platform.md`、`CONTEXT.md` 与 `access-control/design.md` 中仍然有效的部分。
+> **来源说明**：本域没有现成的独立 PRD 草稿。结构参考 hbdam 域 E PRD；产品语义取自 `prd-platform.md`、`CONTEXT.md` 与旧 `access-control/design.md`（已归档）中仍然有效的部分。
 
 ---
 
@@ -39,6 +39,7 @@
 | v1.17 | 2026-11-03 | 细化主数据边界：`import` 只做授权品牌门店非结构字段与已有结构下新门店；`structure` 改为手动结构变更；审计补导入确认与回流下载。决策人：刘学奎 |
 | v1.18 | 2026-11-03 | 对齐 G 域 v1.0：`learning.manage` 含「全部品牌」课程；`learning.read` 的「全部品牌」课程对所有品牌可见；学习进度按 `User`，换店删旧建新不迁移。决策人：刘学奎 |
 | v1.21 | 2026-11-04 | A §11.3 负责人订正：退出计划、修改已录账号、移出名单改为 `activity_plan.join` 持有者，负责人只作责任标记（B-D18 / B-D19）；MediaStaff 停用清单已由 A §5.4 补齐。决策人：刘学奎 |
+| v1.21.1 | 2026-11-06 | **订正引用，非新规则**：旧 `access-control/design.md` 已归档并由 `.kiro/specs/b-access-control/` 取代，本文内相关引用改指归档文件与新 spec。决策人：刘学奎 |
 | v1.20 | 2026-11-04 | 短信防刷（B-D37 / B-D38）；`store_staff` 能力描述订正；B-D07 改为手机号定位专员；名单导入可自动新建专员；经销商级开关仅超管。决策人：刘学奎 |
 | v1.19 | 2026-11-03 | 对齐 H 域 v0.2：`ai.content.assist` 只授予超管与总部；分公司/门店不开放 H5；D 第三层的 ASR + 大模型判定不经该能力。决策人：刘学奎 |
 
@@ -74,8 +75,8 @@
 | B-D22 | 外部监控账号仅 `platform_admin` 可见；总部与分公司即使持有 `data.account.read` 也看不到 | §8.2 只写「默认只有平台级可见」 |
 | B-D23 | G-D40 的人员级别作为资源属性进入 DataScope；级别由角色映射（门店=1、分公司=2、总部/超管=3），与品牌求交，不新增用户字段 | G 域已有 G-D40，B 域未登记 |
 | B-D24 | 组织范围与品牌集合**求交**；大区、分公司、板块、经销商是全品牌对象，门店才是单品牌；关闭 ADR 未决选型 #7 | 文档默认求交但 ADR 一直未关闭 |
-| B-D25 | 品牌或组织停用不影响已授予的读范围；恢复收窄只去掉「不存在或无法映射」的对象，不去掉停用对象 | `access-control/design.md`「状态失效 → 空 DataScope 或拒绝」 |
-| B-D26 | 组织/品牌 ID 无法映射、DataScope 解析失败时返回 403 并记可处理问题；不回退空列表、不回退全量 | `access-control/design.md` 允许「空 DataScope 或拒绝」 |
+| B-D25 | 品牌或组织停用不影响已授予的读范围；恢复收窄只去掉「不存在或无法映射」的对象，不去掉停用对象 | 旧 `access-control/design.md`（已归档）「状态失效 → 空 DataScope 或拒绝」 |
+| B-D26 | 组织/品牌 ID 无法映射、DataScope 解析失败时返回 403 并记可处理问题；不回退空列表、不回退全量 | 旧 `access-control/design.md`（已归档）允许「空 DataScope 或拒绝」 |
 | B-D27 | 通知/消息出口纳入交付前复查，发送前按接收者当前范围过滤 | §10.2 未列通知 |
 | B-D28 | 停用或撤权时立即取消该用户触发的未完成异步任务；计划任务不受影响 | 未写明 |
 | B-D29 | 手机号不逐条记审计；只在批量导出（出口 4）时记 | §11.1「敏感字段查看」可被读成逐条 |
@@ -744,5 +745,5 @@ Worker 不是 `User`，没有 Grant，也不继承任何角色的默认能力。
 | 1 | A 域 §11.3 | 修改已录账号、移出名单 → 当前负责人 | 负责人不是权限；改为「持有 `activity_plan.join` 的本分公司人员」 | 已订正（2026-11-04，A v1.10） |
 | 2 | G 域 §8.4 / G-D40 | `learning.read` + 品牌范围 | 增加人员级别维度，与品牌求交 | 已由 G-D40 定义；本文 B-D23 登记 |
 | 3 | ADR 未决选型 #7 | Branch 范围是否与品牌 grant 求交——未决 | 求交 | 已关闭，见 ADR-0010 |
-| 4 | `access-control/design.md` §12 | 主数据状态失效 → 空 DataScope 或拒绝 | 停用不影响读范围；无法映射才 403 | 已在本文 B-D25 / B-D26 登记；设计稿待同步 |
+| 4 | 旧 `access-control/design.md`（已归档）§12 | 主数据状态失效 → 空 DataScope 或拒绝 | 停用不影响读范围；无法映射才 403 | 已在本文 B-D25 / B-D26 登记；设计稿待同步 |
 | 5 | better-auth | 库自带 IP 限流可用 | 只做认证本体；失败计数与账号锁定自建 | ADR-0005 已登记 |

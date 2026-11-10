@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：进行中（2026-11-06 初建；2026-11-10 任务 0–5 完成；2026-11-10 任务 6 完成，CLI 入口留任务 11）。任务 0 的「待确认闸门」已通过（2026-11-06，刘学奎：全部按建议采纳）；任务 1 的库兼容性验证与 ADR-0015 已于 2026-11-10 完成并接受。**待你确认的取舍见本文末「实施记录」的「待决项」**
+> **执行状态**：进行中（2026-11-06 初建；2026-11-10 任务 0–5 完成；2026-11-10 任务 6、7 完成，CLI 入口留任务 11）。任务 0 的「待确认闸门」已通过（2026-11-06，刘学奎：全部按建议采纳）；任务 1 的库兼容性验证与 ADR-0015 已于 2026-11-10 完成并接受。**待你确认的取舍见本文末「实施记录」的「待决项」**
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -27,7 +27,7 @@
 - [x] 任务 4 · DataScope、`ScopeStrategy` 注册表与四个自带策略 — 完成（2026-11-10）
 - [x] 任务 5 · 登录保护、短信、激活 / 重置 / 改密流程 — 完成（2026-11-10）
 - [x] 任务 6 · 用户管理：邀请、边界、变更、停用 / 恢复、强制下线、首个超管 — 完成（2026-11-10）；`access token create` / `bootstrap-superadmin` 的**命令行入口**随任务 11 的 `access-cli` 一起做，函数与测试已在 `users/bootstrap.ts`
-- [ ] 任务 7 · `MediaStaff` 联动与 `access maintain`
+- [x] 任务 7 · `MediaStaff` 联动与 `access maintain` — 完成（2026-11-10）；`access maintain` **命令行入口**随任务 11 的 `access-cli` 一起做（`createAccessMaintenance().runNow` 已就绪）
 - [ ] 任务 8 · 用户批量导入
 - [ ] 任务 9 · 审计：持久表、触发器、适配器、清理、读取
 - [ ] 任务 10 · 数据出口框架、有效范围、交付复查、撤权取消
@@ -320,11 +320,11 @@
 
 **验证**
 
-- [ ] 专员停用后用户下一次请求被停用并撤销会话；
-- [ ] 从未登录的用户被补偿任务停用；
-- [ ] 专员恢复：自动停用的恢复、人工停用的不恢复、同号冲突保持停用 + 质量问题；
-- [ ] 专员不存在时恢复用户：有效但本人范围拒绝；
-- [ ] 无 OSS 配置的装配里 `accessMaintain` 仍被调度；
+- [x] 专员停用后用户下一次请求被停用并撤销会话；
+- [x] 从未登录的用户被补偿任务停用；
+- [x] 专员恢复：自动停用的恢复、人工停用的不恢复、同号冲突保持停用 + 质量问题；
+- [x] 专员不存在时恢复用户：有效但本人范围拒绝；
+- [x] 无 OSS 配置的装配里 `accessMaintain` 仍被调度；
 - [ ] `./scripts/verify.sh` 通过。
 
 **Requirements:** AX-5；**Design:** §7.10。
@@ -562,6 +562,13 @@
 - 与设计的偏差（已核实，待你知晓）：① 我最初按「同一门店编码跨品牌重复」写了一个专员定位歧义分支（`staff_ambiguous` + `storeBrandId` 选项），写测试时发现 `media_staff.active_phone` 全局唯一，**有效专员的手机号不可能重复**，该分支不可达，已删除；设计与验收里本来就没有这个错误码；② `bootstrap` 的拒绝细分为 `token_invalid / token_used / token_expired / superadmin_exists` 四个码，对操作者（有数据库凭证的运维）可见，对外无暴露；③ 变更授权的「最后一个超管」保护在正常路径上不可达（只有超管能管理超管，执行者自己就是一个可用超管），只会在执行者上下文已陈旧（刚被并发停用）时触发，用例用直接改库来模拟；
 - 实现取舍：`bootstrapSuperadmin` 锁住令牌表全部行（表很小，增长型清理有界）来串行化「不同令牌的并发引导」，比引入 `GET_LOCK` 简单；
 - 测试里有两处刻意的并发（`Promise.allSettled`，不是被 B-AX-13 禁止的 `Promise.all` 造数）：两个超管互停、两个令牌并发引导；锁顺序固定，结果确定。
+**2026-11-10 · 任务 7（专员联动与每日维护）**
+- `linkage.ts`（`disableIfStaffInactive`、`compensate`、`clearStaleAcks`、`conditionalRestore`、`cleanup`、`runNow`、`runDaily`）、`maintenance.ts`（给 worker 的装配，不需要 OSS）；`authenticate` 补懒停用；`runForever` 的 `extras.accessMaintain` 在 `sync-main` 里**无条件接入**（ODS 维护因缺 OSS 配置被关掉时它照常运行）；
+- `authenticate` 的 `linkage` 依赖是**必填**：漏接线会让专员停用后的用户继续有效，不能做成可选；
+- AX-D30 标记的完整生命周期：人工恢复时写入（任务 6）→ 懒停用 / 补偿跳过 → **专员重新有效时由维护的第一步清掉** → 之后再停用会被正常停用；用例覆盖这一整圈；
+- 与设计的小偏差：① 条件恢复遇到「该专员已绑定了另一个非停用用户」（`UQ(active_staff)`）时，设计只写了同号冲突；我加了同样的处理（保持停用 + 质量问题 `user_auto_restore_blocked_staff_bound`），否则每天静默重试且无人知晓；② 步骤 3（审计到期清理）留空位 `purgeAudit`，任务 9 接入；③ `runDaily` 的起点按设计写的北京时间 04:30（现有 ODS 维护是整点 04:00，两者不同，是设计的原文）；
+- 静态护栏：`acceptance-boundaries` 增加「access-control 里没有删除用户行的路径」「没有引用 `monitoring_enabled`」（D16、D17），用故意违规的临时文件验证过会失败；
+- 注意（沿用之前的记录）：仓库里仍没有任何代码会把 `media_staff.status` 改成 `inactive`，所以这条联动的**触发源**要等主数据侧有「停用专员」功能；现在只有测试用直接改库来触发。
 **已知问题（非本 spec 引入，2026-11-10 记录）**
 
 - `services/capability` 的 `tests/test_app.py::test_image_errors_are_structured_json` 在本机**间歇性失败**：单独连续跑 10 次，9 次通过、1 次失败（`urllib.error.HTTPError: 415` 在 `call()` 的 `except` 之外被抛出，疑似 Python 3.14 + 测试服务器的连接处理细节）；整个套件连跑 3 次全过。我没有改过该目录，也没有深挖，只记录证据。更早一次 verify 还出现过 HEIC 用例失败，当时下的「ffmpeg 版本」结论站不住，同样应视为间歇性；

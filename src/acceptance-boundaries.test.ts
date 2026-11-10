@@ -110,6 +110,17 @@ describe("B-AX-1：不使用 better-auth 的 admin 体系", () => {
   });
 });
 
+describe("B-AX-5：用户只停用不删除，且不触碰监控开关（acceptance D16、D17）", () => {
+  const sources = nonTestSources.filter((p) => rel(p).startsWith("modules/access-control/"));
+  it("access-control 里没有删除 access_users / auth_users 行的路径", () => {
+    expect(sources.length).toBeGreaterThan(5);
+    const offenders = sources.filter((p) => /\.delete\(\s*(accessUsers|authUsers)\s*\)|DELETE\s+FROM\s+(access_users|auth_users)\b/i.test(code(p))).map(rel);
+    expect(offenders).toEqual([]);
+  });
+  it("access-control 里没有对 monitoring_enabled 的任何引用", () => {
+    expect(sources.filter((p) => /monitoring_?enabled/i.test(code(p))).map(rel)).toEqual([]);
+  });
+});
 describe("B-AX-12：src/app 只做入口，不写 SQL", () => {
   it("src/app 下没有 insert / update / delete / execute / transaction / sql 模板 / 对 db 目录的导入", () => {
     const app = nonTestSources.filter((p) => rel(p).startsWith("app/"));

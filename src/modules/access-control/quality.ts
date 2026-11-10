@@ -7,6 +7,8 @@ import { dataQualityIssues } from "../../db/schema";
 
 export const ISSUE_SCOPE_NOT_RESOLVABLE = "access_scope_not_resolvable";
 export const ISSUE_AUTO_RESTORE_BLOCKED = "user_auto_restore_blocked_phone_in_use";
+/** 专员恢复了，但该专员已绑定了另一个非停用用户（UQ(active_staff)）：同样保持停用并留痕。 */
+export const ISSUE_AUTO_RESTORE_STAFF_BOUND = "user_auto_restore_blocked_staff_bound";
 
 export interface AccessIssue {
   code: string;

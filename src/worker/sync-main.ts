@@ -6,6 +6,7 @@
 import pino from "pino";
 import { z } from "zod";
 import { createDb, createPool } from "../db/client";
+import { createAccessMaintenance } from "../modules/access-control/maintenance";
 import { createDemandModule } from "../modules/demand";
 import { createMaintenance, type Maintenance } from "../modules/maintenance";
 import { cleanStaleTmp } from "../modules/media-archive";
@@ -84,7 +85,9 @@ if (isWorkerCommand) {
   } catch (e) {
     app.logger.warn({ err: e instanceof Error ? e.message : String(e) }, "daily maintenance disabled");
   }
-  await runForever(app, cfg, process, { ...(maintain ? { maintain } : {}) });
+  // 访问控制维护不依赖 OSS：无论上面是否启用，都接入
+  const accessMaintenance = createAccessMaintenance({ db: app.db, clock: app.clock, logger: app.logger });
+  await runForever(app, cfg, process, { ...(maintain ? { maintain } : {}), accessMaintain: () => accessMaintenance.runDaily() });
   await app.close();
   process.exit(0);
 }

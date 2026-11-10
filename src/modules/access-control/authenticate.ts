@@ -7,6 +7,7 @@ import type { Db } from "../../db/client";
 import { accessUserBranches, accessUserBrands, accessUsers } from "../../db/schema";
 import type { AccessAuth } from "./auth-instance";
 import type { AuthContext, DenyReason } from "./authorize";
+import type { StaffLinkage } from "./linkage";
 import { isRoleCode, ROLE_CAPABILITIES } from "./roles";
 import { buildDataScope, ScopeUnresolvable, type OrgDirectory } from "./scope";
 
@@ -18,6 +19,8 @@ export interface AuthenticatorDeps {
   db: Db;
   auth: AccessAuth;
   dir: OrgDirectory;
+  /** 专员停用的懒执行（design §7.10）。必填：漏接线会让专员停用后的用户继续有效，不能是可选。 */
+  linkage: Pick<StaffLinkage, "disableIfStaffInactive">;
   /** 范围无法解释时调用（写质量问题）；失败不影响拒绝。 */
   onUnresolvable?(info: { userId: bigint; reason: string }): Promise<void> | void;
 }
@@ -27,13 +30,15 @@ export interface UserFacts {
   role: string;
   status: string;
   mediaStaffId: bigint | null;
+  /** 管理员人工恢复时已知情的失效绑定（AX-D30）。 */
+  bindingAckStaffId: bigint | null;
   brandIds: ReadonlySet<bigint>;
   branchIds: ReadonlySet<bigint>;
 }
 
 export async function loadUserFacts(db: Db, userId: bigint): Promise<UserFacts | null> {
   const [u] = await db
-    .select({ userId: accessUsers.userId, role: accessUsers.roleCode, status: accessUsers.status, mediaStaffId: accessUsers.mediaStaffId })
+    .select({ userId: accessUsers.userId, role: accessUsers.roleCode, status: accessUsers.status, mediaStaffId: accessUsers.mediaStaffId, bindingAckStaffId: accessUsers.bindingAckStaffId })
     .from(accessUsers)
     .where(eq(accessUsers.userId, userId))
     .limit(1);
@@ -64,6 +69,24 @@ export function createAuthenticator(deps: AuthenticatorDeps) {
     }
     if (!facts || facts.status !== "active" || !isRoleCode(facts.role)) return { ok: false, kind: "unauthenticated", reason: "user_not_active" };
 
+    // 懒执行：绑定的专员已不是有效 → 停用用户并撤销会话，本次请求即被拒。人工恢复时已知情的失效绑定（ack）不触发；
+    // 此时用户有效，但本人范围解析失败，由 buildDataScope 拒绝（B-D08）。停用写失败 → unavailable，不静默放行
+    if (facts.role === "store_staff" && facts.mediaStaffId !== null && facts.bindingAckStaffId !== facts.mediaStaffId) {
+      let inactive = false;
+      try {
+        const b = await deps.dir.staffBinding(facts.mediaStaffId);
+        inactive = b !== null && b.status !== "active";
+      } catch {
+        // 目录不可用：不在这里判断，交给下面的 buildDataScope 按「范围无法解释」处理（拒绝 + 质量问题）
+      }
+      if (inactive) {
+        try {
+          if ((await deps.linkage.disableIfStaffInactive(userId)) === "disabled") return { ok: false, kind: "unauthenticated", reason: "media_staff_disabled" };
+        } catch {
+          return { ok: false, kind: "unavailable", reason: "no_session" };
+        }
+      }
+    }
     try {
       const scope = await buildDataScope({ role: facts.role, mediaStaffId: facts.mediaStaffId, brandIds: facts.brandIds, branchIds: facts.branchIds }, deps.dir);
       return {

@@ -68,7 +68,7 @@ export async function runForever(
   cfg: SyncWorkerConfig,
   signals: { on(sig: "SIGTERM" | "SIGINT", f: () => void): void },
   /** 每日维护（北京时间 04:00 之后每天一次，由 maintenance.runDaily 自己判断，这里每次 tick 后调用）。 */
-  extras: { maintain?: () => Promise<unknown> } = {},
+  extras: { maintain?: () => Promise<unknown>; accessMaintain?: () => Promise<unknown> } = {},
 ): Promise<void> {
   let stopped = false;
   let stopping: Promise<void> | null = null;
@@ -83,6 +83,12 @@ export async function runForever(
         await extras.maintain?.();
       } catch (e) {
         app.logger.error({ err: e }, "maintenance failed"); // runDaily 自己吞步骤错误；这里兜底，不让它拖垮 tick 循环
+      }
+      // 访问控制的每日维护（B 域）：独立于上面的 ODS 维护，不需要 OSS，所以 OSS 配置不全时它仍然运行
+      try {
+        await extras.accessMaintain?.();
+      } catch (e) {
+        app.logger.error({ err: e }, "access maintenance failed");
       }
       await new Promise((r) => setTimeout(r, TICK_INTERVAL_MS));
     }

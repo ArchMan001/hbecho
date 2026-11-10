@@ -23,6 +23,8 @@ import type { AccessAlert, SmsService } from "../../src/modules/access-control/s
 import type { PersistentAuditWriter } from "../../src/modules/access-control/audit";
 import type { AccessConfig } from "../../src/modules/access-control/config";
 import { FakeSmsSender } from "../../src/modules/access-control/sms";
+import { createStaffLinkage, type LinkageDeps, type StaffLinkage } from "../../src/modules/access-control/linkage";
+import { createOrgDirectory, type OrgDirectory } from "../../src/modules/access-control/scope";
 import { FakeClock } from "./fake-clock";
 import type { TestDb } from "./db";
 
@@ -78,6 +80,12 @@ export function accessEnv(t: TestDb, opts: { flow?: boolean | AuthFlow; config?:
     ...(opts.flow === false ? { flow: false as const } : typeof opts.flow === "object" ? { flow: opts.flow } : {}),
   });
   return { t, clock, sender, config, auth, audit, guard, sms, alerts };
+}
+
+/** 专员联动（懒停用 + 每日维护）：与生产同一个工厂，用 env 的时钟与审计。 */
+export function accessLinkage(env: AccessEnv, over: { dir?: OrgDirectory } & Partial<Pick<LinkageDeps, "purgeAudit" | "config" | "log">> = {}): StaffLinkage {
+  const { dir, ...rest } = over;
+  return createStaffLinkage({ db: env.t.db, clock: env.clock, audit: env.audit, dir: dir ?? createOrgDirectory(env.t.db), ...rest });
 }
 
 // scrypt 哈希约 50–100 ms；所有造数用户共用同一个哈希，测试里统一用 PASSWORD 登录

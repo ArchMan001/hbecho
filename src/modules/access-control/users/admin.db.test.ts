@@ -1,7 +1,7 @@
 // 用户管理（任务 6；AX-2、AX-5、AX-8）：授权边界、读写同源、整体拒绝零写入、立即生效、不碰密码。
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import { accessEnv, insertAccessUser, loginAs, seedAccessOrg, type AccessEnv, type AccessOrg } from "../../../../tests/harness/access";
+import { accessEnv, accessLinkage, insertAccessUser, loginAs, seedAccessOrg, type AccessEnv, type AccessOrg } from "../../../../tests/harness/access";
 import { useTestDb } from "../../../../tests/harness/db";
 import { accessUserBranches, accessUserBrands, accessUsers, auditEvents, authSessions, authUsers } from "../../../db/schema";
 import { createAuthenticator } from "../authenticate";
@@ -32,7 +32,7 @@ beforeEach(async () => {
     authorizer: createAuthorizer(),
     onRevoked: async (a) => void revokedCalls.push(a),
   });
-  authenticate = createAuthenticator({ db: t.db, auth: env.auth, dir }).authenticate;
+  authenticate = createAuthenticator({ db: t.db, auth: env.auth, dir, linkage: accessLinkage(env, { dir }) }).authenticate;
 });
 
 /** 真实登录再认证：得到的 ctx 与生产路径一致（角色、能力、范围都从库里现算）。 */

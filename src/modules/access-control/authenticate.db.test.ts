@@ -1,9 +1,9 @@
 // authenticate：每请求现建 AuthContext（AX-1、AX-7）。
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import { accessEnv, insertAccessUser, loginAs, seedAccessOrg, type AccessEnv, type AccessOrg } from "../../../tests/harness/access";
+import { accessEnv, accessLinkage, insertAccessUser, loginAs, seedAccessOrg, type AccessEnv, type AccessOrg } from "../../../tests/harness/access";
 import { useTestDb } from "../../../tests/harness/db";
-import { accessUserBrands, accessUsers, authSessions, dataQualityIssues } from "../../db/schema";
+import { accessUserBrands, accessUsers, auditEvents, authSessions, dataQualityIssues } from "../../db/schema";
 import { createAuthenticator } from "./authenticate";
 import { ISSUE_SCOPE_NOT_RESOLVABLE, recordAccessIssue } from "./quality";
 import { ROLE_CAPABILITIES } from "./roles";
@@ -18,7 +18,7 @@ beforeEach(async () => {
 });
 
 const make = (dir: OrgDirectory = createOrgDirectory(t.db), over: Partial<Parameters<typeof createAuthenticator>[0]> = {}) =>
-  createAuthenticator({ db: t.db, auth: env.auth, dir, ...over });
+  createAuthenticator({ db: t.db, auth: env.auth, dir, linkage: accessLinkage(env, { dir }), ...over });
 
 describe("authenticate", () => {
   it("有效会话 → AuthContext：规范主体、角色、Capability、范围", async () => {
@@ -85,20 +85,42 @@ describe("authenticate", () => {
     expect(await t.db.select().from(authSessions)).toHaveLength(1); // 同一个会话
   });
 
-  it("store_staff：范围来自专员所在门店；绑定到已停用专员 → 仍通过认证但本人范围拒绝", async () => {
+  it("store_staff：范围来自专员所在门店", async () => {
     await insertAccessUser(env, { phone: "13800000001", role: "store_staff", mediaStaffId: org.staffA });
     const ok = await make().authenticate(await loginAs(env, "13800000001"));
     expect(ok.ok && ok.ctx.scope.self).toEqual({ kind: "resolved", mediaStaffId: org.staffA, storeId: org.storeA });
-
-    // 停用专员后 user 是被「恢复」成有效的（人工）：认证通过，但本人范围是 unresolved
+  });
+  it("专员停用后用户下一次请求被停用并撤销会话（懒执行，D8）；之后的请求同样被拒", async () => {
+    const userId = await insertAccessUser(env, { phone: "13800000001", role: "store_staff", mediaStaffId: org.staffA });
+    const headers = await loginAs(env, "13800000001");
+    expect((await make().authenticate(headers)).ok).toBe(true);
     await t.pool.query("UPDATE media_staff SET status='inactive' WHERE staff_id = ?", [org.staffA]);
-    const r = await make().authenticate(await loginAs(env, "13800000001"));
+    expect(await make().authenticate(headers)).toEqual({ ok: false, kind: "unauthenticated", reason: "media_staff_disabled" });
+    const [u] = await t.db.select().from(accessUsers).where(eq(accessUsers.userId, userId));
+    expect(u).toMatchObject({ status: "disabled", disabledReason: "media_staff_disabled", autoDisabledStaffId: org.staffA });
+    expect(await t.db.select().from(authSessions).where(eq(authSessions.userId, userId))).toHaveLength(0);
+    expect(await make().authenticate(headers)).toMatchObject({ ok: false, kind: "unauthenticated" });
+    const ev = await t.db.select().from(auditEvents).where(eq(auditEvents.targetId, userId.toString()));
+    expect(ev.filter((e) => e.reasonCode === "media_staff_disabled")).toEqual([expect.objectContaining({ actor: "service:access-worker" })]);
+  });
+  it("人工恢复时专员已停用（binding_ack）：用户保持有效，认证通过，但本人范围被拒（D12）", async () => {
+    await insertAccessUser(env, { phone: "13800000001", role: "store_staff", mediaStaffId: org.staffA });
+    const headers = await loginAs(env, "13800000001");
+    await t.pool.query("UPDATE media_staff SET status='inactive' WHERE staff_id = ?", [org.staffA]);
+    await t.pool.query("UPDATE access_users SET binding_ack_staff_id = ? WHERE phone = '13800000001'", [org.staffA]);
+    const r = await make().authenticate(headers);
     expect(r.ok && r.ctx.scope.self).toEqual({ kind: "unresolved", reason: "staff_inactive" });
   });
-
+  it("停用写入失败 → unavailable，不静默放行", async () => {
+    await insertAccessUser(env, { phone: "13800000001", role: "store_staff", mediaStaffId: org.staffA });
+    const headers = await loginAs(env, "13800000001");
+    await t.pool.query("UPDATE media_staff SET status='inactive' WHERE staff_id = ?", [org.staffA]);
+    const failing = { disableIfStaffInactive: async () => { throw new Error("db down"); } };
+    expect(await make(createOrgDirectory(t.db), { linkage: failing }).authenticate(headers)).toMatchObject({ ok: false, kind: "unavailable" });
+  });
   it("认证库异常 → unavailable（业务拒绝），不当作未登录放行", async () => {
     const broken = { api: { getSession: async () => { throw new Error("auth db down"); } } } as unknown as typeof env.auth;
-    const r = await createAuthenticator({ db: t.db, auth: broken, dir: createOrgDirectory(t.db) }).authenticate(new Headers());
+    const r = await createAuthenticator({ db: t.db, auth: broken, dir: createOrgDirectory(t.db), linkage: accessLinkage(env) }).authenticate(new Headers());
     expect(r).toMatchObject({ ok: false, kind: "unavailable" });
   });
 

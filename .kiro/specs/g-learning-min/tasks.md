@@ -92,6 +92,8 @@
   - 接入四个 Capability；确认业务代码无角色判断；补 acceptance 全部自动项；回写 runbook 与 ADR 的实测值。
   - **验证**：全量离线测试通过且无网络调用；`./scripts/verify.sh` 通过；acceptance 清单逐项勾选。
 
+- [ ] 页面任务：**本轮不写**。界面设计已于 2026-11-10 确认（design §11.6），原型在 [`ui-lab/g-learning-min/`](../../../ui-lab/g-learning-min/README.md)；页面任务另行排期，按确认范围拆。
+
 ## 对已有代码与测试的改动
 
 当前仓库没有应用代码，本 spec 是首批落地之一。实施时若发现与 ADR-0005 的目录约定冲突，先改 ADR 或提出决策，不在任务里临时决定。

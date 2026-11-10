@@ -1,5 +1,6 @@
 // 回流 CSV（design §7.8、MD-8）：原 11 列 + 预检分类 / 结果 / 原因；只含 error、needs_superadmin、conflict 行。
 // 单元格以 = + - @ \t \r 开头加 ' 前缀（F-D11，展示保护，业务重新上传前需去掉）；输出带 BOM 的 UTF-8，Excel 直接打开不乱码。
+import { buildCsv, csvCell } from "../csv-file";
 import { HEADER } from "./file-parser";
 
 export const RETURN_COLUMNS = [...HEADER, "预检分类", "结果", "原因"] as const;
@@ -32,10 +33,7 @@ export const REASON_TEXT: Record<string, string> = {
   dealer_name_conflict: "写入时经销商名称冲突，请重新上传预检",
 };
 
-export const csvCell = (v: string): string => {
-  const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
-  return /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
-};
+export { csvCell };
 
 export interface ReturnRow {
   raw: Record<string, string>;
@@ -49,17 +47,16 @@ export const isReturned = (r: Pick<ReturnRow, "precheckClass" | "outcome">): boo
   r.precheckClass === "error" || r.precheckClass === "needs_superadmin" || r.outcome === "conflict";
 
 export function buildReturnFile(rows: readonly ReturnRow[]): string {
-  const lines = [RETURN_COLUMNS.map(csvCell).join(",")];
+  const out: string[][] = [];
   for (const r of rows) {
     if (!isReturned(r)) continue;
     const reason = r.reasonCode ? `${REASON_TEXT[r.reasonCode] ?? r.reasonCode}（${r.reasonCode}${r.reasonDetail ? `：${r.reasonDetail}` : ""}）` : "";
-    const cells = [
+    out.push([
       ...HEADER.map((h) => r.raw[h] ?? ""),
       CLASS_TEXT[r.precheckClass ?? ""] ?? "",
       r.outcome ? (OUTCOME_TEXT[r.outcome] ?? r.outcome) : "未写入",
       reason,
-    ];
-    lines.push(cells.map(csvCell).join(","));
+    ]);
   }
-  return `\uFEFF${lines.join("\r\n")}\r\n`;
+  return buildCsv(RETURN_COLUMNS, out);
 }

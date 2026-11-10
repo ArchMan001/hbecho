@@ -555,3 +555,7 @@
 - 「手机是否真正收到」：**刘学奎确认已收到**（2026-11-10）；
 - 尚未验证：reset、activate 两个模板的真实发送；经 Web 流程（`/phone-number/send-otp`）的端到端真实发送；这把 key 属于主账号还是 RAM 子账号（未判断）。
 
+**已知问题（非本 spec 引入，2026-11-10 记录）**
+
+- `services/capability` 的 `tests/test_app.py::test_image_errors_are_structured_json` 在本机**间歇性失败**：单独连续跑 10 次，9 次通过、1 次失败（`urllib.error.HTTPError: 415` 在 `call()` 的 `except` 之外被抛出，疑似 Python 3.14 + 测试服务器的连接处理细节）；整个套件连跑 3 次全过。我没有改过该目录，也没有深挖，只记录证据。更早一次 verify 还出现过 HEIC 用例失败，当时下的「ffmpeg 版本」结论站不住，同样应视为间歇性；
+- **CI 不验证 Python 侧**：`ci.yml` 没有安装 pytest / ffmpeg / 建 venv，`verify.sh` 第 9 步在 CI 上走 `SKIPPED（Python 侧未验证）`。所以 CI 绿不代表 Python 侧通过，这与 `dev-ci-cadence` 里「CI 绿 ≠ Python 侧验过」的措辞一致，但这条边界目前没有被任何文档明确写成现状。

@@ -46,7 +46,15 @@ describe("迁移与参考数据", () => {
     const [tables] = await t.pool.query(
       "SELECT table_name n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type='BASE TABLE' AND table_name <> '__drizzle_migrations'",
     );
-    expect((tables as unknown[]).length).toBe(29);
+    // B 域的 11 张表在本 spec 内定义，不属于 v2（b-access-control AX-D01），单独核对
+    const B_TABLES = [
+      "auth_users", "auth_sessions", "auth_accounts", "auth_verifications",
+      "access_users", "access_user_brands", "access_user_branches", "access_login_failures",
+      "access_sms_sends", "access_bootstrap_tokens", "audit_events",
+    ];
+    const names = (tables as Array<{ n: string }>).map((r) => r.n);
+    expect(B_TABLES.filter((n) => !names.includes(n))).toEqual([]);
+    expect(names.filter((n) => !B_TABLES.includes(n))).toHaveLength(29);
     const [enums] = await t.pool.query("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND data_type = 'enum'");
     expect(enums).toEqual([]);
     const [rules] = await t.pool.query(

@@ -35,7 +35,9 @@ export async function resetData(pool: Pool): Promise<void> {
     const [rows] = await conn.query("SELECT table_name AS t FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'");
     await conn.query("SET FOREIGN_KEY_CHECKS = 0");
     for (const r of rows as Array<{ t: string }>) {
-      if (!KEEP.has(r.t)) await conn.query(`DELETE FROM \`${r.t}\``);
+      if (KEEP.has(r.t)) continue;
+      // audit_events 有「未满 365 天不可 DELETE」的触发器；TRUNCATE 不触发它，只有测试挂具这样清
+      await conn.query(r.t === "audit_events" ? "TRUNCATE TABLE `audit_events`" : `DELETE FROM \`${r.t}\``);
     }
     await conn.query("SET FOREIGN_KEY_CHECKS = 1");
   } finally {

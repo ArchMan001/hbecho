@@ -151,7 +151,10 @@ describe("bootstrap（任务 2）", () => {
     const { runMigrations } = await import("../../db/client");
     const { createDb } = await import("../../db/client");
     await runMigrations(createDb(t.pool));
-    const [tables] = await t.pool.query("SELECT COUNT(*) n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type='BASE TABLE' AND table_name <> '__drizzle_migrations'");
+    // v2 的 29 张表；b-access-control 的 11 张（auth_* / access_* / audit_events）不属于 v2，单独不计
+    const [tables] = await t.pool.query(
+      "SELECT COUNT(*) n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type='BASE TABLE' AND table_name <> '__drizzle_migrations' AND table_name NOT LIKE 'auth\\_%' AND table_name NOT LIKE 'access\\_%' AND table_name <> 'audit_events'",
+    );
     expect(Number((tables as Array<{ n: string }>)[0]!.n)).toBe(29);
   });
 });

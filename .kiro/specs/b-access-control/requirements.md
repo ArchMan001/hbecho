@@ -140,7 +140,7 @@ B PRD 在产品层已「待定项清零」。下列是**实现层**必须选一�
 
 **陈述**：系统 SHALL 用 better-auth 提供「手机号 + 密码」与「手机号 + 短信验证码」两种登录，会话由 better-auth 管理；授权自建（ADR-0005）。
 
-- 会话有效期 SHALL 为 15 天，滑动续期**每个自然日至多刷新一次**（B-D13）；SHALL NOT 设绝对有效期，SHALL NOT 限制并发会话数；
+- 会话有效期 SHALL 为 15 天，滑动续期**至多每 24 小时刷新一次**（B-D13 写作「每天最多一次」；better-auth 的 `updateAge` 是从上次刷新起算的滚动 24 小时，不是自然日零点，2026-11-10 任务 1 实测。滚动 24 小时蕴含「任一自然日至多刷新一次」，但不保证「跨过零点后的首次请求就刷新」）；SHALL NOT 设绝对有效期，SHALL NOT 限制并发会话数；
 - SHALL NOT 启用会话 cookie 缓存：每次请求都读会话与用户状态，使「停用后现有会话全部失效」即时生效；
 - 会话 cookie SHALL 为 `HttpOnly`、`Secure`（生产）、`SameSite=Lax`；状态变更请求 SHALL 受 better-auth 的 Origin 校验保护，`trustedOrigins` 来自配置，不写死；
 - 每次认证请求 SHALL 重新检查用户状态与授权（`authenticate(request)`）；`disabled` 用户无法续期；
@@ -152,7 +152,7 @@ B PRD 在产品层已「待定项清零」。下列是**实现层**必须选一�
 
 **验收标准**
 
-- 用 fixture 手机号 + 密码登录得到会话；会话到期日 = 登录时间 + 15 天；同一自然日内第二次认证请求不写库，跨天后的首次请求把到期日刷新到当时 + 15 天（`FakeClock`）；
+- 用 fixture 手机号 + 密码登录得到会话；会话到期日 = 登录时间 + 15 天；24 小时内的第二次认证请求不写库；距上次刷新满 24 小时后的首次请求把到期日刷新到当时 + 15 天（better-auth 用真实时钟，所以用改库时间戳模拟「上次刷新是 25 小时前」，不能用 `FakeClock`）；
 - 用户停用后，下一次 `authenticate` 返回未认证，无论会话 cookie 是否仍存在；
 - 修改密码 / 重置密码后，其他会话被撤销，当前会话保留（改密）或全部失效（重置）；
 - 全仓库搜索 `adminAc`、`set-password`、`impersonate`、`defaultRole`、`adminRoles` 无使用；

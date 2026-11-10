@@ -61,10 +61,10 @@
 |---|---|---|
 | `prd` | B PRD 或已编号决定 | 角色矩阵、5 次 / 15 分钟、15 天滑动、1,000 行、严格下级 |
 | `code` | 已合并代码里读到的事实 | 三个 `ActorContext` 的字段；`media_staff` 的 `active_phone`；审计回调只写 pino；`package.json` 没有 Next / better-auth |
-| `library` | 来自 better-auth 官方文档的描述，**尚未在本仓库验证** | 手机号插件的 `sendOTP` 回调、会话 `expiresIn` / `updateAge`、Drizzle 适配器与 CLI 生成 |
+| `library` | 来自 better-auth 官方文档的描述，**尚未在本仓库验证** | 任务 1 之后只剩尚未被用例覆盖的描述（例如 `next build` 下 Route Handler 的行为，留任务 12） |
 | `proposal` | 本 spec 的建议，**待评审** | 墓碑手机号、`access_users` 扩展表、审计表触发器 |
 
-标 `library` 的行为在任务 1 用真实库版本、真实 MySQL 8.4 测试库验证后才转为事实（§6.5）。搜索结果显示 better-auth 当前在 1.7 系列；**版本在任务 1 锁定**，本文不写具体版本号。
+标 `library` 的行为在任务 1 用真实库版本、真实 MySQL 8.4 测试库验证后才转为事实（§6.5）。**2026-11-10 任务 1 已验证 S1–S9**，版本精确锁定为 better-auth **1.7.18**；已验证的行为转为 `code`，结论与库外要补的五处见 [ADR-0015](../../../HBECHO设计方案/architecture/adr/0015-auth-boundary-and-disabled-phone.md)（accepted，2026-11-10）。**没有被测试覆盖的 `library` 描述保持原标签**：例如 `drizzle-kit generate` 生成结果与手写 `auth.ts` 的逐列一致性，留到任务 2 用真实 schema 核对。
 
 ### 2.3 对旧 `access-control/design.md` 的继承与舍弃
 
@@ -228,10 +228,10 @@ restore(user)  事务：重校验 → 手机号唯一（status 回到 pending/ac
 
 ### 6.2 better-auth 的表
 
-四张认证表（`user`、`session`、`account`、`verification`）用 `modelName` / 字段映射命名为 `auth_users`、`auth_sessions`、`auth_accounts`、`auth_verifications`；手机号插件在用户表上增加 `phone_number`、`phone_number_verified`。形状以库的实际要求为准，**手工维护** `src/db/schema/auth.ts` 并在任务 1 用库的 CLI 生成结果核对。
+四张认证表（`user`、`session`、`account`、`verification`）用 `modelName` / 字段映射命名为 `auth_users`、`auth_sessions`、`auth_accounts`、`auth_verifications`；手机号插件在用户表上增加 `phone_number`、`phone_number_verified`。形状以库的实际要求为准，**手工维护** `src/db/schema/auth.ts`。任务 1 已验证：不用库的 `fields` 映射，TS 属性名取库的字段名、列名用 snake_case，`modelName` 改为 `auth_*` 后适配器的 `schema` 以新模型名为键（§6.5 S2）；库自带的 schema 一致性检查在缺表时会告警，任务 2 的迁移与手写 schema 一致由 `drizzle-kit generate` 无新文件保证。
 
 - 认证表 ID 要求 BIGINT 自增（R7）；做不到则停下；
-- 库要求用户表有必填的 `email`：本项目不使用邮箱登录，写入不可路由的合成值（`u<ID>@hbecho.invalid`），**不对外展示、不用于找回**；任务 1 确认是否可配置为可空；
+- 库要求用户表有必填的 `email`：本项目不使用邮箱登录，写入不可路由的**随机**合成值（`<UUID>@hbecho.invalid`，不能由手机号或 ID 推导，见 §6.5 S7），**不对外展示、不用于找回**；库不允许为空（任务 1 实测）；
 - 登录手机号列：待激活 / 有效时 = 真实号码；停用时 = 墓碑值（§7.9）；
 - 不使用库的 admin、organization、api-key 等插件。
 
@@ -254,19 +254,19 @@ restore(user)  事务：重校验 → 手机号唯一（status 回到 pending/ac
 
 ### 6.5 库兼容性验证清单（任务 1 的出口条件）
 
-| # | 要验证的事 | 通过 | 不通过时 |
-|---|---|---|---|
-| S1 | Drizzle 适配器 + MySQL 8.4 下用户 / 会话 ID 为自增 BIGINT，并在 JS 里以字符串往返 | 继续 | **停下报告**（R7），不静默改字符串 ID |
-| S2 | 表名 / 列名映射（`modelName`、`fields`）能落到 `auth_*` 与 snake_case，且 `drizzle-kit generate` 与手工 schema 一致 | 继续 | 使用库默认表名，在 v2 外的 schema 里加视图不可取；退回默认名并更新本文 |
-| S3 | 手机号插件：密码登录端点、发送 OTP、验证 OTP、验证码重置密码（无凭据时自动建凭据）、`allowedAttempts`、`expiresIn`、`otpLength` 可配置；`sendOTP` 回调拿到的是明文码且我们能决定「不发送」 | 继续 | 缺的部分按 §1.4 第 7 项自建端点，仍复用 `verification` 存储与会话 |
-| S4 | 在插件钩子（或 Route Handler 前置包装）上能插入：登录锁定检查、发送前资格校验与限频、激活成功后置 active | 继续 | 用 Route Handler 包装层拦截同名端点（仍是库的端点，只是前后加我们的逻辑） |
-| S5 | 会话：`expiresIn=15 天`、`updateAge=1 天`，同日重复请求不写库；`cookieCache` 关闭；删除会话行即撤销；`api.getSession` 可在 Route Handler 之外用 `headers` 调用 | 继续 | 若刷新频率与 B-D13 不符，改为自己控制刷新（关闭库的自动刷新，在 `authenticate` 里每日一次写入） |
-| S6 | 墓碑值：把登录手机号列改写后，原号码的新用户可建，旧用户无法用原号登录 / 收码；库不对该列做格式校验 | 继续 | 若库校验格式，用 `phone_number` 可空 + 另列；任一路径必须保持「登录只匹配非停用记录」 |
-| S7 | 必填 `email` 的处理（可空或合成值）与唯一性 | 继续 | 合成值 |
-| S8 | Route Handler 可在 vitest（Node 24，无 Next 运行时）里用 `new Request()` 直接调用；返回 `Set-Cookie` | 继续 | 引入最小 `next` 测试运行时（不推荐） |
-| S9 | 库请求级限流可启用且不影响账号锁定的语义 | 继续 | 关闭库限流，洪水兜底交给 Nginx（ADR-0006） |
+验证于 2026-11-10，better-auth 1.7.18 + MySQL 8.4 + Node 24，`src/modules/access-control/__spike__/` 38 个用例全部通过（随 `pnpm test:db` 运行，作为库升级回归）。「结论」列的证据等级为 `code`；详细行为与理由见 [ADR-0015](../../../HBECHO设计方案/architecture/adr/0015-auth-boundary-and-disabled-phone.md)。
 
-验证写成 `src/modules/access-control/__spike__/*.db.test.ts`（离线，MySQL 测试库），结论写回本节（把 `library` 变 `code`），**通过后写 ADR-0015**（认证边界：库拥有 user / session，授权表自有；墓碑手机号）。
+| # | 要验证的事 | 结论 | 采用的做法 / 备选的代价 |
+|---|---|---|---|
+| S1 | Drizzle 适配器 + MySQL 8.4 下用户 / 会话 ID 为自增 BIGINT，并在 JS 里以字符串往返 | **通过，有天花板** | `advanced.database.generateId: "serial"`；库对外给出十进制字符串。库内部按 JS `Number` 处理，精确到 2^53−1；自增起点抬到 2^53 以上时 `createUser` 陷入内存耗尽死循环（实测）。**认证表 ID 只能由数据库自增，不设起点、不写指定 ID** |
+| S2 | 表名 / 列名映射能落到 `auth_*` 与 snake_case，且 `drizzle-kit generate` 与手工 schema 一致 | **通过**（前半）；一致性核对留任务 2 | 不用库的 `fields`：TS 属性名取库字段名，列名用 snake_case；`modelName` 改为 `auth_*` 后 `schema` 对象须以新模型名为键 |
+| S3 | 手机号插件的端点与可配置项 | **通过，有 5 处要补** | 密码登录、发送 / 验证 OTP、验证码重置密码（无凭据自动建凭据）、`allowedAttempts` / `expiresIn` / `otpLength` 均可用；`sendOTP` 拿明文码；`revokeSessionsOnPasswordReset` 同事务撤销会话。库外要补的见 ADR-0015「五处」。**验证码在 `verification` 里是明文**（`<码>:<次数>`，5 分钟，过期行由库在每次查找时顺带删除），刘学奎选 A：接受（2026-11-10） |
+| S4 | 在钩子上插入锁定检查、发送前资格校验、激活后置 active | **通过** | 全局 `hooks.before / after` 足够：before 可抛错或用 `ctx.json` 直接返回成功样式而不执行端点；after 用 `ctx.context.returned instanceof APIError` 区分成败。**不需要 Route Handler 包装层** |
+| S5 | 会话 15 天 / 每日至多刷新一次 / 无 cookie 缓存 / 删行即撤销 / `api.getSession` 可在 Route Handler 外调用 | **通过** | `expiresIn = 15 天`、`updateAge = 1 天`、`cookieCache` 关闭。24 小时内不写库，距上次刷新满 24 小时后首次读刷新回 15 天（滚动 24 小时，不是自然日零点） |
+| S6 | 墓碑值 | **通过，有 1 处缺口** | 改写后旧用户无法登录 / 收码，原号可新建，恢复冲突报 1062。缺口：库的 `phoneNumberValidator` 只覆盖 `sign-in` 与 `send-otp`，墓碑值可到达 `request-password-reset` / `verify` / `reset-password`。用全局 `hooks.before` 统一校验 `cn-mobile.v1`（实测关闭缺口） |
+| S7 | 必填 `email` | **通过** | 合成值，**必须随机**（`<UUID>@hbecho.invalid`）。不能由手机号或 ID 推导：手机号推导会让停用后同号新建用户撞邮箱唯一键（实测）。§6.2 原写的 `u<ID>@hbecho.invalid` 因 ID 在插入前未知而改为随机值 |
+| S8 | Route Handler 可在 vitest 里直接调用 | **通过，有 1 处必须显式配置** | `auth.handler(new Request())` 与 `toNextJsHandler(auth)` 都不需要 `next`。库在 `NODE_ENV=test` 时默认关闭来源 / CSRF 检查，**认证实例必须显式 `advanced.disableOriginCheck: false` 并配 `trustedOrigins`**，测试也用同一配置 |
+| S9 | 库请求级限流可启用且不影响账号锁定 | **通过，有 1 处要调** | 按「IP + 路径」计数，同一手机号换 IP 不被限，所以账号锁定仍自建。插件自带 `/phone-number*` 每 60 秒 10 次，公司 NAT 出口会被误伤，用 `rateLimit.customRules` 调高（实测生效）。洪水兜底仍交给 Nginx |
 
 ## 7. Algorithms
 
@@ -413,6 +413,8 @@ canGrant(actor, proposed{role, brandIds, branchIds, staff?}):
 ```
 
 变更流程：`current`：`manages(actor, target)`；`proposed`：`canGrant(actor, proposed)`；两个都通过才在一个事务里写用户行、集合与审计，否则整个拒绝、零写入。批量逐行判断，越权进跳过清单。列表查询 = `list.filter(manages ∨ self)`，实现为一条 SQL（集合运算在数据库里做），并有「列表集合 = 可操作集合 ∪ 自己」的等价测试。
+
+**创建与变更时的集合形状**（AX-D29，2026-11-10 刘学奎确认）：`hq_manager` 的品牌集合**必须非空**且不带分公司集合；`branch_manager` 的品牌集合与分公司集合都**必须非空**；`platform_admin` 与 `store_staff` 的两个集合都为空（`store_staff` 的范围由其门店推出）。这只约束**创建与变更**；已有用户被收窄到空集合（例如恢复时去掉了无法映射的项）仍是合法空范围，读取得到空结果而不是全量（AX-7）。
 
 **最后一个超管**：停用 / 降级超管的事务先 `SELECT … FOR UPDATE` 锁住所有未停用超管行，再判断剩余数量 ≥ 1；超管不能停用自己（`manages` 已排除自己）。
 
@@ -611,6 +613,14 @@ access maintain
 | ADR-0005 | 已知坑 5 订正为 B-D14 口径（R2）；任务 5 把短信官方包登记到采用清单；任务 1 之后新增 ADR-0015 |
 | `tsconfig.json` | 如 `src/app` 引入 JSX / Next 类型需要调整，只放宽 `include` 到 `src/app` 且不改变其他目录的选项；任务 2 评估，必要时只把无页面的 Route Handler 保持为 `.ts`（不引入 JSX） |
 
+### 10.1 部署要求（Web 进程）
+
+内部站点，要求很少，但下面三条缺一就有明确后果：
+
+1. `HBECHO_TRUSTED_PROXIES` 设为 Nginx 所在地址（生产必填，缺则启动失败）；
+2. Nginx 的 `/api/auth/` 反代配置里写 `proxy_set_header X-Forwarded-For $remote_addr;`（**覆盖**，不用 `proxy_add_x_forwarded_for`）。配置的唯一来源是仓库 `deploy/nginx/`（ADR-0006），该目录建立时照此写；
+3. 后果：不配 1，库取不到可信 IP，所有请求落进同一个共享限流桶（一个人刷满，所有人一起 429）；配了 1 但 2 用了追加，客户端可伪造 IP 绕开限流。限流只是洪水兜底，账号锁定按手机号计数，不依赖 IP。
+
 ## 11. Testing strategy
 
 | 层 | 内容 |
@@ -635,7 +645,7 @@ access maintain
 - 各资源的策略未注册前，非超管（实际上包括超管）请求这些资源被拒；
 - `owner` 类的责任标记不是权限（B-D18），与本 spec 无关；
 - 审计触发器依赖 MySQL 触发器权限；部署账号需要 `TRIGGER`，由运维手册登记；
-- better-auth 的 `verification` 表保存验证码，库内部是否哈希存储以任务 1 的验证为准；若是明文，保留期只有 5 分钟 + 清理，并在 ADR-0015 记录；
+- better-auth 的 `verification` 表保存验证码，**任务 1 实测为明文**（`<码>:<次数>`，5 分钟，过期行由库在每次验证码查找时顺带删除）；刘学奎已选 A：接受（2026-11-10，ADR-0015）；
 - 短信签名与模板已申请（2026-11-06），名称与编码待提供、CLI 无权限复核；真实发送仍需批准，生产启用时间不由本 spec 决定；
 - 1,000 行导入的耗时与内存待任务 12 记录。
 
@@ -647,8 +657,8 @@ access maintain
 |---|---|---|---|
 | AX-D01 | B 域的表放在本 spec，不写入 v2 | v2 是数据底座基线；B 的表不属于它 | proposed |
 | AX-D02 | better-auth 的 user 就是 `User`；授权数据放 1:1 扩展表；不建 Grant / RoleProfile | ADR-0005「两者不得各建一套 User」；PRD 单角色、固定矩阵、无个人覆盖 | proposed |
-| AX-D03 | 停用用户的认证表登录手机号改写为墓碑值，原号存授权表 | 让「登录只匹配非停用记录」由数据结构保证；对库的唯一列最小侵入 | proposed（待任务 1 验证 → ADR-0015） |
-| AX-D04 | 认证表 ID 必须是 BIGINT；做不到则停下 | 技术基线；`data_quality_issues.entity_id` 等处是 BIGINT | proposed |
+| AX-D03 | 停用用户的认证表登录手机号改写为墓碑值，原号存授权表 | 让「登录只匹配非停用记录」由数据结构保证；对库的唯一列最小侵入 | 任务 1 已验证（2026-11-10，§6.5 S6）；ADR-0015 accepted |
+| AX-D04 | 认证表 ID 必须是 BIGINT；做不到则停下 | 技术基线；`data_quality_issues.entity_id` 等处是 BIGINT | 任务 1 已验证通过（2026-11-10，§6.5 S1）；天花板与「ID 只能自增」规则见 ADR-0015 |
 | AX-D05 | 登录失败按规范化手机号计数，不论用户是否存在；按字面「连续」 | 不暴露账号存在；PRD 无窗口 | proposed |
 | AX-D06 | 高风险审计同事务、低风险尽力 | 旧设计把它留作「可配置」；这里给默认 | proposed |
 | AX-D07 | 服务身份是常量白名单，永不含高敏 Capability | B §10.3；防止 Worker 成为旁路 | prd + proposed |
@@ -670,6 +680,12 @@ access maintain
 | AX-D25 | 范围构建经 `OrgDirectory` 端口，保留 RESTRICT 外键；「无法映射」用端口故障注入测试 | 数据完整性优先；不靠关外键构造用例 | proposed |
 | AX-D20 | 关闭会话 cookie 缓存 | 撤销必须即时 | proposed（待 S5 验证） |
 | AX-D21 | 激活不发短信（创建时），由用户自己请求验证码 | PRD §4.2 | prd |
+| AX-D26 | 限流阈值来自配置 `HBECHO_AUTH_RATE_LIMIT_PER_MIN`：**缺省生产 300、非生产 60** 次 / 分钟 / IP / 认证路径；库的全局默认规则为其 2 倍。**都是「每个 IP 每条路径」，不是全局**。「每天」的短信上限按北京时间自然日 | 阈值不在代码里静默冻结；公司 NAT 出口上班高峰多人同时登录，生产放宽；挡暴力破解靠按手机号锁定，不靠它 | 已确认（刘学奎，2026-11-10） |
+| AX-D27 | 生产必须配置 `HBECHO_TRUSTED_PROXIES`（Nginx 地址 / CIDR），且 Nginx 用 `proxy_set_header X-Forwarded-For $remote_addr;` **覆盖**客户端自带的头 | 库取不到可信 IP 时所有请求落进同一个 per-path 共享桶（一个人刷满，所有人一起 429）；实测配置受信代理后伪造前缀换不到新桶。限流存储保留库默认的进程内存储（单 Web 进程，重启清零，只作洪水兜底） | 已确认（刘学奎，2026-11-10：内部站点，实现简单所以做；配置项 + 部署要求，不另写运行手册） |
+| AX-D28 | 登录失败审计只为**已存在**的用户写；不存在的号码只进 `access_login_failures`（有清理），不写审计 | 否则随机号码可无限写审计表（保留一年、手机号明文） | 已确认（刘学奎，2026-11-10）；PRD v1.21.4 澄清记录 |
+| AX-D29 | 创建与变更 `hq_manager` / `branch_manager` 时品牌集合必须非空，`branch_manager` 的分公司集合必须非空；已有的空范围用户（授权被收窄到空）仍是合法空范围 | 空集合授权没有业务意义且是误操作；与 AX-7 的「合法空范围」不冲突（那是读取侧） | 已确认（刘学奎，2026-11-10） |
+| AX-D30 | 专员联动的「人工恢复豁免」用**标记列**，不用 `updated_at` 比较 | 监控开关会刷新 `media_staff.updated_at`（`monitoring/set-switch.ts`），不能当作停用信号；懒停用跳过有标记的用户，恢复时写、改绑时清 | 已确认（刘学奎，2026-11-10）；任务 7 前实现，迁移尚未推送所以现在加列成本低 |
+| AX-D31 | 短信 `admit` 按号码加库锁（`GET_LOCK`，与事务同一连接，提交后放锁）并先写预占行，deliver 失败再改 failed | 不加锁时 8 个并发请求有多个通过 60 秒窗口、各发一条短信（实测）；加锁后 5/5 次稳定只通过 1 个 | 已实现 |
 
 ### B-D 对照
 
@@ -699,7 +715,7 @@ access maintain
 
 | # | 问题 | 本 spec 当前写法 | 影响 |
 |---:|---|---|---|
-| 1 | 短信签名与模板；真实发送的批准 | **签名与模板已由刘学奎在阿里云申请完成（2026-11-06 告知）**；本机 `hbecho-setup` profile 没有 `dysms:QuerySmsSignList` / `QuerySmsTemplateList` 权限，无法由 CLI 复核，签名名称与模板编码待刘学奎提供后写入部署配置（`HBECHO_SMS_SIGN_NAME`、`HBECHO_SMS_TEMPLATE_CODE`，非密钥）；自动验收仍全用假发送器；真实 smoke 另行批准（固定条数、显式开关）；应用运行用的 RAM 账号需授予 `dysms:SendSms` | 生产启用 |
+| 1 | 短信签名与模板；真实发送的批准 | **签名与模板已由刘学奎在阿里云申请完成（2026-11-06 告知）**；本机 `hbecho-setup` profile 没有 `dysms:QuerySmsSignList` / `QuerySmsTemplateList` 权限，无法由 CLI 复核，签名名称与模板编码待刘学奎提供后写入部署配置（任务 5 实现为 6 个变量：`HBECHO_SMS_ACCESS_KEY_ID`、`HBECHO_SMS_ACCESS_KEY_SECRET`、`HBECHO_SMS_SIGN_NAME`、`HBECHO_SMS_TEMPLATE_ACTIVATE`、`HBECHO_SMS_TEMPLATE_LOGIN`、`HBECHO_SMS_TEMPLATE_RESET`；前两个是密钥，其余非密钥；仅 `HBECHO_SMS_MODE=aliyun` 时必填；键名清单见仓库 `.env.example`）。**2026-11-10 刘学奎提供阿里云控制台截图，读到的三个已审核通过的验证码模板**：`hbecho登陆` = `SMS_512115917` → `HBECHO_SMS_TEMPLATE_LOGIN`；`hbecho修改密码` = `SMS_512090911` → `HBECHO_SMS_TEMPLATE_RESET`；`hbecho应用注册` = `SMS_512035897` → `HBECHO_SMS_TEMPLATE_ACTIVATE`（模板编码不是密钥）。**2026-11-10 刘学奎又提供了签名与模板详情截图，已确认**：① 签名名称是 **`青岛海信博世`**（签名来源「企事业单位名」，关联资质「青岛海信博世空调营销股份有限公司」，场景为企业内部用户在自建应用中接收验证码）；② 三个模板正文的验证码变量名**都是 `${code}`**，与代码一致；③ 三个模板的变量类型：登录、注册为「仅数字」，修改密码为「数字+字母组合或仅字母」，我们发的是 6 位纯数字，三者都满足；模板限制「仅限发送 4–6 位数字验证码」，我们正好 6 位；④ 登录模板正文写「该验证码 5 分钟内有效」，与我们的有效期 300 秒一致。**仍待确认**：签名状态显示「可用·异常」、运营商报备结果为「已报备待验证」，截图没有说明含义，首次真实发送前请在控制台点开「详情」确认不影响送达。**授权方式参照 hbdam**（`/Users/liuxuekui/Documents/hbdam`，只读）：同一个官方 SDK `@alicloud/dysmsapi20170525`，短信用**专用的显式 AccessKey**（`ALIYUN_SMS_ACCESS_KEY_ID/SECRET`），不走 ECS 的实例 RAM 角色，也不复用 OSS 的密钥；接入点固定 `dysmsapi.aliyuncs.com`；生产不允许 mock；发送不自动重试（避免已发出却超时的情况重复发、重复计费）；区分运维类错误码（余额、签名、模板、日限额）并告警。本设计已采用后三点。应用的 AccessKey 请你自己配到服务器 `.env`（**不要发给我**）；自动验收仍全用假发送器；真实 smoke 另行批准（固定条数、显式开关）；应用运行用的 RAM 账号需授予 `dysms:SendSms` | 生产启用 |
 | 2 | 任务 1 库兼容性验证结果（尤其 S1 BIGINT ID、S3/S4 钩子、S6 墓碑） | 通过前不写迁移；S1 不通过则停下报告 | 全部实现 |
 | 3 | Next.js 骨架做到什么程度、`next build` 是否进 `verify.sh` | 只建无页面的 Route Handler；`next build` 作为一次性环境项，不进 `verify.sh` | 工程 |
 | 4 | 页面何时开工 | 本轮无页面；进入条件：UI 基线定稿 ∧ ui-lab 原型走查 ∧ §15.6 填写确认 | 页面任务 |
@@ -717,7 +733,7 @@ access maintain
 
 ## 15. 界面
 
-> **草案，未确认。** 本轮不写页面任务（AX-D11）。此节固定页面清单、流程、状态与可见性，供评审与原型使用；`ui-lab/` 原型与线框尚未制作；**N.6 未填写即视为未确认**，页面任务不得开工（`structure` 规则，`ui-foundation.md` §1 第 3–4 步）。本节与 `ui-foundation.md` §3 的页面地图一致。
+> **已确认（2026-11-10，刘学奎）。** 页面清单、流程、状态与可见性经 v2 原型确认；页面任务仍未编写，按本 spec 的排期另行追加。确认记录见 §15.6；视觉以 `ui-foundation.md`（2026-11-10 版）为准。本节与 `ui-foundation.md` §3 的页面地图一致。
 
 ### 15.1 页面清单
 
@@ -743,7 +759,9 @@ access maintain
 
 ### 15.3 线框
 
-未制作。登录 / 激活属低优先级，**用户导入向导**与**停用恢复弹窗**建议先在 `ui-lab/` 做可点击原型，请业务按「分公司导入 200 行含 5 个越权行、3 个手机号已存在」走一遍。
+**2026-11-08 第一版原型**：[`ui-lab/hbecho-ui/`](../../../ui-lab/hbecho-ui/README.md)。覆盖登录、激活、忘记密码、修改密码、用户列表 / 新建 / 详情 / 停用恢复 / 强制下线、用户批量导入、审计日志。只抄 hbdam 当前 UI 的结构与组件，业务按本 spec。保留作对照。
+
+**2026-11-10 第二版原型（已确认）**：[`ui-lab/hbecho-ui-v2/`](../../../ui-lab/hbecho-ui-v2/README.md)。视觉层重做，审计筛选改为表格上方一行，界面文案去掉内部权限码与 `reason_code`。建议业务按「分公司导入 200 行含 5 个越权行、3 个手机号已存在」走一遍。
 
 ### 15.4 状态矩阵
 
@@ -772,4 +790,4 @@ access maintain
 
 | 确认人 | 日期 | 确认的页面范围 | 原型 / 线框链接 | 备注 |
 |---|---|---|---|---|
-| — | — | — | — | 未确认。原型制作与确认之前，不得写页面类 tasks 条目或页面代码 |
+| 刘学奎 | 2026-11-10 | 登录、激活、忘记密码、修改密码、用户列表、新建用户、用户详情 / 编辑、批量导入用户、审计日志 | [`ui-lab/hbecho-ui-v2/`](../../../ui-lab/hbecho-ui-v2/README.md) | 视觉按 `ui-foundation.md` 2026-11-10 版；v1 原型保留为对照。页面任务另行排期 |

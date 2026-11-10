@@ -12,7 +12,7 @@ import type { Principal, TargetUser } from "../grants";
 import { isRoleCode, type RoleCode } from "../roles";
 import type { OrgDirectory } from "../scope";
 
-type Runner = Db | DbTx;
+export type Runner = Db | DbTx;
 
 export type UserStatus = "pending_activation" | "active" | "disabled";
 

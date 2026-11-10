@@ -20,6 +20,7 @@ import {
   principalOf,
   restoreCore,
   targetsOf,
+  type Runner,
   type RestoreResult,
   type UserDeps,
   type UserRecord,
@@ -114,7 +115,7 @@ export function createUserAdmin(deps: UserAdminDeps) {
   });
 
   /** store_staff 的专员定位（B-D07）：手机号 + 门店编码 → 唯一有效专员。 */
-  async function locateStaff(tx: DbTx, phone: string, storeCode: string) {
+  async function locateStaff(tx: Runner, phone: string, storeCode: string) {
     const rows = await tx
       .select({ staffId: mediaStaff.staffId, status: mediaStaff.status, storeId: stores.storeId, storeCode: stores.storeCode, brandId: stores.brandId })
       .from(mediaStaff)
@@ -127,8 +128,11 @@ export function createUserAdmin(deps: UserAdminDeps) {
     throw new AccessError("input", "staff_not_found", "找不到该手机号在该门店下的有效专员");
   }
 
-  /** 邀请的验证与写入，在调用方给的事务内（批量导入的确认也走这里，保证与单个邀请同一套逻辑）。 */
-  async function inviteIn(tx: DbTx, ctx: AuthContext, p: Principal, input: InviteInput): Promise<bigint> {
+  /**
+   * 邀请的验证（只读）：输入合法、授权边界（canGrant）、门店专员定位。通过则返回可直接创建的内容。
+   * 单个邀请、批量导入的预检与确认都走这里，保证是同一套规则。
+   */
+  async function prepareInvite(r: Runner, p: Principal, input: InviteInput) {
     const phone = normalizePhone(input.phone);
     if (phone === null) throw new AccessError("input", "phone_invalid", "手机号不合法");
     if (!isRoleCode(input.role)) throw new AccessError("input", "role_invalid", "角色不合法");
@@ -140,8 +144,8 @@ export function createUserAdmin(deps: UserAdminDeps) {
     if (input.role === "store_staff") {
       if (!input.storeCode?.trim()) throw new AccessError("input", "store_code_required", "门店专员必须填写门店编码");
       if (input.brandIds?.length || input.branchIds?.length) throw new AccessError("input", "scope_fields_not_allowed", "门店专员的品牌与分公司由其门店推出，不能填写");
-      const staff = await locateStaff(tx, phone, input.storeCode.trim());
-      const placement = (await loadStaffPlacements(tx, [staff.staffId])).get(staff.staffId)!;
+      const staff = await locateStaff(r, phone, input.storeCode.trim());
+      const placement = (await loadStaffPlacements(r, [staff.staffId])).get(staff.staffId)!;
       mediaStaffId = staff.staffId;
       proposed = { role: input.role, brandIds: new Set(), branchIds: new Set(), store: { brandId: placement.brandId, branchId: placement.branchId } };
     } else {
@@ -154,13 +158,14 @@ export function createUserAdmin(deps: UserAdminDeps) {
       const code = proposed.store && verdict.reason === "scope_exceeds_boundary" ? "store_not_in_scope" : verdict.reason;
       throw new AccessError("authorization", code, "超出你的授权边界");
     }
+    return { name, role: input.role, phone, brandIds: proposed.brandIds, branchIds: proposed.branchIds, mediaStaffId };
+  }
+
+  /** 邀请的验证与写入，在调用方给的事务内（批量导入的确认也走这里，保证与单个邀请同一套逻辑）。 */
+  async function inviteIn(tx: DbTx, ctx: AuthContext, p: Principal, input: InviteInput): Promise<bigint> {
+    const v = await prepareInvite(tx, p, input);
     return createUserRecord(tx, deps, {
-      name,
-      role: input.role,
-      phone,
-      brandIds: proposed.brandIds,
-      branchIds: proposed.branchIds,
-      mediaStaffId,
+      ...v,
       createdByActor: ctx.actor,
       createdByUserId: ctx.userId,
       ...(input.source ? { source: input.source } : {}),
@@ -176,8 +181,10 @@ export function createUserAdmin(deps: UserAdminDeps) {
       return { userId: id.toString() };
     },
 
-    /** 供批量导入的确认写入使用：同一套逻辑，调用方提供事务。 */
+    /** 供批量导入使用：同一套逻辑。预检只调 prepareInvite（只读），确认在调用方的事务里调 inviteIn。 */
+    prepareInvite,
     inviteIn,
+    requireManager,
 
     async get(ctx: AuthContext, userId: bigint): Promise<UserView> {
       const p = await requireManager(ctx);

@@ -5,7 +5,7 @@
 //   - 越权行进跳过清单（error），不让整批失败；预检为 error 的行**不会**在确认时被「升级」成新增；
 //   - 只做新增：没有「改成更新」的入口；手机号已被占用就是 phone_exists。
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, inArray, isNull, lt, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, ne, or } from "drizzle-orm";
 import type { Db, DbTx } from "../../../db/client";
 import { accessUsers, branches, brands, importBatches, importRowResults } from "../../../db/schema";
 import { buildCsv, CsvFileError, parseCsv } from "../../csv-file";
@@ -307,6 +307,30 @@ export function createUserImport(deps: UserImportDeps) {
         return id;
       });
       return view(batchId);
+    },
+
+    /** 本人提交过的批次（新的在前）。 */
+    async list(ctx: AuthContext, page: { offset?: number; limit?: number } = {}): Promise<Array<Omit<BatchView, "rows">>> {
+      await admin.requireManager(ctx);
+      if (ctx.userId === null) return [];
+      const rows = await db
+        .select()
+        .from(importBatches)
+        .where(and(eq(importBatches.importKind, "user_import"), eq(importBatches.uploadedByUserId, ctx.userId)))
+        .orderBy(desc(importBatches.importBatchId))
+        .limit(Math.min(page.limit ?? 50, 200))
+        .offset(page.offset ?? 0);
+      return rows.map((b) => ({
+        batchId: b.importBatchId.toString(),
+        status: b.status,
+        fileName: b.fileName,
+        totalRows: b.totalRows,
+        newRows: b.newRows,
+        skippedRows: b.skippedRows,
+        errorRows: b.errorRows,
+        conflictRows: b.conflictRows,
+        summary: b.summary,
+      }));
     },
 
     /** 提交人才能看到批次详情。 */

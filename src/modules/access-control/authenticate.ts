@@ -15,14 +15,16 @@ export type AuthenticateResult =
   | { ok: true; ctx: AuthContext }
   | { ok: false; kind: "unauthenticated" | "forbidden" | "unavailable"; reason: DenyReason | "no_session" | "media_staff_disabled" };
 
-export interface AuthenticatorDeps {
+export interface ContextResolverDeps {
   db: Db;
-  auth: AccessAuth;
   dir: OrgDirectory;
   /** 专员停用的懒执行（design §7.10）。必填：漏接线会让专员停用后的用户继续有效，不能是可选。 */
   linkage: Pick<StaffLinkage, "disableIfStaffInactive">;
   /** 范围无法解释时调用（写质量问题）；失败不影响拒绝。 */
   onUnresolvable?(info: { userId: bigint; reason: string }): Promise<void> | void;
+}
+export interface AuthenticatorDeps extends ContextResolverDeps {
+  auth: AccessAuth;
 }
 
 export interface UserFacts {
@@ -50,7 +52,10 @@ export async function loadUserFacts(db: Db, userId: bigint): Promise<UserFacts |
   return { ...u, brandIds: new Set(brandRows.map((r) => r.id)), branchIds: new Set(branchRows.map((r) => r.id)) };
 }
 
-export function createAuthenticator(deps: AuthenticatorDeps) {
+/**
+ * 按用户现建 AuthContext，不依赖认证库（请求路径、后台任务、CLI 共用）。
+ */
+export function createContextResolver(deps: ContextResolverDeps) {
   /**
    * 按用户现建 AuthContext（请求路径与后台任务共用）。
    * 后台任务（用户触发的导出等）在**执行时、交付前**用它重新取提交者的当前身份与范围：已停用 / 专员失效 / 范围变化都立即反映。
@@ -107,6 +112,11 @@ export function createAuthenticator(deps: AuthenticatorDeps) {
       return { ok: false, kind: "forbidden", reason: "scope_not_resolvable" };
     }
   }
+  return { contextForUser };
+}
+export type ContextResolver = ReturnType<typeof createContextResolver>;
+export function createAuthenticator(deps: AuthenticatorDeps) {
+  const { contextForUser } = createContextResolver(deps);
   async function authenticate(headers: Headers): Promise<AuthenticateResult> {
     let session: Awaited<ReturnType<AccessAuth["api"]["getSession"]>>;
     try {

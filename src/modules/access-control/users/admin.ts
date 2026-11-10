@@ -181,6 +181,14 @@ export function createUserAdmin(deps: UserAdminDeps) {
       return { userId: id.toString() };
     },
 
+    /** 邀请预览（CLI 不带 --apply 时用）：同一套校验，**不写任何东西**；多返回「手机号是否已被占用」。 */
+    async previewInvite(ctx: AuthContext, input: InviteInput): Promise<{ role: RoleCode; name: string; phone: string; brandIds: string[]; branchIds: string[]; mediaStaffId: string | null; phoneExists: boolean }> {
+      const p = await requireManager(ctx);
+      const v = await prepareInvite(db, p, input);
+      const taken = await db.select({ id: accessUsers.userId }).from(accessUsers).where(and(eq(accessUsers.phone, v.phone), ne(accessUsers.status, "disabled"))).limit(1);
+      return { role: v.role, name: v.name, phone: v.phone, brandIds: [...v.brandIds].map(String), branchIds: [...v.branchIds].map(String), mediaStaffId: v.mediaStaffId?.toString() ?? null, phoneExists: taken.length > 0 };
+    },
+
     /** 供批量导入使用：同一套逻辑。预检只调 prepareInvite（只读），确认在调用方的事务里调 inviteIn。 */
     prepareInvite,
     inviteIn,

@@ -598,7 +598,7 @@ access audit list
 access maintain
 ```
 
-输出 JSON；BIGINT 十进制字符串；退出码 0 / 2 / 3 / 4 / 5 / 1（对齐 master-data）；`parseArgs` strict；影响多个对象的命令（`disable` 的批量形式、`force-logout`、`change` 的批量形式、导入确认）默认只预览。身份来自环境变量：`HBECHO_ACCESS_ACTOR`、`HBECHO_ACCESS_CAPABILITIES`、`HBECHO_ACCESS_BRAND_SCOPE`、`HBECHO_ACCESS_BRANCH_SCOPE`、`HBECHO_ACCESS_ROLE`，缺任一启动失败。CLI 内部同样构造 `AuthContext`，经 `authorize` / `manages` / `canGrant`，**没有旁路**。
+输出 JSON；BIGINT 十进制字符串；退出码 0 / 2 / 3 / 4 / 5 / 1（对齐 master-data）；`parseArgs` strict；**所有写命令**（invite / change / disable / restore / force-logout / 导入确认）不带 `--apply` 只预览，库里无变化。~~身份来自环境变量：`HBECHO_ACCESS_ACTOR`、`HBECHO_ACCESS_CAPABILITIES`、`HBECHO_ACCESS_BRAND_SCOPE`、`HBECHO_ACCESS_BRANCH_SCOPE`、`HBECHO_ACCESS_ROLE`，缺任一启动失败。~~（由 AX-D32 于 2026-11-10 修订）身份只有一个环境变量 `HBECHO_ACCESS_ACTOR=user:<id>`（必须是有效用户），角色、能力与范围一律从数据库现算；需要身份的命令缺它启动失败；`token create` / `bootstrap-superadmin` / `maintain` 只需要数据库凭证。CLI 内部同样构造 `AuthContext`，经 `authorize` / `manages` / `canGrant`，**没有旁路**。
 
 ## 10. 对既有代码与依赖的改动
 
@@ -686,6 +686,8 @@ access maintain
 | AX-D29 | 创建与变更 `hq_manager` / `branch_manager` 时品牌集合必须非空，`branch_manager` 的分公司集合必须非空；已有的空范围用户（授权被收窄到空）仍是合法空范围 | 空集合授权没有业务意义且是误操作；与 AX-7 的「合法空范围」不冲突（那是读取侧） | 已确认（刘学奎，2026-11-10） |
 | AX-D30 | 专员联动的「人工恢复豁免」用**标记列**，不用 `updated_at` 比较 | 监控开关会刷新 `media_staff.updated_at`（`monitoring/set-switch.ts`），不能当作停用信号；懒停用跳过有标记的用户，恢复时写、改绑时清 | 已确认（刘学奎，2026-11-10）；任务 7 前实现，迁移尚未推送所以现在加列成本低 |
 | AX-D31 | 短信 `admit` 按号码加库锁（`GET_LOCK`，与事务同一连接，提交后放锁）并先写预占行，deliver 失败再改 failed | 不加锁时 8 个并发请求有多个通过 60 秒窗口、各发一条短信（实测）；加锁后 5/5 次稳定只通过 1 个 | 已实现 |
+| AX-D32 | CLI 身份：只认 `HBECHO_ACCESS_ACTOR=user:<id>`，角色 / 能力 / 范围从数据库现算（取代设计原文的 5 个环境变量） | 原设计让操作者在环境变量里自己声明角色与范围，等于「说自己是超管就是超管」；从库里现算后，CLI 的权限不可能超过该真实用户，且与页面入口同一条路径（`contextForUser`） | **待刘学奎确认**（实现已按此做；改回去只需让 `context()` 读环境变量，但会引入「自称超管」的风险） |
+| AX-D33 | 撤权取消：`changeAccess` 在「降级、或拿掉原有品牌 / 分公司」提交后也触发 `onRevoked`（晋升不触发）；出口守卫的审计是低风险、不在业务事务里 | PRD B-D28 写的是「停用或撤权」，设计原文只写了停用；守卫没有事务可传，所以出口 6 的审计写失败不会阻止访问 | **待刘学奎确认**后一半（是否要求原始载荷访问「审计写失败即拒绝」） |
 
 ### B-D 对照
 

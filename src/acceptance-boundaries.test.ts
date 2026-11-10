@@ -121,6 +121,15 @@ describe("B-AX-5：用户只停用不删除，且不触碰监控开关（accepta
     expect(sources.filter((p) => /monitoring_?enabled/i.test(code(p))).map(rel)).toEqual([]);
   });
 });
+describe("B-AX-14：其他模块只经 access-control 的入口（index）导入它", () => {
+  // 例外：src/app（Next 入口）与本模块自己的进程入口（worker/access-*、worker/sms-smoke-*）
+  const own = (r: string) => r.startsWith("modules/access-control/") || r.startsWith("app/") || r.startsWith("worker/access-") || r.startsWith("worker/sms-smoke-");
+  it("非测试代码里，模块外对 access-control 的导入路径都以 access-control 结尾（不带子路径）", () => {
+    const offenders = nonTestSources.filter((p) => !own(rel(p)) && /from\s+["'][^"']*\/access-control\/[^"']+["']/.test(code(p))).map(rel);
+    expect(offenders).toEqual([]);
+    expect(nonTestSources.some((p) => !own(rel(p)) && /from\s+["'][^"']*\/access-control["']/.test(code(p)))).toBe(true); // 确实有人在用入口
+  });
+});
 describe("B-AX-12：src/app 只做入口，不写 SQL", () => {
   it("src/app 下没有 insert / update / delete / execute / transaction / sql 模板 / 对 db 目录的导入", () => {
     const app = nonTestSources.filter((p) => rel(p).startsWith("app/"));

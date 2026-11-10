@@ -3,6 +3,7 @@
 // 不传 runners / makeRunners 时 RUNNERS 为空，这里不读任何 secret。
 import pino, { type Logger } from "pino";
 import { createDb, createPool, type Db } from "../db/client";
+import { createAuditWriter, fromSyncAudit } from "../modules/access-control";
 import type { Clock } from "../modules/raw-capture";
 import { DEFAULT_RETRY } from "../modules/tracer-command";
 import { createDemandModule } from "../modules/demand";
@@ -32,8 +33,10 @@ export function buildSyncApp(
     batch_budget: cfg.batchBudget,
   };
   const scheduler = createSyncScheduler({ db, clock, resolver, runtime });
-  const commands = createSyncCommands({ db, clock, resolver, planner: scheduler.planner, runtime, audit: createLogSyncAuditSink(logger) });
-  const demand = createDemandModule({ db, clock, runtime: { environment: cfg.environment, modes: cfg.demandModes }, audit: createLogSyncAuditSink(logger) });
+  // 审计：日志 + 持久（audit_events）
+  const syncAudit = fromSyncAudit(createAuditWriter({ db, clock, logger }), createLogSyncAuditSink(logger));
+  const commands = createSyncCommands({ db, clock, resolver, planner: scheduler.planner, runtime, audit: syncAudit });
+  const demand = createDemandModule({ db, clock, runtime: { environment: cfg.environment, modes: cfg.demandModes }, audit: syncAudit });
   const breakers = createBreakerSet({
     failures: cfg.breaker.failures,
     cooldownMs: cfg.breaker.cooldownMs,

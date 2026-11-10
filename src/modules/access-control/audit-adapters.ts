@@ -31,9 +31,9 @@ export interface TracerAuditEventShape {
   locatorSha256?: string;
   locatorLength?: number;
 }
-export function fromTracerAudit(writer: AuditWriter, inner?: { record(e: TracerAuditEventShape): void }) {
+export function fromTracerAudit<E extends TracerAuditEventShape>(writer: AuditWriter, inner?: { record(e: E): void }) {
   return {
-    record(e: TracerAuditEventShape): void {
+    record(e: E): void {
       inner?.record(e);
       const eventType = `tracer.command.${e.action}`;
       const rejected = e.outcome === "rejected";
@@ -61,9 +61,9 @@ export interface SyncAuditEventShape {
   batchId?: string;
   detail?: Record<string, string | number | boolean | null>;
 }
-export function fromSyncAudit(writer: AuditWriter, inner?: { record(e: SyncAuditEventShape): void }) {
+export function fromSyncAudit<E extends SyncAuditEventShape>(writer: AuditWriter, inner?: { record(e: E): void }) {
   return {
-    record(e: SyncAuditEventShape): void {
+    record(e: E): void {
       inner?.record(e);
       const eventType = `sync.command.${e.action}`;
       const batchRef = bigintOrUndefined(e.batchId);
@@ -94,8 +94,8 @@ export interface MasterDataAuditEventShape {
   after?: Record<string, unknown>;
   counts?: Record<string, unknown>;
 }
-export function fromMasterDataAudit(writer: AuditWriter, inner?: (e: MasterDataAuditEventShape) => void) {
-  return (e: MasterDataAuditEventShape): void => {
+export function fromMasterDataAudit<E extends MasterDataAuditEventShape>(writer: AuditWriter, inner?: (e: E) => void) {
+  return (e: E): void => {
     inner?.(e);
     const eventType = `master_data.${e.event_type}`;
     const batchRef = bigintOrUndefined(e.batch_id);
@@ -130,8 +130,8 @@ export interface PlanAuditEventShape {
   batch_id?: string;
   detail?: Record<string, unknown>;
 }
-export function fromPlanAudit(writer: AuditWriter, inner?: (e: PlanAuditEventShape) => void) {
-  return (e: PlanAuditEventShape): void => {
+export function fromPlanAudit<E extends PlanAuditEventShape>(writer: AuditWriter, inner?: (e: E) => void) {
+  return (e: E): void => {
     inner?.(e);
     const eventType = `activity_plan.${e.event_type}`;
     const outcome = e.outcome ?? "succeeded";

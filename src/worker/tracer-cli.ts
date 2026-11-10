@@ -6,6 +6,7 @@
 // B 域未实现前，CLI 的权限边界就是持有数据库凭证的服务身份；不提供 HTTP 接口。
 import pino from "pino";
 import { createDb, createPool } from "../db/client";
+import { createAuditWriter, fromTracerAudit } from "../modules/access-control";
 import {
   CAP_SYNC_TRIGGER,
   createLogAuditSink,
@@ -40,7 +41,7 @@ const code = await runCli(process.argv.slice(2), {
   commands: createTracerCommands({
     db,
     clock,
-    audit: createLogAuditSink(logger),
+    audit: fromTracerAudit(createAuditWriter({ db, clock, logger }), createLogAuditSink(logger)),
     config: { environment: env, modes: { media_user_info: "synchronous", user_video_list: "synchronous" } },
   }),
   status: createTracerStatusQuery({ db, clock }),

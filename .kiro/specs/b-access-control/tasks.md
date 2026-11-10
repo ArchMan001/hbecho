@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：进行中（2026-11-06 初建；2026-11-10 任务 0–5 完成；2026-11-10 任务 6、7、8 完成，CLI 入口留任务 11）。任务 0 的「待确认闸门」已通过（2026-11-06，刘学奎：全部按建议采纳）；任务 1 的库兼容性验证与 ADR-0015 已于 2026-11-10 完成并接受。**待你确认的取舍见本文末「实施记录」的「待决项」**
+> **执行状态**：进行中（2026-11-06 初建；2026-11-10 任务 0–5 完成；2026-11-10 任务 6–9 完成，CLI 入口与审计装配替换留任务 11）。任务 0 的「待确认闸门」已通过（2026-11-06，刘学奎：全部按建议采纳）；任务 1 的库兼容性验证与 ADR-0015 已于 2026-11-10 完成并接受。**待你确认的取舍见本文末「实施记录」的「待决项」**
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -29,7 +29,7 @@
 - [x] 任务 6 · 用户管理：邀请、边界、变更、停用 / 恢复、强制下线、首个超管 — 完成（2026-11-10）；`access token create` / `bootstrap-superadmin` 的**命令行入口**随任务 11 的 `access-cli` 一起做，函数与测试已在 `users/bootstrap.ts`
 - [x] 任务 7 · `MediaStaff` 联动与 `access maintain` — 完成（2026-11-10）；`access maintain` **命令行入口**随任务 11 的 `access-cli` 一起做（`createAccessMaintenance().runNow` 已就绪）
 - [x] 任务 8 · 用户批量导入 — 完成（2026-11-10）；`user import` **命令行入口**随任务 11 的 `access-cli` 一起做
-- [ ] 任务 9 · 审计：持久表、触发器、适配器、清理、读取
+- [x] 任务 9 · 审计：持久表、触发器、适配器、清理、读取 — 完成（2026-11-10）；适配器在各进程装配处的**替换**随任务 11
 - [ ] 任务 10 · 数据出口框架、有效范围、交付复查、撤权取消
 - [ ] 任务 11 · 到现有模块的适配、审计装配替换、CLI 收口
 - [ ] 任务 12 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾（**完成后推第二次**）
@@ -381,13 +381,13 @@
 
 **验证**
 
-- [ ] 事件覆盖清单每类至少一条；
-- [ ] 对全部事件夹具字符串扫描：无密码 / 令牌 / Cookie / 验证码；
-- [ ] 幂等键去重；UPDATE / 未到期 DELETE 被触发器拒；
-- [ ] 清理 366 天前 / 364 天前；产生 `audit_purged`；
-- [ ] 高风险审计失败 → 业务回滚；低风险失败 → 业务继续；
-- [ ] 三类现有事件经适配器可按 actor / 对象 / 批次查询；
-- [ ] `./scripts/verify.sh` 通过。
+- [x] 事件覆盖清单每类至少一条；
+- [x] 对全部事件夹具字符串扫描：无密码 / 令牌 / Cookie / 验证码；
+- [x] 幂等键去重；UPDATE / 未到期 DELETE 被触发器拒；
+- [x] 清理 366 天前 / 364 天前；产生 `audit_purged`；
+- [x] 高风险审计失败 → 业务回滚；低风险失败 → 业务继续；
+- [x] 三类现有事件经适配器可按 actor / 对象 / 批次查询；
+- [x] `./scripts/verify.sh` 通过。
 
 **Requirements:** AX-10；**Design:** §6.1、§7.14。
 
@@ -578,6 +578,13 @@
 - 回流文件只含没成功的行（预检 error、确认 conflict / invalid），与 master-data 一致；下载的审计是高风险（审计写失败则不给文件）；
 - 租约：认领是一条原子语句（`awaiting_confirm` 直接认领，`writing` 仅在心跳超过 2 分钟时接手），每行一个事务并核对 token；用例模拟了「前一个进程死亡」→ `batch_busy` → 陈旧后接手；
 - 没有做：行结果表没有「创建出的用户 ID」列，所以追溯某行建出的用户靠审计 `user_created`（`batchRef` + `source.rowNo`）。如果你想在行结果里直接看到用户 ID，需要给 `import_row_results` 加列，会动 A 域共用的表，所以我没自作主张。
+**2026-11-10 · 任务 9（审计）**
+- 持久写入器、幂等键、`purgeOlderThan`、`listAudit`、日志脱敏在任务 2 已经做完；这一步补了：`audit-adapters.ts`（`fromTracerAudit` / `fromSyncAudit` / `fromMasterDataAudit` / `fromPlanAudit`，结构类型，不 import 各模块，低风险、仍转发原 sink）、`audit-read.ts`（`audit.read` 授权的读取入口，只有超管能过）、`maintenance.ts` 把 `purgeOlderThan` 接成维护的步骤 3，以及 13 个数据库用例（`audit.db.test.ts`）；
+- 用例证实了此前**没有测试**的东西：未到期 DELETE / 任何 UPDATE 被触发器拒、366 天前清掉且 364 天前保留且写一条 `audit_purged`（触发器按数据库时钟，所以这条用例用真实时间构造「N 天前」）、高风险写失败 → 业务事务回滚、低风险写失败 → 业务继续并计数、一次综合场景覆盖 10 类事件且全表扫描无令牌 / 凭据；
+- 偏差 1：`PlanAuditEventShape` 是我**按 a-master-data-import 的风格假定的形状**（snake_case：`event_type`、`actor`、`occurred_at`、`plan_id`、`batch_id`……）。a-activity-plan 的设计里只列了事件名（`roster_batch_confirmed`、`staff_created`、`monitoring_*`），没有审计端口的形状；A 落地时对不上就改适配器，不改 A；
+- 偏差 2：design §7.14 的 reason_code 目录是「节选」，实现里**没有出现**的有：`sms_rate_limited`（60 秒限频被拒不写审计，只记 `access_sms_sends`）、`otp_attempts_exceeded`、`session_revoked`；`delivery_scope_shrunk`、`job_cancelled_on_revoke` 属任务 10。我没有为了凑目录而造事件；如果你要这几类可追溯，需要明确说，我再补；
+- 注意：适配器只是**能用**，还没有在任何进程里替换掉 `createLog*`（那是任务 11 的「审计装配替换」）。所以现在 `tracer` / `sync` / `master-data` 的 CLI 事件仍然只进日志；
+- 同一秒内同一事件（同 actor、同对象、同细节）会被幂等键合并成一条，这是设计的取舍（防重试重复），代价是极短时间内的真实重复操作只留一条。
 **已知问题（非本 spec 引入，2026-11-10 记录）**
 
 - `services/capability` 的 `tests/test_app.py::test_image_errors_are_structured_json` 在本机**间歇性失败**：单独连续跑 10 次，9 次通过、1 次失败（`urllib.error.HTTPError: 415` 在 `call()` 的 `except` 之外被抛出，疑似 Python 3.14 + 测试服务器的连接处理细节）；整个套件连跑 3 次全过。我没有改过该目录，也没有深挖，只记录证据。更早一次 verify 还出现过 HEIC 用例失败，当时下的「ffmpeg 版本」结论站不住，同样应视为间歇性；

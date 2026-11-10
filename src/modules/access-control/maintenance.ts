@@ -2,7 +2,7 @@
 import type { Logger } from "pino";
 import type { Db } from "../../db/client";
 import type { Clock } from "../raw-capture/ports";
-import { createAuditWriter } from "./audit";
+import { createAuditWriter, purgeOlderThan } from "./audit";
 import { createStaffLinkage, type StaffLinkage } from "./linkage";
 import { createOrgDirectory } from "./scope";
 
@@ -13,6 +13,7 @@ export function createAccessMaintenance(d: { db: Db; clock: Clock; logger?: Logg
     clock: d.clock,
     audit,
     dir: createOrgDirectory(d.db),
+    purgeAudit: () => purgeOlderThan(d.db, audit, d.clock), // 步骤 3：审计到期清理
     ...(d.logger ? { log: (e: Record<string, unknown>, m: string) => d.logger!.info(e, m) } : {}),
   });
   return { runNow: link.runNow, runDaily: link.runDaily };

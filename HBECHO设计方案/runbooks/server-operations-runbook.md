@@ -78,6 +78,15 @@
 | 34 | ✅ 我 | VOD 已开通（2026-10-29，华北2 北京）：`hbecho-vod-manage` 策略已加，点播系统存储已启用，`hbecho-course` 模板组已建（`3ca24a90956dbbfa16f1f6cf2fe6ad3a`）。**剩余**：播放域名（等备案）、自动截图模板（`InternalError`，暂缓） | §1.7、§3.6 |
 | 35 | ✅ 我 | `hbecho-course` 桶已建（2026-10-30，cn-beijing、私有、无过期规则 + 碎片 7 天）；「阻止公共访问」已开启；`hbecho-oss-rw` 已更新为 v2，新增 `CourseDocReadWriteDelete`；上传/列举/删除实测通过 | §1.6、§7 |
 
+### P5 · 容器镜像服务（ACR）
+
+| # | 谁 | 事项 | 详见 |
+|---|---|---|---|
+| 36 | ✅ 共同 | ACR 经济版开通并完成端到端验证（2026-11-10）：实例、VPC 绑定、命名空间 `hbecho`、RAM 子账号 push/pull、固定密码、探测镜像推拉 | §1.7、§3.7 |
+| 37 | 我 | 关闭 `hbecho-acr-push` / `hbecho-acr-pull` 的**控制台访问**（固定密码已设，子账号不再需要登录控制台） | §3.7 |
+| 38 | 我 | 接 CI 前删除 ACR 公网白名单里的 `127.0.0.1/32`，否则 GitHub Actions 无法推送 | §1.7 |
+| 39 | ✅ 我 | 费用中心确认 ACR 自动续费已生效（2026-11-10，刘学奎） | §1.7 |
+
 ### 待触发（有前置条件，暂不做）
 
 | 谁 | 事项 | 触发条件 |
@@ -284,6 +293,7 @@ Endpoint：
 | AI Master（FieldShortcut） | 数据底座内部 Provider Adapter | HTTP 头 `X-Api-Key` | 见 §8.1 |
 | Base URL | `https://openapi.fieldshortcut.com` | | |
 | 阿里云视频点播 VOD | 域 G 课程视频托管、转码与播放 | RAM 角色（待定，见 ADR-0007） | 未开通 |
+| 阿里云容器镜像服务 ACR（经济版） | 应用镜像仓库：CI 推送、测试 ECS 内网拉取 | RAM 子账号 + registry 固定密码 | 见 §3.7 |
 
 **VOD 状态（2026-10-29 实测完毕）**：域 G 已决定用 VOD 承载课程视频（`prd-domain-g-learning.md` 的 G-D09），接入细节见 ADR-0007。已确认：
 
@@ -298,6 +308,19 @@ Endpoint：
 **备案与联调（2026-10-29 实测）**：自有域名备案进行中，预计约一周。实测结论：`DescribeVodUserDomains` 返回 `TotalCount: 0`，域名相关 API 只有 `AddVodDomain`（要求填自有域名与回源地址），**VOD 没有系统分配的默认播放域名**。因此备案未通过前无法通过域名播放，只能测上传、转码与取播放凭证。播放联调用 OSS 签名 URL 做脚手架（只验证播放器集成、进度与续播），备案后切 VOD 并**重新跑一遍播放相关验收**，不能因为 OSS 下测过就认为 VOD 也过。
 
 AI Master 的正式 QPS、并发、SLA、计费与轮询失败合同仍是 P0 未决项（总纲 §12.1）。运维侧的含义：**不能按"配额充足"假设配置并发**，必须有硬上限和人工止损开关（§12.4）。
+
+**ACR 状态（2026-11-10 开通并端到端验证）**：
+
+- 实例 `hbecho-registry`，ID `cri-e07ol87axh61gu6d`，**华北2（北京）**，经济版，包月，到期 **2026-12-11**（自动续费已于 2026-11-10 确认生效）；
+- 容量：仓库 200、命名空间 5、并发拉取 30 QPS；**公开匿名拉取关闭**；
+- 域名规则是 `<实例名>-registry[-vpc].<地域>.cr.aliyuncs.com`。实例名本身以 `registry` 结尾，所以域名里出现两个 `registry`——以控制台为准，不要按"实例名 + -vpc"推断：
+  - 公网 `hbecho-registry-registry.cn-beijing.cr.aliyuncs.com`（访问入口已开启；**白名单当前只有 `127.0.0.1/32`**，接 CI 前必须删掉，否则 GitHub runner 连不上）
+  - 内网 `hbecho-registry-registry-vpc.cn-beijing.cr.aliyuncs.com` → `172.25.70.147`（2026-11-10 在测试 ECS 实测，`/v2/` 返回 401、connect 7 ms）
+- VPC 访问控制：绑定 `vpc-2zevfnkvxxw6ae8gpj2f3` / `vsw-2ze1ymn3rrx0i2bivbufv`，额度 **1/1**——经济版只有 1 个配额，换绑必须先删；
+- 命名空间 `hbecho`（私有）；验证用的探测仓库 `hbecho/probe:probe-1`（523 B，控制台可删）；
+- **偏离记录**：`dev-test-deploy-workflow.md` 原要求"开通前单独决定并记 ADR"，实际先开通（2026-11-10）、当日补记 [ADR-0016](../architecture/adr/0016-container-registry.md)。顺序颠倒，决定内容无变化。
+
+**为什么不用 hbdam 的 ACR**：实例属于另一个阿里云账号（`1967785122003299`），内网域名绑在 hbdam 自己的 VPC（`vpc-2zeyhxf9ftlyeq1gr3vgx`，解析到 `172.24.60.202`）。两个账号的 VPC 默认隔离，hbecho 的 ECS（`vpc-2zevfnkvxxw6ae8gpj2f3`）访问不到；跨账号复用只能靠 RAM 授权 + 跨账号 VPC 对等/CEN，或改走公网拉取，耦合与代价都高于自建一个经济版实例（约 ¥117/月，下单页报价，未经账单核对）。
 
 ### 1.8 如何重新采集本章的值
 
@@ -931,6 +954,62 @@ aliyun vod DescribeVodUserDomains --PageSize 50 --profile hbecho-setup
 `~/.aliyun/config.json` 与 `~/.workbench/config.json` 都是本机长期密钥，纳入 §8.4 密钥分级：权限 600、不进任何仓库、轮换记 §8.6。本机应开启全盘加密（macOS 的 FileVault）。
 
 `<待填写：实际安装版本、所用 RAM 用户名、AK 签发与删除日期>`
+
+---
+
+### 3.7 ACR 登录凭证（2026-11-10）
+
+两个专用 RAM 子账号，权限各自限定在实例 `cri-e07ol87axh61gu6d` 的 `hbecho` 命名空间：
+
+| 用途 | RAM 用户 | docker login 用户名 | 策略名 | 密码存放 |
+|---|---|---|---|---|
+| CI 推送 | `hbecho-acr-push` | `hbecho-acr-push@1241086349153033` | `hbecho-acr-push-policy` | GitHub Actions secret `ACR_PUSH_PASSWORD` |
+| 服务器拉取 | `hbecho-acr-pull` | `hbecho-acr-pull@1241086349153033` | `hbecho-acr-pull-policy` | 服务器 `/root/.docker/config.json`（600），交互输入 |
+
+**push 策略**（pull 策略删掉 `cr:PushRepository`、`cr:CreateRepository`、`cr:UpdateRepository`，其余相同；**`cr:PullRepository` 不能少**）：
+
+```json
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["cr:ListInstance*", "cr:GetInstance*", "cr:GetAuthorizationToken"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cr:PullRepository", "cr:PushRepository", "cr:GetRepository", "cr:ListRepository",
+        "cr:ListRepositoryTag", "cr:GetRepositoryManifest", "cr:GetRepositoryLayers",
+        "cr:CreateRepository", "cr:UpdateRepository"
+      ],
+      "Resource": [
+        "acs:cr:*:*:repository/cri-e07ol87axh61gu6d/hbecho/*",
+        "acs:cr:*:*:repository/cri-e07ol87axh61gu6d/hbecho"
+      ]
+    }
+  ]
+}
+```
+
+**登录与拉取**（服务器侧只用内网域名；CI 推送用公网域名）：
+
+```bash
+docker login --username=hbecho-acr-pull@1241086349153033 hbecho-registry-registry-vpc.cn-beijing.cr.aliyuncs.com
+docker pull hbecho-registry-registry-vpc.cn-beijing.cr.aliyuncs.com/hbecho/<repo>:<git短sha>
+```
+
+**已知坑**：
+
+- 缺 `cr:PullRepository` 时 `docker login` 仍然成功，pull 才报 `pull access denied`，令牌里 `granted` 为空——先查策略，不要先怀疑密码（hbdam 2026-10-15 踩过）。
+- RAM 控制台把 `cr:PullRepository` 显示在「未识别操作」下，是可视化目录没收录数据面动作，策略实际生效。
+- **固定密码只能由账号本人设置**：ACR 的 `ResetLoginPassword` 只有 `InstanceId` + `Password` 两个参数，没有用户名，主账号无法代设；控制台同理。
+- 子账号设完固定密码后应关闭其「控制台访问」——设定密码时沿用了控制台密码的话，不关就等于同一串密码同时开两个门。
+
+**验证记录（2026-11-10）**：探测镜像 `hbecho/probe:probe-1` 用 push 账号推送成功（523 B）；pull 账号拉取成功、**推送被拒**（`unauthorized: authentication required`）；服务器 `/root/.docker/config.json` 权限 600、只含内网域名。
+
+**轮换**：固定密码在 ACR 控制台「访问凭证」重设；push 侧重设后同步更新 GitHub secret，pull 侧重设后在服务器重新 `docker login`。
 
 ---
 
@@ -2045,6 +2124,8 @@ ssh hbecho '
 ssh hbecho 'docker image prune -f'
 ```
 
+**镜像分发（已就绪，未启用）**：应用镜像将来推 ACR 的 `hbecho/<repo>`，标签 = git 短 sha，服务器用**内网域名**拉取（§1.7、§3.7）。在出现第一个可运行镜像之前不建 CI 镜像 job——跑不起来的流水线只会制造假绿。
+
 ### 10.4 部署后必检
 
 1. 服务健康：`<待填写：健康检查端点或命令>`
@@ -2596,6 +2677,7 @@ ssh hbecho 'growpart /dev/<设备> 1 && resize2fs /dev/<设备>p1 && df -h /data
 | 8 | ~~视频/音频归档范围~~ —— 已由 D-29 关闭：按规则圈定范围归档 | — | prd-platform §5.1 |
 | 9 | ~~反代形态（宿主 Nginx or 容器）~~ —— 已由 ADR-0006 关闭：宿主 Nginx | — | ADR-0006 |
 | 10 | 域名与备案主体 | §1.5、§4.3 | 越早查 whois 一致性越好 |
+| 11 | 应用镜像形态（是否 Docker 化、基础镜像、构建上下文） | §10 | 第一个可运行镜像出现时定；ACR 已开通但未启用 |
 
 > 2026-10-28 同步：关闭 0、1、2、3、7、8、9 七项，均只标来源、不新增判断。反代形态由 [ADR-0006](../architecture/adr/0006-host-nginx-reverse-proxy.md) 定为宿主 Nginx：配置入仓库、部署脚本同步、证书续期走宿主机。
 
@@ -2669,6 +2751,13 @@ ssh hbecho 'growpart /dev/<设备> 1 && resize2fs /dev/<设备>p1 && df -h /data
 | 2026-09-04 | 应用账号 `hbecho_app` 权限验证限定在 `hbecho.*`，非 `*.*`；容器 fd 上限 65535（继承 daemon.json）；`local_infile=OFF` | Kiro |
 | 2026-10-25 | 新增 [`dev-test-deploy-workflow.md`](dev-test-deploy-workflow.md)：verify → CI → 测试 ECS → 生产 ECS。本章 §10 增加指针；当前只有本机 verify 与 CI 的文档/密钥检查可用，测试 ECS 与镜像链路尚未建立 | Claude |
 | 2026-10-25 | **环境定位更正**：现有唯一实例 `i-2zef8qpi1d2mldntjgrv` 是**测试环境**，不是生产环境；生产 ECS 未购买。更新 §1.1、§3.1、§8.5、§10.6 与 `dev-test-deploy-workflow.md` | Claude |
+| 2026-11-10 | 开通 ACR 经济版 `hbecho-registry`（`cri-e07ol87axh61gu6d`，华北2 北京，包月到期 2026-12-11）；绑定 VPC `vpc-2zevfnkvxxw6ae8gpj2f3` / `vsw-2ze1ymn3rrx0i2bivbufv`；建私有命名空间 `hbecho`。新增 §1.7 状态块与 §3.7 | 刘学奎 / Claude |
+| 2026-11-10 | 建 RAM 子账号 `hbecho-acr-push` / `hbecho-acr-pull` 与两条最小权限策略（限定 `hbecho` 命名空间）；固定密码由两个子账号本人设置 | 刘学奎 |
+| 2026-11-10 | 端到端验证通过：探测镜像 `hbecho/probe:probe-1` push 成功、pull 账号 pull 成功且 push 被拒；服务器登录态落 pull 账号，`/root/.docker/config.json` 600、只含内网域名 | Claude |
+| 2026-11-10 | GitHub Actions secret `ACR_PUSH_PASSWORD` 已写入 `ArchMan001/hbecho`（`gh secret list` 核对，2026-11-10T14:58:54Z） | Claude |
+| 2026-11-10 | 待办登记（§P5）：关闭两个子账号控制台访问、接 CI 前删公网白名单 `127.0.0.1/32` | — |
+| 2026-11-10 | 新增 [ADR-0016](../architecture/adr/0016-container-registry.md)：镜像仓库自建 ACR 经济版、不复用 hbdam 实例；同步更新 ADR 索引与 `INDEX.md`（15→16 项） | 刘学奎 / Claude |
+| 2026-11-10 | 刘学奎确认 ACR 自动续费已生效（到期 2026-12-11），§P5 #39 关闭 | 刘学奎 |
 
 ### 17.1 当前进度
 

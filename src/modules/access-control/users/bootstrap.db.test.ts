@@ -35,7 +35,7 @@ const input = (token: string) => ({ token, phone: "13900000001", name: "首个�
 describe("token create", () => {
   it("令牌只返回一次，库里只有 sha256；24 小时过期", async () => {
     const { token, expiresAt } = await boot.createToken();
-    expect(Buffer.from(token, "base64url")).toHaveLength(32);
+    expect(token).toMatch(/^[0-9a-f]{64}$/); // 十六进制，不会以「-」开头被命令行当成选项
     const [row] = await t.db.select().from(accessBootstrapTokens);
     expect(row!.tokenSha256.equals(createHash("sha256").update(token).digest())).toBe(true);
     expect(JSON.stringify(await t.db.select().from(auditEvents), (_k, v) => (typeof v === "bigint" ? v.toString() : v))).not.toContain(token); // 令牌明文不进审计

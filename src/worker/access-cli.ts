@@ -39,7 +39,7 @@ const USAGE = [
   "  access user import confirm --batch <id> [--apply]",
   "  access user import batches | batch <id> | rows <id> | report <id> --out <csv>",
   "  access audit list [--actor a] [--target-type t] [--target-id i] [--batch b] [--event-type e] [--from iso] [--to iso] [--limit n] [--offset n]",
-  "  access maintain",
+  "  access maintain [--apply]",
   "写命令不带 --apply 只预览，不改变任何数据。",
 ].join("\n");
 
@@ -100,7 +100,12 @@ export async function runAccessCli(argv: string[], deps: AccessCliDeps): Promise
         return 0;
       }
       case "maintain": {
-        if (rest.length > 0) throw bad("maintain 不带参数");
+        const { values } = parseArgs({ args: rest, strict: true, options: { apply: { type: "boolean" } } });
+        // 会停用用户、恢复用户、清理表：和其它写命令一样，不带 --apply 只说明将做什么，不执行
+        if (!values.apply) {
+          preview("maintain", { steps: ["补偿：停用绑定专员已失效的用户", "条件恢复：专员恢复后恢复因其自动停用的用户", "审计到期清理（保留 365 天）", "增长型表清理（短信流水、登录失败计数、引导令牌）"] });
+          return 0;
+        }
         const r = await deps.maintain.runNow();
         print({ ok: r.ok, report: r.report });
         return r.ok ? 0 : 1;

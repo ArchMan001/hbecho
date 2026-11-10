@@ -66,6 +66,13 @@ describe("四类角色 × 三个适配器", () => {
     expect(toTracerActor(svc("service:sync-worker"))).toMatchObject({ ok: true, actor: { actorId: "service:sync-worker", platformAdmin: false } });
   });
 
+  it("主数据适配：没有导入 Capability 的角色（分公司、门店专员）不可适配（K2）", async () => {
+    const bm = await ctxOf(await insertAccessUser(env, { role: "branch_manager", phone: "13000000003", brandIds: [org.hisense], branchIds: [org.bj] }));
+    const staff = await ctxOf(await insertAccessUser(env, { role: "store_staff", phone: "13800000001", mediaStaffId: org.staffA }));
+    expect(await toMasterDataActor(bm, { db: t.db })).toEqual({ ok: false, reason: "no_import_capability" });
+    expect(await toMasterDataActor(staff, { db: t.db })).toEqual({ ok: false, reason: "no_import_capability" });
+  });
+
   it("适配出的 Actor 形状与各模块既有测试里用的字段一致（编译期结构兼容）", async () => {
     const ctx = await ctxOf(await insertAccessUser(env, { role: "platform_admin", phone: "13000000001" }));
     const md = await toMasterDataActor(ctx, { db: t.db });

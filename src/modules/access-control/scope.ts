@@ -316,6 +316,12 @@ export interface PredicateContext {
   readonly platformAdmin: boolean;
 }
 
+/**
+ * `monitoring_level` 谓词的标准体（PRD：经销商级监控开关只有超管）。ref 形如 `{ level: "dealer" | "store" | "account" }`。
+ * 谓词体按设计由资源所属域注册，这里提供 B 定义的语义，所属域直接用，不必各写一份。
+ */
+export const monitoringLevelPredicate: ResourcePredicate = (ctx, ref) => (ref as { level?: string } | null)?.level !== "dealer" || ctx.platformAdmin;
+
 export class AccessRegistry {
   private readonly strategies = new Map<ResourceKey, ScopeStrategy<never>>();
   private readonly predicates = new Map<PredicateName, ResourcePredicate>();

@@ -7,7 +7,7 @@ import type { Db } from "../../db/client";
 import { brands } from "../../db/schema";
 import type { AuthContext } from "./authorize";
 
-export type Adapted<T> = { ok: true; actor: T } | { ok: false; reason: "partial_scope_not_supported" | "brand_unmappable" };
+export type Adapted<T> = { ok: true; actor: T } | { ok: false; reason: "partial_scope_not_supported" | "brand_unmappable" | "no_import_capability" };
 
 // ---- a-activity-plan（A design §9 的 PlanActor）------------------------------------------------------------
 export interface PlanActorShape {
@@ -54,7 +54,9 @@ export async function toPlanActor(ctx: AuthContext, deps: AdapterDeps): Promise<
   return { ok: true, actor: { actor: ctx.actor, capabilities: ctx.capabilities, brandScope, branchScope: ctx.scope.branches, platformAdmin: ctx.role === "platform_admin" } };
 }
 
+/** 主数据导入只有持有 `data.master_data.import`（或 `structure`）的主体才有意义；其余角色（分公司、门店专员）不适配，不给一个注定被拒的 Actor。 */
 export async function toMasterDataActor(ctx: AuthContext, deps: AdapterDeps): Promise<Adapted<MdActorShape>> {
+  if (!ctx.capabilities.has("data.master_data.import") && !ctx.capabilities.has("data.master_data.structure")) return { ok: false, reason: "no_import_capability" };
   const brandScope = await brandScopeOf(deps, ctx);
   if (brandScope === null) return { ok: false, reason: "brand_unmappable" };
   return { ok: true, actor: { actor: ctx.actor, capabilities: ctx.capabilities, brandScope } };

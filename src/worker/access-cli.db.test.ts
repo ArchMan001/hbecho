@@ -85,7 +85,7 @@ describe("首个超管（不需要身份，只要数据库凭证）", () => {
     const tok = await run(["token", "create"]);
     expect(tok.code).toBe(0);
     const token = first(tok).token as string;
-    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(token).toMatch(/^[0-9a-f]{64}$/);
     const ok = await run(["bootstrap-superadmin", "--token", token, "--phone", "13000000001", "--name", "首个超管"]);
     expect(ok.code).toBe(0);
     expect(first(ok)).toMatchObject({ ok: true, userId: expect.stringMatching(/^\d+$/) });
@@ -202,10 +202,16 @@ describe("读取", () => {
     expect(await t.db.select().from(auditEvents)).not.toHaveLength(0);
   });
 
-  it("maintain 跑一轮并报告", async () => {
-    const r = await run(["maintain"]);
+  it("maintain：不带 --apply 只说明将做什么，不执行；带 --apply 跑一轮并报告", async () => {
+    const u = await insertAccessUser(env, { role: "store_staff", phone: "13800000001", mediaStaffId: org.staffA });
+    await t.pool.query("UPDATE media_staff SET status = 'inactive' WHERE staff_id = ?", [org.staffA]);
+    const p = await run(["maintain"]);
+    expect(first(p)).toMatchObject({ ok: true, applied: false });
+    expect((await t.db.select().from(accessUsers).where(eq(accessUsers.userId, u)))[0]!.status).toBe("active");
+    const r = await run(["maintain", "--apply"]);
     expect(r.code).toBe(0);
-    expect(first(r)).toMatchObject({ ok: true, report: { failedSteps: [] } });
+    expect(first(r)).toMatchObject({ ok: true, report: { failedSteps: [], compensated: 1 } });
+    expect((await t.db.select().from(accessUsers).where(eq(accessUsers.userId, u)))[0]!.status).toBe("disabled");
   });
 });
 

@@ -228,6 +228,7 @@ describe("事件覆盖与脱敏扫描（一次综合场景）", () => {
       "audit_purged",
     ]) expect(types, `缺事件 ${needed}`).toContain(needed);
     expect(all.some((x) => x.reasonCode === "media_staff_disabled" && x.actor === SYSTEM_ACTOR_ACCESS_WORKER)).toBe(true);
+    for (const x of all) expect(x.reasonCode, `${x.eventType} 的 reasonCode`).toMatch(/^[a-z0-9_.]+$/); // 稳定标识符，不是自由文本
     // 每条事件的 actor 都是规范主体（user:/service:/cli:）
     for (const x of all) expect(x.actor, `${x.eventType} 的 actor`).toMatch(/^(user|service|cli):/);
     // 全表扫描：令牌明文、手机号以外的凭据不出现

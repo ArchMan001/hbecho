@@ -1,5 +1,5 @@
 // 首个超管引导（design §7.12、AX-2）：数据库里还没有任何超管时，用一次性令牌建出第一个待激活超管。
-//   token create            生成 32 字节随机令牌，只返回一次，库里只存 sha256，24 小时过期
+//   token create            生成 32 字节随机令牌（64 位十六进制），只返回一次，库里只存 sha256，24 小时过期
 //   bootstrapSuperadmin     令牌存在、未过期、未用 → 当前没有未停用超管 → 建用户 → 令牌 consumed → 审计；任一步失败整体回滚
 // 不发短信；超管随后自己走短信激活（和其他用户同一条路径，没有管理员设置密码的入口）。
 import { createHash, randomBytes } from "node:crypto";
@@ -20,7 +20,8 @@ export function createBootstrap(deps: Pick<UserDeps, "db" | "clock" | "audit">) 
   return {
     /** 令牌明文只在返回值里出现这一次。 */
     async createToken(): Promise<{ token: string; expiresAt: Date }> {
-      const token = randomBytes(32).toString("base64url");
+      // 十六进制：base64url 的令牌可能以「-」开头，会被命令行参数解析当成选项
+      const token = randomBytes(32).toString("hex");
       const now = deps.clock.now();
       const expiresAt = new Date(now.getTime() + BOOTSTRAP_TOKEN_TTL_MS);
       await db.transaction(async (tx) => {

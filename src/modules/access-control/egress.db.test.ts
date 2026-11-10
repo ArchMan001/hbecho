@@ -130,7 +130,7 @@ describe("审计（I13、I14）", () => {
     expect(ok.detail).toMatchObject({ exit: 10, fileId: "F-1" });
     expect(ok.occurredAt).toEqual(env.clock.now());
     expect(rows.find((r) => r.outcome === "denied")!.reasonCode).toBe("capability_not_granted");
-    expect(await auditRows("egress.page_query")).toHaveLength(0); // 页面查询（含看手机号）不逐条记审计
+    expect(await auditRows("egress.page_query")).toHaveLength(0);
   });
 
   it("批量导出（出口 4）由调用方标注含手机号，记一条", async () => {

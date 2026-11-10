@@ -14,7 +14,7 @@
 >
 > **最近核对**：2026-11-06
 >
-> **更新日期**：2026-11-06（初建；尚未实施，下面所有条目的结果列为空）
+> **更新日期**：2026-11-10（任务 1–12 实施完成，逐条结果见下；人工项与环境项的状态以各自表为准）
 
 ## 怎么用
 
@@ -27,8 +27,24 @@
 - **真实短信发送不是自动验收**，见 `[环境]` 组。
 
 ## 逐条结果
+2026-11-10。方法：先由一个独立的只读审计逐行对照测试（只看断言，不看标题），得出 125 行已覆盖、43 行部分、11 行缺失、3 行不可离线判定；随后补了 `acceptance-gaps.db.test.ts` 等并订正了 5 处规格措辞。下面是**补完后的诚实状态**：通过 = 有测试断言了该行的预期；「部分」写明还缺什么；没有把任何未运行的项写成通过。
 
-未实施。任务 12 完成时在此回填「组 / 结果 / 测试文件」表，格式同 `a-master-data-import/acceptance.md`。
+| 组 | 结果 | 主要测试文件 |
+|---|---|---|
+| A 认证与会话 | A1–A13 通过（A1–A3、A12 在 `acceptance-gaps` 用生产配置补测；A11 = 端点 404 + 静态：CLI / 管理函数无密码） | `http.db`、`authenticate.db`、`auth-flows.db`、`acceptance-gaps`、`acceptance-boundaries` |
+| B 开户、激活、首个超管 | B1–B13 通过（B1 在 `acceptance-gaps`；B7 订正措辞） | `users/bootstrap.db`、`users/admin.db`、`auth-flows.db`、`acceptance-gaps` |
+| C 登录保护与短信 | C1–C5、C8–C9、C11–C12、C14–C16、C19 通过；C10 补了到期时间 = 创建 + 300 秒；**部分**：C6 / C7（状态不变、无 IP 列只有间接证据）、C13（被抑制请求计入每日上限未单测）、C17（未单测「纯小写 8 位通过」）、C18（日志未扫，审计已扫） | `auth-flows.db`、`linkage.db`、`config.test`、`sms-aliyun.test`、`acceptance-gaps` |
+| D 用户生命周期 | D1–D13、D15–D17 通过（D6 用触发器注入墓碑失败；D7 补了不变式；D15 补了流程）；**部分**：D14（并发互停恰好一个成功 + 陈旧上下文顺序交错，没有「持锁者停在 hook」的确定性交错） | `users/shared.db`、`users/admin.db`、`linkage.db`、`authenticate.db`、`acceptance-gaps`、`acceptance-boundaries` |
+| E Capability 与授权入口 | E1、E2、E4、E5、E6、E7、E9–E14、E16、E17、E18 通过（E6 补了 HTTP 映射；E9 补了 `monitoringLevelPredicate`；E18 逐函数 forbidden）；**部分**：E3（只有 `role_invalid`，没有多角色输入）、E8（谓词体由 A 域提供，B 侧用测试谓词）、E15（总部导入越品牌行被拒在 `import.db` 的 H5 覆盖，master-data 侧的端到端不在 B）、E19（Capability 层通过；没有以 `service:plan-worker` 实跑 supplement） | `roles.test`、`authorize.test`、`grants.test`、`adapters.db`、`acceptance-gaps`、`acceptance-boundaries` |
+| F DataScope 与资源策略 | F1–F4、F7–F13 通过；**部分**：F5（缺 `ambiguous` 多条绑定用例）、F6（只测到门店级，未测同店两专员互不可见）；**依赖所属域，B 内无法验证**：F14（人员级别过滤，需要课程资源）、F15（改绑后的历史快照，需要 identity / projection）、F16（手机号随行返回，需要列表资源） | `scope.test`、`scope.db`、`authorize.test`、`authenticate.db` |
+| G 管理范围与授权变更 | G1–G13 通过（G10 补了 `changeAccess` / `restore` / 导入确认的审计失败回滚）；**部分**：G14（同 D14） | `users/admin.db`、`grants.test`、`users/import.db`、`acceptance-gaps` |
+| H 用户批量导入 | H1–H17 通过（H5 补了 `scope_exceeds_boundary`；H9 订正措辞；H13 补了列、范围与 `data.export` 的断言） | `users/import.db`、`users/import.perf.db`、`access-cli.db`、`acceptance-gaps` |
+| I 数据出口 | I1–I14 通过（I14 改为「审计总数不变」的负向断言） | `egress.db`、`acceptance-gaps` |
+| J 审计 | J3–J8、J10、J11 通过（J6、J11 静态；J8 补了授权变更 / 恢复 / 导入）；**部分**：J1（没有独立的「会话撤销」事件，实现里没有该事件）、J2（导入整行原文不入审计只有间接证据）、J9（未断言 pino 有记录）、J12（`fromPlanAudit` 只用了一个假定形状的事件，等 A 落地用其夹具） | `audit.db`、`db/access-schema.db`、`acceptance-gaps` |
+| K 对既有模块的接入与入口 | K1–K5、K7–K9、K11、K13–K15 通过（K2、K8、K13 补实现 / 订正后）；**部分**：K10（直接调函数而非路由文件）、K12（CLI 层缺项键名没测）；**不可离线判定**：K6（靠既有测试一个断言未改 + git diff）、K16（`pnpm typecheck` 在 `verify.sh` 第 2 步） | `adapters.db`、`access-cli.db`、`audit-wiring.db`、`http.db`、`acceptance-boundaries`、`acceptance-gaps` |
+| L 离线、一致性与边界 | L1、L2、L4、L5、L6、L7、L8、L10 通过（L7 = 并发创建同号恰好一个成功，另一个 `phone_exists`；L10 订正措辞）；L3 由 `verify.sh` 第 4 步判定（`drizzle-kit generate` 不产生新文件）；**不可离线判定**：L9（`./scripts/verify.sh` 本身） | `db/access-schema.db`、`tests/harness`、`acceptance-gaps`、`acceptance-boundaries` |
+
+**未闭合的部分项合计**：C6、C7、C13、C17、C18、D14、E3、E8、E15、E19、F5、F6、G14、J1、J2、J9、K10、K12，加上依赖所属域的 F14、F15、F16、J12。这些都是断言偏弱或依赖尚未实现的域，**没有一项是已知的行为错误**；是否要在合并前补齐，由你决定（见 tasks 实施记录的「待决项」）。
 
 ## 自动项
 
@@ -60,7 +76,7 @@
 | B4 | AX-2 | 令牌过期（`FakeClock` 推进 25 小时） | 拒绝 |
 | B5 | AX-2 | 创建用户 | 状态待激活；**没有发出短信**（`FakeSms` 为空） |
 | B6 | AX-2 | 创建 `store_staff`：同门店两名专员，各自手机号 | 各自定位成功，绑定不同 `MediaStaff` |
-| B7 | AX-2 | 创建 `store_staff`：手机号不存在 / 不在该门店 / 专员已停用 | 创建失败，不建用户 |
+| B7 | AX-2 | 创建 `store_staff`：手机号不存在 / 手机号不在该编码的门店 / 专员已停用 | 创建失败（`staff_not_found` / `staff_inactive`），不建用户 |
 | B8 | AX-2 | 待激活用户用验证码设置密码 | 状态 `active`；可密码登录；`activated_at` 有值；审计 `user_activated` |
 | B9 | AX-2 | 待激活用户走密码登录 | 响应（状态码与文案）与「手机号或密码错误」一致 |
 | B10 | AX-2 | 待激活用户改手机号；有效用户改手机号 | 前者成功且授权表与认证表一致；后者被拒并提示删旧建新 |
@@ -192,7 +208,7 @@
 | H6 | AX-3 | 手机号已被待激活 / 有效用户占用 | `phone_exists`；不静默改角色或范围 |
 | H7 | AX-3 | 停用用户的号码 | 不占号，可新建 |
 | H8 | AX-3 | 同文件内同号两行 | 两行都报 `duplicate_phone_in_file` |
-| H9 | AX-3 | `store_staff` 定位失败：手机号不存在 / 不在该门店 / 专员停用 | `staff_not_found` / `store_not_in_scope` / `staff_inactive`；不建用户 |
+| H9 | AX-3 | `store_staff` 定位失败：手机号不存在 / 手机号在别的门店（填错门店编码）/ 专员停用 / 门店不在操作者范围 | 分别为 `staff_not_found` / `staff_not_found` / `staff_inactive` / `store_not_in_scope`；不建用户（2026-11-10 订正：定位键是「手机号 + 门店编码」，所以「不在该门店」与「不存在」同为 `staff_not_found`；`store_not_in_scope` 只表示专员已定位到、但其门店超出操作者范围） |
 | H10 | AX-3 | 角色与列取值不匹配（hq 填分公司、staff 填品牌等） | `scope_fields_not_allowed` |
 | H11 | AX-3 | 预检后有人先建同号用户，再确认 | 该行 `conflict`；不重复创建 |
 | H12 | AX-3 | 确认写入 | 每个新用户走与单个邀请相同的创建逻辑；每条有审计；批次 `completed` |
@@ -243,13 +259,13 @@
 | # | 需求 | 断言 | 预期 |
 |---|---|---|---|
 | K1 | AX-11 | `toPlanActor` 对四类角色 | 输出与 `a-activity-plan` 的授权期望一致（契约 fixture） |
-| K2 | AX-11 | `toMasterDataActor` 对四类角色 | 品牌范围正确；分公司人员 / 门店专员 → 不可适配（无 `import` Capability） |
+| K2 | AX-11 | `toMasterDataActor` 对四类角色 | 超管 `all`、总部为授权品牌编码；分公司人员 / 门店专员 → `no_import_capability`（无 `import` Capability，不可适配） |
 | K3 | AX-11 | `toTracerActor`：超管 / 范围 all 的主体 | 产出全范围 actor |
 | K4 | AX-11 | `toTracerActor`：分公司人员 | `Unadaptable('partial_scope_not_supported')`，不降级 |
 | K5 | AX-11 | 仓库中全部已用 Capability 字符串 | 都在注册表中 |
 | K6 | AX-11 | 现有模块（tracer、sync、master-data）的既有测试 | 全绿，一个断言都不改 |
 | K7 | AX-11 | `userIdOf` | `user:<id>` → ID；`service:*` → null；历史行不回填 |
-| K8 | AX-11 | 环境变量声明的 CLI 身份 | 仍可用；被映射为 `service:<名称>`，范围不超过声明 |
+| K8 | AX-11 | 环境变量声明的 CLI 身份 | 仍可用（现有 CLI 一行未改）；审计里被规范化为 `service:<名称>`（适配器 `canonicalActor`），范围不超过声明（B 不放宽任何范围） |
 | K9 | AX-12 | 直接调用 Route Handler（`new Request()`）登录、读会话、退出 | 状态码与 `Set-Cookie` 符合预期 |
 | K10 | AX-12 | `GET /api/health` | 200；不写库 |
 | K11 | AX-12 | `src/app` | 无 SQL、无 `db.insert`（静态） |
@@ -272,7 +288,7 @@
 | L7 | AX-13 | `access_users.active_phone` 唯一键 | 并发（持锁者停在 hook）创建同号，一条成功、另一条稳定冲突 |
 | L8 | AX-13 | `ON DELETE CASCADE` | 本 spec 的表没有 |
 | L9 | AX-13 | `./scripts/verify.sh` | 通过；Python 侧未验证时明确写出，不声称通过 |
-| L10 | AX-13 | 真实短信发送器 | 测试环境从不被构造（静态：测试不 import `AliyunSmsSender`） |
+| L10 | AX-13 | 真实短信发送器 | 测试环境从不构造真实 SDK 客户端（静态：测试不 import `@alicloud/*`；`AliyunSmsSender` 只能以注入的假客户端构造；2026-11-10 订正：原文「不 import `AliyunSmsSender`」会禁掉对它自己的离线测试） |
 
 ## 手工项
 
@@ -289,7 +305,7 @@
 | # | 需求 | 内容 | 当前状态 |
 |---|---|---|---|
 | ENV-1 | AX-13 | 测试 ECS 上一次性库容器跑 `pnpm test:db`（仅 Workbench；`_test` 库；用完 `down -v`） | 未执行 |
-| ENV-2 | AX-12 | 本地一次性 `next build` 通过（不进 `verify.sh`） | 未执行 |
+| ENV-2 | AX-12 | 本地一次性 `next build` 通过（不进 `verify.sh`） | **通过**（2026-11-10，约 4 秒；路由表只有 `/api/auth/[...all]` 与 `/api/health`；`next build` 会改写 `tsconfig.json` 并生成 `next-env.d.ts`，已还原 / 删除，不入库） |
 | ENV-3 | AX-4 | **真实短信发送**：阿里云短信签名与模板可用后，在批准的条数内发送一条验证码并完成激活 | **不属于自动验收**；签名与模板已申请（2026-11-06，刘学奎告知），名称与编码待提供，CLI 无 `dysms` 查询权限；需要刘学奎批准、显式开关、固定条数与审计摘要；批准前生产不得启用真实发送器 |
 | ENV-4 | AX-10 | 部署账号具备 `TRIGGER` 权限，审计触发器在测试 ECS 上生效 | 未执行 |
 | ENV-5 | AX-1 | 在 Nginx 之后（ADR-0006）确认 `Secure` cookie 与 `trustedOrigins` 在真实域名下工作 | 未执行；域名与 ICP 备案外部阻塞 |

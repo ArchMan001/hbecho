@@ -371,6 +371,21 @@ describe("回流文件（H13、H14）", () => {
     expect(await t.db.select().from(auditEvents).where(eq(auditEvents.eventType, "user_import_returnfile_downloaded"))).toHaveLength(1);
   });
 
+  it("H13 补充：前 6 列与原文件逐字一致；不要求 data.export（只持有 user.manage 也能下载）；只含本批次的行", async () => {
+    const a = await actors();
+    const rowsA = [["甲", "总部人员", "13911110001", "HISENSE", "", ""], ["乙", "老板", "13911110002", "HISENSE", "", ""]];
+    const first = await imp.precheck(a.adminCtx, { name: "a.csv", bytes: csv(rowsA) });
+    await imp.precheck(a.adminCtx, { name: "b.csv", bytes: csv([["丙", "老板", "13911110003", "HISENSE", "", ""]]) });
+    const onlyManage: AuthContext = { ...a.adminCtx, capabilities: new Set(["user.manage"]) };
+    const f = await imp.returnFile(onlyManage, BigInt(first.batchId));
+    const lines = f.csv.slice(1).trim().split("\r\n");
+    expect(lines).toHaveLength(2); // 表头 + 唯一失败行（乙）；甲成功（预检为新增）不在回流文件，丙属于另一个批次
+    expect(lines[1]!.split(",").slice(0, 6)).toEqual(rowsA[1]);
+    expect(lines[1]).not.toContain("13911110003");
+    expect(RETURN_COLUMNS.slice(0, 6)).toEqual([...USER_IMPORT_HEADER]);
+    expect(RETURN_COLUMNS.slice(6)).toEqual(["结果", "原因", "指引"]);
+  });
+
   it("回流文件改后作为新文件重传：新批次，旧批次结果不变（H14）", async () => {
     const a = await actors();
     const first = await imp.precheck(a.hqCtx, { name: "a.csv", bytes: csv([["乙", "总部人员", "13911110003", "HISENSE", "", ""]]) });

@@ -227,3 +227,12 @@ describe("服务身份", () => {
     expect(Object.keys(SERVICE_PRINCIPALS)).toEqual(["service:sync-worker", "service:plan-worker", "service:access-worker"]);
   });
 });
+
+describe("E6：HTTP 状态映射", () => {
+  it("未认证 401、缺 Capability 403、对象越权 404、认证库不可用 503", () => {
+    expect(httpStatusOf({ ok: false, kind: "unauthenticated", reason: "user_not_active" })).toBe(401);
+    expect(httpStatusOf({ ok: false, kind: "forbidden", reason: "capability_not_granted" })).toBe(403);
+    expect(httpStatusOf({ ok: false, kind: "not_found", reason: "out_of_scope" })).toBe(404);
+    expect(httpStatusOf({ ok: false, kind: "unavailable", reason: "scope_not_resolvable" })).toBe(503);
+  });
+});

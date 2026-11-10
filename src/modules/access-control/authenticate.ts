@@ -51,16 +51,12 @@ export async function loadUserFacts(db: Db, userId: bigint): Promise<UserFacts |
 }
 
 export function createAuthenticator(deps: AuthenticatorDeps) {
-  async function authenticate(headers: Headers): Promise<AuthenticateResult> {
-    let session: Awaited<ReturnType<AccessAuth["api"]["getSession"]>>;
-    try {
-      session = await deps.auth.api.getSession({ headers });
-    } catch {
-      return { ok: false, kind: "unavailable", reason: "no_session" };
-    }
-    if (!session) return { ok: false, kind: "unauthenticated", reason: "no_session" };
-
-    const userId = BigInt(session.user.id);
+  /**
+   * 按用户现建 AuthContext（请求路径与后台任务共用）。
+   * 后台任务（用户触发的导出等）在**执行时、交付前**用它重新取提交者的当前身份与范围：已停用 / 专员失效 / 范围变化都立即反映。
+   * 此时没有会话，sessionId 为 null。
+   */
+  async function contextForUser(userId: bigint, sessionId: string | null): Promise<AuthenticateResult> {
     let facts: UserFacts | null;
     try {
       facts = await loadUserFacts(deps.db, userId);
@@ -98,7 +94,7 @@ export function createAuthenticator(deps: AuthenticatorDeps) {
           role: facts.role,
           capabilities: ROLE_CAPABILITIES[facts.role],
           scope,
-          sessionId: String(session.session.id),
+          sessionId,
         },
       };
     } catch (e) {
@@ -111,7 +107,17 @@ export function createAuthenticator(deps: AuthenticatorDeps) {
       return { ok: false, kind: "forbidden", reason: "scope_not_resolvable" };
     }
   }
-  return { authenticate };
+  async function authenticate(headers: Headers): Promise<AuthenticateResult> {
+    let session: Awaited<ReturnType<AccessAuth["api"]["getSession"]>>;
+    try {
+      session = await deps.auth.api.getSession({ headers });
+    } catch {
+      return { ok: false, kind: "unavailable", reason: "no_session" };
+    }
+    if (!session) return { ok: false, kind: "unauthenticated", reason: "no_session" };
+    return contextForUser(BigInt(session.user.id), String(session.session.id));
+  }
+  return { authenticate, contextForUser };
 }
 
 export type Authenticator = ReturnType<typeof createAuthenticator>;

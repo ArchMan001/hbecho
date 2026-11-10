@@ -26,7 +26,13 @@ export type DenyReason =
   | "scope_not_resolvable"
   | "predicate_failed"
   | "out_of_scope"
-  | "service_principal_forbidden";
+  | "service_principal_forbidden"
+  /** 出口守卫：这个动作不属于该出口（例如用页面查询的口子去做导出）。 */
+  | "exit_not_allowed"
+  /** 出口守卫：需要数据范围检查的出口没有给出资源。 */
+  | "scope_required"
+  /** 出口守卫：AI 工具取数必须声明行数上限。 */
+  | "row_limit_required";
 
 export type Decision =
   | { readonly ok: true }

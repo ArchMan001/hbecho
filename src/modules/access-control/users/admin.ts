@@ -222,6 +222,7 @@ export function createUserAdmin(deps: UserAdminDeps) {
     /** 变更授权：current 校验（manages）+ proposed 校验（canGrant），任一不过整体拒绝、零写入；不撤销现有会话（B-D33）。 */
     async changeAccess(ctx: AuthContext, userId: bigint, change: ChangeInput): Promise<{ userId: string }> {
       const p = await requireManager(ctx);
+      let narrowed = false;
       await db.transaction(async (tx) => {
         const u = await loadManaged(tx, p, userId, { forUpdate: true });
         if (u.status === "disabled") throw new AccessError("conflict", "user_disabled", "停用的用户不能变更，请先恢复");
@@ -258,6 +259,8 @@ export function createUserAdmin(deps: UserAdminDeps) {
             if (admins.filter((a) => a.id !== u.userId).length === 0) throw new AccessError("conflict", "last_superadmin", "不能降级最后一个可用的超级管理员");
           }
 
+          // 撤权 = 角色降级，或原有品牌 / 分公司被拿掉：提交后要取消该用户触发的未完成任务（B-D28）
+          narrowed = ROLE_RANK[role] < ROLE_RANK[u.role] || (ROLE_RANK[role] === ROLE_RANK[u.role] && ([...u.brandIds].some((b) => !proposed.brandIds.has(b)) || [...u.branchIds].some((b) => !proposed.branchIds.has(b)))); // 晋升（如分公司→总部）不算收窄
           set.roleCode = role;
           await tx.delete(accessUserBrands).where(eq(accessUserBrands.userId, u.userId));
           await tx.delete(accessUserBranches).where(eq(accessUserBranches.userId, u.userId));
@@ -301,6 +304,7 @@ export function createUserAdmin(deps: UserAdminDeps) {
           { tx, risk: "high" },
         );
       });
+      if (narrowed) await revoked(`user:${userId}`);
       return { userId: userId.toString() };
     },
 

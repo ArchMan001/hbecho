@@ -86,3 +86,6 @@ coverage/
 #   docs/、CONTEXT.md、.kiro/specs/、.kiro/steering/  设计基线
 #   迁移脚本与 DDL                          结构的唯一真相源
 #   .env.example                            键名清单（不含真实值）
+
+# 截图与过程证据（oil-ui 任务工作区）
+.oil-ui/

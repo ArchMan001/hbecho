@@ -1,6 +1,6 @@
 # ui-lab · 界面原型
 
-> **状态**：空目录（2026-11-05 建立，见 ADR-0013 增补）。里面还没有原型。
+> **状态**：已有三个原型：[`hbecho-ui/`](hbecho-ui/README.md)（2026-11-08，v1，保留作对照）、[`hbecho-ui-v2/`](hbecho-ui-v2/README.md)（2026-11-10，**已由刘学奎确认**为 A/B 页面界面基线）、[`g-learning-min/`](g-learning-min/README.md)（2026-11-10，学习平台 1.0，**已由刘学奎确认**）。其余 spec 的原型仍未开始。
 
 ## 作用
 

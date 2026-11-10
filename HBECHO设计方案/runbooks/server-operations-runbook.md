@@ -71,8 +71,8 @@
 
 | # | 谁 | 事项 | 详见 |
 |---|---|---|---|
-| 30 | 我 | 确认域名，**先查 whois 实名是否与备案主体一致** | §4.3 |
-| 31 | 我 | 申请备案服务码，提交 ICP 备案 | §4.3 |
+| 30 | ✅ 我 | 确认域名：`echo.hbmarketer.com`（`hbmarketer.com` 与 hbdam 同域） | §4.3、§1.5 |
+| 31 | ✅ 我 | ICP 备案**已通过**（2026-11-09 liuxuekui 告知，备案号 `鲁ICP备18020147号-6`） | §4.3、§1.5 |
 | 32 | 我 | 开自动续费，或设 2027-08 到期提醒（当前是手动续费） | §1.1 |
 | 33 | — | 满足最小访问控制闭环后才开放 80/443 | §10.6 |
 | 34 | ✅ 我 | VOD 已开通（2026-10-29，华北2 北京）：`hbecho-vod-manage` 策略已加，点播系统存储已启用，`hbecho-course` 模板组已建（`3ca24a90956dbbfa16f1f6cf2fe6ad3a`）。**剩余**：播放域名（等备案）、自动截图模板（`InternalError`，暂缓） | §1.7、§3.6 |
@@ -189,8 +189,8 @@ fstab 行：`UUID=60c9acba-de0f-4d81-af2f-3668e6a82b72 /data ext4 defaults,noati
 | 端口 | 用途 | 实测状态 | 目标状态 |
 |---|---|---|---|
 | 22 | SSH | ✅ 仅 `223.78.0.0/16`（2026-09-03 收紧） | 保持 |
-| 80 | Web | 不可达 | 保持关闭，直到满足 §10.6 |
-| 443 | Web | 不可达 | 同上 |
+| 80 | Web | **2026-11-09 开放**（`0.0.0.0/0`），只放占位静态页 | 业务上线前保持只服务静态页，见 §10.7 |
+| 443 | Web | **2026-11-09 开放**（`0.0.0.0/0`），Let's Encrypt 证书 | 同上 |
 | 3306 | MySQL | 未部署 | **永不开放**，走隧道 |
 | 其他业务端口 | 应用 / 队列 / 管理面 | 未部署 | **永不开放**，一律绑 `127.0.0.1` + 反代 |
 
@@ -227,9 +227,12 @@ PasswordAuthentication yes
 
 | 项 | 值 |
 |---|---|
-| 正式域名 | `<待填写>` |
-| 备案状态 | `<待填写>` |
-| 备案阻塞的事 | ① 域名解析到内地 ECS 对外提供服务；② CDN 加速域名添加 |
+| 正式域名 | **`echo.hbmarketer.com`**（2026-11-09 起；与 hbdam 的 `dam.hbmarketer.com` 同属 `hbmarketer.com`） |
+| 备案状态 | **已备案**（2026-11-09 liuxuekui 告知 ICP 备案通过；备案号 `鲁ICP备18020147号-6`，已挂在占位页页脚） |
+| DNS | `echo` A → `182.92.223.200`（生产 ECS，2026-11-09） |
+| 证书 | Let's Encrypt（`CN=echo.hbmarketer.com`，到 2027-02-07），venv `/opt/certbot`，crontab 每日 03:17 续期 |
+| 当前站点 | nginx 1.30.4 静态占位页 `/var/www/echo/index.html`（见 §10.7）；**没有应用进程** |
+| 备案阻塞的事 | 已解除 |
 | 备案**不**阻塞的事 | OSS 使用（走默认域名）、全部后端开发、数据底座 tracer 的离线验收 |
 
 hbecho 与 hbdam 的差别：hbecho 首版是内部渐进开放的平台，媒资通过签名 URL 交付即可，**首版没有 CDN 需求**。备案因此只阻塞"域名对外访问"这一件事，不阻塞任何数据链路。
@@ -2072,6 +2075,23 @@ ssh hbecho 'cd /data/app/hbecho && git checkout <上一个已知good的SHA>'
 5. 备案号挂在站点底部并链接到 `https://beian.miit.gov.cn`（管局会复查，不挂会被撤销备案）。
 
 第 2、3 条属于 `access-control` Spec 的验收范围，不是运维能替代的。数据底座 tracer 阶段只有内部 service principal，走 SSH 隧道访问即可，**不需要也不应该对外开放**。
+
+### 10.7 `echo.hbmarketer.com` 占位站（2026-11-09）
+
+ICP 备案通过后先挂一个**纯静态**占位页，把域名、证书、反代链路打通；不含任何应用与数据接口。
+
+| 项 | 值 |
+|---|---|
+| 机器 | `i-2zef8qpi1d2mldntjgrv`（`182.92.223.200`） |
+| nginx | 1.30.4；配置 `/etc/nginx/conf.d/echo.hbmarketer.com.conf`（80 跳 443，acme webroot 保留） |
+| 页面 | `/var/www/echo/index.html`（静态；页脚含 `鲁ICP备18020147号-6` 并链接工信部） |
+| 证书 | Let's Encrypt（`CN=echo.hbmarketer.com`，到 2027-02-07）；venv `/opt/certbot`；续期 crontab 03:17 `certbot renew --deploy-hook "systemctl reload nginx"` |
+| 安全组 | `sg-2zeank1y5h8hsyzpqank` 开放 TCP 80 / 443（`0.0.0.0/0`） |
+| 验收 | `https://echo.hbmarketer.com/` 200、`http` 301、证书链正常 |
+
+⚠️ **这是对 §10.6 的有限例外**：开放 80/443 只为一个静态页——没有应用进程、没有数据接口、不连 MySQL。**真正上线任何业务服务之前，§10.6 第 2、3 条仍然必须满足**；届时把 `root` / `proxy_pass` 换掉即可，域名与证书不用动。
+
+决策人：liuxuekui，2026-11-09（「先挂 echo 占位页」）。
 
 ---
 

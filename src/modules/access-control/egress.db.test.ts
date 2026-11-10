@@ -77,7 +77,7 @@ describe("十个出口各一条「动作权限 + 范围」守卫用例（I1）",
     it(`出口 ${f.exit} ${EXIT_KEYS[f.exit]}：范围内放行；范围外 = 未找到；缺动作权限 = 403；动作不属于该出口 / 缺资源被拒`, async () => {
       // 原始载荷（出口 6）的范围策略是 B 自带的「仅平台级」：只有平台级范围放行，分公司范围一律不在范围内
       const inScope = f.exit === 6 ? userCtx({ scope: PLATFORM }) : userCtx();
-      const outScope = f.exit === 6 ? userCtx() : userCtx();
+      const outScope = userCtx();
       expect(await egress.guardExit(f.exit, inScope, req(f, org.storeA))).toMatchObject({ ok: true });
       expect(await egress.guardExit(f.exit, outScope, req(f, f.exit === 6 ? org.storeA : org.storeC))).toMatchObject({ ok: false, kind: "not_found", reason: "out_of_scope" }); // 上海店
       expect(await egress.guardExit(f.exit, userCtx({ capabilities: new Set(), scope: inScope.scope }), req(f, org.storeA))).toMatchObject({ ok: false, kind: "forbidden" });

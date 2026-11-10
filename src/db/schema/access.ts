@@ -35,6 +35,11 @@ export const accessUsers = mysqlTable(
     // disabled_reason = media_staff_disabled 时记录触发它的专员，供条件恢复使用（B-D11）
     autoDisabledStaffId: id("auto_disabled_staff_id"),
     mediaStaffId: id("media_staff_id"),
+    // 人工恢复豁免（AX-D30，B-D08）：管理员恢复用户时，若其绑定的专员当前不是 active，记下该专员 ID，
+    // 表示「管理员已知道绑定失效、特意恢复」——懒停用与补偿跳过它，用户保持有效但本人范围被拒。
+    // 只对**这个专员**有效：改绑到别的专员后自然不再相等，无需显式清除；专员恢复为 active 时由条件恢复步骤清掉，
+    // 使「专员之后再次停用」仍会触发自动停用。
+    bindingAckStaffId: id("binding_ack_staff_id"),
     // 非停用用户的专员绑定一对一
     activeMediaStaff: id("active_media_staff").generatedAlwaysAs(sql`(CASE WHEN status <> 'disabled' THEN media_staff_id END)`, {
       mode: "stored",
@@ -49,6 +54,7 @@ export const accessUsers = mysqlTable(
     foreignKey({ name: "fk_access_users_auth", columns: [t.userId], foreignColumns: [authUsers.id] }),
     foreignKey({ name: "fk_access_users_staff", columns: [t.mediaStaffId], foreignColumns: [mediaStaff.staffId] }),
     foreignKey({ name: "fk_access_users_auto_staff", columns: [t.autoDisabledStaffId], foreignColumns: [mediaStaff.staffId] }),
+    foreignKey({ name: "fk_access_users_ack_staff", columns: [t.bindingAckStaffId], foreignColumns: [mediaStaff.staffId] }),
     uniqueIndex("uq_access_users_active_phone").on(t.activePhone),
     uniqueIndex("uq_access_users_active_staff").on(t.activeMediaStaff),
     index("idx_access_users_role_status").on(t.roleCode, t.status),

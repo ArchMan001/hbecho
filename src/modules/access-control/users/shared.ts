@@ -26,6 +26,8 @@ export interface UserRecord {
   disabledReason: string | null;
   autoDisabledStaffId: bigint | null;
   mediaStaffId: bigint | null;
+  /** 人工恢复豁免：管理员恢复时已知「这个专员」非 active（AX-D30）。 */
+  bindingAckStaffId: bigint | null;
   activatedAt: Date | null;
   createdByActor: string;
   createdAt: Date;
@@ -55,6 +57,7 @@ const rowToRecord = (r: typeof accessUsers.$inferSelect, brandIds: Set<bigint>, 
     disabledReason: r.disabledReason,
     autoDisabledStaffId: r.autoDisabledStaffId,
     mediaStaffId: r.mediaStaffId,
+    bindingAckStaffId: r.bindingAckStaffId,
     activatedAt: r.activatedAt,
     createdByActor: r.createdByActor,
     createdAt: r.createdAt,
@@ -342,6 +345,12 @@ export async function restoreCore(
   if (removedBrandIds.length) await tx.delete(accessUserBrands).where(and(eq(accessUserBrands.userId, u.userId), inArray(accessUserBrands.brandId, removedBrandIds)));
   if (removedBranchIds.length) await tx.delete(accessUserBranches).where(and(eq(accessUserBranches.userId, u.userId), inArray(accessUserBranches.branchId, removedBranchIds)));
 
+  // 人工恢复豁免（AX-D30、B-D08）：绑定的专员当前不是 active → 记下这个专员，懒停用 / 补偿跳过；用户保持有效，本人范围被拒
+  let ackStaffId: bigint | null = null;
+  if (u.mediaStaffId !== null) {
+    const placement = (await loadStaffPlacements(tx, [u.mediaStaffId])).get(u.mediaStaffId);
+    if (!placement || placement.status !== "active") ackStaffId = u.mediaStaffId;
+  }
   try {
     await tx
       .update(accessUsers)
@@ -352,6 +361,7 @@ export async function restoreCore(
         disabledByActor: null,
         disabledReason: null,
         autoDisabledStaffId: null,
+        bindingAckStaffId: ackStaffId,
         updatedAt: now,
       })
       .where(eq(accessUsers.userId, u.userId));
@@ -375,7 +385,7 @@ export async function restoreCore(
       reasonCode: o.reasonCode ?? "user_restored",
       targetType: "user",
       targetId: u.userId.toString(),
-      detail: { phone: u.phone, role: u.role, restoredStatus, removedBrandIds, removedBranchIds },
+      detail: { phone: u.phone, role: u.role, restoredStatus, removedBrandIds, removedBranchIds, bindingInvalid: ackStaffId !== null },
     },
     { tx, risk: "high" },
   );

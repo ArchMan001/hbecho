@@ -1,0 +1,2 @@
+ALTER TABLE `access_users` ADD `binding_ack_staff_id` bigint;--> statement-breakpoint
+ALTER TABLE `access_users` ADD CONSTRAINT `fk_access_users_ack_staff` FOREIGN KEY (`binding_ack_staff_id`) REFERENCES `media_staff`(`staff_id`) ON DELETE no action ON UPDATE no action;

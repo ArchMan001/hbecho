@@ -12,25 +12,33 @@
     "test:db": "./scripts/with-test-mysql.sh vitest --run --project db",
     "tracer": "tsx src/worker/tracer-cli.ts",
     "sync": "tsx src/worker/sync-main.ts",
+    "access": "tsx src/worker/access-main.ts",
     "master-data": "tsx src/worker/master-data-main.ts",
     "smoke": "tsx src/worker/smoke-main.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/db/migrate.ts"
+    "db:migrate": "tsx src/db/migrate.ts",
+    "sms-smoke": "tsx src/worker/sms-smoke-main.ts"
   },
   "devDependencies": {
     "@types/ali-oss": "^6.23.4",
     "@types/node": "^24.19.2",
+    "@types/react": "19.3.0",
     "drizzle-kit": "^0.31.11",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   },
   "dependencies": {
+    "@alicloud/dysmsapi20170525": "4.6.0",
     "ali-oss": "^6.23.0",
+    "better-auth": "1.7.18",
     "csv-parse": "7.0.3",
     "drizzle-orm": "^0.45.4",
     "mysql2": "^3.24.6",
+    "next": "16.4.5",
     "pino": "^10.4.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "zod": "^4.6.7"
   }
 }

@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 import { check, foreignKey, index, int, json, mysqlTable, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { id, inList, sha256, utc } from "../columns";
 
-export const IMPORT_KINDS = ["master_data", "roster"] as const;
+export const IMPORT_KINDS = ["master_data", "roster", "user_import"] as const;
 export const IMPORT_STATUSES = ["prechecking", "precheck_failed", "awaiting_confirm", "writing", "completed", "failed"] as const;
 export const PRECHECK_CLASSES = ["new", "update", "unchanged", "error", "needs_superadmin"] as const;
 export const ROW_OUTCOMES = ["imported", "unchanged", "conflict", "invalid"] as const;

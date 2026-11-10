@@ -3,6 +3,7 @@
 // 不传 runners / makeRunners 时 RUNNERS 为空，这里不读任何 secret。
 import pino, { type Logger } from "pino";
 import { createDb, createPool, type Db } from "../db/client";
+import { createAuditWriter, fromSyncAudit } from "../modules/access-control";
 import type { Clock } from "../modules/raw-capture";
 import { DEFAULT_RETRY } from "../modules/tracer-command";
 import { createDemandModule } from "../modules/demand";
@@ -32,8 +33,10 @@ export function buildSyncApp(
     batch_budget: cfg.batchBudget,
   };
   const scheduler = createSyncScheduler({ db, clock, resolver, runtime });
-  const commands = createSyncCommands({ db, clock, resolver, planner: scheduler.planner, runtime, audit: createLogSyncAuditSink(logger) });
-  const demand = createDemandModule({ db, clock, runtime: { environment: cfg.environment, modes: cfg.demandModes }, audit: createLogSyncAuditSink(logger) });
+  // 审计：日志 + 持久（audit_events）
+  const syncAudit = fromSyncAudit(createAuditWriter({ db, clock, logger }), createLogSyncAuditSink(logger));
+  const commands = createSyncCommands({ db, clock, resolver, planner: scheduler.planner, runtime, audit: syncAudit });
+  const demand = createDemandModule({ db, clock, runtime: { environment: cfg.environment, modes: cfg.demandModes }, audit: syncAudit });
   const breakers = createBreakerSet({
     failures: cfg.breaker.failures,
     cooldownMs: cfg.breaker.cooldownMs,
@@ -68,7 +71,7 @@ export async function runForever(
   cfg: SyncWorkerConfig,
   signals: { on(sig: "SIGTERM" | "SIGINT", f: () => void): void },
   /** 每日维护（北京时间 04:00 之后每天一次，由 maintenance.runDaily 自己判断，这里每次 tick 后调用）。 */
-  extras: { maintain?: () => Promise<unknown> } = {},
+  extras: { maintain?: () => Promise<unknown>; accessMaintain?: () => Promise<unknown> } = {},
 ): Promise<void> {
   let stopped = false;
   let stopping: Promise<void> | null = null;
@@ -83,6 +86,12 @@ export async function runForever(
         await extras.maintain?.();
       } catch (e) {
         app.logger.error({ err: e }, "maintenance failed"); // runDaily 自己吞步骤错误；这里兜底，不让它拖垮 tick 循环
+      }
+      // 访问控制的每日维护（B 域）：独立于上面的 ODS 维护，不需要 OSS，所以 OSS 配置不全时它仍然运行
+      try {
+        await extras.accessMaintain?.();
+      } catch (e) {
+        app.logger.error({ err: e }, "access maintenance failed");
       }
       await new Promise((r) => setTimeout(r, TICK_INTERVAL_MS));
     }

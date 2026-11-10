@@ -1,7 +1,7 @@
 # 域 E 用户与权限详细设计评审意见
 
 > **文档状态**：`archived`  
-> **当前相关设计**：[`access-control/design.md`](../../../.kiro/specs/access-control/design.md)  
+> **当前相关设计**：[`access-control/design.md`](../access-control-design-2026-11-04.md)  
 > **归档说明**：评审建议已被选择性吸收进当前 Access Control 设计；未被当前 Spec 明确吸收的建议不生效。  
 > **禁止用途**：不得单独作为需求、实现合同或验收依据。
 

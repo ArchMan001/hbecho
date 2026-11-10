@@ -1,7 +1,7 @@
 # 域 E · 用户与权限 详细设计
 
 > **文档状态**：`archived`  
-> **当前相关设计**：[`access-control/design.md`](../../../.kiro/specs/access-control/design.md)  
+> **当前相关设计**：[`access-control/design.md`](../access-control-design-2026-11-04.md)  
 > **归档说明**：本文原属另一产品语境，仅作为会话安全、最小权限和最终出口复查等经验输入。  
 > **禁止用途**：不得作为 hbecho 的实现合同，不得据此冻结框架、部署、角色、组织或 User↔MediaStaff 模型。
 

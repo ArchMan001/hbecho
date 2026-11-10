@@ -8,6 +8,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import pino from "pino";
 import { createDb, createPool } from "../db/client";
+import { createAuditWriter, fromMasterDataAudit } from "../modules/access-control";
 import { actorFromEnv, createLogAudit, createMasterData, MasterDataError } from "../modules/master-data-import";
 import { runCli } from "./master-data-cli";
 
@@ -25,8 +26,12 @@ try {
   process.exit(1);
 }
 const pool = createPool(url);
+const db = createDb(pool);
+const clock = { now: () => new Date() };
+// 审计：日志 + 持久（audit_events）。业务模块仍只认 AuditSink 函数
+const audit = fromMasterDataAudit(createAuditWriter({ db, clock, logger }), createLogAudit(logger));
 const code = await runCli(process.argv.slice(2), {
-  md: createMasterData(createDb(pool), { now: () => new Date() }, createLogAudit(logger)),
+  md: createMasterData(db, clock, audit),
   actor,
   readFile: (p) => readFileSync(p),
   writeFile: (p, c) => writeFileSync(p, c, "utf8"),

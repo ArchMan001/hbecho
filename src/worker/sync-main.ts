@@ -6,6 +6,7 @@
 import pino from "pino";
 import { z } from "zod";
 import { createDb, createPool } from "../db/client";
+import { createAccessMaintenance, createAuditWriter, fromSyncAudit, fromTracerAudit } from "../modules/access-control";
 import { createDemandModule } from "../modules/demand";
 import { createMaintenance, type Maintenance } from "../modules/maintenance";
 import { cleanStaleTmp } from "../modules/media-archive";
@@ -84,7 +85,9 @@ if (isWorkerCommand) {
   } catch (e) {
     app.logger.warn({ err: e instanceof Error ? e.message : String(e) }, "daily maintenance disabled");
   }
-  await runForever(app, cfg, process, { ...(maintain ? { maintain } : {}) });
+  // 访问控制维护不依赖 OSS：无论上面是否启用，都接入
+  const accessMaintenance = createAccessMaintenance({ db: app.db, clock: app.clock, logger: app.logger });
+  await runForever(app, cfg, process, { ...(maintain ? { maintain } : {}), accessMaintain: () => accessMaintenance.runDaily() });
   await app.close();
   process.exit(0);
 }
@@ -101,10 +104,13 @@ const clock = { now: () => new Date() };
 const resolver = createMonitoringResolver(db);
 const runtime = { environment: cfg.HBECHO_ENV, modes: { media_user_info: cfg.HBECHO_SYNC_PROFILE_MODE, user_video_list: cfg.HBECHO_SYNC_LIST_MODE } };
 const scheduler = createSyncScheduler({ db, clock, resolver, runtime });
-const commands = createSyncCommands({ db, clock, resolver, planner: scheduler.planner, runtime, audit: createLogSyncAuditSink(logger) });
+// 审计：日志 + 持久（audit_events）；业务模块仍只认各自的 AuditSink 端口
+const auditWriter = createAuditWriter({ db, clock, logger });
+const syncAudit = fromSyncAudit(auditWriter, createLogSyncAuditSink(logger));
+const commands = createSyncCommands({ db, clock, resolver, planner: scheduler.planner, runtime, audit: syncAudit });
 const actor = actorFor(cfg.HBECHO_ACTOR_ID, cfg.HBECHO_ACTOR_PLATFORM_ADMIN === "true");
-const audit = createLogSyncAuditSink(logger);
-const tracer = createTracerCommands({ db, clock, audit: createLogAuditSink(logger), config: { environment: cfg.HBECHO_ENV, modes: { media_user_info: cfg.HBECHO_SYNC_PROFILE_MODE, user_video_list: cfg.HBECHO_SYNC_LIST_MODE } } });
+const audit = syncAudit;
+const tracer = createTracerCommands({ db, clock, audit: fromTracerAudit(auditWriter, createLogAuditSink(logger)), config: { environment: cfg.HBECHO_ENV, modes: { media_user_info: cfg.HBECHO_SYNC_PROFILE_MODE, user_video_list: cfg.HBECHO_SYNC_LIST_MODE } } });
 let maintain: Maintenance["runNow"] | undefined;
 try {
   const maintenance = createMaintenance({ db, store: new OssObjectStore(readOssSecrets(process.env)), clock, log: (e, m) => logger.info(e, m) });
@@ -114,7 +120,7 @@ try {
 }
 const demand =
   cfg.HBECHO_SYNC_DETAIL_MODE && cfg.HBECHO_SYNC_COMMENTS_MODE
-    ? createDemandModule({ db, clock, runtime: { environment: cfg.HBECHO_ENV, modes: { media_stats_number: cfg.HBECHO_SYNC_DETAIL_MODE, post_comments_list: cfg.HBECHO_SYNC_COMMENTS_MODE } }, audit: createLogSyncAuditSink(logger) })
+    ? createDemandModule({ db, clock, runtime: { environment: cfg.HBECHO_ENV, modes: { media_stats_number: cfg.HBECHO_SYNC_DETAIL_MODE, post_comments_list: cfg.HBECHO_SYNC_COMMENTS_MODE } }, audit: syncAudit })
     : undefined;
 const code = await runSyncCli(process.argv.slice(2), {
   scheduler,

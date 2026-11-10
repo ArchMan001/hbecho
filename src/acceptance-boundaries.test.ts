@@ -62,3 +62,95 @@ describe("Q5 / R7：启动接线（静态检查）", () => {
     expect(readFileSync(join(SRC, "worker", "sync-config.ts"), "utf8")).toContain('default("service:sync-worker")');
   });
 });
+
+// ---- b-access-control（AX-6、AX-11、AX-12）-----------------------------------------------------------------
+import { CAPABILITIES } from "./modules/access-control/roles";
+
+const nonTestSources = all.filter((p) => p.endsWith(".ts") && !isTest(p));
+const text = (p: string) => readFileSync(p, "utf8");
+/** 去掉注释，避免说明文字触发扫描。 */
+const code = (p: string) => text(p).replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+describe("B-AX-6：业务代码只检查 Capability，不写角色条件", () => {
+  it("四个角色字面量只出现在 access-control、授权表 schema 与 access CLI 里", () => {
+    const allowed = (r: string) => r.startsWith("modules/access-control/") || r === "db/schema/access.ts" || r.startsWith("worker/access-");
+    const offenders = nonTestSources.filter((p) => !allowed(rel(p)) && /\b(platform_admin|hq_manager|branch_manager|store_staff)\b/.test(code(p))).map(rel);
+    expect(offenders).toEqual([]);
+  });
+
+  it("仓库里出现的 Capability 字符串都属于注册表（29 项）", () => {
+    expect(CAPABILITIES).toHaveLength(29);
+    const known = new Set<string>(CAPABILITIES);
+    const re = /["'`]((?:data|report|rule|metric|learning|ai|user|audit|config|activity_plan|monitor)\.[a-z_]+(?:\.[a-z_]+)*)["'`]/g;
+    const unknown: string[] = [];
+    // 日志事件名（logger.info(obj, "audit.low_risk_write_failed")）长得像 Capability 但不是；只放行这一种明确形态
+    const logEvent = /\b(?:logger|log)\??\.(?:info|warn|error|debug)\([^)]*["'`]$/;
+    for (const p of nonTestSources) {
+      const src = code(p);
+      for (const m of src.matchAll(re)) {
+        if (known.has(m[1]!)) continue;
+        if (logEvent.test(src.slice(Math.max(0, m.index! - 160), m.index! + 1))) continue;
+        unknown.push(`${rel(p)}: ${m[1]}`);
+      }
+    }
+    expect(unknown).toEqual([]);
+  });
+
+  it("没有 admin 旁路：authorize.ts 里不存在「是超管就直接放行」", () => {
+    const src = code(join(SRC, "modules", "access-control", "authorize.ts"));
+    expect(src).not.toMatch(/platform_admin[^\n]*return\s*\{?\s*(ok:\s*true|true)/);
+    expect(src).not.toMatch(/isAdmin|platformAdmin\s*\)\s*return/);
+  });
+});
+
+describe("B-AX-1：不使用 better-auth 的 admin 体系", () => {
+  it("非测试代码里没有 adminAc / set-password / impersonate / defaultRole / adminRoles", () => {
+    const offenders = nonTestSources.filter((p) => /\b(adminAc|defaultRole|adminRoles)\b|(?<![\w-])set-password|impersonate/.test(code(p))).map(rel);
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe("B-AX-5：用户只停用不删除，且不触碰监控开关（acceptance D16、D17）", () => {
+  const sources = nonTestSources.filter((p) => rel(p).startsWith("modules/access-control/"));
+  it("access-control 里没有删除 access_users / auth_users 行的路径", () => {
+    expect(sources.length).toBeGreaterThan(5);
+    const offenders = sources.filter((p) => /\.delete\(\s*(accessUsers|authUsers)\s*\)|DELETE\s+FROM\s+(access_users|auth_users)\b/i.test(code(p))).map(rel);
+    expect(offenders).toEqual([]);
+  });
+  it("access-control 里没有对 monitoring_enabled 的任何引用", () => {
+    expect(sources.filter((p) => /monitoring_?enabled/i.test(code(p))).map(rel)).toEqual([]);
+  });
+});
+describe("B-AX-14：其他模块只经 access-control 的入口（index）导入它", () => {
+  // 例外：src/app（Next 入口）与本模块自己的进程入口（worker/access-*、worker/sms-smoke-*）
+  const own = (r: string) => r.startsWith("modules/access-control/") || r.startsWith("app/") || r.startsWith("worker/access-") || r.startsWith("worker/sms-smoke-");
+  it("非测试代码里，模块外对 access-control 的导入路径都以 access-control 结尾（不带子路径）", () => {
+    const offenders = nonTestSources.filter((p) => !own(rel(p)) && /from\s+["'][^"']*\/access-control\/[^"']+["']/.test(code(p))).map(rel);
+    expect(offenders).toEqual([]);
+    expect(nonTestSources.some((p) => !own(rel(p)) && /from\s+["'][^"']*\/access-control["']/.test(code(p)))).toBe(true); // 确实有人在用入口
+  });
+});
+describe("B-AX-12：src/app 只做入口，不写 SQL", () => {
+  it("src/app 下没有 insert / update / delete / execute / transaction / sql 模板 / 对 db 目录的导入", () => {
+    const app = nonTestSources.filter((p) => rel(p).startsWith("app/"));
+    expect(app.length).toBeGreaterThan(0);
+    const offenders = app.filter((p) => /\.(insert|update|delete|execute|transaction)\(|\bsql`|from\s+["'][^"']*\/db\/|drizzle-orm/.test(code(p))).map(rel);
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe("B-AX-13：access-control 的数据库测试里没有并发造数（dev-ci-cadence 第 3 条）", () => {
+  it("access-control 与 src/db 下新增的 *.db.test.ts 没有 Promise.all", () => {
+    const files = all.filter((f) => f.endsWith(".db.test.ts") && (rel(f).startsWith("modules/access-control/") || rel(f).startsWith("db/access-")));
+    expect(files.length).toBeGreaterThan(3);
+    const needle = ["Promise", "all("].join(".");
+    expect(files.filter((f) => text(f).includes(needle)).map(rel)).toEqual([]);
+  });
+});
+
+describe("csv-parse 只在 csv-file 里被导入（ADR-0014）", () => {
+  it("其余模块拿到的是项目自己的行结构", () => {
+    const offenders = nonTestSources.filter((p) => /from\s+["']csv-parse/.test(code(p)) && rel(p) !== "modules/csv-file/index.ts").map(rel);
+    expect(offenders).toEqual([]);
+  });
+});

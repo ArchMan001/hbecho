@@ -30,6 +30,7 @@
 | [0012](0012-python-capability-service.md) | Python 能力服务：FastAPI + OpenCV + ffmpeg，compose 内网、无数据库凭证 | accepted | 2026-11-04 | 刘学奎 |
 | [0013](0013-repository-layout.md) | 仓库目录：单应用，TypeScript 全在 `src/`，Python 服务在 `services/capability/` | accepted | 2026-11-04 | 刘学奎 |
 | [0014](0014-csv-parser-dependency.md) | CSV 解析用 csv-parse（严格模式）；编码判定仍用 `TextDecoder`；星标线下调为 3,000 | accepted | 2026-11-05 | 刘学奎 |
+| [0015](0015-auth-boundary-and-disabled-phone.md) | 认证边界：better-auth 1.7.18 拥有 user / session，授权表自有；停用用户的登录手机号改写为墓碑值；库外必须补的五处 | accepted | 2026-11-10 | 刘学奎 |
 
 ## 未决选型登记
 

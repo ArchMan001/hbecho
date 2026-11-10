@@ -1,0 +1,209 @@
+{
+  "_comment": "由 HBECHO设计方案/prd-domain-b-access-control.md §7.3 机械转写（2026-11-10，PRD v1.21.2）。单元格保留 PRD 原文：❌ = 不授予，其余 = 授予（✅ / 授权品牌 / 本分公司 / 本人）。增删改注册表任一项，对照测试失败。",
+  "source": "prd-domain-b-access-control.md §7.3",
+  "rows": [
+    {
+      "capability": "data.account.read",
+      "platform_admin": "✅",
+      "hq_manager": "授权品牌",
+      "branch_manager": "本分公司",
+      "store_staff": "本人"
+    },
+    {
+      "capability": "data.account.manage",
+      "platform_admin": "✅",
+      "hq_manager": "授权品牌",
+      "branch_manager": "本分公司",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "data.monitoring.manage",
+      "platform_admin": "✅",
+      "hq_manager": "授权品牌（不含经销商级）",
+      "branch_manager": "本分公司（不含经销商级）",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "data.content.read",
+      "platform_admin": "✅",
+      "hq_manager": "授权品牌",
+      "branch_manager": "本分公司",
+      "store_staff": "本人"
+    },
+    {
+      "capability": "data.media.read",
+      "platform_admin": "✅",
+      "hq_manager": "授权品牌",
+      "branch_manager": "本分公司",
+      "store_staff": "本人"
+    },
+    {
+      "capability": "data.sync.trigger",
+      "platform_admin": "✅",
+      "hq_manager": "授权品牌",
+      "branch_manager": "本分公司",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "data.raw_payload.read",
+      "platform_admin": "✅",
+      "hq_manager": "❌",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "data.master_data.import",
+      "platform_admin": "✅",
+      "hq_manager": "✅",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "data.master_data.correct",
+      "platform_admin": "✅",
+      "hq_manager": "✅",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "data.master_data.structure",
+      "platform_admin": "✅",
+      "hq_manager": "❌",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "monitor.external.manage",
+      "platform_admin": "✅",
+      "hq_manager": "❌",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "activity_plan.create",
+      "platform_admin": "✅",
+      "hq_manager": "✅",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "activity_plan.join",
+      "platform_admin": "✅",
+      "hq_manager": "授权品牌",
+      "branch_manager": "本分公司",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "data.export",
+      "platform_admin": "✅",
+      "hq_manager": "授权品牌",
+      "branch_manager": "本分公司",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "report.read",
+      "platform_admin": "✅",
+      "hq_manager": "授权品牌",
+      "branch_manager": "本分公司",
+      "store_staff": "本人"
+    },
+    {
+      "capability": "report.export",
+      "platform_admin": "✅",
+      "hq_manager": "授权品牌",
+      "branch_manager": "本分公司",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "rule.definition.read",
+      "platform_admin": "✅",
+      "hq_manager": "✅",
+      "branch_manager": "✅",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "rule.definition.manage",
+      "platform_admin": "✅",
+      "hq_manager": "✅",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "rule.run.execute",
+      "platform_admin": "✅",
+      "hq_manager": "✅",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "metric.catalog.read",
+      "platform_admin": "✅",
+      "hq_manager": "✅",
+      "branch_manager": "✅",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "metric.catalog.manage",
+      "platform_admin": "✅",
+      "hq_manager": "✅",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "learning.read",
+      "platform_admin": "✅",
+      "hq_manager": "✅",
+      "branch_manager": "✅",
+      "store_staff": "✅"
+    },
+    {
+      "capability": "learning.manage",
+      "platform_admin": "✅",
+      "hq_manager": "✅",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "learning.report.read",
+      "platform_admin": "✅",
+      "hq_manager": "授权品牌",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "learning.tag.manage",
+      "platform_admin": "✅",
+      "hq_manager": "❌",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "ai.content.assist",
+      "platform_admin": "✅",
+      "hq_manager": "✅",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "user.manage",
+      "platform_admin": "✅",
+      "hq_manager": "授权品牌",
+      "branch_manager": "本分公司",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "audit.read",
+      "platform_admin": "✅",
+      "hq_manager": "❌",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    },
+    {
+      "capability": "config.manage",
+      "platform_admin": "✅",
+      "hq_manager": "❌",
+      "branch_manager": "❌",
+      "store_staff": "❌"
+    }
+  ]
+}

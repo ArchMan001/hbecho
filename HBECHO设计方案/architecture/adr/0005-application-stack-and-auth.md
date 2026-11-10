@@ -44,6 +44,9 @@ hbdam 已在生产前验证了一套 Node / TypeScript 栈，其中认证、ORM�
 | pino | 结构化 JSON 日志、追踪编号、脱敏、轮转 | 哪些字段算敏感（业务约定） |
 | ali-oss | 签发链接、服务端核对对象、分片上传配合 | CDN 鉴权签名 |
 | `@alicloud/*` | 短信、STS 等云资源 | 业务模板与限流 |
+| `@alicloud/dysmsapi20170525` 4.6.0（Apache-2.0，官方 SDK；属本 ADR 的 `@alicloud/*` 范围，`b-access-control` 任务 5 于 2026-11-10 引入；具体包名与版本待刘学奎合并时确认） | 调用阿里云 `SendSms` 发送验证码 | 限频、发送资格校验、全局上限、结果记录、模板选择（都在 `SmsService`）；SDK 只在 `sms-aliyun.ts` 里被动态导入，默认测试不加载。其依赖 `@alicloud/openapi-core` 的 postinstall 在 `pnpm-workspace.yaml` 记为 `false`（只为 Node 10/12 额外装 TypeScript，Node 24 直接退出） |
+| better-auth 1.7.18（精确锁定，不加 `^`；2026-11-10 引入，ADR-0015 已接受） | 见 ADR-0015「用它做什么」 | 见 ADR-0015「不用它做什么」与「必须在库外补的五处」 |
+| next 16.4.5 / react 19.3.1 / react-dom 19.3.1（精确锁定；本 ADR 已登记，`b-access-control` 任务 2 于 2026-11-10 引入；next 取 16.4.5，16.4.6 发布不足一天未用） | 本轮只有无页面的 Route Handler（`src/app/api/**`）；页面待界面确认后再写 | 不承载业务逻辑：`src/app` 只做入口与参数校验（ADR-0013）；不用 `next/server` 的专有 API，处理器是标准 `Request → Response` |
 | vitest | 单元与集成测试 | — |
 | mysql2 | Drizzle 的 MySQL 驱动；连接池、`bigNumberStrings` 让 BIGINT 以字符串往返、UTC 时区（2026-11-04 刘学奎批准，tracer 任务 2 引入） | 不做查询构造与迁移（Drizzle 负责）；不在事务内等待网络 IO |
 | tsx | 在开发与 Worker 镜像里直接运行 TypeScript 入口（CLI `pnpm tracer`）（2026-11-04 刘学奎批准，tracer 任务 2 引入） | 不参与类型检查（`tsc --noEmit` 负责）；不用于生产构建产物 |
@@ -108,7 +111,7 @@ hbdam 已在生产前验证了一套 Node / TypeScript 栈，其中认证、ORM�
 | 2 | `defaultRole` 默认 `user`、`adminRoles` 默认 `["admin"]` | 必须显式改成项目四类角色；不改则静默得到无效角色 |
 | 3 | 管理员改密码不会自动撤销该用户会话 | 改密流程必须单独调撤销 |
 | 4 | `/phone-number/reset-password` 在无 credential account 时会自动建行 | 激活与忘记密码是同一条库路径，激活无需额外端点 |
-| 5 | 登录失败限流不由 better-auth 承担 | 自建限流（IP + 账号双维度） |
+| 5 | 登录失败限流不由 better-auth 承担 | 自建限流，**只保留账号维度**（2026-11-06 订正：原写「IP + 账号双维度」，已被 B-D14 取代，去掉 IP 维度以免公司 NAT 出口误伤；请求洪水由 better-auth 的全局请求限流兜底） |
 | 6 | 多租户组织插件不适用于本项目 | 组织归属用业务表，不用租户模型 |
 | 7 | drizzle-kit 能否生成 v2 需要的 CHECK、复合外键、生成列与受限写入过程 | **已验证（2026-11-04，tracer 任务 2，MySQL 8.4.11）**：CHECK、复合与循环外键、STORED 生成列唯一键、`ON DELETE SET NULL`、自定义列类型（含 `collate`）**都能生成且被 MySQL 强制**；触发器、种子数据、受限写入过程**不支持，写手写 SQL 迁移**（`drizzle-kit generate --custom`）。限制与绕法见下方「已知坑 7 的验证结论」 |
 

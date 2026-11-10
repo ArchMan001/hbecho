@@ -36,6 +36,7 @@
 - 配置变更必须走部署脚本，不能 SSH 手工改（与"部署单一来源"一致）；
 - 证书续期是宿主机定时任务，需要监控到期时间；
 - 应用容器继续只绑回环，暴露面维持在 Nginx 一处。
+- **转发客户端 IP 的约定**（2026-11-10，`b-access-control` 补）：对 Web 应用的反代配置必须用 `proxy_set_header X-Forwarded-For $remote_addr;` **覆盖**客户端自带的头，不用 `proxy_add_x_forwarded_for`；应用侧用 `HBECHO_TRUSTED_PROXIES`（生产必填）声明哪些地址是受信代理。否则应用的请求限流取不到可信 IP（所有人共用一个桶）或可被客户端伪造绕开。
 
 ## 仍未定
 

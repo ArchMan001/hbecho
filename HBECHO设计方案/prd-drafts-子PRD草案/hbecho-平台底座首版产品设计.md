@@ -2,7 +2,7 @@
 
 > **状态**：`draft`（2026-10-26 由 liuxuekui 从归档恢复为子 PRD 草案，待复核）  
 > **复核状态**：未复核。此前 2026-09-02 的 `archived` 标记作废。  
-> **权威关系**：与 [`prd-platform.md`](../prd-platform.md) 和 [`access-control/design.md`](../../.kiro/specs/access-control/design.md) 冲突时，以它们为准。  
+> **权威关系**：与 [`prd-platform.md`](../prd-platform.md) 和 [`b-access-control`](../../.kiro/specs/b-access-control/design.md) 冲突时，以它们为准。  
 > **用途**：保留首版试点范围与反过度设计原则，作为访问控制子 PRD 的素材。
 
 > **文档状态**：v0.1 业务讨论稿，尚未冻结  

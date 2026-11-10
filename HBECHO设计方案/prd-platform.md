@@ -297,7 +297,7 @@
 
 **边界**：不重建组织主档；不定义业务规则；不返回 SQL。未注册策略默认拒绝。
 
-**详见**：`.kiro/specs/access-control/design.md`。
+**详见**：`.kiro/specs/b-access-control/`（requirements / design / tasks / acceptance；旧 `access-control/design.md` 已归档）。
 
 #### C 识别能力
 

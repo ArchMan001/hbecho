@@ -4,11 +4,18 @@
 //   - 不写密码、令牌、Cookie、验证码、整行原文、文件内容：序列化前按键名过滤（sanitize）
 //   - 幂等键去重：sha256(event_type | actor | target | occurred_at 到秒 | detail 摘要)
 import { createHash } from "node:crypto";
-import { and, asc, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, lte, sql, type SQL } from "drizzle-orm";
 import type { Logger } from "pino";
 import type { Db, DbTx } from "../../db/client";
 import { auditEvents } from "../../db/schema";
 import type { Clock } from "../raw-capture/ports";
+import type { AuthContext, AuthorizeRequest, Decision } from "./authorize";
+
+/** reasonCode 是系统生成的稳定标识符（B-D30）：调用方无法传入自由文本。违反是编程错误，不论风险级别都抛。 */
+const REASON_CODE = /^[a-z0-9][a-z0-9_.-]{0,63}$/;
+const assertReasonCode = (code: string): void => {
+  if (!REASON_CODE.test(code)) throw new AuditWriteError("reasonCode 必须是稳定标识符（小写字母、数字、下划线、点、连字符），不能是自由文本");
+};
 
 export type AuditOutcome = "succeeded" | "denied" | "failed";
 export type AuditRisk = "high" | "low";
@@ -101,6 +108,7 @@ export function createMemoryAuditWriter(clock: Clock = { now: () => new Date() }
     events,
     failNext: (n = 1) => void (failures = n),
     async write(e, opts) {
+      assertReasonCode(e.reasonCode);
       if (opts.risk === "high" && !opts.tx) throw new AuditWriteError("高风险审计必须传 tx（与业务写入同一事务）");
       if (failures > 0) {
         failures -= 1;
@@ -155,6 +163,7 @@ export function createAuditWriter(deps: AuditWriterDeps): PersistentAuditWriter 
   return {
     lowRiskFailures: () => lowFailures,
     async write(e, opts) {
+      assertReasonCode(e.reasonCode);
       if (opts.risk === "high") {
         if (!opts.tx) throw new AuditWriteError("高风险审计必须传 tx（与业务写入同一事务）");
         try {
@@ -225,6 +234,9 @@ export interface AuditQuery {
   targetId?: string;
   batchRef?: bigint;
   eventType?: string;
+  /** 操作者 / 对象是这些用户（页面按姓名或手机号解析出的用户 ID）；空数组 = 没有匹配，结果为空。 */
+  actorUserIds?: readonly bigint[];
+  targetUserIds?: readonly bigint[];
   from?: Date;
   to?: Date;
   limit?: number;
@@ -247,16 +259,36 @@ export interface AuditRow {
   detail: unknown;
 }
 
-/** 读取审计：调用方（`audit.read` 的授权）负责鉴权；这里只做查询。BIGINT 一律十进制字符串。 */
-export async function listAudit(db: Db, q: AuditQuery = {}): Promise<AuditRow[]> {
+const auditConds = (q: AuditQuery): SQL[] => {
   const conds: SQL[] = [];
   if (q.actor !== undefined) conds.push(eq(auditEvents.actor, q.actor));
   if (q.targetType !== undefined) conds.push(eq(auditEvents.targetType, q.targetType));
   if (q.targetId !== undefined) conds.push(eq(auditEvents.targetId, q.targetId));
   if (q.batchRef !== undefined) conds.push(eq(auditEvents.batchRef, q.batchRef));
   if (q.eventType !== undefined) conds.push(eq(auditEvents.eventType, q.eventType));
+  if (q.actorUserIds) conds.push(q.actorUserIds.length ? inArray(auditEvents.actorUserId, [...q.actorUserIds]) : sql`1 = 0`);
+  if (q.targetUserIds) {
+    const ids = q.targetUserIds.map(String);
+    conds.push(ids.length ? and(eq(auditEvents.targetType, "user"), inArray(auditEvents.targetId, ids))! : sql`1 = 0`);
+  }
   if (q.from) conds.push(gte(auditEvents.occurredAt, q.from));
   if (q.to) conds.push(lte(auditEvents.occurredAt, q.to));
+  return conds;
+};
+
+/** 同一筛选条件下的总数与失败 / 拒绝数（审计页的概要带与分页用；与 listAudit 用同一条谓词）。 */
+export async function countAudit(db: Db, q: AuditQuery = {}): Promise<{ total: number; notSucceeded: number }> {
+  const conds = auditConds(q);
+  const [r] = await db
+    .select({ total: count(), notSucceeded: sql<string>`COALESCE(SUM(${auditEvents.outcome} <> 'succeeded'), 0)` })
+    .from(auditEvents)
+    .where(conds.length ? and(...conds) : undefined);
+  return { total: Number(r?.total ?? 0), notSucceeded: Number(r?.notSucceeded ?? 0) };
+}
+
+/** 读取审计：调用方（`audit.read` 的授权）负责鉴权；这里只做查询。BIGINT 一律十进制字符串。 */
+export async function listAudit(db: Db, q: AuditQuery = {}): Promise<AuditRow[]> {
+  const conds = auditConds(q);
   const rows = await db
     .select()
     .from(auditEvents)
@@ -278,4 +310,25 @@ export async function listAudit(db: Db, q: AuditQuery = {}): Promise<AuditRow[]>
     scopeSummary: r.scopeSummary,
     detail: r.detail,
   }));
+}
+
+/**
+ * 授权拒绝的审计（低风险、尽力写入）：接到 `createAuthorizer({ onDenied })`。页面、CLI 和各域的 authorize 拒绝因此都留痕，
+ * 不再只有出口守卫里「需要审计」的那几个出口才记。reasonCode 取拒绝原因（稳定枚举）。
+ */
+export function denialAuditor(audit: AuditWriter) {
+  return async (info: { ctx: AuthContext; request: AuthorizeRequest; decision: Exclude<Decision, { ok: true }> }): Promise<void> => {
+    await audit.write(
+      {
+        actor: info.ctx.actor,
+        actorUserId: info.ctx.userId,
+        eventType: "authorization_denied",
+        outcome: "denied",
+        reasonCode: info.decision.reason,
+        ...(info.request.resource ? { targetType: info.request.resource.key } : {}),
+        detail: { capability: info.request.capability, kind: info.decision.kind },
+      },
+      { risk: "low" },
+    );
+  };
 }

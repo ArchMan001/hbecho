@@ -103,7 +103,7 @@ B PRD 在产品层已「待定项清零」。下列是**实现层**必须选一�
 - **数据出口框架**：10 个出口的守卫函数、交付前复查、异步任务有效范围、撤权取消用户任务；
 - **审计**：持久表、事件覆盖、系统生成的 `reason_code`、保留一年与到期清理、仅超管可读、现有三类审计的适配写入；
 - **对既有模块的适配**：`AuthContext` → 各 actor、`created_by_user_id` 回填入口；
-- **CLI**：`pnpm access ...`；
+- **CLI**：`pnpm run access ...`；
 - **离线验证**：假短信发送器、假时钟、真实 MySQL 测试库。
 
 #### 1.5.2 范围外
@@ -408,7 +408,7 @@ B PRD 在产品层已「待定项清零」。下列是**实现层**必须选一�
 
 - Next.js 16 App Router 骨架：`src/app/api/auth/[...all]/route.ts`（better-auth 处理器）、`src/app/api/health/route.ts`；`src/app` 只做入口与参数校验，不直接写 SQL（ADR-0013）；
 - `authenticate(request): Promise<AuthContext | Unauthenticated>`：模块函数，Route Handler 与将来的页面共用；
-- CLI `pnpm access ...`：`token create`、`bootstrap-superadmin`、`user invite|list|show|change|disable|restore|force-logout`、`user import precheck|confirm|batches|batch|rows|report`、`maintain`（定时补偿 + 审计清理）、`audit list`；输出 JSON、BIGINT 十进制字符串、退出码沿用 master-data 约定；影响多个对象的命令默认只预览，`--apply` 才写入；**没有 `--force` / `--skip-auth`**；
+- CLI `pnpm run access ...`：`token create`、`bootstrap-superadmin`、`user invite|list|show|change|disable|restore|force-logout`、`user import precheck|confirm|batches|batch|rows|report`、`maintain`（定时补偿 + 审计清理）、`audit list`；输出 JSON、BIGINT 十进制字符串、退出码沿用 master-data 约定；影响多个对象的命令默认只预览，`--apply` 才写入；**没有 `--force` / `--skip-auth`**；
 - CLI 身份来自环境变量，缺任一启动失败，不缺省为全部；
 - 本轮**没有**对外的管理 HTTP 接口；
 - `.env` 与密钥不出现在仓库、日志与回复里（`server-access.md`）。

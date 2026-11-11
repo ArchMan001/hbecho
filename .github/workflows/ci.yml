@@ -6,11 +6,11 @@
 #
 # 刻意没有 continue-on-error：失败就是失败。CI 显示绿但实际没验，比没有 CI 更糟。
 #
-# 应用代码继续落地后按 HBECHO设计方案/runbooks/dev-test-deploy-workflow.md §5.2 增加：
-#   image       —— 仅在应用/worker 路径变化或手动触发时构建并推 ACR
-#   deploy-test —— 手动触发，测试 ECS 拉同一标签验收
-#   deploy-prod —— 手动触发 + 环境审批
-# 在这些 job 真正可跑之前，不要创建空壳。
+# image job（2026-11-11 起）：verify 通过后，仅在应用路径变化或手动触发时构建镜像并推 ACR（ADR-0016），标签 = git 短 sha（main 另加 main-latest）。
+#   推送凭证是 GitHub secret ACR_PUSH_PASSWORD（RAM 子账号 hbecho-acr-push，只能推 hbecho 命名空间）。
+# 仍未建（按 HBECHO设计方案/runbooks/dev-test-deploy-workflow.md §5.2，等真正可跑再建，不创建空壳）：
+#   deploy-test —— 现在由人经 Workbench 拉同一标签部署（runbook §P6）
+#   deploy-prod —— 没有生产 ECS
 name: ci
 on:
   push:
@@ -59,3 +59,73 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: 本机验证入口
         run: ./scripts/verify.sh
+  image:
+    needs: verify
+    # PR 不推镜像（push 事件已经覆盖同一提交）
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # 链路本身不慢（探针：大文件约 9.4 MB/s，与 hbdam 同量级）；依赖层（大量小文件）首次推送要几分钟，之后依赖不变时层已在 ACR，
+    # 稳态约 1.5 分钟（构建 1 分钟 + 推送 30 秒）。留 30 分钟余量给「依赖变了、整层重推」的情形。
+    timeout-minutes: 30
+    env:
+      REGISTRY: hbecho-registry-registry.cn-beijing.cr.aliyuncs.com
+      NAMESPACE: hbecho
+      REPO: app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 应用路径是否变化（手动触发一律构建）
+        id: changed
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "build=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          # 分支上：与 main 的分叉点比较（分支上只改了 CI 文件的后续提交也会再构建，避免上一次构建失败后被「无变化」跳过）；
+          # main 上：与这次 push 之前比较。
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            base="${{ github.event.before }}"
+            if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then base="$(git rev-list --max-parents=0 HEAD | tail -1)"; fi
+          else
+            base="$(git merge-base origin/main HEAD)"
+          fi
+          if git diff --name-only "$base" HEAD | grep -qE '^(src/|drizzle/|Dockerfile$|\.dockerignore$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|next\.config\.ts$|tsconfig\.json$|drizzle\.config\.ts$)'; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"; echo "应用路径没有变化，跳过镜像构建"
+          fi
+      - name: 构建镜像（标签 = git 短 sha）
+        if: steps.changed.outputs.build == 'true'
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse --short=12 HEAD)"
+          image="$REGISTRY/$NAMESPACE/$REPO"
+          docker build -t "$image:$sha" .
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then docker tag "$image:$sha" "$image:main-latest"; fi
+          echo "IMAGE=$image" >> "$GITHUB_ENV"; echo "SHA=$sha" >> "$GITHUB_ENV"
+      - name: 冒烟：以生产配置路径启动容器（不连数据库，不发短信）
+        if: steps.changed.outputs.build == 'true'
+        run: |
+          set -euo pipefail
+          # NODE_ENV=production 在镜像里已设置：这一步同时验证「生产配置解析 + next start + 非 root + 镜像里没有测试文件」
+          docker run -d --name smoke -p 3000:3000 \
+            -e HBECHO_DATABASE_URL="mysql://u:p@127.0.0.1:1/x" -e HBECHO_AUTH_SECRET="$(openssl rand -hex 32)" \
+            -e HBECHO_PUBLIC_ORIGIN="https://smoke.invalid" -e HBECHO_SMS_MODE=aliyun -e HBECHO_SMS_DAILY_CAP=1 -e HBECHO_TRUSTED_PROXIES=127.0.0.1 \
+            -e HBECHO_SMS_ACCESS_KEY_ID=x -e HBECHO_SMS_ACCESS_KEY_SECRET=x -e HBECHO_SMS_SIGN_NAME=x \
+            -e HBECHO_SMS_TEMPLATE_ACTIVATE=x -e HBECHO_SMS_TEMPLATE_LOGIN=x -e HBECHO_SMS_TEMPLATE_RESET=x \
+            "$IMAGE:$SHA" > /dev/null
+          ok=0
+          for i in $(seq 1 40); do if curl -fsS http://127.0.0.1:3000/api/health; then ok=1; break; fi; sleep 1; done
+          if [ "$ok" != 1 ]; then docker logs smoke | tail -30; exit 1; fi
+          [ "$(docker exec smoke id -un)" = "node" ]
+          [ "$(docker exec smoke find /app/src /app/tests -name '*.test.ts' 2>/dev/null | wc -l)" = "0" ]
+          docker rm -f smoke > /dev/null
+      - name: 推送到 ACR
+        if: steps.changed.outputs.build == 'true'
+        env:
+          ACR_PUSH_PASSWORD: ${{ secrets.ACR_PUSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          echo "$ACR_PUSH_PASSWORD" | docker login --username "hbecho-acr-push@1241086349153033" --password-stdin "$REGISTRY"
+          docker push "$IMAGE:$SHA"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then docker push "$IMAGE:main-latest"; fi
+          echo "已推送 $IMAGE:$SHA" >> "$GITHUB_STEP_SUMMARY"

@@ -1,4 +1,4 @@
-// `pnpm access ...` 的进程入口：组装真实依赖后交给 runAccessCli。
+// `pnpm run access ...` 的进程入口：组装真实依赖后交给 runAccessCli。
 // 环境变量：
 //   HBECHO_DATABASE_URL   必填
 //   HBECHO_ACCESS_ACTOR   需要身份的命令必填：user:<id>（必须是有效用户；角色与范围一律从数据库现算，不接受自行声明）

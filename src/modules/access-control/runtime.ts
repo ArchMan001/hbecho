@@ -8,6 +8,7 @@ import type { AccessAuth } from "./auth-instance";
 import { AccessConfigError, parseAccessConfig, type AccessConfig } from "./config";
 import { FakeSmsSender, type SmsSender } from "./sms";
 import { AliyunSmsSender, createAliyunSmsClient, type AliyunSmsClient } from "./sms-aliyun";
+import { createWebServices, type WebServices } from "./web";
 
 export interface AccessRuntime {
   config: AccessConfig;
@@ -15,6 +16,8 @@ export interface AccessRuntime {
   db: Db;
   auth: AccessAuth;
   sender: SmsSender;
+  /** 页面入口用：认证、用户管理、导入、审计读取与名称补全。 */
+  web: WebServices;
 }
 
 /** 按模式选择发送器。生产（aliyun）缺任一配置在 parseAccessConfig 就已启动失败，不缺省为假发送器（AX-4）。 */
@@ -35,15 +38,16 @@ export function createRuntime(env: Record<string, string | undefined>): AccessRu
   const db = createDb(pool);
   // 日志写 stderr（结构化 JSON）。低风险审计写入失败、全局短信上限告警都经这里出来，运维可以直接抓
   const logger = pino({ name: "access-control" }, pino.destination(2));
+  const clock = { now: () => new Date() };
   const { auth } = assembleAccess({
     db,
     config,
-    clock: { now: () => new Date() },
+    clock,
     sender,
     logger,
     alert: (a) => logger.warn({ alert: a }, "access.alert"),
   });
-  return { config, pool, db, sender, auth };
+  return { config, pool, db, sender, auth, web: createWebServices({ db, clock, auth, logger }) };
 }
 
 const KEY = Symbol.for("hbecho.access-control.runtime");

@@ -18,12 +18,12 @@
 | 环节 | 状态 | 说明 |
 |---|---|---|
 | Mac 开发 | ✅ | 设计基线与探针脚本已就位 |
-| `./scripts/verify.sh` | ✅ | 当前只覆盖密钥、文档链接、文档登记与 spec 结构 |
-| GitHub Actions | ✅ | `ci.yml` 的 `verify` job；无数据库、无构建、无付费调用 |
-| 应用代码 | ❌ | 尚未开始；tracer 0/9 任务 |
-| DDL / 迁移 | ❌ | v2 是文字基线，仓库里没有迁移脚本 |
-| 测试套件 | ❌ | 不存在 |
-| 镜像与镜像仓库 | 🟡 | ACR 经济版已开通并端到端验证（2026-11-10，`server-operations-runbook.md` §1.7/§3.7）；**仍无应用镜像**，镜像链路未启用 |
+| `./scripts/verify.sh` | ✅ | 九步：Node 版本、类型检查、离线单元测试、迁移一致、MySQL 8.4 数据库测试、密钥、文档链接、文档登记、Python 能力服务（2026-11-11 起） |
+| GitHub Actions | ✅ | `ci.yml`：`verify`（MySQL 服务容器上跑 `verify.sh`）+ `image`（应用路径变化时构建镜像 → 生产配置路径容器冒烟 → 推 ACR；稳态约 1.5 分钟，job 超时 30 分钟；首次推送依赖层较慢，原因与对照见 server-operations-runbook §10.3）；无付费调用 |
+| 应用代码 | ✅ | 数据底座 tracer、全量同步、主数据导入、访问控制已合并 `main`；访问控制页面在分支 `b-access-ui` |
+| DDL / 迁移 | ✅ | `drizzle/` 版本化迁移，CI 与本机都在空库上从头执行 |
+| 测试套件 | ✅ | 单元 733、数据库 908（2026-11-11） |
+| 镜像与镜像仓库 | 🟡 | ACR 经济版已开通（ADR-0016）；`Dockerfile`（两阶段、非 standalone）与 CI `image` job 已写；镜像是否已推送、测试 ECS 是否已运行，以 `server-operations-runbook.md` §P6 的记录为准 |
 | 测试 ECS | ✅ | 当前唯一实例 `i-2zef8qpi1d2mldntjgrv`，**就是测试环境** |
 | 生产 ECS | ❌ | **未购买**；当前没有任何生产环境 |
 

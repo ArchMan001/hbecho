@@ -274,6 +274,9 @@ export const userStrategy: ScopeStrategy<UserScopeRef> = {
  * 门店级对象（账号、内容、媒资……凡是带门店的资源）的通用判断：品牌 ∈ brands 且 分公司 ∈ branches，
  * 本人范围还要求对象属于该门店。资源所属域用它组装自己的 ScopeStrategy（B 不替它们注册）。
  * 门店不存在 / 目录不可用 → ScopeUnresolvable（403 + 质量问题），不回退。品牌或门店**停用**不影响读范围（B-D25）。
+ * 注意：本策略只到「门店」粒度。本人范围下它放行**同门店其他专员**的对象，所以不能直接用于「专员名下」的资源
+ * （账号、内容等，验收 F6 要求只含自己专员名下）；那类资源的所属域要在 ref 里带 mediaStaffId 并校验 `scope.self.mediaStaffId`，
+ * 或自己组装策略。B 不替它们注册。
  */
 export function createStoreStrategy(dir: OrgDirectory): ScopeStrategy<{ storeId: bigint }> {
   return {
@@ -320,7 +323,12 @@ export interface PredicateContext {
  * `monitoring_level` 谓词的标准体（PRD：经销商级监控开关只有超管）。ref 形如 `{ level: "dealer" | "store" | "account" }`。
  * 谓词体按设计由资源所属域注册，这里提供 B 定义的语义，所属域直接用，不必各写一份。
  */
-export const monitoringLevelPredicate: ResourcePredicate = (ctx, ref) => (ref as { level?: string } | null)?.level !== "dealer" || ctx.platformAdmin;
+export const monitoringLevelPredicate: ResourcePredicate = (ctx, ref) => {
+  // 缺 ref / 缺 level / 未知 level 一律不成立（fail-closed）：调用方漏传 level 不能让非超管越过经销商级开关
+  const level = (ref as { level?: unknown } | null)?.level;
+  if (level === "dealer") return ctx.platformAdmin;
+  return level === "store" || level === "account";
+};
 
 export class AccessRegistry {
   private readonly strategies = new Map<ResourceKey, ScopeStrategy<never>>();

@@ -34,7 +34,10 @@ const once = async () => {
   if (running) return; // 上一轮还没结束就跳过，避免重叠
   running = true;
   try {
-    logger.info(await runMaintenance(deps, { slow: tick % SLOW_EVERY === 0 }), "learning_maintenance");
+    const report = await runMaintenance(deps, { slow: tick % SLOW_EVERY === 0 });
+    // 有步骤失败按错误级别记（运维靠它发现 VOD / OSS 不可用），否则一行 info
+    if (report.errors.length > 0) logger.error(report, "learning_maintenance_errors");
+    else logger.info(report, "learning_maintenance");
   } catch (e) {
     logger.error({ err: e instanceof Error ? e.name : typeof e }, "learning.maintenance_failed");
   } finally {

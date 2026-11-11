@@ -6,7 +6,7 @@ import { z } from "zod";
 import { brands, courseBrandScopes, courses, courseTags, tags } from "../../db/schema";
 import type { AuthContext } from "../access-control";
 import { assertKeysFree, audienceInput, brandScopeInput, descriptionInput, parseOrThrow, resolveBrands, resolveTags, tagIdsInput, titleInput, verifyAll } from "./course-common";
-import { authorizeOrThrow, requireUser, type LearningDeps } from "./deps";
+import { authorizeOrThrow, requireUser, writeAudit, type LearningDeps, type PendingAudit } from "./deps";
 import { LearningError, mysqlErrorCode } from "./errors";
 import { parseId } from "./ids";
 import { enqueueDeletion, processDeletions } from "./media-deletions";
@@ -166,11 +166,9 @@ async function lock(deps: LearningDeps, ctx: AuthContext, tx: Tx, courseId: bigi
   return { course: c, brandIds };
 }
 
-function audit(deps: LearningDeps, ctx: AuthContext, tx: Tx, eventType: string, courseId: bigint, detail: Record<string, unknown>) {
-  return deps.audit.write(
-    { actor: ctx.actor, actorUserId: ctx.userId, eventType, outcome: "succeeded", reasonCode: eventType.replace(/^learning_/, ""), targetType: "course", targetId: courseId.toString(), detail },
-    { tx, risk: "high" },
-  );
+/** 审计事件在事务里只构造、不写；提交之后由 writeAudit 低风险写入（G-D24：审计失败不阻断业务）。 */
+function auditEvent(ctx: AuthContext, eventType: string, courseId: bigint, detail: Record<string, unknown>): PendingAudit {
+  return { actor: ctx.actor, actorUserId: ctx.userId, eventType, outcome: "succeeded", reasonCode: eventType.replace(/^learning_/, ""), targetType: "course", targetId: courseId.toString(), detail };
 }
 
 /** 提交后立即尝试一次删除；失败留在队列里按退避重试。 */
@@ -197,10 +195,13 @@ export async function updateCourse(deps: LearningDeps, ctx: AuthContext, rawId: 
   const courseId = parseId(rawId, "courseId");
   await authorizeOrThrow(deps, ctx, CAP_MANAGE);
   const patch = parseOrThrow(patchInput, raw);
-  await loadManageable(deps, ctx, courseId); // 先确认存在与范围，再做昂贵校验
+  const current = await loadManageable(deps, ctx, courseId); // 先确认存在与范围，再做昂贵校验
 
   const scope = patch.brandScope ? await resolveBrands(deps, ctx, patch.brandScope) : null;
   const tagIds = patch.tagIds ? await resolveTags(deps, patch.tagIds) : null;
+  // 原样回传当前封面不是错误（表单可能整体提交）：当作没改，不去校验也不报「已被使用」
+  if (patch.coverKey === current.course.coverKey) delete patch.coverKey;
+  if (Object.keys(patch).length === 0) return { changed: [] };
   if (patch.coverKey !== undefined) {
     const uploads = [{ slot: "cover" as const, key: patch.coverKey }];
     await assertKeysFree(deps, uploads);
@@ -255,10 +256,9 @@ export async function updateCourse(deps: LearningDeps, ctx: AuthContext, rawId: 
         await enqueueDeletion(tx, deps, { kind: "oss_object", id: c.coverKey }, "replaced", courseId);
         note("coverKey", c.coverKey, patch.coverKey);
       }
-      if (changed.length === 0) return { changed, title: null as string | null, vodVideoId: null as string | null };
+      if (changed.length === 0) return { changed, title: null as string | null, vodVideoId: null as string | null, event: null as PendingAudit | null };
       await tx.update(courses).set(set).where(eq(courses.courseId, courseId));
-      await audit(deps, ctx, tx, "learning_course_updated", courseId, { changed, before, after });
-      return { changed, title: set.title ?? null, vodVideoId: c.vodVideoId };
+      return { changed, title: set.title ?? null, vodVideoId: c.vodVideoId, event: auditEvent(ctx, "learning_course_updated", courseId, { changed, before, after }) };
     });
   } catch (e) {
     if (mysqlErrorCode(e) === "ER_DUP_ENTRY") throw new LearningError("conflict", "file_already_used", "这个文件已被其他课程使用");
@@ -266,6 +266,7 @@ export async function updateCourse(deps: LearningDeps, ctx: AuthContext, rawId: 
     if (patch.coverKey !== undefined) await deps.store.delete(patch.coverKey).catch(() => undefined); // 没换成：新封面不留
     throw e;
   }
+  if (result.event) await writeAudit(deps, [result.event]);
   if (result.title && result.vodVideoId) {
     // G-D36：标题同步到 VOD，尽力而为；失败不影响保存，留一条记录
     await deps.vod.updateTitle(result.vodVideoId, result.title).catch(() =>
@@ -286,14 +287,15 @@ export async function unpublishCourse(deps: LearningDeps, ctx: AuthContext, rawI
   requireUser(ctx);
   const courseId = parseId(rawId, "courseId");
   await authorizeOrThrow(deps, ctx, CAP_MANAGE);
-  return deps.db.transaction(async (tx) => {
+  const event = await deps.db.transaction(async (tx) => {
     const { course: c } = await lock(deps, ctx, tx, courseId);
-    if (c.status === "unpublished") return { changed: false };
+    if (c.status === "unpublished") return null;
     const now = deps.clock.now();
     await tx.update(courses).set({ status: "unpublished", unpublishedAt: now, updatedAt: now }).where(eq(courses.courseId, courseId));
-    await audit(deps, ctx, tx, "learning_course_unpublished", courseId, { title: c.title });
-    return { changed: true };
+    return auditEvent(ctx, "learning_course_unpublished", courseId, { title: c.title });
   });
+  if (event) await writeAudit(deps, [event]);
+  return { changed: event !== null };
 }
 
 /** 下架 30 天内可重新上架，进度继续使用；满 30 天（或已归档）不可上架。 */
@@ -301,16 +303,17 @@ export async function republishCourse(deps: LearningDeps, ctx: AuthContext, rawI
   requireUser(ctx);
   const courseId = parseId(rawId, "courseId");
   await authorizeOrThrow(deps, ctx, CAP_MANAGE);
-  return deps.db.transaction(async (tx) => {
+  const event = await deps.db.transaction(async (tx) => {
     const { course: c } = await lock(deps, ctx, tx, courseId);
-    if (c.status === "published") return { changed: false };
+    if (c.status === "published") return null;
     const now = deps.clock.now();
     // 满 30 天但归档任务还没跑到：同样不可上架（媒体马上会被删）
     if (!c.unpublishedAt || now.getTime() - c.unpublishedAt.getTime() >= ARCHIVE_AFTER_MS) throw new LearningError("conflict", "archive_due", "课程下架已满 30 天，不能再上架");
     await tx.update(courses).set({ status: "published", unpublishedAt: null, updatedAt: now }).where(eq(courses.courseId, courseId));
-    await audit(deps, ctx, tx, "learning_course_republished", courseId, { title: c.title });
-    return { changed: true };
+    return auditEvent(ctx, "learning_course_republished", courseId, { title: c.title });
   });
+  if (event) await writeAudit(deps, [event]);
+  return { changed: event !== null };
 }
 
 // ---- 替换文件 ---------------------------------------------------------------------------------------------
@@ -326,19 +329,21 @@ export async function replaceDocumentFile(deps: LearningDeps, ctx: AuthContext, 
   const uploads = [{ slot: "doc" as const, key: fileKey }];
   await assertKeysFree(deps, uploads);
   const v = (await verifyAll(deps, uploads)).doc!;
+  let event: PendingAudit | undefined;
   try {
     await deps.db.transaction(async (tx) => {
       const { course: c } = await lock(deps, ctx, tx, courseId);
       if (c.kind !== "document" || !c.fileKey) throw new LearningError("conflict", "wrong_kind", "这不是资料课程");
       await tx.update(courses).set({ fileKey, fileMime: v.mime, fileSize: v.size, updatedAt: deps.clock.now() }).where(eq(courses.courseId, courseId));
       await enqueueDeletion(tx, deps, { kind: "oss_object", id: c.fileKey }, "replaced", courseId);
-      await audit(deps, ctx, tx, "learning_course_file_replaced", courseId, { kind: "document", oldFileId: c.fileKey, newFileId: fileKey, fileMime: v.mime, fileSize: v.size });
+      event = auditEvent(ctx, "learning_course_file_replaced", courseId, { kind: "document", oldFileId: c.fileKey, newFileId: fileKey, fileMime: v.mime, fileSize: v.size });
     });
   } catch (e) {
     if (mysqlErrorCode(e) === "ER_DUP_ENTRY") throw new LearningError("conflict", "file_already_used", "这个文件已被其他课程使用");
     await deps.store.delete(fileKey).catch(() => undefined);
     throw e;
   }
+  if (event) await writeAudit(deps, [event]);
   await flushDeletions(deps);
 }
 
@@ -365,12 +370,14 @@ export async function replaceVideoFile(deps: LearningDeps, ctx: AuthContext, raw
     await deps.vod.deleteVideo(videoId).catch(() => undefined);
     throw new LearningError("input", "video_too_large", "视频超出时长或大小上限");
   }
+  let event: PendingAudit | undefined;
   await deps.db.transaction(async (tx) => {
     const { course: c } = await lock(deps, ctx, tx, courseId);
     if (c.kind !== "video" || !c.vodVideoId) throw new LearningError("conflict", "wrong_kind", "这不是视频课程");
     await tx.update(courses).set({ vodVideoId: videoId, vodVideoStatus: info.status, durationSec: info.durationSec, updatedAt: deps.clock.now() }).where(eq(courses.courseId, courseId));
     await enqueueDeletion(tx, deps, { kind: "vod_video", id: c.vodVideoId }, "replaced", courseId);
-    await audit(deps, ctx, tx, "learning_course_file_replaced", courseId, { kind: "video", oldFileId: c.vodVideoId, newFileId: videoId, vodVideoStatus: info.status });
+    event = auditEvent(ctx, "learning_course_file_replaced", courseId, { kind: "video", oldFileId: c.vodVideoId, newFileId: videoId, vodVideoStatus: info.status });
   });
+  if (event) await writeAudit(deps, [event]);
   await flushDeletions(deps);
 }

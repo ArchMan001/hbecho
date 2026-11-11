@@ -25,6 +25,7 @@ describe("转码回填", () => {
     const gone = "a".repeat(32);
     const flaky = e.vod.add({ status: "transcoding", durationSec: null });
     const mk = (v: string) => e.insertCourse({ kind: "video", vodVideoId: v, vodVideoStatus: "transcoding", fileKey: null, fileMime: null, fileSize: null });
+    const alerts: unknown[] = [];
     const [a, b, c] = [await mk(ok), await mk(gone), await mk(flaky)];
     e.vod.videos.get(ok)!.status = "normal";
     e.vod.videos.get(ok)!.durationSec = 321;
@@ -35,11 +36,13 @@ describe("转码回填", () => {
       if (id === flaky) throw new Error("vod down");
       return origGet(id);
     };
-    expect(await refreshVideoStatuses(e.deps)).toEqual({ checked: 3, changed: 2 });
+    expect(await refreshVideoStatuses({ ...e.deps, alert: (a) => void alerts.push(a) })).toEqual({ checked: 3, changed: 2, failed: 1 });
+    expect(alerts).toEqual([{ code: "video_status_check_failed", failed: 1 }]); // 查不到的不再静默
     expect(await rowOf(a)).toMatchObject({ vodVideoStatus: "normal", durationSec: 321 });
     expect(await rowOf(b)).toMatchObject({ vodVideoStatus: "failed" });
     expect(await rowOf(c)).toMatchObject({ vodVideoStatus: "transcoding" });
-    expect(await refreshVideoStatuses(e.deps)).toEqual({ checked: 1, changed: 0 }); // 只剩还在转码的
+    e.vod.getVideo = origGet; // VOD 恢复
+    expect(await refreshVideoStatuses(e.deps)).toEqual({ checked: 1, changed: 0, failed: 0 }); // 只剩还在转码的那个：VOD 恢复后不再算失败
   });
 });
 
@@ -170,18 +173,46 @@ describe("残渣清理（I1、I2）", () => {
 });
 
 describe("一轮维护", () => {
-  it("每步独立：VOD 列表失败不影响归档与删除重试；慢任务按 slow 开关", async () => {
+  it("每步独立：VOD 列表失败不影响归档与删除重试；慢任务按 slow 开关；失败进报告并告警（不再静默）", async () => {
+    const alerts: unknown[] = [];
+    const deps = { ...e.deps, alert: (x: unknown) => void alerts.push(x) } as typeof e.deps;
     const admin = await e.actor("platform_admin");
     const id = await e.insertCourse({});
     await unpublishCourse(e.deps, admin, id.toString());
     e.env.clock.advance(ARCHIVE_AFTER_MS + H);
     e.vod.failNext.listVideosBefore = 1;
-    const fast = await runMaintenance(e.deps, { slow: false });
+    const fast = await runMaintenance(deps, { slow: false });
     expect(fast.archive).toBeUndefined();
+    expect(fast.errors).toEqual([]);
     expect((await rowOf(id)).status).toBe("unpublished");
-    const slow = await runMaintenance(e.deps, { slow: true });
+    const slow = await runMaintenance(deps, { slow: true });
     expect(slow.archive).toEqual({ archived: 1 });
-    expect(slow.orphans).toBeUndefined(); // 列 VOD 失败（上面注入的那一次被 fast 轮没消耗，在这里消耗）
+    expect(slow.orphans).toBeUndefined();
+    expect(slow.errors).toEqual([{ step: "sweep_orphans", error: "Error" }]);
+    expect(alerts).toEqual([{ code: "maintenance_step_failed", step: "sweep_orphans", error: "Error" }]);
     expect(slow.deletions.done).toBe(2); // 归档课程的资料文件与封面在同一轮里被删除
+  });
+
+  it("适配器抛出的、只带错误码的信息会进报告；其它错误只留类型名，不带原文", async () => {
+    e.vod.listVideosBefore = async () => {
+      throw new Error("VOD GetVideoList 失败（Throttling.User）");
+    };
+    const r1 = await runMaintenance(e.deps, { slow: true });
+    expect(r1.errors).toEqual([{ step: "sweep_orphans", error: "VOD GetVideoList 失败（Throttling.User）" }]);
+    e.vod.listVideosBefore = async () => {
+      throw new Error("Access denied for user 'x'@'10.0.0.1' password=secret");
+    };
+    const r2 = await runMaintenance(e.deps, { slow: true });
+    expect(JSON.stringify(r2.errors)).not.toContain("secret");
+  });
+
+  it("审计写不进去也不能让课程永远归档不了（G-D24）", async () => {
+    const admin = await e.actor("platform_admin");
+    const id = await e.insertCourse({});
+    await unpublishCourse(e.deps, admin, id.toString());
+    e.env.clock.advance(ARCHIVE_AFTER_MS + H);
+    const broken = { ...e.deps, audit: { write: async () => Promise.reject(new Error("audit down")) } } as typeof e.deps;
+    expect(await archiveDue(broken)).toEqual({ archived: 1 });
+    expect((await rowOf(id)).status).toBe("archived");
   });
 });

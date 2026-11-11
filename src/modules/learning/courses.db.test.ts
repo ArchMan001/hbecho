@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { SAMPLE } from "../../../tests/harness/fake-course-store";
 import { useTestDb } from "../../../tests/harness/db";
 import { auditOf, learningEnv, type LearningEnv } from "../../../tests/harness/learning";
-import { courseBrandScopes, courses, courseTags } from "../../db/schema";
-import { AuditWriteError, type AuthContext } from "../access-control";
+import { auditEvents, courseBrandScopes, courses, courseTags, tags } from "../../db/schema";
+import { AuditWriteError, createAuditWriter, type AuthContext } from "../access-control";
 import { createDocumentCourse, requestUpload } from "./courses";
 import { LearningError } from "./errors";
 import { listCourses, parseListQuery } from "./read";
@@ -228,14 +228,47 @@ describe("上传校验（G-5）：失败就删对象、不建行", () => {
   });
 });
 
-describe("失败不留残渣", () => {
-  it("审计写入失败 → 整个创建回滚（课程、品牌范围、标签引用都没有），对象删除", async () => {
+describe("审计尽力而为（G-D24、acceptance I3）", () => {
+  it("I3：审计写入失败 → 业务照常成功，对象保留，并触发告警", async () => {
     const b = await base();
-    const deps = { ...e.deps, audit: { write: async () => Promise.reject(new AuditWriteError("注入的审计写入失败")) } };
-    await expect(createDocumentCourse(deps, admin, { ...b, brandScope: { brandIds: [e.org.hisense.toString()] } })).rejects.toBeInstanceOf(AuditWriteError);
+    const alerts: unknown[] = [];
+    const deps = { ...e.deps, audit: { write: async () => Promise.reject(new AuditWriteError("注入的审计写入失败")) }, alert: (a: unknown) => void alerts.push(a) };
+    const { courseId } = await createDocumentCourse(deps, admin, { ...b, brandScope: { brandIds: [e.org.hisense.toString()] } });
+    expect((await t.db.select().from(courses)).map((c) => c.courseId.toString())).toEqual([courseId]);
+    expect(await t.db.select().from(courseBrandScopes)).toHaveLength(1);
+    expect(await t.db.select().from(courseTags)).toHaveLength(1);
+    expect(e.store.deleted).toEqual([]); // 课程已建，文件不能删
+    expect(alerts).toEqual([{ code: "audit_write_failed", eventType: "learning_course_created" }]);
+  });
+
+  it("I3（真实审计写入器）：audit_events 写不进去 → 业务成功，写入器记错误日志并累加失败计数", async () => {
+    const logged: unknown[] = [];
+    const brokenDb = new Proxy(t.db, { get: (target, prop, r) => (prop === "insert" ? (table: unknown) => (table === auditEvents ? { values: () => { throw new Error("audit table down"); } } : target.insert(table as never)) : Reflect.get(target, prop, r)) }) as typeof t.db;
+    const audit = createAuditWriter({ db: brokenDb, clock: e.env.clock, logger: { error: (...a: unknown[]) => void logged.push(a) } as never });
+    const b = await base();
+    await createDocumentCourse({ ...e.deps, audit }, admin, b);
+    expect(await t.db.select().from(courses)).toHaveLength(1);
+    expect(audit.lowRiskFailures()).toBe(1);
+    expect(JSON.stringify(logged)).toContain("audit.low_risk_write_failed");
+  });
+});
+
+describe("失败不留残渣", () => {
+  it("事务内失败（引用在校验后被改动）→ 不建行，已通过校验的对象删除", async () => {
+    const b = await base();
+    // 校验之后、提交之前标签被删：外键拒绝，整体回滚
+    const real = e.deps.db;
+    const racing = new Proxy(real, {
+      get: (target, prop, r) =>
+        prop === "transaction"
+          ? async (fn: never) => {
+              await t.db.delete(tags);
+              return (target.transaction as never as (f: never) => Promise<unknown>)(fn);
+            }
+          : Reflect.get(target, prop, r),
+    }) as typeof real;
+    await fails(createDocumentCourse({ ...e.deps, db: racing }, admin, b), 409, "reference_changed");
     expect(await t.db.select().from(courses)).toEqual([]);
-    expect(await t.db.select().from(courseBrandScopes)).toEqual([]);
-    expect(await t.db.select().from(courseTags)).toEqual([]);
     expect([...e.store.deleted].sort()).toEqual([b.coverKey, b.fileKey].sort());
   });
 });

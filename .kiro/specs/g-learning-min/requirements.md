@@ -2,11 +2,11 @@
 
 > **状态**：`draft`
 > **模式**：Design-First
-> **实现状态**：仅定义可验收需求；尚未执行 `tasks.md`
-> **上游 PRD**：[`prd-domain-g-learning.md`](../../../HBECHO设计方案/prd-domain-g-learning.md) v1.0.1（2026-11-04）
+> **实现状态**：`tasks.md` 任务 1–12 与页面任务已实现（2026-11-11，分支 `g-learning-min`）；未验证的部分见 `tasks.md` 与 `acceptance.md` 的环境依赖项
+> **上游 PRD**：[`prd-domain-g-learning.md`](../../../HBECHO设计方案/prd-domain-g-learning.md) v1.0.2（2026-11-11）
 > **所属域**：G 学习平台 · **目录命名**：新名 `g-learning-min`，符合 `<代号>-<切片>`
-> **最近核对**：2026-11-04（已按 G v1.0.1 对齐 G-D41 / G-D44 / G-D47；ADR-0007 的偏差仍见文末附录）
-> **更新日期**：2026-11-04
+> **最近核对**：2026-11-11（G-D48 封面必填已吸收；此前 2026-11-04 已按 G v1.0.1 对齐 G-D41 / G-D44 / G-D47；ADR-0007 的偏差仍见文末附录）
+> **更新日期**：2026-11-11
 
 ## 1. Introduction
 

@@ -7,7 +7,7 @@ import { z } from "zod";
 import { courseBrandScopes, courses, courseTags } from "../../db/schema";
 import type { AuthContext } from "../access-control";
 import { assertKeysFree, audienceInput, brandScopeInput, descriptionInput, maxBytesOf, parseOrThrow, resolveBrands, resolveTags, tagIdsInput, titleInput, verifyAll } from "./course-common";
-import { authorizeOrThrow, requireUser, type LearningDeps } from "./deps";
+import { authorizeOrThrow, requireUser, writeAudit, type LearningDeps, type PendingAudit } from "./deps";
 import { LearningError, mysqlErrorCode } from "./errors";
 import { mimeAllowed, newKey, type UploadSlot } from "./files";
 import type { VodUploadTicket } from "./vod";
@@ -80,7 +80,8 @@ async function insertCourse(
   row: Partial<typeof courses.$inferInsert> & Pick<typeof courses.$inferInsert, "kind">,
   audit: Record<string, unknown>,
 ): Promise<string> {
-  return deps.db.transaction(async (tx) => {
+  let event: PendingAudit | undefined;
+  const courseId = await deps.db.transaction(async (tx) => {
     const now = deps.clock.now();
     const [r] = await tx.insert(courses).values({
       title: c.title,
@@ -97,8 +98,7 @@ async function insertCourse(
     const courseId = BigInt(r.insertId);
     if (scope.brandIds.length) await tx.insert(courseBrandScopes).values(scope.brandIds.map((brandId) => ({ courseId, brandId })));
     await tx.insert(courseTags).values(scope.tagIds.map((tagId) => ({ courseId, tagId })));
-    await deps.audit.write(
-      {
+    event = {
         actor: ctx.actor,
         actorUserId: userId,
         eventType: "learning_course_created",
@@ -116,11 +116,11 @@ async function insertCourse(
           coverKey: c.coverKey,
           ...audit,
         },
-      },
-      { tx, risk: "high" },
-    );
+    };
     return courseId.toString();
   });
+  if (event) await writeAudit(deps, [event]);
+  return courseId;
 }
 
 export async function createDocumentCourse(deps: LearningDeps, ctx: AuthContext, raw: unknown): Promise<{ courseId: string }> {

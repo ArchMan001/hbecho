@@ -7,6 +7,13 @@ import { LearningError } from "./errors";
 import type { CourseObjectStore } from "./store";
 import type { VodClient } from "./vod";
 
+/** 需要人知道的事。只带类型、标识与计数，不带内容 / 凭证。 */
+export type LearningAlert =
+  | { code: "media_deletion_stuck"; targetKind: string; targetId: string; attempts: number }
+  | { code: "audit_write_failed"; eventType: string }
+  | { code: "maintenance_step_failed"; step: string; error: string }
+  | { code: "video_status_check_failed"; failed: number };
+
 export interface LearningDeps {
   db: Db;
   clock: Clock;
@@ -17,7 +24,7 @@ export interface LearningDeps {
   vod: VodClient;
   config: LearningConfig;
   /** 需要人知道的事（删除卡住等）；缺省不告警。只传类型与标识，不传内容。 */
-  alert?: (e: { code: "media_deletion_stuck"; targetKind: string; targetId: string; attempts: number }) => void;
+  alert?: (e: LearningAlert) => void;
 }
 
 /** 学习功能只给用户身份：服务身份不能把课程内容交给某个人。返回用户 ID。 */
@@ -35,4 +42,20 @@ export async function authorizeOrThrow(
 ): Promise<void> {
   const d = await deps.authorizer.authorize(ctx, { capability, ...(resource ? { resource } : {}) });
   if (!d.ok) throw new LearningError("authorization", d.reason, "没有权限执行这个操作");
+}
+
+export type PendingAudit = Parameters<AuditWriter["write"]>[0];
+
+/**
+ * 审计尽力而为（G-D24、acceptance I3）：业务事务**提交之后**再写，低风险——失败只记日志与计数并告警，不阻断业务。
+ * 代价（PRD §6.7 已接受）：进程在提交与写审计之间崩溃会出现「有变更、无审计」。
+ */
+export async function writeAudit(deps: Pick<LearningDeps, "audit" | "alert">, events: readonly PendingAudit[]): Promise<void> {
+  for (const e of events) {
+    try {
+      await deps.audit.write(e, { risk: "low" });
+    } catch {
+      deps.alert?.({ code: "audit_write_failed", eventType: e.eventType });
+    }
+  }
 }

@@ -5,7 +5,7 @@
 //   sweepOrphans          无引用超过 24 小时的 VOD 视频与 OSS 对象 → 入队删除
 import { and, eq, inArray, isNotNull, lte } from "drizzle-orm";
 import { courses, courseMediaDeletions } from "../../db/schema";
-import type { LearningDeps } from "./deps";
+import { writeAudit, type LearningDeps, type PendingAudit } from "./deps";
 import { ARCHIVE_AFTER_MS } from "./manage";
 import { enqueueDeletion, processDeletions, type DeletionRun } from "./media-deletions";
 
@@ -13,19 +13,21 @@ export const ORPHAN_AFTER_MS = 24 * 3600_000;
 export const SYSTEM_ACTOR = "service:learning-worker";
 
 /** 轮询转码中的视频，回填状态与时长。VOD 里已经没有这个视频 → 标记失败（学员侧不可播，维护者可替换）。 */
-export async function refreshVideoStatuses(deps: LearningDeps): Promise<{ checked: number; changed: number }> {
+export async function refreshVideoStatuses(deps: LearningDeps): Promise<{ checked: number; changed: number; failed: number }> {
   const rows = await deps.db
     .select({ id: courses.courseId, vodId: courses.vodVideoId, status: courses.vodVideoStatus, duration: courses.durationSec })
     .from(courses)
     .where(and(eq(courses.kind, "video"), inArray(courses.vodVideoStatus, ["uploading", "transcoding"])))
     .limit(500);
   let changed = 0;
+  let failed = 0;
   for (const r of rows) {
     let info;
     try {
       info = await deps.vod.getVideo(r.vodId!);
     } catch {
-      continue; // 暂时不可用：下一轮再查
+      failed += 1; // 暂时不可用：下一轮再查，但要让人看见（见下面的告警与报告）
+      continue;
     }
     const status = info?.status ?? "failed";
     const duration = info?.durationSec ?? r.duration;
@@ -33,7 +35,8 @@ export async function refreshVideoStatuses(deps: LearningDeps): Promise<{ checke
     await deps.db.update(courses).set({ vodVideoStatus: status, durationSec: duration, updatedAt: deps.clock.now() }).where(eq(courses.courseId, r.id));
     changed += 1;
   }
-  return { checked: rows.length, changed };
+  if (failed > 0) deps.alert?.({ code: "video_status_check_failed", failed });
+  return { checked: rows.length, changed, failed };
 }
 
 /** 下架满 30 天的课程：状态置 archived，视频 / 资料 / 封面入删除队列。进度、汇总、审计、课程行都保留。 */
@@ -46,6 +49,7 @@ export async function archiveDue(deps: LearningDeps): Promise<{ archived: number
     .limit(200);
   let archived = 0;
   for (const { id } of due) {
+    let event: PendingAudit | undefined;
     const done = await deps.db.transaction(async (tx) => {
       const [c] = await tx.select().from(courses).where(eq(courses.courseId, id)).for("update");
       if (!c || c.status !== "unpublished") return false; // 刚被重新上架
@@ -53,13 +57,13 @@ export async function archiveDue(deps: LearningDeps): Promise<{ archived: number
       if (c.vodVideoId) await enqueueDeletion(tx, deps, { kind: "vod_video", id: c.vodVideoId }, "archived", id);
       if (c.fileKey) await enqueueDeletion(tx, deps, { kind: "oss_object", id: c.fileKey }, "archived", id);
       await enqueueDeletion(tx, deps, { kind: "oss_object", id: c.coverKey }, "archived", id);
-      await deps.audit.write(
-        { actor: SYSTEM_ACTOR, eventType: "learning_course_archived", outcome: "succeeded", reasonCode: "course_archived", targetType: "course", targetId: id.toString(), detail: { title: c.title, vodVideoId: c.vodVideoId, fileKey: c.fileKey, coverKey: c.coverKey } },
-        { tx, risk: "high" },
-      );
+      event = { actor: SYSTEM_ACTOR, eventType: "learning_course_archived", outcome: "succeeded", reasonCode: "course_archived", targetType: "course", targetId: id.toString(), detail: { title: c.title, vodVideoId: c.vodVideoId, fileKey: c.fileKey, coverKey: c.coverKey } };
       return true;
     });
-    if (done) archived += 1;
+    if (done) {
+      archived += 1;
+      if (event) await writeAudit(deps, [event]); // 审计写不进去也不能让课程永远归档不了（G-D24）
+    }
   }
   return { archived };
 }
@@ -87,22 +91,40 @@ export async function sweepOrphans(deps: LearningDeps): Promise<{ queued: number
 }
 
 export interface MaintenanceReport {
-  refresh: { checked: number; changed: number };
+  refresh: { checked: number; changed: number; failed: number };
   deletions: DeletionRun;
   archive?: { archived: number };
   orphans?: { queued: number };
+  /** 失败的步骤；空数组表示这一轮没有步骤抛错。worker 看到非空会按错误级别记日志。 */
+  errors: Array<{ step: string; error: string }>;
+}
+
+/** 错误摘要：只留类型与我们自己包装过的、不含凭证的信息（OSS / VOD 适配器的 message 只带错误码）。 */
+function summarize(e: unknown): string {
+  if (e instanceof Error && /^(OSS|VOD) /.test(e.message)) return e.message.slice(0, 120);
+  return e instanceof Error ? e.name : typeof e;
 }
 /** 一轮维护：每轮都做状态回填与删除重试；归档与残渣较慢（列 VOD / OSS），由 `slow` 控制。每步独立，一步抛错不影响后面的。 */
 export async function runMaintenance(deps: LearningDeps, opts: { slow: boolean }): Promise<MaintenanceReport> {
-  const report = { refresh: { checked: 0, changed: 0 }, deletions: { done: 0, failed: 0, stuck: 0 } } as MaintenanceReport;
-  const safe = async <T>(fn: () => Promise<T>): Promise<T | undefined> => fn().catch(() => undefined);
-  report.refresh = (await safe(() => refreshVideoStatuses(deps))) ?? report.refresh;
+  const report: MaintenanceReport = { refresh: { checked: 0, changed: 0, failed: 0 }, deletions: { done: 0, failed: 0, stuck: 0 }, errors: [] };
+  // 一步抛错不影响后面的，但绝不静默：记入报告并告警，否则 VOD / OSS 挂掉时只会看到全 0
+  const step = async <T>(name: string, fn: () => Promise<T>): Promise<T | undefined> => {
+    try {
+      return await fn();
+    } catch (e) {
+      const error = summarize(e);
+      report.errors.push({ step: name, error });
+      deps.alert?.({ code: "maintenance_step_failed", step: name, error });
+      return undefined;
+    }
+  };
+  report.refresh = (await step("refresh_video_status", () => refreshVideoStatuses(deps))) ?? report.refresh;
   if (opts.slow) {
-    const archive = await safe(() => archiveDue(deps));
+    const archive = await step("archive_due", () => archiveDue(deps));
     if (archive) report.archive = archive;
-    const orphans = await safe(() => sweepOrphans(deps));
+    const orphans = await step("sweep_orphans", () => sweepOrphans(deps));
     if (orphans) report.orphans = orphans;
   }
-  report.deletions = (await safe(() => processDeletions(deps))) ?? report.deletions;
+  report.deletions = (await step("process_deletions", () => processDeletions(deps))) ?? report.deletions;
   return report;
 }

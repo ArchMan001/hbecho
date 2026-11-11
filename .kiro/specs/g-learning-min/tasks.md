@@ -5,7 +5,7 @@
 > **需求**：[`requirements.md`](requirements.md)
 > **设计**：[`design.md`](design.md)
 > **所属域**：G 学习平台 · **目录命名**：新名 `g-learning-min`，符合 `<代号>-<切片>`
-> **最近核对**：2026-10-29
+> **最近核对**：2026-11-11
 > **更新日期**：2026-11-11
 
 ## Planning rules

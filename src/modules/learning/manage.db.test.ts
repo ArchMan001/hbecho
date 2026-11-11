@@ -136,6 +136,13 @@ describe("编辑（G-13 审计）", () => {
     expect((await rowOf(id)).coverKey).toBe(next);
   });
 
+  it("原样回传当前封面不是错误：当作没改（表单整体提交时），其余字段照常保存", async () => {
+    const id = await e.insertCourse({ title: "旧", coverKey: "cover/00000000-0000-0000-0000-0000000000b1.png" });
+    expect(await updateCourse(e.deps, admin, id.toString(), { coverKey: "cover/00000000-0000-0000-0000-0000000000b1.png" })).toEqual({ changed: [] });
+    expect(await updateCourse(e.deps, admin, id.toString(), { coverKey: "cover/00000000-0000-0000-0000-0000000000b1.png", title: "新" })).toEqual({ changed: ["title"] });
+    expect(e.store.deleted).toEqual([]);
+  });
+
   it("G-D36：改视频课程标题同步到 VOD；同步失败不影响保存，留一条失败记录", async () => {
     const v = e.vod.add({ title: "旧" });
     const id = await e.insertCourse({ kind: "video", vodVideoId: v, vodVideoStatus: "normal", fileKey: null, fileMime: null, fileSize: null, title: "旧" });

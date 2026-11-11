@@ -43,6 +43,11 @@
 7. **1.0 不开启 VOD 智能审核**：内容是总部自传，审核是额外付费能力，且未验证。
 8. **课程素材与 A 域媒资互不引用**：课程不写 `media_assets`，A 域也不读 VOD。
 
+## 2026-11-11 补记（g-learning-min 实现）
+- 决定 6 的运行期动作清单**不完整**：实现还用到 `GetVideoInfo`（取状态与时长）、`UpdateVideoInfo`（课程改名同步 VOD 标题，G-D36）、`GetVideoList`（残渣清理），已补入清单；`CreateUploadImage`、`GetPlayInfo`、`DeleteStream`、`RefreshUploadVideo` 目前未被调用，保留不动。
+- 课程封面不走 VOD 图片媒资，存 `hbecho-course` 桶（G-D48）。
+- npm 包与播放器的登记见 [ADR-0017](0017-learning-vod-sdk-and-player.md)。
+
 ## 备选与不选原因
 
 | 方案 | 不选原因 |

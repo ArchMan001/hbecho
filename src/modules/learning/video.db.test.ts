@@ -140,13 +140,14 @@ describe("创建视频课程", () => {
     expect(await t.db.select().from(courses).where(eq(courses.vodVideoId, v))).toHaveLength(1);
   });
 
-  it("审计写入失败 → 回滚；封面对象删除，视频留给残渣清理", async () => {
+  it("I3：审计写入失败 → 课程照常建好；封面与视频都保留", async () => {
     const v = e.vod.add({});
     const b = await body(v);
     const deps = { ...e.deps, audit: { write: async () => Promise.reject(new Error("audit down")) } };
-    await expect(createVideoCourse(deps, admin, b, KEY)).rejects.toThrow("audit down");
-    expect(await t.db.select().from(courses)).toEqual([]);
-    expect(e.store.deleted).toEqual([b.coverKey]);
+    const r = await createVideoCourse(deps, admin, b, KEY);
+    expect(r.replayed).toBe(false);
+    expect(await t.db.select().from(courses)).toHaveLength(1);
+    expect(e.store.deleted).toEqual([]);
     expect(e.vod.deleted).toEqual([]);
   });
 });

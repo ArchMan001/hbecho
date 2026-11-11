@@ -2,7 +2,7 @@
 import { asc, count, eq, sql } from "drizzle-orm";
 import { courseTags, tags } from "../../db/schema";
 import type { AuthContext } from "../access-control";
-import { authorizeOrThrow, requireUser, type LearningDeps } from "./deps";
+import { authorizeOrThrow, requireUser, writeAudit, type LearningDeps, type PendingAudit } from "./deps";
 import { LearningError, mysqlErrorCode } from "./errors";
 import { parseId } from "./ids";
 
@@ -44,15 +44,10 @@ export async function createTag(deps: LearningDeps, ctx: AuthContext, rawName: u
   await authorizeOrThrow(deps, ctx, CAP_TAG);
   const name = cleanName(rawName);
   try {
-    return await deps.db.transaction(async (tx) => {
-      const [r] = await tx.insert(tags).values({ name, createdAt: deps.clock.now() });
-      const tagId = BigInt(r.insertId);
-      await deps.audit.write(
-        { actor: ctx.actor, actorUserId: userId, eventType: "learning_tag_created", outcome: "succeeded", reasonCode: "tag_created", targetType: "tag", targetId: tagId.toString(), detail: { name } },
-        { tx, risk: "high" },
-      );
-      return { tagId: tagId.toString(), name };
-    });
+    const [r] = await deps.db.insert(tags).values({ name, createdAt: deps.clock.now() });
+    const tagId = BigInt(r.insertId);
+    await writeAudit(deps, [{ actor: ctx.actor, actorUserId: userId, eventType: "learning_tag_created", outcome: "succeeded", reasonCode: "tag_created", targetType: "tag", targetId: tagId.toString(), detail: { name } }]);
+    return { tagId: tagId.toString(), name };
   } catch (e) {
     if (mysqlErrorCode(e) === "ER_DUP_ENTRY") throw new LearningError("conflict", "tag_exists", "已有同名标签");
     throw e;
@@ -64,17 +59,16 @@ export async function renameTag(deps: LearningDeps, ctx: AuthContext, rawId: unk
   await authorizeOrThrow(deps, ctx, CAP_TAG);
   const tagId = parseId(rawId, "tagId");
   const name = cleanName(rawName);
+  const events: PendingAudit[] = [];
   try {
-    return await deps.db.transaction(async (tx) => {
+    await deps.db.transaction(async (tx) => {
       const [cur] = await tx.select({ name: tags.name }).from(tags).where(eq(tags.tagId, tagId)).for("update");
       if (!cur) throw new LearningError("not_found", "tag_not_found", "标签不存在");
       await tx.update(tags).set({ name }).where(eq(tags.tagId, tagId));
-      await deps.audit.write(
-        { actor: ctx.actor, actorUserId: userId, eventType: "learning_tag_renamed", outcome: "succeeded", reasonCode: "tag_renamed", targetType: "tag", targetId: tagId.toString(), detail: { before: cur.name, after: name } },
-        { tx, risk: "high" },
-      );
-      return { tagId: tagId.toString(), name };
+      events.push({ actor: ctx.actor, actorUserId: userId, eventType: "learning_tag_renamed", outcome: "succeeded", reasonCode: "tag_renamed", targetType: "tag", targetId: tagId.toString(), detail: { before: cur.name, after: name } });
     });
+    await writeAudit(deps, events);
+    return { tagId: tagId.toString(), name };
   } catch (e) {
     if (mysqlErrorCode(e) === "ER_DUP_ENTRY") throw new LearningError("conflict", "tag_exists", "已有同名标签");
     throw e;
@@ -86,16 +80,15 @@ export async function deleteTag(deps: LearningDeps, ctx: AuthContext, rawId: unk
   const userId = requireUser(ctx);
   await authorizeOrThrow(deps, ctx, CAP_TAG);
   const tagId = parseId(rawId, "tagId");
+  const events: PendingAudit[] = [];
   try {
     await deps.db.transaction(async (tx) => {
       const [cur] = await tx.select({ name: tags.name }).from(tags).where(eq(tags.tagId, tagId)).for("update");
       if (!cur) throw new LearningError("not_found", "tag_not_found", "标签不存在");
       await tx.delete(tags).where(eq(tags.tagId, tagId));
-      await deps.audit.write(
-        { actor: ctx.actor, actorUserId: userId, eventType: "learning_tag_deleted", outcome: "succeeded", reasonCode: "tag_deleted", targetType: "tag", targetId: tagId.toString(), detail: { name: cur.name } },
-        { tx, risk: "high" },
-      );
+      events.push({ actor: ctx.actor, actorUserId: userId, eventType: "learning_tag_deleted", outcome: "succeeded", reasonCode: "tag_deleted", targetType: "tag", targetId: tagId.toString(), detail: { name: cur.name } });
     });
+    await writeAudit(deps, events);
   } catch (e) {
     if (mysqlErrorCode(e) === "ER_ROW_IS_REFERENCED_2") {
       const [r] = await deps.db.select({ n: sql<string>`COUNT(*)` }).from(courseTags).where(eq(courseTags.tagId, tagId));

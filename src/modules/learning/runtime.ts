@@ -75,6 +75,6 @@ export function assembleLearning(a: { db: Db; clock: Clock; env: Record<string, 
     store: new OssCourseStore(cfg),
     vod: a.vod ?? lazyVod(cfg),
     config: DEFAULT_LEARNING_CONFIG,
-    alert: (e) => a.logger?.warn({ alert: e }, "learning.alert"),
+    alert: (e) => a.logger?.warn({ alert: e }, "learning_alert"),
   };
 }

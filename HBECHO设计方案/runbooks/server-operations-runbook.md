@@ -87,6 +87,17 @@
 | 38 | 我 | 接 CI 前删除 ACR 公网白名单里的 `127.0.0.1/32`，否则 GitHub Actions 无法推送 | §1.7 |
 | 39 | ✅ 我 | 费用中心确认 ACR 自动续费已生效（2026-11-10，刘学奎） | §1.7 |
 
+### P6 · 应用上线到测试 ECS（2026-11-11）
+
+| # | 谁 | 事项 | 详见 |
+|---|---|---|---|
+| 40 | ✅ 我 | ACR 公网白名单已删除 `127.0.0.1/32`（P5 #38），CI 可推送 | §1.7 |
+| 41 | ✅ Kiro | `hbecho-mysql` 由 8.0.46 换为 **8.4.13**（ADR-0002 基线；数据目录为空库，换前做了逻辑备份 `/data/backup/pre-mysql84-*.sql.gz`）；compose 增加 `--log-bin-trust-function-creators=1`（二进制日志开启时，非 SUPER 的迁移账号创建触发器需要它；本项目触发器是确定性的） | §10.3 |
+| 42 | ✅ Kiro | 应用容器 `hbecho-web`（compose 服务 `web`，镜像 `…/hbecho/app:<git 短 sha>`，只发布 `127.0.0.1:3000`，与 MySQL 同一 compose 网络，库地址用服务名 `mysql`） | §10.3 |
+| 43 | ✅ Kiro | 两个库账号：迁移账号 = `mysql.env` 里的 `MYSQL_USER`（`hbecho` 库全部权限，只在迁移时用，`/data/app/migrate.env`）；运行账号 `hbecho_web`（只有 `SELECT/INSERT/UPDATE/DELETE`，`/data/app/web.env`） | §10.2 |
+| 44 | ✅ Kiro | `echo.hbmarketer.com` 的 nginx 由静态占位页改为反代到 `127.0.0.1:3000`（`X-Forwarded-For` 用 `$remote_addr` 覆盖，`client_max_body_size 12m`，HSTS 一天）；旧配置备份 `/data/backup/echo.hbmarketer.com.conf.bak-20261111`，回滚 = 还原该文件并 `systemctl reload nginx` | §10.7 |
+| 45 | 刘学奎 | 用 `17863267891` 在 `https://echo.hbmarketer.com/activate` 收真实验证码，设置密码，完成首个超管激活 | tasks 实施记录 |
+
 ### 待触发（有前置条件，暂不做）
 
 | 谁 | 事项 | 触发条件 |
@@ -2089,59 +2100,46 @@ vi /data/app/.env
 
 | # | 约束 | 理由 |
 |---|---|---|
-| 1 | 代码只通过 `git pull` 到服务器，不用 tar/scp 覆盖 | 覆盖式部署会留下删除不掉的旧文件，且解包损坏无法察觉（旧项目为此要 `head -1` 验证文件头，那是在治症状） |
+| 1 | 应用只通过 CI 构建、推 ACR 的镜像部署（标签 = git 短 sha），服务器不构建、不用 tar/scp 覆盖代码 | 覆盖式部署会留下删除不掉的旧文件，且解包损坏无法察觉；同一个标签在测试机验证过才会上线（2026-11-11 起；此前这一条写的是 `git pull`） |
 | 2 | 每次部署记录 commit SHA，服务器可回答"当前跑的是哪个提交" | 没有这条，线上行为和代码对不上时无法排查 |
 | 3 | 所有配置从环境变量读，代码里不出现环境相关常量 | endpoint、桶名、开关都要能在不改代码的情况下切换 |
 | 4 | 所有业务端口绑 `127.0.0.1`，对外只经反代 | 减少暴露面 |
 | 5 | 数据库结构变更只走版本化迁移脚本，**禁止手工 `ALTER`** | v2 的语义大量落在 CHECK 与唯一键上，手改表会让线上结构与设计文档静默分叉 |
 | 6 | 迁移脚本必须可在空库上从头执行一遍得到相同结构 | 这是"结构以仓库为准"的验证方式 |
-| 7 | `/data/app/.env` 不在仓库里，也不随部署覆盖 | 密钥与代码分离 |
+| 7 | `/data/app/web.env`、`/data/app/migrate.env`（root 600）不在仓库里，也不随部署覆盖 | 密钥与代码分离（测试 ECS 的实际文件名；`/data/app/.env` 现在只放 `WEB_TAG`） |
 | 8 | 部署不触发任何真实付费供应商调用 | `AIMASTER_ENABLED` 默认 `false`（§8.4） |
 
-### 10.3 部署流程
-
+### 10.3 部署流程（测试 ECS，2026-11-11 实际跑通的步骤；一律经 Workbench，不用 SSH）
 ```bash
-# 本机：确认要发布的提交
-git log --oneline -1
-
-# 服务器
-ssh hbecho '
-  set -euo pipefail
-  cd /data/app/hbecho
-  git fetch --all
-  git checkout <目标分支或tag>
-  git pull --ff-only
-  echo "当前提交: $(git rev-parse --short HEAD)"
-'
-
-# 迁移（工具确定后替换为实际命令）
-# ssh hbecho "cd /data/app/hbecho && <迁移命令>"
-
-# 启动/更新服务（编排确定后替换）
-# ssh hbecho "cd /data/app/hbecho && docker compose --env-file /data/app/.env up -d --build"
-
-# 清理悬空镜像，防止磁盘被镜像层吃掉
-ssh hbecho 'docker image prune -f'
+# 0. 本机：确认要发布的提交已推送、CI 的 image job 成功（run 里有「已推送 …:<sha>」）
+git rev-parse --short=12 HEAD
+# 1. 服务器：拉同一个标签（内网域名；pull 账号已登录，§3.7）
+workbench exec -P hbecho -i i-2zef8qpi1d2mldntjgrv -c 'docker pull hbecho-registry-registry-vpc.cn-beijing.cr.aliyuncs.com/hbecho/app:<sha>'
+# 2. 迁移（版本化、可在空库重放；用迁移账号，不用运行账号）
+docker run --rm --network app_default --env-file /data/app/migrate.env <镜像> ./node_modules/.bin/tsx src/db/migrate.ts
+# 3. 切换标签并启动（/data/app/.env 里只有 WEB_TAG=<sha>）
+cd /data/app && echo WEB_TAG=<sha> > .env && docker compose up -d web
+# 4. 首个超管（只在空库做一次；运行账号即可）
+docker run --rm --network app_default --env-file /data/app/web.env <镜像> ./node_modules/.bin/tsx src/worker/access-main.ts token create
+docker run --rm --network app_default --env-file /data/app/web.env <镜像> ./node_modules/.bin/tsx src/worker/access-main.ts bootstrap-superadmin --token <t> --phone <p> --name <n>
+# 5. 清理悬空镜像
+docker image prune -f
 ```
-
-**镜像分发（已就绪，未启用）**：应用镜像将来推 ACR 的 `hbecho/<repo>`，标签 = git 短 sha，服务器用**内网域名**拉取（§1.7、§3.7）。在出现第一个可运行镜像之前不建 CI 镜像 job——跑不起来的流水线只会制造假绿。
+容器里**不经过 pnpm / corepack**（corepack 首次运行会去外网下载 pnpm）：直接调用 `./node_modules/.bin/…`。
+**镜像分发**：CI（GitHub Actions）经公网域名推送，实测约 1 MB/s，所以 `image` job 超时 60 分钟、运行阶段只装生产依赖；服务器经内网域名拉取，几十秒（ADR-0016）。
 
 ### 10.4 部署后必检
 
-1. 服务健康：`<待填写：健康检查端点或命令>`
+1. 服务健康：`curl -s http://127.0.0.1:3000/api/health` 返回 `{"ok":true}`；公网 `https://echo.hbmarketer.com/login` 200 且页脚有备案号；`/users` 未登录 307 到 `/login`
 2. 端口没有意外对外：`ss -tlnp | grep -v 127.0.0.1`（除 22 外不应有公网监听）
 3. OSS endpoint 自检通过（§7.6 的启动断言没有被绕过）
 4. `AIMASTER_ENABLED` 仍是预期值
 5. 磁盘水位：`df -hT /data`
 
 ### 10.5 回滚
-
-```bash
-ssh hbecho 'cd /data/app/hbecho && git checkout <上一个已知good的SHA>'
-# 然后重新执行 §10.3 的启动步骤
-```
-
-代码回滚容易，**数据库迁移回滚不容易**。所以迁移脚本要遵守：能加列不改列，能新增不删除，破坏性变更单独一次上线并提前备份。回滚前先确认目标 SHA 对应的结构与当前库结构兼容。
+- **应用**：把 `/data/app/.env` 的 `WEB_TAG` 改回上一个已知好的 sha，`docker compose up -d web`。
+- **nginx**：还原 `/data/backup/echo.hbmarketer.com.conf.bak-20261111`（静态占位页）并 `systemctl reload nginx`。
+- **数据库**：代码回滚容易，**迁移回滚不容易**。迁移遵守「扩展 → 部署 → 收缩」：能加列不改列，能新增不删除，破坏性变更单独一次上线并提前备份。回滚前先确认目标 sha 对应的结构与当前库结构兼容。
 
 ### 10.6 对外开放的前置条件
 
@@ -2677,7 +2675,7 @@ ssh hbecho 'growpart /dev/<设备> 1 && resize2fs /dev/<设备>p1 && df -h /data
 | 8 | ~~视频/音频归档范围~~ —— 已由 D-29 关闭：按规则圈定范围归档 | — | prd-platform §5.1 |
 | 9 | ~~反代形态（宿主 Nginx or 容器）~~ —— 已由 ADR-0006 关闭：宿主 Nginx | — | ADR-0006 |
 | 10 | 域名与备案主体 | §1.5、§4.3 | 越早查 whois 一致性越好 |
-| 11 | 应用镜像形态（是否 Docker 化、基础镜像、构建上下文） | §10 | 第一个可运行镜像出现时定；ACR 已开通但未启用 |
+| 11 | 应用镜像形态 | §10 | **测试环境已定（2026-11-11）**：Docker 化、`node:24-slim`、两阶段、非 standalone（同一镜像要跑 `tsx` 的迁移与 access CLI）、运行阶段只装生产依赖；**生产环境形态仍未决**（含是否拆出运行镜像与工具镜像，镜像解压后约 900 MB） |
 
 > 2026-10-28 同步：关闭 0、1、2、3、7、8、9 七项，均只标来源、不新增判断。反代形态由 [ADR-0006](../architecture/adr/0006-host-nginx-reverse-proxy.md) 定为宿主 Nginx：配置入仓库、部署脚本同步、证书续期走宿主机。
 
@@ -2758,6 +2756,7 @@ ssh hbecho 'growpart /dev/<设备> 1 && resize2fs /dev/<设备>p1 && df -h /data
 | 2026-11-10 | 待办登记（§P5）：关闭两个子账号控制台访问、接 CI 前删公网白名单 `127.0.0.1/32` | — |
 | 2026-11-10 | 新增 [ADR-0016](../architecture/adr/0016-container-registry.md)：镜像仓库自建 ACR 经济版、不复用 hbdam 实例；同步更新 ADR 索引与 `INDEX.md`（15→16 项） | 刘学奎 / Claude |
 | 2026-11-10 | 刘学奎确认 ACR 自动续费已生效（到期 2026-12-11），§P5 #39 关闭 | 刘学奎 |
+| 2026-11-11 | 测试 ECS 上线应用：`hbecho-mysql` 8.0.46 → 8.4.13（先备份）并加 `--log-bin-trust-function-creators=1`；建 `hbecho_web` 运行账号与迁移账号；`/data/app/web.env`、`migrate.env`（root 600，短信 AccessKey 由本机经 Workbench 上传，只在服务器落盘）；compose 增加 `web` 服务；迁移全部应用；nginx 反代到 `127.0.0.1:3000`；创建待激活的首个超管。镜像 `…/hbecho/app:cd8188516e13` | Kiro（刘学奎同意） |
 
 ### 17.1 当前进度
 

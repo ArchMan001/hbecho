@@ -81,7 +81,7 @@
 
 每个页面归一个业务 spec；页面细节写在该 spec 的 design.md「界面」一节。
 
-**1.0 的页面统一在 `b-access-control`（真实登录）之后排期**（B 的 Module / CLI / 认证端点已于 2026-11-10 实施完成，页面任务现在可以排期）：此前各 spec 先交付 CLI 与 Module（例如 `a-master-data-import`、`a-full-sync`），页面只调用这些 Module，不会返工。下表「状态」全部为**未建**。
+**1.0 的页面统一在 `b-access-control`（真实登录）之后排期**（B 的 Module / CLI / 认证端点已于 2026-11-10 实施完成，页面任务现在可以排期）：此前各 spec 先交付 CLI 与 Module（例如 `a-master-data-import`、`a-full-sync`），页面只调用这些 Module，不会返工。下表中 `b-access-control` 的页面（登录 / 激活 / 忘记密码 / 修改密码、用户列表 / 新建 / 编辑 / 批量导入、审计日志）于 2026-11-11 在分支 `b-access-ui` 建成（未合并），其余仍为**未建**。
 
 | 区域 | 页面 | 业务归属 | 数据来自 | 原型优先级 |
 |---|---|---|---|---|

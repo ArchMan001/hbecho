@@ -55,7 +55,7 @@ hbdam 的实测结论已经排除了 ghcr：北京 ECS 从 ghcr 拉约 4 GB 的�
 - **VPC 配额只有 1**：换绑 VPC 必须先删旧绑定；未来若引入新 VPC（例如生产环境独立 VPC），需要重新评估规格。
 - **域名里有两个 `registry`**：实例名以 `registry` 结尾，产品又追加 `-registry[-vpc]` 后缀，得到 `hbecho-registry-registry…`。实例名创建后不可改，为这个重建实例不值得；所有文档、CI 与命令以控制台显示为准。
 - **凭证**：新增两个 RAM 子账号，纳入 `§8.4` 密钥分级与轮换流程；push 的固定密码进 GitHub Actions secret `ACR_PUSH_PASSWORD`（2026-11-10 已写入），pull 的只在服务器上交互登录。
-- **镜像链路尚未启用**：仓库就绪，但 hbecho 还没有 Dockerfile 与镜像；在第一个可运行镜像出现前不建 CI 镜像 job（`dev-test-deploy-workflow.md` §11）。
+- **镜像链路已启用（2026-11-11 订正）**：`Dockerfile` 与 CI `image` job 已存在，镜像 `…/hbecho/app:<git 短 sha>` 已推送并在测试 ECS 运行（`server-operations-runbook.md` §P6、§10.3）。实测 GitHub runner 经公网域名推送约 1 MB/s，所以 job 超时 60 分钟、镜像采用两阶段构建只装生产依赖；公网白名单的 `127.0.0.1/32` 已于 2026-11-11 删除。形态上是「非 standalone 的 `next start` + `tsx`（迁移与 CLI 共用同一镜像）」，仅测试环境；生产形态仍未决。
 
 ## 它推翻了什么
 

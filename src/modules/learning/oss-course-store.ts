@@ -9,6 +9,7 @@ export interface CourseOssClientLike {
   head(name: string, options?: { timeout?: number }): Promise<{ res: { headers: Record<string, unknown> } }>;
   get(name: string, options?: { headers?: Record<string, string>; timeout?: number }): Promise<{ content?: unknown }>;
   delete(name: string, options?: { timeout?: number }): Promise<unknown>;
+  list(query: { prefix?: string; marker?: string; "max-keys": number }, options?: { timeout?: number }): Promise<{ objects?: Array<{ name: string; lastModified: string }>; isTruncated?: boolean; nextMarker?: string }>;
   signatureUrl(name: string, options?: { expires?: number; method?: string; "Content-Type"?: string; response?: Record<string, string> }): string;
 }
 
@@ -112,6 +113,22 @@ export class OssCourseStore implements CourseObjectStore {
     } catch (e) {
       if (isNotFound(e)) return;
       throw wrap(e, "delete");
+    }
+  }
+
+  async list(prefix: string): Promise<Array<{ key: string; lastModified: Date }>> {
+    const out: Array<{ key: string; lastModified: Date }> = [];
+    let marker: string | undefined;
+    for (;;) {
+      let page: Awaited<ReturnType<CourseOssClientLike["list"]>>;
+      try {
+        page = await this.client.list({ prefix, "max-keys": 1000, ...(marker === undefined ? {} : { marker }) }, { timeout: this.timeoutMs });
+      } catch (e) {
+        throw wrap(e, "list");
+      }
+      for (const o of page.objects ?? []) out.push({ key: o.name, lastModified: new Date(o.lastModified) });
+      if (!page.isTruncated || !page.nextMarker) return out;
+      marker = page.nextMarker;
     }
   }
 }

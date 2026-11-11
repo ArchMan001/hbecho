@@ -41,6 +41,7 @@ const base = async (ctx: AuthContext = admin) => ({
   brandScope: { all: true } as const,
   tagIds: [tagId.toString()],
   fileKey: await upload(ctx, "doc", "application/pdf", SAMPLE.pdf),
+  coverKey: await upload(ctx, "cover", "image/png", SAMPLE.png),
 });
 
 describe("取直传地址", () => {
@@ -75,7 +76,8 @@ describe("创建成功", () => {
   it("C1：保存即发布，学员列表立即可见；全部品牌不写品牌范围行", async () => {
     const { courseId } = await createDocumentCourse(e.deps, admin, await base());
     const [row] = await t.db.select().from(courses);
-    expect(row).toMatchObject({ kind: "document", status: "published", brandScope: "all", audienceLevel: "all", fileMime: "application/pdf", fileSize: SAMPLE.pdf.byteLength, coverKey: null, createdBy: admin.userId });
+    expect(row).toMatchObject({ kind: "document", status: "published", brandScope: "all", audienceLevel: "all", fileMime: "application/pdf", fileSize: SAMPLE.pdf.byteLength, createdBy: admin.userId, unpublishedAt: null });
+    expect(row!.coverKey).toMatch(/^cover\//);
     expect(row!.courseId.toString()).toBe(courseId);
     expect(await t.db.select().from(courseBrandScopes)).toEqual([]);
     expect(await t.db.select().from(courseTags)).toEqual([{ courseId: row!.courseId, tagId }]);
@@ -85,7 +87,7 @@ describe("创建成功", () => {
     expect(list.items.map((i) => i.courseId)).toEqual([courseId]);
   });
 
-  it("指定品牌写品牌范围行；封面可选并同样校验；审计记下关键字段但不含文件内容", async () => {
+  it("指定品牌写品牌范围行；审计记下关键字段但不含文件内容", async () => {
     const cover = await upload(admin, "cover", "image/png", SAMPLE.png);
     const { courseId } = await createDocumentCourse(e.deps, admin, {
       ...(await base()),
@@ -148,7 +150,7 @@ describe("品牌范围与权限（G-2）", () => {
 describe("必填项（G-1）", () => {
   it("缺标题、简介、标签、文件，或字段多余 → 400", async () => {
     const b = await base();
-    for (const bad of [{ title: "  " }, { title: undefined }, { description: "" }, { description: undefined }, { tagIds: [] }, { tagIds: undefined }, { fileKey: undefined }, { audienceLevel: "everyone" }, { kind: "video" }]) {
+    for (const bad of [{ title: "  " }, { title: undefined }, { description: "" }, { description: undefined }, { tagIds: [] }, { tagIds: undefined }, { fileKey: undefined }, { coverKey: undefined }, { audienceLevel: "everyone" }, { kind: "video" }]) {
       await fails(createDocumentCourse(e.deps, admin, { ...b, ...bad }), 400, "invalid_input");
     }
     expect(await t.db.select().from(courses)).toEqual([]);
@@ -234,6 +236,6 @@ describe("失败不留残渣", () => {
     expect(await t.db.select().from(courses)).toEqual([]);
     expect(await t.db.select().from(courseBrandScopes)).toEqual([]);
     expect(await t.db.select().from(courseTags)).toEqual([]);
-    expect(e.store.deleted).toEqual([b.fileKey]);
+    expect([...e.store.deleted].sort()).toEqual([b.coverKey, b.fileKey].sort());
   });
 });

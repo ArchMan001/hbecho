@@ -11,6 +11,9 @@ importers:
       '@alicloud/dysmsapi20170525':
         specifier: 4.6.0
         version: 4.6.0
+      '@alicloud/vod20170321':
+        specifier: 3.12.1
+        version: 3.12.1
       ali-oss:
         specifier: ^6.23.0
         version: 6.23.0
@@ -110,6 +113,9 @@ packages:
 
   '@alicloud/tea-util@1.4.11':
     resolution: {integrity: sha512-HyPEEQ8F0WoZegiCp7sVdrdm6eBOB+GCvGl4182u69LDFktxfirGLcAx3WExUr1zFWkq2OSmBroTwKQ4w/+Yww==}
+
+  '@alicloud/vod20170321@3.12.1':
+    resolution: {integrity: sha512-OKZ1gg+lHjKvU+tqzg/soy+U+fG+8AoDEovPQgbv2OAoHBi8toxSLpUf4U6fbKU9ltLpyFT9MgvlyA+7Q/3tiw==}
 
   '@better-auth/core@1.7.18':
     resolution: {integrity: sha512-GPue1yR24fd+RkCiOpVtdBwtCqkgGHRMGxUL6A11LzUv0JsHA2hnIFEdoxorr9TWO2kJLvYOuUu0vjV9Wxd4AA==}
@@ -2301,6 +2307,15 @@ snapshots:
       '@alicloud/tea-typescript': 1.8.0
       '@darabonba/typescript': 1.0.6
       kitx: 2.2.0
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
+  '@alicloud/vod20170321@3.12.1':
+    dependencies:
+      '@alicloud/openapi-core': 1.0.9
+      '@darabonba/typescript': 1.0.6
     transitivePeerDependencies:
       - bufferutil
       - supports-color

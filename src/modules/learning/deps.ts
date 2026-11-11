@@ -5,6 +5,7 @@ import type { Clock } from "../raw-capture/ports";
 import type { LearningConfig } from "./config";
 import { LearningError } from "./errors";
 import type { CourseObjectStore } from "./store";
+import type { VodClient } from "./vod";
 
 export interface LearningDeps {
   db: Db;
@@ -13,7 +14,10 @@ export interface LearningDeps {
   egress: Egress;
   audit: AuditWriter;
   store: CourseObjectStore;
+  vod: VodClient;
   config: LearningConfig;
+  /** 需要人知道的事（删除卡住等）；缺省不告警。只传类型与标识，不传内容。 */
+  alert?: (e: { code: "media_deletion_stuck"; targetKind: string; targetId: string; attempts: number }) => void;
 }
 
 /** 学习功能只给用户身份：服务身份不能把课程内容交给某个人。返回用户 ID。 */

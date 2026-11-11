@@ -11,4 +11,6 @@ export interface CourseObjectStore {
   signedGetUrl(key: string, ttlSeconds: number, opts?: { downloadName?: string }): Promise<string>;
   /** 幂等：对象不存在也成功。 */
   delete(key: string): Promise<void>;
+  /** 列出前缀下的对象与最后修改时间（残渣清理用）。 */
+  list(prefix: string): Promise<Array<{ key: string; lastModified: Date }>>;
 }

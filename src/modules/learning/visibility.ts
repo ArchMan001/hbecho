@@ -2,7 +2,7 @@
 // 两种形态必须一致：courseVisible（对象判断，给 ScopeStrategy / 出口守卫用）与 visibleSql（查询条件，给列表用），
 // visibility.db.test.ts 用同一组数据逐项对照。
 // 品牌集合与人员级别都来自 B 的 DataScope（brands、level）；本模块不重算组织关系，也不读角色名。
-import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { and, eq, inArray, notInArray, sql, type SQL } from "drizzle-orm";
 import { courseBrandScopes, courses, type AUDIENCE_LEVELS } from "../../db/schema";
 import { constraintOf, isEmptyScope, type DataScope, type ScopeStrategy } from "../access-control";
 
@@ -46,4 +46,19 @@ export function visibleSql(scope: DataScope): SQL {
       ? sql`1 = 1`
       : sql`(${courses.brandScope} = 'all' OR EXISTS (SELECT 1 FROM ${courseBrandScopes} WHERE ${and(eq(courseBrandScopes.courseId, courses.courseId), inArray(courseBrandScopes.brandId, [...scope.brands]))}))`;
   return sql`(${courses.status} = 'published' AND ${inArray(courses.audienceLevel, [...allowedAudience(scope.level)])} AND ${brandCond})`;
+}
+
+// ---- 维护范围（G-D42、PRD §4.5）-------------------------------------------------------------------------------
+// 维护 ≠ 可见：不看状态与适用级别。hq 只能维护「指定品牌完全落在自己授权品牌内」的课，以及「全部品牌」课；平台级维护全部。
+export function canManage(scope: DataScope, ref: Pick<CourseVisibilityRef, "brandScope" | "brandIds">): boolean {
+  if (isEmptyScope(scope)) return false;
+  if (scope.brands === "all" || ref.brandScope === "all") return true;
+  const mine = scope.brands;
+  return ref.brandIds.every((b) => mine.has(b));
+}
+
+export function manageSql(scope: DataScope): SQL {
+  if (isEmptyScope(scope)) return sql`1 = 0`;
+  if (scope.brands === "all") return sql`1 = 1`;
+  return sql`(${courses.brandScope} = 'all' OR NOT EXISTS (SELECT 1 FROM ${courseBrandScopes} WHERE ${and(eq(courseBrandScopes.courseId, courses.courseId), notInArray(courseBrandScopes.brandId, [...scope.brands]))}))`;
 }

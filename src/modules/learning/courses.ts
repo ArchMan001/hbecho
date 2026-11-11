@@ -1,14 +1,16 @@
-// 资料课程创建（OSS 直传，design §4.2、G-1 / G-2 / G-5）。
-// 顺序：取签名地址 → 浏览器直传 → 服务端 HEAD + 读文件头魔数 → 通过才建课程行。
-// 服务端不中转字节；校验失败删除对象、不建行（避免「有记录没文件」，也避免留下伪装的文件）。
-import { inArray, or } from "drizzle-orm";
+// 课程创建（G-1 / G-2 / G-4 / G-5）。
+//   资料：取签名地址 → 浏览器直传 OSS → 服务端 HEAD + 读文件头魔数 → 通过才建课程行（design §4.2）。
+//   视频：取 VOD 上传凭证 → 浏览器直传 VOD → 通知「上传完成」→ 服务端查视频状态 → 建课程行（design §4.1）。
+// 服务端不中转字节；校验失败删对象、不建行（避免「有记录没文件」，也避免留下伪装的文件）。封面所有课程必填（G-D48）。
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { AUDIENCE_LEVELS, brands, courseBrandScopes, courses, courseTags, tags } from "../../db/schema";
+import { courseBrandScopes, courses, courseTags } from "../../db/schema";
 import type { AuthContext } from "../access-control";
+import { assertKeysFree, audienceInput, brandScopeInput, descriptionInput, maxBytesOf, parseOrThrow, resolveBrands, resolveTags, tagIdsInput, titleInput, verifyAll } from "./course-common";
 import { authorizeOrThrow, requireUser, type LearningDeps } from "./deps";
 import { LearningError, mysqlErrorCode } from "./errors";
-import { extOf, hasMagic, keyExt, keyMatches, MAGIC_BYTES_NEEDED, mimeAllowed, newKey, type UploadSlot } from "./files";
-import { parseId } from "./ids";
+import { mimeAllowed, newKey, type UploadSlot } from "./files";
+import type { VodUploadTicket } from "./vod";
 
 const CAP_MANAGE = "learning.manage";
 
@@ -22,8 +24,6 @@ export interface UploadTicket {
   expiresAt: string;
   maxBytes: number;
 }
-
-const maxBytesOf = (deps: LearningDeps, slot: UploadSlot): number => (slot === "doc" ? deps.config.docMaxBytes : deps.config.coverMaxBytes);
 
 export async function requestUpload(deps: LearningDeps, ctx: AuthContext, input: { slot: UploadSlot; mime: string; size: number }): Promise<UploadTicket> {
   requireUser(ctx);
@@ -39,137 +39,178 @@ export async function requestUpload(deps: LearningDeps, ctx: AuthContext, input:
   return { key, uploadUrl, contentType: mime, expiresAt: new Date(deps.clock.now().getTime() + ttl * 1000).toISOString(), maxBytes };
 }
 
+/** 取 VOD 上传凭证：强制 MP4、超限在上传前拒绝（G-D33、G-D44）；模板组由 VodClient 固定传入。 */
+export async function requestVideoUpload(deps: LearningDeps, ctx: AuthContext, input: { title: string; fileName: string; size: number }): Promise<VodUploadTicket & { maxBytes: number }> {
+  requireUser(ctx);
+  await authorizeOrThrow(deps, ctx, CAP_MANAGE);
+  const title = parseOrThrow(titleInput, input.title);
+  if (typeof input.fileName !== "string" || !/\.mp4$/i.test(input.fileName) || input.fileName.length > 200) throw new LearningError("input", "file_type_not_allowed", "视频只支持 MP4 格式（H.264 / AAC）");
+  if (!Number.isSafeInteger(input.size) || input.size <= 0 || input.size > deps.config.videoMaxBytes) throw new LearningError("input", "file_too_large", "视频大小超出上限");
+  try {
+    return { ...(await deps.vod.createUpload({ title, fileName: input.fileName, fileSize: input.size })), maxBytes: deps.config.videoMaxBytes };
+  } catch {
+    // 凭证失败：不建课程行，可重试
+    throw new LearningError("unavailable", "vod_unavailable", "视频服务暂时不可用，请稍后重试");
+  }
+}
+
 // ---- 创建 -------------------------------------------------------------------------------------------------
 
-const createInput = z
-  .object({
-    title: z.string().trim().min(1).max(200),
-    description: z.string().trim().min(1).max(2000),
-    audienceLevel: z.enum(AUDIENCE_LEVELS).default("all"),
-    // 二选一且必选其一（G-2）：{ all: true } 或非空的 { brandIds }
-    brandScope: z.union([z.object({ all: z.literal(true) }).strict(), z.object({ brandIds: z.array(z.string()).min(1).max(100) }).strict()]),
-    tagIds: z.array(z.string()).min(1).max(20),
-    fileKey: z.string(),
-    coverKey: z.string().optional(),
-  })
-  .strict();
-export type CreateDocumentCourseInput = z.input<typeof createInput>;
+const commonFields = {
+  title: titleInput,
+  description: descriptionInput,
+  audienceLevel: audienceInput.default("all"),
+  brandScope: brandScopeInput,
+  tagIds: tagIdsInput,
+  coverKey: z.string(),
+};
+const documentInput = z.object({ ...commonFields, fileKey: z.string() }).strict();
+const videoInput = z.object({ ...commonFields, videoId: z.string().regex(/^[0-9a-fA-F]{32}$/) }).strict();
+export type CreateDocumentCourseInput = z.input<typeof documentInput>;
+export type CreateVideoCourseInput = z.input<typeof videoInput>;
 
-async function verifyUpload(deps: LearningDeps, slot: UploadSlot, key: string): Promise<{ size: number; mime: string }> {
-  const head = await deps.store.head(key);
-  if (!head) throw new LearningError("input", "upload_missing", "没有找到已上传的文件，请重新上传");
-  const mime = head.contentType.split(";")[0]!.trim().toLowerCase();
-  if (!mimeAllowed(slot, mime)) throw new LearningError("input", "file_type_not_allowed", slot === "doc" ? "资料只支持 PDF、JPG、PNG" : "封面只支持 JPG、PNG");
-  if (extOf(mime) !== keyExt(key)) throw new LearningError("input", "file_type_mismatch", "文件类型与上传时声明的不一致");
-  if (head.size <= 0 || head.size > maxBytesOf(deps, slot)) throw new LearningError("input", "file_too_large", "文件超出大小上限");
-  const first = await deps.store.getRange(key, 0, MAGIC_BYTES_NEEDED - 1);
-  if (!first || !hasMagic(mime, first)) throw new LearningError("input", "file_content_mismatch", "文件内容与扩展名不符");
-  return { size: head.size, mime };
+type Common = { title: string; description: string; audienceLevel: string; coverKey: string };
+
+async function insertCourse(
+  deps: LearningDeps,
+  ctx: AuthContext,
+  userId: bigint,
+  c: Common,
+  scope: { allBrands: boolean; brandIds: bigint[]; tagIds: bigint[] },
+  row: Partial<typeof courses.$inferInsert> & Pick<typeof courses.$inferInsert, "kind">,
+  audit: Record<string, unknown>,
+): Promise<string> {
+  return deps.db.transaction(async (tx) => {
+    const now = deps.clock.now();
+    const [r] = await tx.insert(courses).values({
+      title: c.title,
+      description: c.description,
+      status: "published",
+      brandScope: scope.allBrands ? "all" : "specified",
+      audienceLevel: c.audienceLevel,
+      coverKey: c.coverKey,
+      createdBy: userId,
+      createdAt: now,
+      updatedAt: now,
+      ...row,
+    });
+    const courseId = BigInt(r.insertId);
+    if (scope.brandIds.length) await tx.insert(courseBrandScopes).values(scope.brandIds.map((brandId) => ({ courseId, brandId })));
+    await tx.insert(courseTags).values(scope.tagIds.map((tagId) => ({ courseId, tagId })));
+    await deps.audit.write(
+      {
+        actor: ctx.actor,
+        actorUserId: userId,
+        eventType: "learning_course_created",
+        outcome: "succeeded",
+        reasonCode: "course_created",
+        targetType: "course",
+        targetId: courseId.toString(),
+        detail: {
+          title: c.title,
+          kind: row.kind,
+          brandScope: scope.allBrands ? "all" : "specified",
+          brandIds: scope.brandIds.map(String),
+          audienceLevel: c.audienceLevel,
+          tagIds: scope.tagIds.map(String),
+          coverKey: c.coverKey,
+          ...audit,
+        },
+      },
+      { tx, risk: "high" },
+    );
+    return courseId.toString();
+  });
 }
 
 export async function createDocumentCourse(deps: LearningDeps, ctx: AuthContext, raw: unknown): Promise<{ courseId: string }> {
   const userId = requireUser(ctx);
   await authorizeOrThrow(deps, ctx, CAP_MANAGE);
+  const input = parseOrThrow(documentInput, raw);
+  const { allBrands, brandIds } = await resolveBrands(deps, ctx, input.brandScope);
+  const tagIds = await resolveTags(deps, input.tagIds);
 
-  const parsed = createInput.safeParse(raw);
-  if (!parsed.success) {
-    const where = [...new Set(parsed.error.issues.map((i) => i.path.join(".") || "(root)"))].join("、");
-    throw new LearningError("input", "invalid_input", `字段不合法：${where}`);
-  }
-  const input = parsed.data;
-  const allBrands = "all" in input.brandScope;
-  const brandIds = allBrands ? [] : [...new Set((input.brandScope as { brandIds: string[] }).brandIds.map((b) => parseId(b, "brandIds")))];
-  const tagIds = [...new Set(input.tagIds.map((t) => parseId(t, "tagIds")))];
-
-  // 只能勾选自己授权的品牌；「全部品牌」不受此限（G-D08）
-  if (ctx.scope.brands !== "all") {
-    const mine = ctx.scope.brands;
-    if (brandIds.some((b) => !mine.has(b))) throw new LearningError("authorization", "brand_out_of_scope", "不能选择未授权的品牌");
-  }
-  if (brandIds.length) {
-    const found = await deps.db.select({ id: brands.brandId }).from(brands).where(inArray(brands.brandId, brandIds));
-    if (found.length !== brandIds.length) throw new LearningError("input", "brand_not_found", "所选品牌不存在");
-  }
-  const foundTags = await deps.db.select({ id: tags.tagId }).from(tags).where(inArray(tags.tagId, tagIds));
-  if (foundTags.length !== tagIds.length) throw new LearningError("input", "tag_not_found", "所选标签不存在");
-
-  // 客户端回传的 key 必须是本服务签发的形态，且没被别的课程占用（否则校验失败时的删除会误伤别人的文件）
-  const uploads: Array<{ slot: UploadSlot; key: string }> = [{ slot: "doc", key: input.fileKey }];
-  if (input.coverKey !== undefined) uploads.push({ slot: "cover", key: input.coverKey });
-  for (const u of uploads) if (!keyMatches(u.slot, u.key)) throw new LearningError("input", "invalid_key", "上传凭据不合法，请重新上传");
-  const keys = uploads.map((u) => u.key);
-  const used = await deps.db
-    .select({ id: courses.courseId })
-    .from(courses)
-    .where(or(inArray(courses.fileKey, keys), inArray(courses.coverKey, keys)))
-    .limit(1);
-  if (used.length) throw new LearningError("conflict", "file_already_used", "这个文件已被其他课程使用");
-
-  const verified: Record<string, { size: number; mime: string }> = {};
-  for (const u of uploads) {
-    try {
-      verified[u.slot] = await verifyUpload(deps, u.slot, u.key);
-    } catch (e) {
-      // 校验不通过：删掉这个对象（对象不存在的情况下删除是幂等的）。删除失败不掩盖原因
-      if (e instanceof LearningError) await deps.store.delete(u.key).catch(() => undefined);
-      throw e;
-    }
-  }
+  const uploads = [
+    { slot: "doc" as const, key: input.fileKey },
+    { slot: "cover" as const, key: input.coverKey },
+  ];
+  await assertKeysFree(deps, uploads);
+  const verified = await verifyAll(deps, uploads);
   const doc = verified.doc!;
 
   try {
-    return await deps.db.transaction(async (tx) => {
-      const now = deps.clock.now();
-      const [r] = await tx.insert(courses).values({
-        title: input.title,
-        kind: "document",
-        description: input.description,
-        status: "published",
-        brandScope: allBrands ? "all" : "specified",
-        audienceLevel: input.audienceLevel,
-        coverKey: input.coverKey ?? null,
-        fileKey: input.fileKey,
-        fileMime: doc.mime,
-        fileSize: doc.size,
-        createdBy: userId,
-        createdAt: now,
-        updatedAt: now,
-      });
-      const courseId = BigInt(r.insertId);
-      if (brandIds.length) await tx.insert(courseBrandScopes).values(brandIds.map((brandId) => ({ courseId, brandId })));
-      await tx.insert(courseTags).values(tagIds.map((tagId) => ({ courseId, tagId })));
-      await deps.audit.write(
-        {
-          actor: ctx.actor,
-          actorUserId: userId,
-          eventType: "learning_course_created",
-          outcome: "succeeded",
-          reasonCode: "course_created",
-          targetType: "course",
-          targetId: courseId.toString(),
-          detail: {
-            title: input.title,
-            kind: "document",
-            brandScope: allBrands ? "all" : "specified",
-            brandIds: brandIds.map(String),
-            audienceLevel: input.audienceLevel,
-            tagIds: tagIds.map(String),
-            fileKey: input.fileKey,
-            fileMime: doc.mime,
-            fileSize: doc.size,
-            coverKey: input.coverKey ?? null,
-          },
-        },
-        { tx, risk: "high" },
-      );
-      return { courseId: courseId.toString() };
-    });
+    const courseId = await insertCourse(deps, ctx, userId, input, { allBrands, brandIds, tagIds }, { kind: "document", fileKey: input.fileKey, fileMime: doc.mime, fileSize: doc.size }, { fileKey: input.fileKey, fileMime: doc.mime, fileSize: doc.size });
+    return { courseId };
   } catch (e) {
-    const code = mysqlErrorCode(e);
     // 唯一键冲突说明对象已被并发的另一次创建占用，不能删；其余失败（含审计写入失败）没建行，对象删掉免得残留
-    if (code === "ER_DUP_ENTRY") throw new LearningError("conflict", "file_already_used", "这个文件已被其他课程使用");
+    if (mysqlErrorCode(e) === "ER_DUP_ENTRY") throw new LearningError("conflict", "file_already_used", "这个文件已被其他课程使用");
     for (const u of uploads) await deps.store.delete(u.key).catch(() => undefined);
-    if (code === "ER_NO_REFERENCED_ROW_2") throw new LearningError("conflict", "reference_changed", "品牌或标签刚刚被改动，请刷新后重试");
+    if (mysqlErrorCode(e) === "ER_NO_REFERENCED_ROW_2") throw new LearningError("conflict", "reference_changed", "品牌或标签刚刚被改动，请刷新后重试");
+    throw e;
+  }
+}
+
+const IDEMPOTENCY_KEY = /^[A-Za-z0-9_-]{16,64}$/;
+
+/**
+ * 视频课程：浏览器已把视频直传 VOD，这里查视频状态后建行。同一 (用户, Idempotency-Key) 只建一门课，重复提交返回第一次的结果（D7）。
+ * 转码中 → 建行（vod_video_status=transcoding）；转码失败 → 建行并标 failed，维护者可替换；上传未完成 → 409，不建行。
+ */
+export async function createVideoCourse(deps: LearningDeps, ctx: AuthContext, raw: unknown, idempotencyKey: string): Promise<{ courseId: string; replayed: boolean }> {
+  const userId = requireUser(ctx);
+  await authorizeOrThrow(deps, ctx, CAP_MANAGE);
+  if (typeof idempotencyKey !== "string" || !IDEMPOTENCY_KEY.test(idempotencyKey)) throw new LearningError("input", "idempotency_key_required", "缺少或不合法的 Idempotency-Key");
+  const input = parseOrThrow(videoInput, raw);
+  const videoId = input.videoId.toLowerCase();
+
+  const replay = async (): Promise<{ courseId: string; replayed: true } | null> => {
+    const [prev] = await deps.db.select({ id: courses.courseId }).from(courses).where(and(eq(courses.createdBy, userId), eq(courses.createKey, idempotencyKey))).limit(1);
+    return prev ? { courseId: prev.id.toString(), replayed: true } : null;
+  };
+  const again = await replay();
+  if (again) return again;
+
+  const { allBrands, brandIds } = await resolveBrands(deps, ctx, input.brandScope);
+  const tagIds = await resolveTags(deps, input.tagIds);
+  const uploads = [{ slot: "cover" as const, key: input.coverKey }];
+  await assertKeysFree(deps, uploads);
+  const [used] = await deps.db.select({ id: courses.courseId }).from(courses).where(eq(courses.vodVideoId, videoId)).limit(1);
+  if (used) throw new LearningError("conflict", "file_already_used", "这个视频已被其他课程使用");
+
+  let info;
+  try {
+    info = await deps.vod.getVideo(videoId);
+  } catch {
+    throw new LearningError("unavailable", "vod_unavailable", "视频服务暂时不可用，请稍后重试");
+  }
+  if (!info) throw new LearningError("input", "video_missing", "没有找到已上传的视频，请重新上传");
+  if (info.status === "uploading") throw new LearningError("conflict", "video_uploading", "视频还没有上传完成");
+  if ((info.durationSec ?? 0) > deps.config.videoMaxSeconds || (info.sizeBytes ?? 0) > deps.config.videoMaxBytes) {
+    await deps.vod.deleteVideo(videoId).catch(() => undefined); // 超限的视频不留；删不掉由残渣清理兜底
+    throw new LearningError("input", "video_too_large", "视频超出时长或大小上限");
+  }
+  await verifyAll(deps, uploads);
+
+  try {
+    const courseId = await insertCourse(
+      deps,
+      ctx,
+      userId,
+      input,
+      { allBrands, brandIds, tagIds },
+      { kind: "video", vodVideoId: videoId, vodVideoStatus: info.status, durationSec: info.durationSec, createKey: idempotencyKey },
+      { vodVideoId: videoId, vodVideoStatus: info.status },
+    );
+    return { courseId, replayed: false };
+  } catch (e) {
+    if (mysqlErrorCode(e) === "ER_DUP_ENTRY") {
+      // 并发的同键请求先到：返回它的结果；否则是视频 / 封面被占用
+      const prev = await replay();
+      if (prev) return prev;
+      throw new LearningError("conflict", "file_already_used", "这个文件已被其他课程使用");
+    }
+    await deps.store.delete(input.coverKey).catch(() => undefined);
+    if (mysqlErrorCode(e) === "ER_NO_REFERENCED_ROW_2") throw new LearningError("conflict", "reference_changed", "品牌或标签刚刚被改动，请刷新后重试");
     throw e;
   }
 }

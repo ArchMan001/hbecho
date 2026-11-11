@@ -49,7 +49,7 @@ export interface CourseListItem {
   title: string;
   kind: "video" | "document";
   durationSec: number | null;
-  coverUrl: string | null;
+  coverUrl: string;
   inProgress: boolean;
   lastLearnedAt: string | null;
   tags: Array<{ tagId: string; name: string }>;
@@ -105,7 +105,7 @@ export async function listCourses(deps: LearningDeps, ctx: AuthContext, q: ListQ
       title: r.title,
       kind: r.kind as CourseListItem["kind"],
       durationSec: r.durationSec,
-      coverUrl: r.coverKey ? await deps.store.signedGetUrl(r.coverKey, deps.config.coverUrlTtlSeconds) : null,
+      coverUrl: await deps.store.signedGetUrl(r.coverKey, deps.config.coverUrlTtlSeconds),
       inProgress: r.progressId !== null,
       lastLearnedAt: r.lastLearnedAt?.toISOString() ?? null,
       tags: tagRows.filter((t) => t.courseId === r.courseId).map((t) => ({ tagId: t.tagId.toString(), name: t.name })),
@@ -167,7 +167,7 @@ export async function getCourse(deps: LearningDeps, ctx: AuthContext, rawId: unk
     vodVideoStatus: c.vodVideoStatus,
     fileMime: c.fileMime,
     fileSize: c.fileSize,
-    coverUrl: c.coverKey ? await deps.store.signedGetUrl(c.coverKey, deps.config.coverUrlTtlSeconds) : null,
+    coverUrl: await deps.store.signedGetUrl(c.coverKey, deps.config.coverUrlTtlSeconds),
     inProgress: prog !== undefined,
     lastLearnedAt: prog?.lastLearnedAt.toISOString() ?? null,
     positionSec: prog?.positionSec ?? 0,

@@ -1,12 +1,20 @@
-// learning 模块的对外入口（g-learning-min 首批：标签、资料课程创建、列表 / 详情 / 可见范围、资料下载）。
-// 视频、进度、替换下架、汇总、清理见 tasks.md 后续任务。
+// learning 模块的对外入口（g-learning-min：标签、课程创建 / 维护、列表 / 详情 / 可见范围、播放、进度、汇总、下载、定时任务）。
 export * from "./config";
 export * from "./courses";
 export * from "./deps";
 export * from "./download";
 export * from "./errors";
+export * from "./http";
+export * from "./jobs";
+export * from "./manage";
+export * from "./media-deletions";
 export * from "./oss-course-store";
+export * from "./playback";
+export * from "./progress";
 export * from "./read";
 export * from "./store";
+export * from "./summary";
 export * from "./tags";
 export * from "./visibility";
+export * from "./vod";
+export * from "./vod-aliyun";

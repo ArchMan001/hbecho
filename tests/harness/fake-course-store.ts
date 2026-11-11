@@ -2,7 +2,10 @@ import type { CourseObjectStore } from "../../src/modules/learning/store";
 
 /** 内存版 `hbecho-course` 桶，记录签名与删除，便于断言。 */
 export class FakeCourseStore implements CourseObjectStore {
-  readonly objects = new Map<string, { bytes: Uint8Array; contentType: string }>();
+  readonly objects = new Map<string, { bytes: Uint8Array; contentType: string; at: Date }>();
+  /** 使 delete 对匹配的 key 抛错（验证删除失败进重试）。 */
+  failDelete: ((key: string) => boolean) | null = null;
+  now: () => Date = () => new Date();
   readonly signedPut: Array<{ key: string; contentType: string; ttlSeconds: number }> = [];
   readonly signedGet: Array<{ key: string; ttlSeconds: number; downloadName?: string }> = [];
   readonly deleted: string[] = [];
@@ -10,7 +13,7 @@ export class FakeCourseStore implements CourseObjectStore {
 
   /** 模拟浏览器按签名地址直传。 */
   upload(key: string, bytes: Uint8Array, contentType: string): void {
-    this.objects.set(key, { bytes: bytes.slice(), contentType });
+    this.objects.set(key, { bytes: bytes.slice(), contentType, at: this.now() });
   }
   async signedPutUrl(key: string, contentType: string, ttlSeconds: number): Promise<string> {
     this.signedPut.push({ key, contentType, ttlSeconds });
@@ -29,8 +32,12 @@ export class FakeCourseStore implements CourseObjectStore {
     return `https://fake-course.test/${key}?ttl=${ttlSeconds}`;
   }
   async delete(key: string): Promise<void> {
+    if (this.failDelete?.(key)) throw new Error(`fake course store: delete 失败（注入）：${key}`);
     this.objects.delete(key);
     this.deleted.push(key);
+  }
+  async list(prefix: string) {
+    return [...this.objects].filter(([k]) => k.startsWith(prefix)).map(([key, v]) => ({ key, lastModified: v.at }));
   }
 }
 

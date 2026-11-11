@@ -44,7 +44,7 @@
 | `status` | VARCHAR(16) | NOT NULL, CHECK in ('published','unpublished','archived') | 无草稿态；`archived` 由下架满 30 天的清理任务自动置位 |
 | `brand_scope` | VARCHAR(16) | NOT NULL, CHECK in ('specified','all') | |
 | `audience_level` | VARCHAR(24) | NOT NULL DEFAULT 'all', CHECK in ('all','branch_and_above','hq_and_above') | 适用人员级别（G-D40） |
-| `cover_key` | VARCHAR(512) ascii_bin | NULL | OSS object key；**video 必填，document 可选**（PRD G-D11；本表原写 NOT NULL，与 PRD 冲突，2026-11-11 以 PRD 为准）。唯一 |
+| `cover_key` | VARCHAR(512) ascii_bin | NOT NULL | OSS object key（`hbecho-course` 桶 `cover/` 前缀）；所有课程必填（G-D48）。唯一 |
 | `vod_video_id` | VARCHAR(64) | NULL | video 必填，document 必须为 NULL |
 | `vod_video_status` | VARCHAR(16) | NULL, CHECK in ('uploading','transcoding','normal','failed') | video 必填 |
 | `file_key` | VARCHAR(512) ascii_bin | NULL | document 必填；唯一（同一对象不能被两门课引用） |
@@ -56,7 +56,7 @@
 | `updated_at` | DATETIME(6) | NOT NULL | |
 
 CHECK 组合约束：
-- `kind='video'` → `vod_video_id`、`vod_video_status`、`cover_key` 非空，`file_key`、`file_mime`、`file_size` 为空；
+- `kind='video'` → `vod_video_id`、`vod_video_status` 非空，`file_key`、`file_mime`、`file_size` 为空；
 - `kind='document'` → `file_key`、`file_mime`、`file_size` 非空，`vod_video_id`、`vod_video_status` 为空；
 - `file_mime` 只能是 PDF / JPEG / PNG；`file_size > 0`；`duration_sec >= 0`；
 - `brand_scope='all'` → `course_brand_scopes` 无行（由应用约束 + 测试保证，MySQL 无跨表 CHECK）。
@@ -109,7 +109,8 @@ CHECK 组合约束：
 
 | 内容 | 位置 | 理由 |
 |---|---|---|
-| 课程视频与封面 | VOD（媒资地域华北2） | ADR-0007；封面用 VOD 图片媒资 |
+| 课程视频 | VOD（媒资地域华北2） | ADR-0007 |
+| 封面 | `hbecho-course` 桶，前缀 `cover/` | G-D48 / D25：视频与资料同一路径，不用 VOD 图片媒资 |
 | 资料文件 | **`hbecho-course` 桶**（2026-10-30 已建），前缀 `doc/` | 资料需要替换时删除旧对象；`hbecho-media` 的 RAM 策略明确没有 `DeleteObject`，不能复用（ADR-0001 现行承诺） |
 
 课程对象**不写入** A 域的 `media_assets` / `oss_objects` 表。新增 `hbecho-course` 桶需要在 ADR-0001 补一条修订，并为应用角色 `hbecho-ecs-role` 增加该桶的 `Put/Get/Delete/List` 权限。
@@ -319,7 +320,7 @@ WHERE c.brand_scope='all' OR EXISTS (
 | D22 | 品牌名称与列表缓存 5 分钟 | 品牌极少变化；接受新品牌最多 5 分钟延迟生效 | 2026-10-30 |
 | D23 | 不预留学习明细表 | 1.0 用不到；2.0 需要时再加，不影响现有累计值 | 2026-10-30 |
 | D24 | 课程可见性增加「适用人员级别」，与品牌取交集 | 管理类内容不该给门店看；复用 RoleCode，不建职级字段、不挂 DataScope | 2026-10-30 |
-| D25 | 资料课程的封面可选，`cover_key` 可空，视频课程仍必填（CHECK 强制） | PRD G-D11；原 §3.1 写 NOT NULL 与 PRD 冲突 | 2026-11-11 |
+| D25 | 所有课程封面必填，`cover_key NOT NULL`，视频与资料都存 `hbecho-course` 桶 `cover/` 前缀（不用 VOD 图片媒资） | G-D48（刘学奎 2026-11-11 修订 G-D11）；封面走同一条已验证的 OSS 路径，且展示不依赖 VOD 域名 / 备案 | 2026-11-11 |
 | D26 | 人员级别取 B 的 `DataScope.level`，品牌取 `DataScope.brands`；本域注册资源 `learning_course` 的 ScopeStrategy，用 B 的授权器与出口 10，不写适配层。D16 的「薄适配层」作废 | B 已落地（`authorize`、`createEgress`、`buildDataScope`） | 2026-11-11 |
 | D27 | 范围外一律 403（B 对外默认是 404）：本域把授权器的任何拒绝都映射为 403；对象不存在才是 404。无 `learning.read` 的人先被 403，探不到课程是否存在 | requirements §5.5；tasks 的「必须停下来问」 | 2026-11-11 |
 | D28 | 列表在范围为空（如门店专员本人绑定失效）时返回 403，不返回空页 | tasks 任务 5 验证「范围外返回 403 而非空页」 | 2026-11-11 |

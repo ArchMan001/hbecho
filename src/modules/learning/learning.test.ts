@@ -7,6 +7,8 @@ import { downloadFileName, hasMagic, keyMatches, newKey } from "./files";
 import { parseId } from "./ids";
 import { attachmentDisposition, OssCourseStore, type CourseOssClientLike } from "./oss-course-store";
 import { parseListQuery } from "./read";
+import { createVodClient, type VodSdkLike } from "./vod-aliyun";
+import { mapVodStatus, VOD_ENDPOINT, VOD_REGION, VOD_TEMPLATE_GROUP_ID } from "./vod";
 import { allowedAudience, courseVisible, type CourseVisibilityRef } from "./visibility";
 
 const scope = (brands: bigint[] | "all", level: 1 | 2 | 3): DataScope => ({
@@ -114,6 +116,9 @@ describe("OssCourseStore（注入假客户端）", () => {
         calls.push({ op: "delete", args: [name] });
         if (!objects.delete(name)) throw notFound;
       },
+      async list() {
+        return { objects: [] };
+      },
       signatureUrl(name, options) {
         calls.push({ op: "signatureUrl", args: [name, options] });
         return `https://signed.test/${name}`;
@@ -151,5 +156,51 @@ describe("OssCourseStore（注入假客户端）", () => {
     await s.delete("doc/a.pdf"); // 已不存在，不抛
     const broken: CourseOssClientLike = { ...client, delete: async () => { throw Object.assign(new Error("AccessKeyId=LTAIxxxx"), { code: "AccessDenied" }); } };
     await expect(store(broken).delete("doc/a.pdf")).rejects.toThrow("OSS delete 失败（AccessDenied）");
+  });
+});
+
+describe("VOD 适配器（注入假 SDK）", () => {
+  const sdk = (over: Partial<VodSdkLike> = {}) => {
+    const calls: Array<{ op: string; arg: unknown }> = [];
+    const rec = <T,>(op: string, out: T) => async (arg: unknown) => (calls.push({ op, arg }), out);
+    const s: VodSdkLike = {
+      createUploadVideo: rec("create", { body: { videoId: "v1", uploadAddress: "addr", uploadAuth: "auth" } }) as VodSdkLike["createUploadVideo"],
+      getVideoInfo: rec("info", { body: { video: { status: "Normal", duration: 12.2, size: 99 } } }) as VodSdkLike["getVideoInfo"],
+      getVideoPlayAuth: rec("play", { body: { playAuth: "pa" } }) as VodSdkLike["getVideoPlayAuth"],
+      deleteVideo: rec("delete", {}) as VodSdkLike["deleteVideo"],
+      updateVideoInfo: rec("update", {}) as VodSdkLike["updateVideoInfo"],
+      getVideoList: rec("list", { body: { total: 1, videoList: { video: [{ videoId: "v9", creationTime: "2026-11-10T01:02:03Z" }] } } }) as VodSdkLike["getVideoList"],
+      ...over,
+    };
+    return { s, calls };
+  };
+
+  it("D1：取上传凭证时带转码模板组 3ca24a90…（VOD 默认 NoTranscode，不传就不转码）；地域与 endpoint 是写进代码的 cn-beijing 常量", async () => {
+    const { s, calls } = sdk();
+    await createVodClient(s).createUpload({ title: "t", fileName: "a.mp4", fileSize: 5 });
+    expect(calls[0]!.arg).toEqual({ title: "t", fileName: "a.mp4", fileSize: 5, templateGroupId: "3ca24a90956dbbfa16f1f6cf2fe6ad3a" });
+    expect(VOD_TEMPLATE_GROUP_ID).toBe("3ca24a90956dbbfa16f1f6cf2fe6ad3a");
+    expect([VOD_REGION, VOD_ENDPOINT]).toEqual(["cn-beijing", "vod.cn-beijing.aliyuncs.com"]);
+  });
+  it("状态映射：Normal→normal，Uploading→uploading，失败类→failed，其余与未知→transcoding（不可播但会继续轮询）", () => {
+    expect(["Normal", "Uploading", "UploadFail", "TranscodeFail", "Blocked", "UploadSucc", "Transcoding", "Checking", "Whatever", undefined].map(mapVodStatus)).toEqual([
+      "normal", "uploading", "failed", "failed", "failed", "transcoding", "transcoding", "transcoding", "transcoding", "transcoding",
+    ]);
+  });
+  it("getVideo：时长向上取整；不存在返回 null；其它错误只带错误码", async () => {
+    expect(await createVodClient(sdk().s).getVideo("v1")).toEqual({ status: "normal", durationSec: 13, sizeBytes: 99 });
+    const missing = sdk({ getVideoInfo: async () => { throw Object.assign(new Error("secret"), { code: "InvalidVideo.NotFound" }); } });
+    expect(await createVodClient(missing.s).getVideo("v1")).toBeNull();
+    const broken = sdk({ getVideoInfo: async () => { throw Object.assign(new Error("AccessKeyId=LTAIxxxx"), { code: "Throttling.User" }); } });
+    await expect(createVodClient(broken.s).getVideo("v1")).rejects.toThrow("VOD GetVideoInfo 失败（Throttling.User）");
+  });
+  it("deleteVideo 幂等；播放凭证缺失视为失败；列表按创建时间截止并翻页", async () => {
+    const gone = sdk({ deleteVideo: async () => { throw Object.assign(new Error("x"), { code: "InvalidVideo.NotFound" }); } });
+    await createVodClient(gone.s).deleteVideo("v1");
+    const empty = sdk({ getVideoPlayAuth: async () => ({ body: {} }) });
+    await expect(createVodClient(empty.s).getPlayAuth("v1")).rejects.toThrow("VOD GetVideoPlayAuth 失败");
+    const { s, calls } = sdk();
+    expect(await createVodClient(s).listVideosBefore(new Date("2026-11-10T00:00:00.123Z"))).toEqual([{ videoId: "v9", createdAt: new Date("2026-11-10T01:02:03Z") }]);
+    expect(calls[0]!.arg).toEqual({ endTime: "2026-11-10T00:00:00Z", pageNo: 1, pageSize: 100, sortBy: "CreationTime:Asc" });
   });
 });

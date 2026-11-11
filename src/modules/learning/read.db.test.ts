@@ -226,14 +226,13 @@ describe("列表筛选与排序", () => {
     expect(p3.hasMore).toBe(false);
   });
 
-  it("封面：有封面给短期签名地址，没有给 null；响应里没有对象 key", async () => {
+  it("封面：每门课都有短期签名地址（G-D48 必填）；响应里没有资料文件的对象 key", async () => {
     const w = await people();
-    await e.insertCourse({ title: "有封面", coverKey: "cover/11111111-1111-1111-1111-111111111111.png" });
-    await e.insertCourse({ title: "无封面" });
+    await e.insertCourse({ title: "课一", coverKey: "cover/11111111-1111-1111-1111-111111111111.png" });
+    await e.insertCourse({ title: "课二", coverKey: "cover/22222222-2222-2222-2222-222222222222.jpg" });
     const items = (await listCourses(e.deps, w.admin, q())).items;
-    expect(items.find((i) => i.title === "有封面")!.coverUrl).toContain("cover/11111111");
-    expect(items.find((i) => i.title === "无封面")!.coverUrl).toBeNull();
-    expect(e.store.signedGet.map((s) => s.ttlSeconds)).toEqual([300]);
+    expect(items.map((i) => i.coverUrl).sort()).toEqual(["https://fake-course.test/cover/11111111-1111-1111-1111-111111111111.png?ttl=300", "https://fake-course.test/cover/22222222-2222-2222-2222-222222222222.jpg?ttl=300"]);
+    expect(e.store.signedGet.map((s) => s.ttlSeconds)).toEqual([300, 300]);
     expect(JSON.stringify(items)).not.toContain("doc/0000");
   });
 });
@@ -249,7 +248,7 @@ describe("详情", () => {
     expect(d).toMatchObject({ courseId: id.toString(), title: "详情课", description: "简介", kind: "document", fileMime: "application/pdf", fileSize: 2048, inProgress: true, positionSec: 40, brandScope: "all", audienceLevel: "all" });
     expect(d.tags.map((x) => x.name)).toEqual(["安全"]);
     expect(d.createdByName).toBe("测试用户");
-    expect(JSON.stringify(d)).not.toContain("00000000-0000-0000-0000");
+    expect(JSON.stringify(d)).not.toContain("doc/");
     const other = await getCourse(e.deps, w.bmHisense, id.toString());
     expect(other).toMatchObject({ inProgress: false, positionSec: 0 });
   });

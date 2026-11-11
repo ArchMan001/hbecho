@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "5feffaa7-66cc-499f-ab46-4b25a1ceb7ee",
+  "id": "a6c181a9-7dbc-4753-b8db-f58cc23c5700",
   "prevId": "2c4084aa-0519-4acc-b929-525245f4df98",
   "tables": {
     "access_bootstrap_tokens": {
@@ -3696,6 +3696,139 @@
       "uniqueConstraints": {},
       "checkConstraint": {}
     },
+    "course_media_deletions": {
+      "name": "course_media_deletions",
+      "columns": {
+        "deletion_id": {
+          "name": "deletion_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "target_kind": {
+          "name": "target_kind",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "varchar(512) character set ascii collate ascii_bin",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "course_id": {
+          "name": "course_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "next_attempt_at": {
+          "name": "next_attempt_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "done_at": {
+          "name": "done_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "uq_course_media_deletions_target": {
+          "name": "uq_course_media_deletions_target",
+          "columns": [
+            "target_kind",
+            "target_id"
+          ],
+          "isUnique": true
+        },
+        "idx_course_media_deletions_due": {
+          "name": "idx_course_media_deletions_due",
+          "columns": [
+            "status",
+            "next_attempt_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "course_media_deletions_deletion_id": {
+          "name": "course_media_deletions_deletion_id",
+          "columns": [
+            "deletion_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {
+        "ck_course_media_deletions_kind": {
+          "name": "ck_course_media_deletions_kind",
+          "value": "`course_media_deletions`.`target_kind` IN ('vod_video','oss_object')"
+        },
+        "ck_course_media_deletions_reason": {
+          "name": "ck_course_media_deletions_reason",
+          "value": "`course_media_deletions`.`reason` IN ('replaced','archived','orphan','create_failed')"
+        },
+        "ck_course_media_deletions_status": {
+          "name": "ck_course_media_deletions_status",
+          "value": "`course_media_deletions`.`status` IN ('pending','done')"
+        },
+        "ck_course_media_deletions_done": {
+          "name": "ck_course_media_deletions_done",
+          "value": "(`course_media_deletions`.`status` = 'done') = (`course_media_deletions`.`done_at` IS NOT NULL)"
+        },
+        "ck_course_media_deletions_attempts": {
+          "name": "ck_course_media_deletions_attempts",
+          "value": "`course_media_deletions`.`attempts` >= 0"
+        }
+      }
+    },
     "course_tags": {
       "name": "course_tags",
       "columns": {
@@ -3820,7 +3953,7 @@
           "name": "cover_key",
           "type": "varchar(512) character set ascii collate ascii_bin",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "vod_video_id": {
@@ -3865,6 +3998,20 @@
           "notNull": false,
           "autoincrement": false
         },
+        "unpublished_at": {
+          "name": "unpublished_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "create_key": {
+          "name": "create_key",
+          "type": "varchar(64) character set ascii collate ascii_bin",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_by": {
           "name": "created_by",
           "type": "bigint",
@@ -3902,6 +4049,22 @@
           ],
           "isUnique": true
         },
+        "uq_courses_create_key": {
+          "name": "uq_courses_create_key",
+          "columns": [
+            "created_by",
+            "create_key"
+          ],
+          "isUnique": true
+        },
+        "idx_courses_unpublished": {
+          "name": "idx_courses_unpublished",
+          "columns": [
+            "status",
+            "unpublished_at"
+          ],
+          "isUnique": false
+        },
         "idx_courses_status_updated": {
           "name": "idx_courses_status_updated",
           "columns": [
@@ -3936,6 +4099,10 @@
       },
       "uniqueConstraints": {},
       "checkConstraint": {
+        "ck_courses_unpublished_at": {
+          "name": "ck_courses_unpublished_at",
+          "value": "(`courses`.`status` = 'published') = (`courses`.`unpublished_at` IS NULL)"
+        },
         "ck_courses_kind": {
           "name": "ck_courses_kind",
           "value": "`courses`.`kind` IN ('video','document')"
@@ -3970,7 +4137,7 @@
         },
         "ck_courses_kind_fields": {
           "name": "ck_courses_kind_fields",
-          "value": "(`courses`.`kind` = 'video' AND `courses`.`vod_video_id` IS NOT NULL AND `courses`.`vod_video_status` IS NOT NULL AND `courses`.`cover_key` IS NOT NULL\n            AND `courses`.`file_key` IS NULL AND `courses`.`file_mime` IS NULL AND `courses`.`file_size` IS NULL)\n        OR (`courses`.`kind` = 'document' AND `courses`.`file_key` IS NOT NULL AND `courses`.`file_mime` IS NOT NULL AND `courses`.`file_size` IS NOT NULL\n            AND `courses`.`vod_video_id` IS NULL AND `courses`.`vod_video_status` IS NULL)"
+          "value": "(`courses`.`kind` = 'video' AND `courses`.`vod_video_id` IS NOT NULL AND `courses`.`vod_video_status` IS NOT NULL\n            AND `courses`.`file_key` IS NULL AND `courses`.`file_mime` IS NULL AND `courses`.`file_size` IS NULL)\n        OR (`courses`.`kind` = 'document' AND `courses`.`file_key` IS NOT NULL AND `courses`.`file_mime` IS NOT NULL AND `courses`.`file_size` IS NOT NULL\n            AND `courses`.`vod_video_id` IS NULL AND `courses`.`vod_video_status` IS NULL)"
         }
       }
     },

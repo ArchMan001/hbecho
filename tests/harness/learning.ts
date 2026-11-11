@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import type { TestDb } from "./db";
 import { accessEnv, insertAccessUser, seedAccessOrg, type AccessEnv, type AccessOrg, type UserSpec } from "./access";
 import { FakeCourseStore } from "./fake-course-store";
+import { FakeVod } from "./fake-vod";
 import { auditEvents, courseBrandScopes, courses, courseTags, tags } from "../../src/db/schema";
 import {
   buildDataScope,
@@ -22,6 +23,7 @@ export interface LearningEnv {
   env: AccessEnv;
   org: AccessOrg;
   store: FakeCourseStore;
+  vod: FakeVod;
   deps: LearningDeps;
   /** 以指定角色建一个用户并返回他此刻的授权上下文（每次调用现建，不缓存）。 */
   actor(role: RoleCode, over?: { brandIds?: bigint[]; branchIds?: bigint[]; staff?: bigint }): Promise<AuthContext>;
@@ -39,7 +41,10 @@ export async function learningEnv(t: TestDb, over: { config?: Partial<LearningCo
   const authorizer = createAuthorizer({ registry, onDenied: denialAuditor(env.audit) });
   const egress = createEgress({ authorizer, audit: env.audit });
   const store = new FakeCourseStore();
-  const deps: LearningDeps = { db: t.db, clock: env.clock, authorizer, egress, audit: env.audit, store, config: { ...DEFAULT_LEARNING_CONFIG, ...over.config } };
+  const vod = new FakeVod();
+  store.now = () => env.clock.now();
+  vod.now = () => env.clock.now();
+  const deps: LearningDeps = { db: t.db, clock: env.clock, authorizer, egress, audit: env.audit, store, vod, config: { ...DEFAULT_LEARNING_CONFIG, ...over.config } };
 
   let seq = 0;
   async function actor(role: RoleCode, o: { brandIds?: bigint[]; branchIds?: bigint[]; staff?: bigint } = {}): Promise<AuthContext> {
@@ -63,12 +68,14 @@ export async function learningEnv(t: TestDb, over: { config?: Partial<LearningCo
       kind: "document",
       status: "published",
       brandScope: brandIds?.length ? "specified" : "all",
+      coverKey: `cover/00000000-0000-0000-0000-${String(n).padStart(12, "0")}.png`,
       fileKey: `doc/00000000-0000-0000-0000-${String(n).padStart(12, "0")}.pdf`,
       fileMime: "application/pdf",
       fileSize: 1024,
       createdBy: (await admin).userId!,
       createdAt: now,
       updatedAt: now,
+      ...(row.status && row.status !== "published" ? { unpublishedAt: now } : {}),
       ...row,
     });
     const courseId = BigInt(r.insertId);
@@ -80,7 +87,21 @@ export async function learningEnv(t: TestDb, over: { config?: Partial<LearningCo
     const [r] = await t.db.insert(tags).values({ name, createdAt: env.clock.now() });
     return BigInt(r.insertId);
   }
-  return { env, org, store, deps, actor, insertCourse, insertTag };
+  return { env, org, store, vod, deps, actor, insertCourse, insertTag };
 }
 
 export const auditOf = (t: TestDb, eventType: string) => t.db.select().from(auditEvents).where(eq(auditEvents.eventType, eventType));
+
+import { expect } from "vitest";
+import { LearningError } from "../../src/modules/learning";
+/** 期望一次调用以指定 HTTP 状态（和错误码）失败；返回错误，便于断言 detail。 */
+export async function fails(p: Promise<unknown>, status: number, code?: string): Promise<LearningError> {
+  const err = await p.then(
+    () => null,
+    (x: unknown) => x,
+  );
+  expect(err).toBeInstanceOf(LearningError);
+  expect((err as LearningError).status).toBe(status);
+  if (code) expect((err as LearningError).code).toBe(code);
+  return err as LearningError;
+}

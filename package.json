@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@alicloud/dysmsapi20170525": "4.6.0",
+    "@alicloud/vod20170321": "3.12.1",
     "ali-oss": "^6.23.0",
     "better-auth": "1.7.18",
     "csv-parse": "7.0.3",

@@ -2,7 +2,7 @@
 
 > 状态：Current  
 > 作用：项目文档的唯一导航页；定义权威顺序、状态和新旧边界。  
-> 更新日期：2026-11-06
+> 更新日期：2026-11-11
 
 ## 1. 从这里开始
 
@@ -117,6 +117,7 @@
 | 域 H 产品需求 | [`prd-domain-h-ai.md`](prd-domain-h-ai.md) | draft（v0.2 初稿，1.0 收窄） | AI 能力：H1 网关、H2 Prompt、H5 单条脚本分析（仅超管/总部）；H8 规则辅助移 2.0；业务 AI 只保留 D 第三层 ASR + 大模型 |
 | 域 I 产品需求 | [`prd-domain-i-ops.md`](prd-domain-i-ops.md) | draft（v0.1 初稿，待盘问确认） | 运维与成本：部署、可观测、备份、安全、生命周期、环境变量配置、配额与硬上限；配置中心/OSS 分级/完整成本看板 2.0 |
 | UI 全局基线 | [`ui-foundation.md`](ui/ui-foundation.md) | current（2026-11-10 刘学奎确认 v2 视觉修订，字号 / 数字 / 选中态 / 角色标签等按新值；2026-11-05 复用 hbdam 视觉约定重写；含「界面设计须经刘学奎确认」闸门） | 角色导航、1.0 页面地图、页面骨架、筛选与表格交互、通用状态与判定三态、色板与组件、文案与格式、适配与可访问性、验收清单；各 spec 的 design.md「界面」一节按它写 |
+| 品牌语言体系 | [`brand-language.md`](ui/brand-language.md) | draft（2026-11-11 刘学奎提出要求、AI 起草；**待刘学奎确认，不是实现依据**） | Echo / 回响 / 先声 / 回声榜 的命名分层、品牌故事（Echo 神话的反转用法）、主张、声学词库、语气与禁忌词；确认后同步修订 `ui-foundation.md` §6.7 与 §11 第 1 项 |
 | PRD 修订清单 | [`prd-修订清单-2026-11-03.md`](prd-修订清单-2026-11-03.md) | draft（工作清单） | 2026-11-03 对总 PRD、A–G、CONTEXT、steering 与相关 ADR 的评审结论与逐条修订建议；修完后移入 `archive/`；不是实现依据 |
 | Kiro steering | [`product`](../.kiro/steering/product.md) · [`tech`](../.kiro/steering/tech.md) · [`structure`](../.kiro/steering/structure.md) | current（derived） | 从本索引、总纲、CONTEXT 与 v2 提炼的自动注入规则；无独立裁决权 |
 | 数据底座编码纪律 | [`data-discipline.md`](../.kiro/steering/data-discipline.md) | current（derived） | 从 CONTEXT 不变量与 tracer R2/R5/R9/R10/R13/R18 提炼的六条预防性纪律；当前无机器守护 |

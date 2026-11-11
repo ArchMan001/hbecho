@@ -34,6 +34,21 @@ function platformOfHost(host: string): Platform | null {
   return null;
 }
 
+/**
+ * 入口里的第一个 URL 属于哪个平台（a-activity-plan design §10.2）：
+ *   "no_url" = 没有 URL（纯分享口令，本地无法识别，放行交供应商判断）；
+ *   null     = 含 URL 但域名不属于任何支持平台（或 URL 无法解析）。
+ * 纯函数，不改 classifyLocator / checkLocatorPlatform 的行为。
+ */
+export function detectLocatorPlatform(original: string): Platform | "no_url" | null {
+  const m = URL_RE.exec(original);
+  if (!m) return "no_url";
+  try {
+    return platformOfHost(new URL(m[0].replace(TRAILING_PUNCT_RE, "")).hostname.toLowerCase());
+  } catch {
+    return null;
+  }
+}
 export type PlatformCheck = { ok: true } | { ok: false; reason: "platform_mismatch"; detected: Platform };
 
 /**

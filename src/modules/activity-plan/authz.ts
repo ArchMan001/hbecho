@@ -28,8 +28,8 @@ export interface PlanResource {
   outOfScope?: "reject" | "hide";
 }
 
-export const brandInScope = (a: PlanActor, brandCode: string): boolean => a.brandScope === "all" || a.brandScope.has(brandCode);
-export const branchInScope = (a: PlanActor, branchId: bigint): boolean => a.branchScope === "all" || a.branchScope.has(branchId);
+export const brandInScope = (a: Pick<PlanActor, "brandScope">, brandCode: string): boolean => a.brandScope === "all" || a.brandScope.has(brandCode);
+export const branchInScope = (a: Pick<PlanActor, "branchScope">, branchId: bigint): boolean => a.branchScope === "all" || a.branchScope.has(branchId);
 
 export function assert(actor: PlanActor, capability: string, resource: PlanResource = {}): void {
   if (!actor.capabilities.has(capability)) throw new PlanError("authorization", "forbidden", `缺少 Capability ${capability}`);

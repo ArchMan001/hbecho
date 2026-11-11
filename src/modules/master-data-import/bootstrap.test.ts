@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { actorFromEnv, assertMode, assertStructure, CAP_IMPORT, CAP_STRUCTURE } from "./authorization";
 import { loadSeed, parseSeed } from "./bootstrap";
 import { MasterDataError } from "./errors";
-import { BRANDS, mapMainBusiness, sectorCodeOf } from "./mappings.v1";
+import { BRANDS, mapMainBusiness, sectorCodeOf, sectorKeyOf } from "./mappings.v1";
 
 describe("种子 CSV", () => {
   it("仓库里的种子：42 个分公司、4 个大区，每个分公司恰好一个大区", () => {
@@ -64,5 +64,17 @@ describe("服务身份", () => {
     const admin = actorFromEnv({ ...env, HBECHO_MD_CAPABILITIES: `${CAP_IMPORT},${CAP_STRUCTURE}`, HBECHO_MD_BRAND_SCOPE: "all" });
     expect(() => assertStructure(admin)).not.toThrow();
     expect(() => assertMode(admin, "import")).not.toThrow();
+  });
+});
+
+describe("sectorKeyOf 是 sectorCodeOf 的反函数（a-activity-plan 预检按它判断门店板块种类）", () => {
+  it("种子里 42 个分公司 × 2 个种类全部往返不变", () => {
+    for (const r of loadSeed()) {
+      expect(sectorKeyOf(sectorCodeOf(r.branchCode, "water"))).toBe("water");
+      expect(sectorKeyOf(sectorCodeOf(r.branchCode, "home"))).toBe("home");
+    }
+  });
+  it("不是约定形态一律 undefined", () => {
+    for (const bad of ["SEC-HOME", "home", "101-kitchen", "", "101-"]) expect(sectorKeyOf(bad)).toBeUndefined();
   });
 });

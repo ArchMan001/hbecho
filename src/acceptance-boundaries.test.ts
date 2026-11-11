@@ -186,3 +186,11 @@ describe("AP 护栏：活动计划不创建详情 / 评论任务", () => {
     expect(files.filter((p) => /\binsertDemandTask\b/.test(code(p))).map(rel)).toEqual([]);
   });
 });
+describe("AP：名单解析驱动与周期 Runner 共用同一个网关（装配静态检查）", () => {
+  it("sync-main 用 onGateway 取出 buildAccountRunners 的网关给 createRosterResolver，且没有自建 RawCaptureGateway", () => {
+    const main = readFileSync(join(SRC, "worker", "sync-main.ts"), "utf8");
+    expect(main).toMatch(/onGateway:\s*\(g\)\s*=>/);
+    expect(main).toMatch(/createRosterResolver\(/);
+    expect(main).not.toMatch(/new RawCaptureGateway\(/);
+  });
+});

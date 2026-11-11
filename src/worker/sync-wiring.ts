@@ -71,7 +71,7 @@ export async function runForever(
   cfg: SyncWorkerConfig,
   signals: { on(sig: "SIGTERM" | "SIGINT", f: () => void): void },
   /** 每日维护（北京时间 04:00 之后每天一次，由 maintenance.runDaily 自己判断，这里每次 tick 后调用）。 */
-  extras: { maintain?: () => Promise<unknown>; accessMaintain?: () => Promise<unknown> } = {},
+  extras: { maintain?: () => Promise<unknown>; accessMaintain?: () => Promise<unknown>; resolveRosters?: () => Promise<unknown> } = {},
 ): Promise<void> {
   let stopped = false;
   let stopping: Promise<void> | null = null;
@@ -92,6 +92,12 @@ export async function runForever(
         await extras.accessMaintain?.();
       } catch (e) {
         app.logger.error({ err: e }, "access maintenance failed");
+      }
+      // 名单解析驱动（a-activity-plan）：确认后挂起的行逐个交给 resolve_account 根任务；共用同一个供应商网关与护栏
+      try {
+        await extras.resolveRosters?.();
+      } catch (e) {
+        app.logger.error({ err: e }, "roster resolver failed");
       }
       await new Promise((r) => setTimeout(r, TICK_INTERVAL_MS));
     }

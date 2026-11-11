@@ -4,6 +4,8 @@
 // 媒资相关调用必须用 cn-beijing，用 cn-shanghai 会静默失败。
 export const VOD_REGION = "cn-beijing";
 export const VOD_ENDPOINT = "vod.cn-beijing.aliyuncs.com";
+/** 本系统创建的视频都打这个标签；残渣清理只认带它的视频，不碰账号里别的来源的视频。 */
+export const VOD_COURSE_TAG = "hbecho-course";
 export const VOD_TEMPLATE_GROUP_ID = "3ca24a90956dbbfa16f1f6cf2fe6ad3a";
 
 export type VodVideoStatus = "uploading" | "transcoding" | "normal" | "failed";

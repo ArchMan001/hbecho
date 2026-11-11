@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { DataScope } from "../access-control";
 import { DEFAULT_LEARNING_CONFIG } from "./config";
 import { LearningError } from "./errors";
+import { ecsRoleCredentials } from "./credentials";
 import { LearningConfigError, parseLearningEnv } from "./runtime";
 import { downloadFileName, hasMagic, keyMatches, newKey } from "./files";
 import { parseId } from "./ids";
@@ -189,7 +190,7 @@ describe("VOD 适配器（注入假 SDK）", () => {
       getVideoPlayAuth: rec("play", { body: { playAuth: "pa" } }) as VodSdkLike["getVideoPlayAuth"],
       deleteVideo: rec("delete", {}) as VodSdkLike["deleteVideo"],
       updateVideoInfo: rec("update", {}) as VodSdkLike["updateVideoInfo"],
-      getVideoList: rec("list", { body: { total: 1, videoList: { video: [{ videoId: "v9", creationTime: "2026-11-10T01:02:03Z" }] } } }) as VodSdkLike["getVideoList"],
+      getVideoList: rec("list", { body: { total: 1, videoList: { video: [{ videoId: "v9", creationTime: "2026-11-10T01:02:03Z", tags: "x,hbecho-course" }, { videoId: "other-system", creationTime: "2026-11-10T01:02:03Z", tags: "hbdam" }, { videoId: "untagged", creationTime: "2026-11-10T01:02:03Z" }] } } }) as VodSdkLike["getVideoList"],
       ...over,
     };
     return { s, calls };
@@ -198,7 +199,7 @@ describe("VOD 适配器（注入假 SDK）", () => {
   it("D1：取上传凭证时带转码模板组 3ca24a90…（VOD 默认 NoTranscode，不传就不转码）；地域与 endpoint 是写进代码的 cn-beijing 常量", async () => {
     const { s, calls } = sdk();
     await createVodClient(s).createUpload({ title: "t", fileName: "a.mp4", fileSize: 5 });
-    expect(calls[0]!.arg).toEqual({ title: "t", fileName: "a.mp4", fileSize: 5, templateGroupId: "3ca24a90956dbbfa16f1f6cf2fe6ad3a" });
+    expect(calls[0]!.arg).toEqual({ title: "t", fileName: "a.mp4", fileSize: 5, templateGroupId: "3ca24a90956dbbfa16f1f6cf2fe6ad3a", tags: "hbecho-course" });
     expect(VOD_TEMPLATE_GROUP_ID).toBe("3ca24a90956dbbfa16f1f6cf2fe6ad3a");
     expect([VOD_REGION, VOD_ENDPOINT]).toEqual(["cn-beijing", "vod.cn-beijing.aliyuncs.com"]);
   });
@@ -217,10 +218,12 @@ describe("VOD 适配器（注入假 SDK）", () => {
   it("deleteVideo 幂等；播放凭证缺失视为失败；列表按创建时间截止并翻页", async () => {
     const gone = sdk({ deleteVideo: async () => { throw Object.assign(new Error("x"), { code: "InvalidVideo.NotFound" }); } });
     await createVodClient(gone.s).deleteVideo("v1");
+    const none = sdk({ getVideoList: async () => { throw Object.assign(new Error("x"), { code: "InvalidVideo.NotFound" }); } });
+    expect(await createVodClient(none.s).listVideosBefore(new Date())).toEqual([]); // 真实 VOD：没有任何视频时报 NotFound 而不是返回空列表
     const empty = sdk({ getVideoPlayAuth: async () => ({ body: {} }) });
     await expect(createVodClient(empty.s).getPlayAuth("v1")).rejects.toThrow("VOD GetVideoPlayAuth 失败");
     const { s, calls } = sdk();
-    expect(await createVodClient(s).listVideosBefore(new Date("2026-11-10T00:00:00.123Z"))).toEqual([{ videoId: "v9", createdAt: new Date("2026-11-10T01:02:03Z") }]);
+    expect(await createVodClient(s).listVideosBefore(new Date("2026-11-10T00:00:00.123Z"))).toEqual([{ videoId: "v9", createdAt: new Date("2026-11-10T01:02:03Z") }]); // 只认带本系统标签的，别的来源 / 无标签的不碰
     expect(calls[0]!.arg).toEqual({ endTime: "2026-11-10T00:00:00Z", pageNo: 1, pageSize: 100, sortBy: "CreationTime:Asc" });
   });
 });
@@ -235,9 +238,67 @@ describe("装配配置", () => {
       expect((e as Error).message).not.toContain("id-secret-value");
     }
   });
-  it("专用凭证优先，缺省回退到 OSS_*；桶缺省 hbecho-course", () => {
+  it("专用凭证优先，缺省回退到 OSS_*；桶缺省 hbecho-course", async () => {
     const cfg = parseLearningEnv({ OSS_ACCESS_KEY_ID: "a", OSS_ACCESS_KEY_SECRET: "b", OSS_REGION: "cn-beijing", HBECHO_LEARNING_ACCESS_KEY_ID: "x" });
-    expect(cfg).toMatchObject({ accessKeyId: "x", accessKeySecret: "b", region: "cn-beijing", bucket: "hbecho-course" });
+    expect(cfg).toMatchObject({ region: "cn-beijing", bucket: "hbecho-course", credentialsKind: "env_access_key" });
+    expect(await cfg.credentials()).toEqual({ accessKeyId: "x", accessKeySecret: "b" });
     expect(parseLearningEnv({ HBECHO_LEARNING_ACCESS_KEY_ID: "a", HBECHO_LEARNING_ACCESS_KEY_SECRET: "b", HBECHO_COURSE_OSS_REGION: "oss-cn-beijing", HBECHO_COURSE_OSS_BUCKET: "other" }).bucket).toBe("other");
+  });
+  it("HBECHO_LEARNING_CREDENTIALS=ecs_role 不需要任何 AccessKey；写错值启动失败", () => {
+    expect(parseLearningEnv({ HBECHO_LEARNING_CREDENTIALS: "ecs_role", OSS_REGION: "cn-beijing" }).credentialsKind).toBe("ecs_role");
+    expect(() => parseLearningEnv({ HBECHO_LEARNING_CREDENTIALS: "ecs_role" })).toThrow(LearningConfigError); // 仍要地域
+    expect(() => parseLearningEnv({ HBECHO_LEARNING_CREDENTIALS: "sts", OSS_REGION: "cn-beijing" })).toThrow(LearningConfigError);
+  });
+});
+
+describe("ECS 实例角色凭证", () => {
+  const body = (exp: string) => JSON.stringify({ Code: "Success", AccessKeyId: "STS.id1", AccessKeySecret: "sec1", SecurityToken: "tok1", Expiration: exp });
+  const fakeMeta = (calls: string[], exp: () => string, opts: { hardened?: boolean } = {}) =>
+    (async (url: string | URL | Request, init?: RequestInit) => {
+      const u = String(url);
+      calls.push(`${init?.method ?? "GET"} ${u.replace("http://100.100.100.200", "")}`);
+      if (u.endsWith("/latest/api/token")) return opts.hardened ? new Response("tkn", { status: 200 }) : new Response("", { status: 404 });
+      if (opts.hardened && (init?.headers as Record<string, string>)?.["X-aliyun-ecs-metadata-token"] !== "tkn") return new Response("", { status: 401 });
+      if (u.endsWith("/security-credentials/")) return new Response("hbecho-ecs-role\n", { status: 200 });
+      if (u.endsWith("/security-credentials/hbecho-ecs-role")) return new Response(body(exp()), { status: 200 });
+      return new Response("", { status: 404 });
+    }) as typeof fetch;
+
+  it("取角色名再取凭证（加固模式带 token）；到期前 5 分钟之外用缓存，之内重新取", async () => {
+    let now = new Date("2026-11-11T00:00:00Z");
+    const calls: string[] = [];
+    const src = ecsRoleCredentials({ fetchImpl: fakeMeta(calls, () => "2026-11-11T06:00:00Z", { hardened: true }), now: () => now });
+    expect(await src()).toEqual({ accessKeyId: "STS.id1", accessKeySecret: "sec1", securityToken: "tok1" });
+    const n = calls.length;
+    await src();
+    expect(calls.length).toBe(n); // 缓存
+    now = new Date("2026-11-11T05:56:00Z"); // 距到期 4 分钟
+    await src();
+    expect(calls.length).toBeGreaterThan(n);
+  });
+  it("非加固模式（token 接口 404）直接取；并发只取一次", async () => {
+    const calls: string[] = [];
+    const src = ecsRoleCredentials({ fetchImpl: fakeMeta(calls, () => "2099-01-01T00:00:00Z"), now: () => new Date("2026-11-11T00:00:00Z") });
+    await Promise.all([src(), src(), src()]);
+    expect(calls.filter((c) => c.endsWith("/security-credentials/hbecho-ecs-role"))).toHaveLength(1);
+  });
+  it("元数据服务不可用 / 返回不完整 → 固定文案，不带任何内容", async () => {
+    const down = ecsRoleCredentials({ fetchImpl: (async () => { throw new Error("connect ECONNREFUSED 100.100.100.200 AccessKeyId=LEAK"); }) as typeof fetch });
+    await expect(down()).rejects.toThrow("无法从 ECS 元数据服务取得实例角色凭证");
+    const bad = ecsRoleCredentials({ roleName: "r", fetchImpl: (async (u: string | URL | Request) => (String(u).endsWith("/api/token") ? new Response("", { status: 404 }) : new Response(JSON.stringify({ Code: "Fail", AccessKeyId: "LEAK" }), { status: 200 }))) as typeof fetch });
+    await expect(bad()).rejects.toThrow(/^无法从 ECS 元数据服务取得实例角色凭证$/);
+  });
+  it("OssCourseStore 凭证轮换后换客户端（签名 URL 不会用过期凭证）", async () => {
+    const built: string[] = [];
+    let id = "a";
+    const store = new OssCourseStore({ credentials: async () => ({ accessKeyId: id, accessKeySecret: "s", securityToken: "t" }), region: "cn-beijing", bucket: "hbecho-course" });
+    // 不发网络：只要求签名（本地计算）；客户端按 accessKeyId 区分
+    const u1 = await store.signedGetUrl("doc/x.pdf", 60);
+    id = "b";
+    const u2 = await store.signedGetUrl("doc/x.pdf", 60);
+    built.push(u1, u2);
+    expect(u1).toContain("OSSAccessKeyId=a");
+    expect(u2).toContain("OSSAccessKeyId=b");
+    expect(u1).toContain("security-token=t");
   });
 });

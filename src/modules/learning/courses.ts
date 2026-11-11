@@ -7,7 +7,7 @@ import { z } from "zod";
 import { courseBrandScopes, courses, courseTags } from "../../db/schema";
 import type { AuthContext } from "../access-control";
 import { assertKeysFree, audienceInput, brandScopeInput, descriptionInput, maxBytesOf, parseOrThrow, resolveBrands, resolveTags, tagIdsInput, titleInput, verifyAll } from "./course-common";
-import { authorizeOrThrow, requireUser, writeAudit, type LearningDeps, type PendingAudit } from "./deps";
+import { alertVod, authorizeOrThrow, requireUser, writeAudit, type LearningDeps, type PendingAudit } from "./deps";
 import { LearningError, mysqlErrorCode } from "./errors";
 import { mimeAllowed, newKey, type UploadSlot } from "./files";
 import type { VodUploadTicket } from "./vod";
@@ -48,7 +48,8 @@ export async function requestVideoUpload(deps: LearningDeps, ctx: AuthContext, i
   if (!Number.isSafeInteger(input.size) || input.size <= 0 || input.size > deps.config.videoMaxBytes) throw new LearningError("input", "file_too_large", "视频大小超出上限");
   try {
     return { ...(await deps.vod.createUpload({ title, fileName: input.fileName, fileSize: input.size })), maxBytes: deps.config.videoMaxBytes };
-  } catch {
+  } catch (e) {
+    alertVod(deps, "createUpload", e);
     // 凭证失败：不建课程行，可重试
     throw new LearningError("unavailable", "vod_unavailable", "视频服务暂时不可用，请稍后重试");
   }
@@ -180,7 +181,8 @@ export async function createVideoCourse(deps: LearningDeps, ctx: AuthContext, ra
   let info;
   try {
     info = await deps.vod.getVideo(videoId);
-  } catch {
+  } catch (e) {
+    alertVod(deps, "getVideo", e);
     throw new LearningError("unavailable", "vod_unavailable", "视频服务暂时不可用，请稍后重试");
   }
   if (!info) throw new LearningError("input", "video_missing", "没有找到已上传的视频，请重新上传");

@@ -7,6 +7,7 @@ import { DEFAULT_LEARNING_CONFIG } from "../modules/learning/config";
 import { verifyUpload } from "../modules/learning/course-common";
 import { newKey } from "../modules/learning/files";
 import { OssCourseStore } from "../modules/learning/oss-course-store";
+import { parseLearningEnv } from "../modules/learning/runtime";
 import type { LearningDeps } from "../modules/learning/deps";
 
 try {
@@ -16,22 +17,19 @@ try {
 }
 const env = process.env;
 const BUCKET = env.HBECHO_COURSE_OSS_BUCKET ?? "hbecho-course";
-const accessKeyId = env.HBECHO_LEARNING_ACCESS_KEY_ID ?? env.OSS_ACCESS_KEY_ID;
-const accessKeySecret = env.HBECHO_LEARNING_ACCESS_KEY_SECRET ?? env.OSS_ACCESS_KEY_SECRET;
 const region = env.HBECHO_COURSE_OSS_REGION ?? env.OSS_REGION;
 
 const gate: string[] = [];
 if (env.HBECHO_LEARNING_SMOKE !== "approved") gate.push("HBECHO_LEARNING_SMOKE=approved");
 if (BUCKET !== "hbecho-course") gate.push("桶名必须是 hbecho-course");
-if (!accessKeyId) gate.push("HBECHO_LEARNING_ACCESS_KEY_ID（或 OSS_ACCESS_KEY_ID）");
-if (!accessKeySecret) gate.push("HBECHO_LEARNING_ACCESS_KEY_SECRET（或 OSS_ACCESS_KEY_SECRET）");
-if (!region) gate.push("HBECHO_COURSE_OSS_REGION（或 OSS_REGION）");
+if (!region && env.HBECHO_LEARNING_CREDENTIALS !== "ecs_role") gate.push("HBECHO_COURSE_OSS_REGION（或 OSS_REGION）");
 if (gate.length) {
   process.stderr.write(`门槛未满足，未发起任何请求：${gate.join("；")}\n`);
   process.exit(2);
 }
 
-const store = new OssCourseStore({ accessKeyId: accessKeyId!, accessKeySecret: accessKeySecret!, region: region!, bucket: BUCKET, ...(env.HBECHO_COURSE_OSS_ENDPOINT ? { endpoint: env.HBECHO_COURSE_OSS_ENDPOINT } : {}) });
+const cfg = parseLearningEnv(env);
+const store = new OssCourseStore({ credentials: cfg.credentials, region: cfg.region, bucket: cfg.bucket, ...(cfg.endpoint ? { endpoint: cfg.endpoint } : {}) });
 const deps = { store, config: DEFAULT_LEARNING_CONFIG } as unknown as LearningDeps;
 
 const pdf = new TextEncoder().encode("%PDF-1.4\n% hbecho learning smoke\n");
@@ -99,5 +97,5 @@ try {
 }
 
 const failed = steps.filter((s) => !s.ok);
-process.stdout.write(`${JSON.stringify({ bucket: BUCKET, region, key, httpRequests: requests, bytesUploaded: pdf.byteLength, steps, failed: failed.length }, null, 2)}\n`);
+process.stdout.write(`${JSON.stringify({ bucket: BUCKET, region: cfg.region, credentials: cfg.credentialsKind, key, httpRequests: requests, bytesUploaded: pdf.byteLength, steps, failed: failed.length }, null, 2)}\n`);
 process.exit(failed.length ? 1 : 0);

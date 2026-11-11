@@ -3,6 +3,8 @@
 // 错误一律去掉可能夹带签名 / 凭证的原始 message，只保留可分类的信息（同 raw-capture/oss-store.ts）。
 import { Readable } from "node:stream";
 import OSS from "ali-oss";
+import type { CredentialSource } from "./credentials";
+import { staticCredentials } from "./credentials";
 import type { CourseObjectStore } from "./store";
 
 /** ali-oss 客户端里本模块用到的那部分形状。 */
@@ -16,8 +18,11 @@ export interface CourseOssClientLike {
 }
 
 export interface CourseStoreOptions {
-  accessKeyId: string;
-  accessKeySecret: string;
+  /** 固定 AccessKey；与 credentials 二选一。 */
+  accessKeyId?: string;
+  accessKeySecret?: string;
+  /** 凭证来源（例如 ECS 实例角色，会过期）：每次操作前现取，凭证变了就换客户端。 */
+  credentials?: CredentialSource;
   region: string;
   bucket: string;
   endpoint?: string;
@@ -49,27 +54,45 @@ export function attachmentDisposition(name: string): string {
 }
 
 export class OssCourseStore implements CourseObjectStore {
-  private readonly client: CourseOssClientLike;
   private readonly timeoutMs: number;
+  private current: { key: string; client: CourseOssClientLike } | undefined;
+  private readonly source: CredentialSource | undefined;
 
-  constructor(opts: CourseStoreOptions) {
+  constructor(private readonly opts: CourseStoreOptions) {
     this.timeoutMs = opts.timeoutMs ?? 30_000;
-    this.client =
-      opts.client ??
-      (new OSS({
-        accessKeyId: opts.accessKeyId,
-        accessKeySecret: opts.accessKeySecret,
-        region: normalizeOssRegion(opts.region),
-        bucket: opts.bucket,
-        ...(opts.endpoint === undefined ? {} : { endpoint: opts.endpoint }),
-        secure: true,
-        timeout: this.timeoutMs,
-      }) as unknown as CourseOssClientLike);
+    if (!opts.client) {
+      if (opts.credentials) this.source = opts.credentials;
+      else if (opts.accessKeyId && opts.accessKeySecret) this.source = staticCredentials({ accessKeyId: opts.accessKeyId, accessKeySecret: opts.accessKeySecret });
+      else throw new Error("OssCourseStore 需要 accessKeyId / accessKeySecret 或 credentials");
+    }
+  }
+
+  /** 凭证变了（STS 轮换）就换客户端；签名 URL 也用当前凭证，所以所有方法都先经过这里。 */
+  private async client(): Promise<CourseOssClientLike> {
+    if (this.opts.client) return this.opts.client;
+    const c = await this.source!();
+    const key = `${c.accessKeyId}:${c.securityToken ?? ""}`;
+    if (this.current?.key !== key) {
+      this.current = {
+        key,
+        client: new OSS({
+          accessKeyId: c.accessKeyId,
+          accessKeySecret: c.accessKeySecret,
+          ...(c.securityToken ? { stsToken: c.securityToken } : {}),
+          region: normalizeOssRegion(this.opts.region),
+          bucket: this.opts.bucket,
+          ...(this.opts.endpoint === undefined ? {} : { endpoint: this.opts.endpoint }),
+          secure: true,
+          timeout: this.timeoutMs,
+        }) as unknown as CourseOssClientLike,
+      };
+    }
+    return this.current.client;
   }
 
   async signedPutUrl(key: string, contentType: string, ttlSeconds: number): Promise<string> {
     try {
-      return this.client.signatureUrl(key, { expires: ttlSeconds, method: "PUT", "Content-Type": contentType });
+      return (await this.client()).signatureUrl(key, { expires: ttlSeconds, method: "PUT", "Content-Type": contentType });
     } catch (e) {
       throw wrap(e, "signatureUrl(PUT)");
     }
@@ -77,7 +100,7 @@ export class OssCourseStore implements CourseObjectStore {
 
   async head(key: string): Promise<{ size: number; contentType: string } | null> {
     try {
-      const h = (await this.client.head(key, { timeout: this.timeoutMs })).res.headers;
+      const h = (await (await this.client()).head(key, { timeout: this.timeoutMs })).res.headers;
       const size = Number(h["content-length"]);
       if (!Number.isSafeInteger(size) || size < 0) throw new Error("OSS head 返回了无法识别的 content-length");
       return { size, contentType: String(h["content-type"] ?? "") };
@@ -90,7 +113,7 @@ export class OssCourseStore implements CourseObjectStore {
   async getRange(key: string, start: number, endInclusive: number): Promise<Uint8Array | null> {
     let content: unknown;
     try {
-      content = (await this.client.get(key, { headers: { Range: `bytes=${start}-${endInclusive}` }, timeout: this.timeoutMs })).content;
+      content = (await (await this.client()).get(key, { headers: { Range: `bytes=${start}-${endInclusive}` }, timeout: this.timeoutMs })).content;
     } catch (e) {
       if (isNotFound(e)) return null;
       throw wrap(e, "get");
@@ -102,7 +125,7 @@ export class OssCourseStore implements CourseObjectStore {
 
   async getObject(key: string): Promise<{ body: ReadableStream<Uint8Array>; size: number } | null> {
     try {
-      const r = await this.client.getStream(key, { timeout: this.timeoutMs });
+      const r = await (await this.client()).getStream(key, { timeout: this.timeoutMs });
       const size = Number(r.res.headers["content-length"]);
       if (!(r.stream instanceof Readable) || !Number.isSafeInteger(size) || size < 0) throw new Error("OSS getStream 返回了无法识别的响应");
       return { body: Readable.toWeb(r.stream) as ReadableStream<Uint8Array>, size };
@@ -114,7 +137,7 @@ export class OssCourseStore implements CourseObjectStore {
 
   async signedGetUrl(key: string, ttlSeconds: number, opts: { downloadName?: string } = {}): Promise<string> {
     try {
-      return this.client.signatureUrl(key, {
+      return (await this.client()).signatureUrl(key, {
         expires: ttlSeconds,
         method: "GET",
         ...(opts.downloadName === undefined ? {} : { response: { "content-disposition": attachmentDisposition(opts.downloadName) } }),
@@ -126,7 +149,7 @@ export class OssCourseStore implements CourseObjectStore {
 
   async delete(key: string): Promise<void> {
     try {
-      await this.client.delete(key, { timeout: this.timeoutMs });
+      await (await this.client()).delete(key, { timeout: this.timeoutMs });
     } catch (e) {
       if (isNotFound(e)) return;
       throw wrap(e, "delete");
@@ -139,7 +162,7 @@ export class OssCourseStore implements CourseObjectStore {
     for (;;) {
       let page: Awaited<ReturnType<CourseOssClientLike["list"]>>;
       try {
-        page = await this.client.list({ prefix, "max-keys": 1000, ...(marker === undefined ? {} : { marker }) }, { timeout: this.timeoutMs });
+        page = await (await this.client()).list({ prefix, "max-keys": 1000, ...(marker === undefined ? {} : { marker }) }, { timeout: this.timeoutMs });
       } catch (e) {
         throw wrap(e, "list");
       }

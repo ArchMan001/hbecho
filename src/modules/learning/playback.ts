@@ -4,7 +4,7 @@
 import { and, eq } from "drizzle-orm";
 import { learningProgress } from "../../db/schema";
 import type { AuthContext } from "../access-control";
-import { authorizeOrThrow, requireUser, type LearningDeps } from "./deps";
+import { alertVod, authorizeOrThrow, requireUser, type LearningDeps } from "./deps";
 import { LearningError } from "./errors";
 import { parseId } from "./ids";
 import { loadCourse } from "./read";
@@ -42,7 +42,8 @@ export async function getPlayback(deps: LearningDeps, ctx: AuthContext, rawId: u
   let auth;
   try {
     auth = await deps.vod.getPlayAuth(c.vodVideoId!);
-  } catch {
+  } catch (e) {
+    alertVod(deps, "getPlayAuth", e);
     throw new LearningError("unavailable", "vod_unavailable", "播放服务暂时不可用，请稍后重试");
   }
   // 续播位置：新文件时长变短时截断到新时长内（PRD §6.2）

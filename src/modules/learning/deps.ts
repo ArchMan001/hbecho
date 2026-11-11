@@ -12,7 +12,9 @@ export type LearningAlert =
   | { code: "media_deletion_stuck"; targetKind: string; targetId: string; attempts: number }
   | { code: "audit_write_failed"; eventType: string }
   | { code: "maintenance_step_failed"; step: string; error: string }
-  | { code: "video_status_check_failed"; failed: number };
+  | { code: "video_status_check_failed"; failed: number }
+  /** 业务路径上 VOD 调用失败（对用户只说「暂时不可用」，原因在这里）；error 只含适配器包装过的错误码。 */
+  | { code: "vod_call_failed"; op: string; error: string };
 
 export interface LearningDeps {
   db: Db;
@@ -58,4 +60,10 @@ export async function writeAudit(deps: Pick<LearningDeps, "audit" | "alert">, ev
       deps.alert?.({ code: "audit_write_failed", eventType: e.eventType });
     }
   }
+}
+
+/** 业务路径上吞掉 VOD 异常之前先留痕：只记操作名与适配器包装过的信息（不含凭证）。 */
+export function alertVod(deps: Pick<LearningDeps, "alert">, op: string, e: unknown): void {
+  const error = e instanceof Error && /^VOD /.test(e.message) ? e.message.slice(0, 120) : e instanceof Error ? e.name : typeof e;
+  deps.alert?.({ code: "vod_call_failed", op, error });
 }

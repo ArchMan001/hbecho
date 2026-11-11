@@ -138,13 +138,13 @@
 
 | # | 依赖 | 当前状态 | 何时可验 |
 |---|---|---|---|
-| E1 | VOD 转码（720p/480p）真实结果 | 模板组已建，未上传过视频 | 首次真实上传后 |
-| E2 | VOD 播放（short-lived 凭证） | 播放域名未配置，等 ICP 备案；备案前用 OSS 签名 URL 联调视频播放（G-D47） | 备案通过 + 域名生效后；联调可先用 OSS 签名 URL |
+| E1 | VOD 转码（720p/480p）真实结果 | **部分验证（2026-11-11）**：真实 VOD 上传 → 转码 → `normal`、时长回填通过（`pnpm learning-smoke-vod` 与浏览器端到端）；测试源 320×240 只出了一档，**720p / 480p 两档未验** | 用 ≥720p 的真实视频上传一次 |
+| E2 | VOD 播放（短期凭证） | **已验证（localhost）**：真实 Chrome + Aliplayer 2.25.1 + `GetVideoPlayAuth`；播放地址是 VOD 存储桶 OSS 默认域名，**无需自有播放域名**（ADR-0017，修正 G-D47 的前提）。**`echo.hbmarketer.com` 上的 Aliplayer License 未验** | 控制台申请 License 后在线上验一次 |
 | E3 | 自动截图 | 1.0 不做：`AddVodTemplate`（Snapshot）连续 `InternalError`，封面人工上传（G-D11） | 2.0 再评估 |
-| E4 | 资料 OSS 直传（服务端链路） | **已验证（2026-11-11）**：真实 `hbecho-course` 桶，签名 PUT / Content-Type 绑定 / HEAD / Range / 流式读取 / 附件名 / List / Delete 全部通过，命令 `HBECHO_LEARNING_SMOKE=approved pnpm learning-smoke` | 已完成，可重复运行 |
-| E5 | 浏览器跨域直传（资料 / 封面 / 视频） | `hbecho-course` 桶**没有 CORS 配置**（`NoSuchCORSConfiguration`）；VOD 存储桶未查。配置前上传会被浏览器拦 | 确认生产域名并由人批准配置 CORS 后 |
-| E6 | Aliplayer 播放 | 需要与播放页面域名绑定的 License + 备案域名（ADR-0017、G-D47） | License 与域名就绪后 |
-| E7 | 资料内联预览 | 服务端转发已用真实桶 + 本机 `next dev` 验证响应头；**手机浏览器 iframe 渲染 PDF 未验** | 手工 M3 |
+| E4 | 资料 OSS 直传（服务端链路） | **已验证（2026-11-11）**：真实 `hbecho-course` 桶，签名 PUT / Content-Type 绑定 / HEAD / Range / 流式读取 / 附件名 / List / Delete 全部通过（`HBECHO_LEARNING_SMOKE=approved pnpm learning-smoke`）；运行期角色 `hbecho-ecs-role` 在测试 ECS 容器里同样通过 | 已完成，可重复运行 |
+| E5 | 浏览器跨域直传（资料 / 封面 / 视频） | **已验证（2026-11-11）**：`hbecho-course` 已配 CORS（`https://echo.hbmarketer.com`）；真实 Chrome 直传资料 / 封面成功，VOD 分片上传成功（VOD 存储桶无需配置） | 新增域名要同步追加来源 |
+| E6 | Aliplayer 线上 License | 未申请；官方文档要求与页面域名绑定。localhost 无 License 可播 | 控制台为 `echo.hbmarketer.com` 申请后线上验 |
+| E7 | 资料内联预览 | **桌面 Chrome 已验**：iframe 加载服务端转发的 PDF（`inline`、`nosniff`）；**手机 / 微信里的渲染未验** | 手工 M3、M8 |
 
 ## 覆盖不了的
 

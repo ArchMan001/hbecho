@@ -98,8 +98,8 @@ export function CoursePlayer({ courseId, durationSec, positionSec, vodVideoStatu
       await loadSdk();
       const { videoId, playAuth, positionSec: resume } = r.data;
       setPhase("playing");
-      // 容器在 phase=playing 之后才渲染
-      await new Promise((res) => setTimeout(res, 0));
+      // 容器一直在 DOM 里（playing 时才显示）；等两帧让它真正可见、有宽度，再交给播放器
+      await new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())));
       const P = window.Aliplayer;
       if (!P) throw Object.assign(new Error("播放器没有加载成功"), { code: "player_sdk_load_failed" });
       const p = new P({ id: `player-${courseId}`, width: "100%", height: "420px", vid: videoId, playauth: playAuth, autoplay: true, ...(license ? { license } : {}) }, (inst) => {
@@ -136,9 +136,8 @@ export function CoursePlayer({ courseId, durationSec, positionSec, vodVideoStatu
   const pct = durationSec ? Math.min(100, Math.round((positionSec / durationSec) * 100)) : 0;
   return (
     <div className={`player ${blocked ? "is-disabled" : ""}`}>
-      {phase === "playing" ? (
-        <div id={`player-${courseId}`} />
-      ) : (
+      <div id={`player-${courseId}`} style={{ display: phase === "playing" ? "block" : "none" }} />
+      {phase !== "playing" ? (
         <div className="player-cover">
           {blocked ? (
             <div className="player-state">
@@ -152,7 +151,7 @@ export function CoursePlayer({ courseId, durationSec, positionSec, vodVideoStatu
             </button>
           )}
         </div>
-      )}
+      ) : null}
       <div className="player-bar">
         <div className="player-progress" style={{ width: `${pct}%` }} />
       </div>

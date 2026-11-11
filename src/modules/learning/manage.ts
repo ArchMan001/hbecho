@@ -6,7 +6,7 @@ import { z } from "zod";
 import { brands, courseBrandScopes, courses, courseTags, tags } from "../../db/schema";
 import type { AuthContext } from "../access-control";
 import { assertKeysFree, audienceInput, brandScopeInput, descriptionInput, parseOrThrow, resolveBrands, resolveTags, tagIdsInput, titleInput, verifyAll } from "./course-common";
-import { authorizeOrThrow, requireUser, writeAudit, type LearningDeps, type PendingAudit } from "./deps";
+import { alertVod, authorizeOrThrow, requireUser, writeAudit, type LearningDeps, type PendingAudit } from "./deps";
 import { LearningError, mysqlErrorCode } from "./errors";
 import { parseId } from "./ids";
 import { enqueueDeletion, processDeletions } from "./media-deletions";
@@ -361,7 +361,8 @@ export async function replaceVideoFile(deps: LearningDeps, ctx: AuthContext, raw
   let info;
   try {
     info = await deps.vod.getVideo(videoId);
-  } catch {
+  } catch (e) {
+    alertVod(deps, "getVideo", e);
     throw new LearningError("unavailable", "vod_unavailable", "视频服务暂时不可用，请稍后重试");
   }
   if (!info) throw new LearningError("input", "video_missing", "没有找到已上传的视频，请重新上传");

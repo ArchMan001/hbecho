@@ -61,6 +61,21 @@ function FilePick({ icon, label, hint, file, accept, onPick, progress, disabled 
   );
 }
 
+/**
+ * 真实 VOD 的实测（2026-11-11）：浏览器分片上传完成后，视频状态仍会在 Uploading 停留几秒到十几秒才进入转码。
+ * 所以「保存」遇到 video_uploading 不是失败，等一会儿再确认；最多等约 90 秒，仍未完成才报错（视频与幂等键保留，可重试）。
+ */
+async function untilUploaded<T>(attempt: () => Promise<ActionResult<T>>, onWait: (waiting: boolean) => void): Promise<ActionResult<T>> {
+  let r = await attempt();
+  for (let i = 0; i < 30 && !r.ok && r.code === "video_uploading"; i++) {
+    onWait(true);
+    await new Promise((res) => setTimeout(res, 3000));
+    r = await attempt();
+  }
+  onWait(false);
+  return r;
+}
+
 const call = async <T,>(fn: () => Promise<ActionResult<T>>): Promise<ActionResult<T>> => {
   try {
     return await fn();
@@ -85,6 +100,7 @@ export function CourseForm({ brands, tags, limits, initial }: { brands: BrandOpt
   const [pCover, setPCover] = useState<number | null>(null);
   const [pFile, setPFile] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState<Err>(null);
   // 同一次填写里重试沿用同一个幂等键，避免重复建课（design §4.1）；文件换了才换键
   const idem = useRef<string>(crypto.randomUUID().replace(/-/g, ""));
@@ -151,7 +167,7 @@ export function CourseForm({ brands, tags, limits, initial }: { brands: BrandOpt
         videoId = t.data.videoId;
         done.current.video = { file, videoId };
       }
-      const r = await call(() => createVideoAction({ title, description, audienceLevel: level, brandScope, tagIds, videoId, coverKey }, idem.current));
+      const r = await untilUploaded(() => call(() => createVideoAction({ title, description, audienceLevel: level, brandScope, tagIds, videoId, coverKey }, idem.current)), setWaiting);
       if (!r.ok) {
         if (/^(file_|upload_|video_|invalid_key)/.test(r.code)) {
           done.current = {};
@@ -314,7 +330,7 @@ export function CourseForm({ brands, tags, limits, initial }: { brands: BrandOpt
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 18 }}>
         <button type="button" className="btn" onClick={() => router.push("/learning/manage")} disabled={busy}>取消</button>
         <button className="btn btn-primary" type="submit" disabled={busy}>
-          <Icon name="check" /> {busy ? "保存中…" : editing ? "保存修改" : "保存并发布"}
+          <Icon name="check" /> {waiting ? "正在确认视频上传结果…" : busy ? "保存中…" : editing ? "保存修改" : "保存并发布"}
         </button>
       </div>
     </form>
@@ -328,6 +344,7 @@ export function ReplaceFile({ courseId, kind, limits }: { courseId: string; kind
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState<Err>(null);
 
   const go = async () => {
@@ -351,7 +368,7 @@ export function ReplaceFile({ courseId, kind, limits }: { courseId: string; kind
         if (!t.ok) throw t;
         setProgress(0);
         await uploadToVod(t.data, file, setProgress).catch(() => Promise.reject({ code: "upload_failed", message: "视频上传失败，请检查网络后重试" }));
-        const r = await call(() => replaceVideoAction(courseId, { videoId: t.data.videoId }));
+        const r = await untilUploaded(() => call(() => replaceVideoAction(courseId, { videoId: t.data.videoId })), setWaiting);
         if (!r.ok) throw r;
       }
       toast("文件已替换，学员立即看到新内容");
@@ -378,7 +395,7 @@ export function ReplaceFile({ courseId, kind, limits }: { courseId: string; kind
       ) : null}
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
         <button type="button" className="btn" onClick={go} disabled={!file || busy}>
-          <Icon name="upload" /> {busy ? "替换中…" : "替换文件"}
+          <Icon name="upload" /> {waiting ? "正在确认视频上传结果…" : busy ? "替换中…" : "替换文件"}
         </button>
       </div>
     </div>

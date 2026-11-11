@@ -1,5 +1,6 @@
 // learning 模块的对外入口（g-learning-min：标签、课程创建 / 维护、列表 / 详情 / 可见范围、播放、进度、汇总、下载、定时任务）。
 export * from "./config";
+export * from "./credentials";
 export * from "./courses";
 export * from "./deps";
 export * from "./download";

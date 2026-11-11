@@ -75,6 +75,11 @@ describe("表头跳过与示例行", () => {
     expect(r.exampleRowNos).toEqual([]);
     expect(r.rows).toHaveLength(1);
   });
+  it("示例行不占 2,000 行上限：示例行 + 2,000 行数据可用，2,001 行数据被拒", () => {
+    const body = (n: number) => Array.from({ length: n }, (_, i) => `S1,甲,138${String(i).padStart(8, "0")},u${i}`).join("\r\n");
+    expect(parseRosterFile(enc(`${buildTemplate()}${body(MAX_ROWS)}\r\n`)).rows).toHaveLength(MAX_ROWS);
+    expect(fail(enc(`${buildTemplate()}${body(MAX_ROWS + 1)}\r\n`))).toBe("too_many_rows");
+  });
   it("只有示例行没有数据 → no_data_rows", () => {
     expect(fail(enc(buildTemplate()))).toBe("no_data_rows");
   });

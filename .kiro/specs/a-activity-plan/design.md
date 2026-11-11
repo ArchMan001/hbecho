@@ -520,6 +520,7 @@ interface PlanActor {
 
 - 授权入口 `assert(actor, capability, resource)`：先 Capability，再 actor 自带的品牌 / 分公司范围，这两步先于任何数据库读取；再读计划行判断资源谓词（创建者、对象状态），读发生在任何业务写入之前（越权对象表现为未找到）；业务模块**只**调它；
 - **与 B 的关系**：`assert` 是本模块的入口，不是第二个独立的授权体系。[`b-access-control`](../b-access-control/design.md) 落地后，`assert` 的 Capability / 范围 / 谓词判定委托给 B 的 `authorize`（`activity_plan` 注册为 `ScopeStrategy`，创建者与分公司判断注册为谓词 `plan_creator` / `plan_branch`），`assert` 退化为一层薄封装；B 的「唯一授权入口」措辞因此成立；
+  - **实施现状（2026-11-11）**：本轮 `assert` 仍是独立实现（Capability → 品牌 / 分公司范围 → 创建者谓词），由 `toPlanActor` 适配出的 `PlanActor` 驱动；与 B 的 `authorize` 只有「角色 × create / join」的契约测试，**谓词没有注册到 B，也没有委托**。委托与谓词注册留到页面接入、`AuthContext` 能贯穿到模块入口时做。
 - 创建者谓词：`plan.created_by_actor === actor.actor || actor.platformAdmin`；
 - 名额豁免：`branchScope === "all"`；
 - CLI 身份来自环境变量，缺任一启动失败：`HBECHO_AP_ACTOR`、`HBECHO_AP_CAPABILITIES`、`HBECHO_AP_BRAND_SCOPE`（`all` 或品牌编码，逗号分隔）、`HBECHO_AP_BRANCH_SCOPE`（`all` 或分公司编码，逗号分隔，启动时解析成 ID）、`HBECHO_AP_PLATFORM_ADMIN`（`true` / `false`，缺省 `false`）；

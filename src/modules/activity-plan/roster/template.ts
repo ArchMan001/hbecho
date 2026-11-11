@@ -29,7 +29,7 @@ export interface ParsedRoster {
 export function parseRosterFile(bytes: Uint8Array): ParsedRoster {
   let parsed;
   try {
-    parsed = parseCsv(bytes, { header: ROSTER_HEADER, limits: { maxBytes: MAX_FILE_BYTES, maxRows: MAX_ROWS } });
+    parsed = parseCsv(bytes, { header: ROSTER_HEADER, limits: { maxBytes: MAX_FILE_BYTES, maxRows: MAX_ROWS + 1 } }); // +1：示例行不占数据行上限，过滤后再检查
   } catch (e) {
     if (e instanceof CsvFileError) {
       const message = e.code === "header_mismatch" ? `模板版本不符（${TEMPLATE_VERSION}），请重新下载模板：表头必须逐列等于「${ROSTER_HEADER.join("、")}」` : e.message;
@@ -40,6 +40,7 @@ export function parseRosterFile(bytes: Uint8Array): ParsedRoster {
   const isExample = (cells: string[]): boolean => cells.length === EXAMPLE_ROW.length && cells.every((c, i) => c === EXAMPLE_ROW[i]);
   const exampleRowNos = parsed.rows.filter((r) => isExample(r.cells)).map((r) => r.rowNo);
   const rows = parsed.rows.filter((r) => !isExample(r.cells));
+  if (rows.length > MAX_ROWS) throw new PlanError("input", "too_many_rows", `数据行超过 ${MAX_ROWS} 行上限，请拆分文件`, { rows: rows.length });
   if (rows.length === 0) throw new PlanError("input", "no_data_rows", "除表头和示例行外没有数据行");
   return { encoding: parsed.encoding, sha256: parsed.sha256, rows, exampleRowNos };
 }

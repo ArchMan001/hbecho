@@ -81,11 +81,11 @@ export async function confirm(deps: ConfirmDeps, batchIdText: string, actor: Pla
   };
 
   // ── 前置检查（零写入）──
+  if (!actor.capabilities.has(CAP_PLAN_JOIN)) return reject(new PlanError("authorization", "forbidden", `缺少 Capability ${CAP_PLAN_JOIN}`));
   const [batch] = await db.select().from(importBatches).where(eq(importBatches.importBatchId, batchId));
   if (!batch || batch.importKind !== "roster" || batch.planId === null) throw new PlanError("not_found", "not_found", "未找到");
   // 范围外的批次表现为未找到；分公司人员只能处理本分公司的批次（不限上传人）
   if (actor.branchScope !== "all" && (batch.submitterBranchId === null || !branchInScope(actor, batch.submitterBranchId))) throw new PlanError("not_found", "not_found", "未找到");
-  if (!actor.capabilities.has(CAP_PLAN_JOIN)) return reject(new PlanError("authorization", "forbidden", `缺少 Capability ${CAP_PLAN_JOIN}`));
   if (batch.status === "resolving" || batch.status === "completed") return existing(deps, batch);
   if (batch.status !== "awaiting_confirm" && batch.status !== "writing") return reject(new PlanError("conflict", "batch_not_confirmable", `批次状态 ${batch.status} 不能确认`));
   let plan: PlanRow;
@@ -243,7 +243,7 @@ async function processChunk(deps: ConfirmDeps, batchId: bigint, token: string, p
       phones: rosterRows.map((r) => normalizePhone(r.cells[2] ?? "")).filter((p): p is string => p !== null),
       locators: rosterRows.map((r) => (r.cells[3] ?? "").trim()).filter(Boolean).map((original) => ({ original, cleaned: classifyLocator(original).cleaned })),
     };
-    const refs = await loadRosterRefs(tx, plan, keys);
+    const refs = await loadRosterRefs(tx, plan, keys, { lockParticipation: true });
     const fresh = classifyRows(rosterRows, { plan: { platform: plan.platformCode as Platform, sectors: new Set(await sectorsOf(tx, planId)) }, actor, refs });
 
     const touched = new Set<bigint>();

@@ -8,7 +8,7 @@ import { classifyLocator, type Platform } from "../../provider-adapter";
 import { normalizePhone } from "../../phone";
 import type { Clock } from "../../raw-capture";
 import type { PlanAuditSink } from "../audit";
-import { branchInScope, CAP_PLAN_JOIN, type PlanActor } from "../authz";
+import { assert, branchInScope, CAP_PLAN_JOIN, type PlanActor } from "../authz";
 import { MAX_NEW_STAFF, ROSTER_HEADER, SOFT_CAP_ACCOUNTS, TEMPLATE_VERSION } from "../constants";
 import { PlanError } from "../errors";
 import { assertCollecting } from "../plans";
@@ -73,9 +73,10 @@ export function resolveSubmitterBranch(actor: PlanActor, requested?: bigint): bi
 export async function precheck(deps: RosterDeps, input: PrecheckInput, actor: PlanActor): Promise<PrecheckAccepted> {
   const { db, clock, audit } = deps;
   const now = clock.now();
+  assert(actor, CAP_PLAN_JOIN); // Capability 与来自 actor 的分公司范围先于任何数据库读取
+  const submitterBranchId = resolveSubmitterBranch(actor, input.branchId);
   const plan = await loadPlanFor(db, actor, CAP_PLAN_JOIN, input.planId);
   assertCollecting(plan);
-  const submitterBranchId = resolveSubmitterBranch(actor, input.branchId);
   if (submitterBranchId !== null) {
     const [p] = await db.select().from(activityPlanBranches).where(and(eq(activityPlanBranches.planId, plan.planId), eq(activityPlanBranches.branchId, submitterBranchId)));
     if (p?.status !== "joined") throw new PlanError("conflict", "branch_not_joined", "你所在的分公司还没有加入这个计划，请先加入");

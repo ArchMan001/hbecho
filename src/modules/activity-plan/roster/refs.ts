@@ -16,7 +16,8 @@ export interface RefKeys {
   /** 入口原文与清洗后文本（成对） */
   locators: ReadonlyArray<{ original: string; cleaned: string }>;
 }
-export async function loadRosterRefs(db: Db | DbTx, plan: { planId: bigint; brandId: bigint; platformId: bigint }, keys: RefKeys): Promise<RosterRefs> {
+/** lockParticipation：确认写入的块事务里对参与关系行加共享锁，使「分公司退出」与本块写入串行化。 */
+export async function loadRosterRefs(db: Db | DbTx, plan: { planId: bigint; brandId: bigint; platformId: bigint }, keys: RefKeys, o: { lockParticipation?: boolean } = {}): Promise<RosterRefs> {
   const storeCodes = [...new Set(keys.storeCodes)];
   const phones = [...new Set(keys.phones)];
   const storeMap = new Map<string, StoreRef>();
@@ -36,7 +37,8 @@ export async function loadRosterRefs(db: Db | DbTx, plan: { planId: bigint; bran
     for (const r of others) otherBrands.set(r.code, [...(otherBrands.get(r.code) ?? []), r.brandCode]);
   }
   const participation = new Map<bigint, "joined" | "exited">();
-  for (const r of await db.select().from(activityPlanBranches).where(eq(activityPlanBranches.planId, plan.planId))) participation.set(r.branchId, r.status as "joined" | "exited");
+  const partQuery = db.select().from(activityPlanBranches).where(eq(activityPlanBranches.planId, plan.planId));
+  for (const r of await (o.lockParticipation ? partQuery.for("share") : partQuery)) participation.set(r.branchId, r.status as "joined" | "exited");
 
   const staffMap = new Map<string, StaffRef[]>();
   for (const part of chunks(phones)) {

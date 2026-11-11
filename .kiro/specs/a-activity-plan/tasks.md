@@ -526,6 +526,7 @@
 5. 回收站内（status=deleted、未清除）的计划，它的批次也不出现在批次查询里（acceptance J5）；清除之后批次重新可见（J16）；
 6. 导入遇到上级关闭：行结果 `reason_detail` 带「监控状态：XX 被关闭」提示，不改上级开关（H13；`roster/upstream.ts`），验收对照时发现并补上；
 7. `assert` 是同步纯函数，Capability 与来自 actor 的范围先于任何数据库读（连事务都不开），用查询计数器测试守护（K2）。
+8. **合并前独立审查（2026-11-11）后的修订**：`settle` 与确认块对参与关系行加共享锁（与分公司退出串行化，新增并发用例）；示例行不再占 2,000 行上限；`confirm` / `precheck` 的 Capability 与分公司范围检查提前到读库之前；`assert` **没有**委托 B 的 `authorize`（design §9、acceptance K2a 已改成如实表述）；验收 / 需求里「本 spec 没有页面」的过期句子已订正；CI 的 ACR 推送加单次超时与重试、`image` job 超时放宽到 45 分钟；
 
 **没有做、需要人**
 

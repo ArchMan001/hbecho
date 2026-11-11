@@ -66,7 +66,7 @@ jobs:
     runs-on: ubuntu-latest
     # 链路本身不慢（探针：大文件约 9.4 MB/s，与 hbdam 同量级）；依赖层（大量小文件）首次推送要几分钟，之后依赖不变时层已在 ACR，
     # 稳态约 1.5 分钟（构建 1 分钟 + 推送 30 秒）。留 30 分钟余量给「依赖变了、整层重推」的情形。
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       REGISTRY: hbecho-registry-registry.cn-beijing.cr.aliyuncs.com
       NAMESPACE: hbecho
@@ -126,6 +126,9 @@ jobs:
         run: |
           set -euo pipefail
           echo "$ACR_PUSH_PASSWORD" | docker login --username "hbecho-acr-push@1241086349153033" --password-stdin "$REGISTRY"
-          docker push "$IMAGE:$SHA"
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then docker push "$IMAGE:main-latest"; fi
+          # 单次推送设超时并重试：上传偶尔在某个层上静默停住（2026-11-11 三次，每次停在不同的层），不能让它占满整个 job；
+          # 已推完的层在重试时 "Layer already exists"，所以重试很快
+          push() { for n in 1 2 3; do timeout 600 docker push "$1" && return 0; echo "推送 $1 第 $n 次失败，重试"; sleep 10; done; return 1; }
+          push "$IMAGE:$SHA"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then push "$IMAGE:main-latest"; fi
           echo "已推送 $IMAGE:$SHA" >> "$GITHUB_STEP_SUMMARY"

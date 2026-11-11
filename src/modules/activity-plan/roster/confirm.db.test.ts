@@ -179,7 +179,7 @@ describe("前置检查：任一失败整条命令零写入", () => {
     const batchId = await pre(deps, fx("basic.utf8.csv"), planActor("branch", { branches: [w.bj] }));
     expect(await code(confirm(deps, batchId, planActor("branch", { branches: [w.sh] })))).toBe("not_found/not_found");
     expect(await code(confirm(deps, "abc", hq))).toBe("input/invalid_batch_id");
-    expect(await code(confirm(deps, batchId, planActor("none")))).toBe("not_found/not_found");
+    expect(await code(confirm(deps, batchId, planActor("none")))).toBe("authorization/forbidden"); // Capability 先于读批次
   });
   it("无 Capability（有分公司范围但没有 join）", async () => {
     const { deps } = await setup();

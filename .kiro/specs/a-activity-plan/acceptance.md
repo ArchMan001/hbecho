@@ -23,7 +23,7 @@
 - `[环境]`：依赖测试机或真实数据，不能在本机离线判定；标明当前状态。
 - 每条对应 requirements 的 `AP-n`；没有「看一眼就行」的条目。
 - 需要 MySQL 的自动项写成 `*.db.test.ts`（`pnpm test:db`），其余是 `unit` project（`pnpm test`）；入口是 `./scripts/verify.sh`。
-- 本 spec **没有页面**，页面验收（`ui-foundation.md` §9 清单）在 N.6 确认后另立；这里不出现页面条目。
+- 页面归本 spec（界面设计已于 2026-11-10 确认，design §15.6），但**本轮不实施页面**，所以本文不含页面条目；页面任务实施后另立页面验收（`ui-foundation.md` §9 清单）。
 - 付费调用的真实 smoke **不是**自动验收，见 L 组与「环境项」。
 
 ## 逐条结果
@@ -282,7 +282,7 @@
 |---|---|---|---|
 | K1 | AP-14 | 无 capability / 越品牌 / 越分公司 / 非创建者各一次 | 稳定拒绝；除审计外零写入；越权对象表现为未找到 |
 | K2 | AP-14 | 授权顺序 | 缺 Capability、品牌 / 分公司范围不符（来自 actor）的调用**不产生任何数据库读**（用查询计数器断言）；需要读计划行的谓词（创建者、对象状态）读发生在任何业务写入之前；谓词失败时库中无业务写入 |
-| K2a | AP-14 | `assert` 与 B 的 `authorize` | B 落地后 `assert` 的判定委托给 `authorize`（契约测试：同一输入两者结论一致）；不存在第二套独立的授权判断 |
+| K2a | AP-14 | `assert` 与 B 的 `authorize` | `assert` 与 B 的 `authorize` 对「四类角色 × activity_plan.create / join」结论一致(契约测试)。**本轮没有把 `assert` 改成委托 `authorize`**：`PlanActor` 由 `toPlanActor` 从 `AuthContext` 适配而来，创建者与分公司谓词仍在 `assert` 里自己判断（谓词 `plan_creator` / `plan_branch` 未注册到 B），契约测试也不覆盖谓词；委托留到页面接入时(那时才有 `AuthContext` 贯穿到模块入口) |
 | K3 | AP-14 | CLI 缺 `HBECHO_AP_BRANCH_SCOPE` / `BRAND_SCOPE` / `CAPABILITIES` / `ACTOR` | 启动失败，不退化成全部 |
 | K4 | AP-14 | `HBECHO_AP_PLATFORM_ADMIN` 缺省 | 视为 false |
 | K5 | AP-14 | CLI 是否存在 `--skip-auth` / `--force` | 不存在（参数解析 strict，传入即报错） |
@@ -330,7 +330,7 @@
 
 ## 不在本 spec 验收内
 
-- 页面（计划列表 / 详情、名单导入向导、账号列表）：N.6 确认后另立页面验收；
+- 页面（计划列表 / 详情、名单导入向导、账号列表）：本轮不实施；页面任务实施后另立页面验收；
 - 监控判定计划的创建与字段、判定、指标、看板、导出：D / C / E；
 - 真实用户登录、DataScope、持久化审计：`b-access-control`；
 - 修改已录账号的主页链接（design §14 第 3 项）；

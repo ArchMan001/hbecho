@@ -89,7 +89,8 @@ async function settle(db: Db, rowId: bigint, now: Date, mode: "task" | "expired"
     if (decision.referenced) {
       const [plan] = await tx.select().from(activityPlans).where(eq(activityPlans.planId, batch.planId)).for("share");
       const [store] = row.storeId === null ? [] : await tx.select({ branchId: sectors.branchId }).from(stores).innerJoin(sectors, eq(sectors.sectorId, stores.sectorId)).where(eq(stores.storeId, row.storeId));
-      const [part] = store ? await tx.select().from(activityPlanBranches).where(and(eq(activityPlanBranches.planId, batch.planId), eq(activityPlanBranches.branchId, store.branchId))) : [];
+      // 参与关系行也要加锁：分公司退出（FOR UPDATE）与本归并并发时，不能给已退出的分公司留下一条在名单的项
+      const [part] = store ? await tx.select().from(activityPlanBranches).where(and(eq(activityPlanBranches.planId, batch.planId), eq(activityPlanBranches.branchId, store.branchId))).for("share") : [];
       if (!plan || plan.status !== "collecting" || !part || part.status !== "joined" || accountId === null || row.storeId === null || row.staffId === null || !store) {
         decision = { outcome: "conflict", reason: "plan_state_changed", detail: "解析完成时计划已不在采集中或分公司已退出，未加入名单", referenced: false };
       } else {

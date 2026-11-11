@@ -181,6 +181,32 @@ describe("归并的保护与幂等", () => {
     await e.resolver.runOnce();
     expect((await rowsOf(batchId))[0]).toMatchObject({ outcome: "conflict", reasonCode: "plan_state_changed" });
   });
+  it("分公司退出（持有参与关系行锁）与归并并发：归并等它提交，之后看到已退出，不留在名单的项", async () => {
+    const e = await env({ runRoot: noopRun });
+    const batchId = await e.submit(csv(staffLine(1, URL("RACE1"))));
+    const [row] = await rowsOf(batchId);
+    const a = await accountFor(row!.staffId!, URL("RACE1"), "URACE");
+    await setRoot(row!.resolveTaskId!, { status: "succeeded", accountId: a, resultSummary: { entry_outcome: "normal", account_created: true } });
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    let locked!: () => void;
+    const hasLock = new Promise<void>((r) => (locked = r));
+    const exiting = t.db.transaction(async (tx) => {
+      await tx.update(activityPlanBranches).set({ status: "exited", exitedAt: T0 }).where(and(eq(activityPlanBranches.planId, w.planId), eq(activityPlanBranches.branchId, w.bj)));
+      locked();
+      await gate; // 退出事务持锁不提交
+    });
+    await hasLock;
+    let settled = false;
+    const run = e.resolver.runOnce().then((r) => ((settled = true), r));
+    await new Promise((r) => setTimeout(r, 300));
+    expect(settled).toBe(false); // 归并阻塞在参与关系行上
+    release();
+    await exiting;
+    await run;
+    expect((await rowsOf(batchId))[0]).toMatchObject({ outcome: "conflict", reasonCode: "plan_state_changed" });
+    expect((await entries()).some((x) => x.accountId === a)).toBe(false);
+  });
   it("根任务未到终态留待下个 tick；写入中（writing）的批次不归并", async () => {
     const e = await env({ runRoot: async () => ({ kind: "retry_wait" }) });
     const batchId = await e.submit(csv(staffLine(1, URL("W1"))));

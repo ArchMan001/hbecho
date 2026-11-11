@@ -55,7 +55,7 @@ hbdam 的实测结论已经排除了 ghcr：北京 ECS 从 ghcr 拉约 4 GB 的�
 - **VPC 配额只有 1**：换绑 VPC 必须先删旧绑定；未来若引入新 VPC（例如生产环境独立 VPC），需要重新评估规格。
 - **域名里有两个 `registry`**：实例名以 `registry` 结尾，产品又追加 `-registry[-vpc]` 后缀，得到 `hbecho-registry-registry…`。实例名创建后不可改，为这个重建实例不值得；所有文档、CI 与命令以控制台显示为准。
 - **凭证**：新增两个 RAM 子账号，纳入 `§8.4` 密钥分级与轮换流程；push 的固定密码进 GitHub Actions secret `ACR_PUSH_PASSWORD`（2026-11-10 已写入），pull 的只在服务器上交互登录。
-- **镜像链路已启用（2026-11-11 订正）**：`Dockerfile` 与 CI `image` job 已存在，镜像 `…/hbecho/app:<git 短 sha>` 已推送并在测试 ECS 运行（`server-operations-runbook.md` §P6、§10.3）。实测 GitHub runner 经公网域名推送约 1 MB/s，所以 job 超时 60 分钟、镜像采用两阶段构建只装生产依赖；公网白名单的 `127.0.0.1/32` 已于 2026-11-11 删除。形态上是「非 standalone 的 `next start` + `tsx`（迁移与 CLI 共用同一镜像）」，仅测试环境；生产形态仍未决。
+- **镜像链路已启用（2026-11-11 订正）**：`Dockerfile` 与 CI `image` job 已存在，镜像 `…/hbecho/app:<git 短 sha>` 已推送并在测试 ECS 运行（`server-operations-runbook.md` §P6、§10.3）。推送速度：GitHub runner → 北京 ACR 的链路本身不慢（2026-11-11 探针：300 MB 不可压缩大文件 32 秒，约 9.4 MB/s，与 hbdam 的 12 MB/s 同量级）；慢的是 docker 对「大量小文件」的单层打包压缩（同样 100 MB 数据拆成 2 万个小文件，推送 54 秒，约 1.85 MB/s），所以 node_modules 这种层首次推送要数分钟；依赖不变时层已在 ACR，推送只要约 30 秒；镜像因此采用两阶段构建、运行阶段只装生产依赖，job 超时 30 分钟；公网白名单的 `127.0.0.1/32` 已于 2026-11-11 删除。形态上是「非 standalone 的 `next start` + `tsx`（迁移与 CLI 共用同一镜像）」，仅测试环境；生产形态仍未决。
 
 ## 它推翻了什么
 

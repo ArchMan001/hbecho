@@ -2126,7 +2126,7 @@ docker run --rm --network app_default --env-file /data/app/web.env <镜像> ./no
 docker image prune -f
 ```
 容器里**不经过 pnpm / corepack**（corepack 首次运行会去外网下载 pnpm）：直接调用 `./node_modules/.bin/…`。
-**镜像分发**：CI（GitHub Actions）经公网域名推送，实测约 1 MB/s，所以 `image` job 超时 60 分钟、运行阶段只装生产依赖；服务器经内网域名拉取，几十秒（ADR-0016）。
+**镜像分发**：CI（GitHub Actions）经公网域名推送，服务器经内网域名拉取（几十秒，ADR-0016）。GitHub runner → 北京 ACR 的链路本身不慢（2026-11-11 探针：300 MB 不可压缩大文件 32 秒，约 9.4 MB/s，与 hbdam 的 12 MB/s 同量级）；慢的是 docker 对「大量小文件」的单层打包压缩（同样 100 MB 数据拆成 2 万个小文件，推送 54 秒，约 1.85 MB/s），所以 node_modules 这种层首次推送要数分钟；依赖不变时层已在 ACR，推送只要约 30 秒。稳态 CI：`verify` 约 5 分钟 + `image` 约 1.5 分钟。
 
 ### 10.4 部署后必检
 

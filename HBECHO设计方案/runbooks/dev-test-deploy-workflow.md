@@ -19,7 +19,7 @@
 |---|---|---|
 | Mac 开发 | ✅ | 设计基线与探针脚本已就位 |
 | `./scripts/verify.sh` | ✅ | 九步：Node 版本、类型检查、离线单元测试、迁移一致、MySQL 8.4 数据库测试、密钥、文档链接、文档登记、Python 能力服务（2026-11-11 起） |
-| GitHub Actions | ✅ | `ci.yml`：`verify`（MySQL 服务容器上跑 `verify.sh`）+ `image`（应用路径变化时构建镜像 → 生产配置路径容器冒烟 → 推 ACR；GitHub runner 到北京 ACR 实测约 1 MB/s，job 超时 60 分钟）；无付费调用 |
+| GitHub Actions | ✅ | `ci.yml`：`verify`（MySQL 服务容器上跑 `verify.sh`）+ `image`（应用路径变化时构建镜像 → 生产配置路径容器冒烟 → 推 ACR；稳态约 1.5 分钟，job 超时 30 分钟；首次推送依赖层较慢，原因与对照见 server-operations-runbook §10.3）；无付费调用 |
 | 应用代码 | ✅ | 数据底座 tracer、全量同步、主数据导入、访问控制已合并 `main`；访问控制页面在分支 `b-access-ui` |
 | DDL / 迁移 | ✅ | `drizzle/` 版本化迁移，CI 与本机都在空库上从头执行 |
 | 测试套件 | ✅ | 单元 733、数据库 908（2026-11-11） |

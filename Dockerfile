@@ -1,7 +1,8 @@
 # hbecho 应用镜像（Web + access CLI + 迁移共用一个镜像）。
 # 形态：node:24-slim + `next start`。不用 standalone：同一镜像里还要跑 `tsx` 的迁移与 access CLI（运维引导首个超管）。
 # 构建发生在 CI（不在服务器上构建，ADR-0016）；标签 = git 短 sha。
-# 体积是硬约束：GitHub runner 推到北京的 ACR 只有约 1 MB/s，1.5 GB 的单阶段镜像会超过 CI 的 20 分钟。
+# 体积与文件数是硬约束（2026-11-11 探针）：链路本身不慢（大文件约 9.4 MB/s），慢的是 node_modules 这种大量小文件的层（约 1.85 MB/s）；
+#   单阶段 1.5 GB 镜像每次改动都要重推。
 #   两阶段：构建阶段装全部依赖并 next build；运行阶段只装生产依赖（tsx 在 dependencies 里，迁移与 CLI 要用），
 #   拷入构建产物（不含 .next/cache）。生产镜像不带 tests/、ui-lab/、设计文档（见 .dockerignore）。
 ARG BASE=node:24-slim

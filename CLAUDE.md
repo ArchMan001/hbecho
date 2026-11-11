@@ -17,7 +17,7 @@
 冲突时按此顺序裁决，不在代码或局部 SQL 里暗中选择一方：
 
 1. `CONTEXT.md` —— 领域词汇、语义边界、不变量
-2. `HBECHO设计方案/domains/data-foundation/database-design-v2.md` —— 数据底座实施基线（30 表）
+2. `HBECHO设计方案/domains/data-foundation/database-design-v2.md` —— 数据底座实施基线（35 表：29 张数据底座 + 6 张活动计划）
 3. `aimaster接口文档/` 的 V1.2 文档与 `raw3` 实测 —— 外部合同与证据
 4. `.kiro/specs/*` —— 各模块需求、设计、任务
 5. `HBECHO设计方案/prd-platform.md` —— 产品方向与阶段

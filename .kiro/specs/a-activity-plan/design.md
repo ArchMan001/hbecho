@@ -228,7 +228,7 @@ daily scan                   → 补记起点；满 15 天关闭
 
 | # | 目标 | 内容 |
 |---:|---|---|
-| R1 | v2 | 新增 §13「活动计划」：六张新表（§6.1）；开头第 10 条改为已定义；概述表数口径 +6 |
+| R1 | v2 | 新增 §22「活动计划」（v2 的 §13 已被「核心查询」占用，2026-11-11 订正）：六张新表（§6.1）；开头第 10 条改为已定义；表数口径统一为 29 + 6 = 35 |
 | R2 | v2 §8.3 | `unreferenced_since`；说明 `unreferenced_15d` 沿用为「因无计划引用而关闭」 |
 | R3 | v2 §9.8 | `resolving`、`submitter_branch_id`、roster 必填 `plan_id` 的 CHECK；说明 `plan_id` 不加外键的原因 |
 | R4 | v2 §9.9 | `new_staff`、三个新 `outcome`、`resolve_task_id` |

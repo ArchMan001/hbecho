@@ -106,6 +106,8 @@ export const staffAccountAssignments = mysqlTable(
     intakeStatus: varchar("intake_status", { length: 32 }).notNull(),
     monitoringClosedReason: varchar("monitoring_closed_reason", { length: 32 }),
     slotReleasedAt: utc("slot_released_at"),
+    // a-activity-plan R2：引用数降到 0 的时刻（15 天自动停采的计时起点）；只由 plan-references 模块写
+    unreferencedSince: utc("unreferenced_since"),
     // D-69：一个专员在同一平台最多一个占用名额的账号
     activeStaffPlatform: id("active_staff_platform").generatedAlwaysAs(
       sql`(CASE WHEN watch_type = 'staff' AND slot_released_at IS NULL THEN staff_id END)`,
@@ -123,7 +125,7 @@ export const staffAccountAssignments = mysqlTable(
     uniqueIndex("uq_assignments_account").on(t.accountId),
     uniqueIndex("uq_assignments_staff_platform_slot").on(t.activeStaffPlatform, t.platformId),
     index("idx_assignments_staff_platform").on(t.staffId, t.platformId),
-    index("idx_assignments_watch_monitoring").on(t.watchType, t.monitoringEnabled),
+    index("idx_assignments_watch_monitoring").on(t.watchType, t.monitoringEnabled, t.unreferencedSince),
     check("ck_assignments_watch_type", inList(t.watchType, ["staff", "external"])),
     check(
       "ck_assignments_staff_by_type",

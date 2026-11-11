@@ -43,7 +43,7 @@
 | **产品需求** | **本文档** | 定位、范围、域边界、跨域决策 | draft（复核中） |
 | 产品需求（域） | `prd-domain-<代号>-<slug>.md` | 单域的用户、场景、功能、规则、验收 | 9 份已写：B `current`；A、C–G 定稿候选；H、I 初稿（见 [`INDEX.md`](INDEX.md) §5） |
 | 跨域约定 | 不单独编写（D-73） | 编号、权限谓词、日志、成本、配置、容量按主题回原文，导航见 [`INDEX.md`](INDEX.md) §3.1 | — |
-| 技术基线 | [`domains/data-foundation/database-design-v2.md`](domains/data-foundation/database-design-v2.md) | 30 表、状态机、事务边界 | draft（待按 A 域逐表复核） |
+| 技术基线 | [`domains/data-foundation/database-design-v2.md`](domains/data-foundation/database-design-v2.md) | 35 表、状态机、事务边界 | draft（待按 A 域逐表复核） |
 | 技术设计 | `.kiro/specs/<代号>-<切片>/{requirements,design,tasks,acceptance}.md` | 单切片的可实施设计 | draft |
 | 技术决策 | [`architecture/adr/`](architecture/adr/README.md) | 难逆取舍与未决选型 | current |
 | 不可协商条款 | [`governance/constitution.md`](governance/constitution.md) | 18 条跨模块红线 | draft |

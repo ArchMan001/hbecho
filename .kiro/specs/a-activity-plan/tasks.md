@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：未开始（2026-11-06 初建）。任务 0 的「待确认闸门」已通过（2026-11-06，刘学奎：全部按建议采纳）；任务 0 其余文档动作（v2 修订、A / CONTEXT 订正）完成之前，不写迁移，不写实现代码
+> **执行状态**：实施中（2026-11-11 起，分支 `a-activity-plan`）。任务 0 已完成（闸门 2026-11-06 通过；v2 §22 与 R2–R4、A v1.11.1、CONTEXT 三条词汇于 2026-11-11 落回）。进度以下方勾选为准
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -20,8 +20,8 @@
 
 ## 进度
 
-- [ ] 任务 0 · 文档前置（v2 修订、A / CONTEXT 订正、INDEX、待确认闸门）
-- [ ] 任务 1 · schema 与迁移（**完成后推第一次**）
+- [x] 任务 0 · 文档前置（v2 修订、A / CONTEXT 订正、INDEX、待确认闸门）
+- [x] 任务 1 · schema 与迁移（**完成后推第一次**）
 - [ ] 任务 2 · `csv-file` 抽取、授权 / 审计 / 错误骨架、测试挂具补充
 - [ ] 任务 3 · `plan-references`：引用计数与联动内核
 - [ ] 任务 4 · 计划生命周期：创建、编辑、状态、删除、回收站、变更记录、下游端口
@@ -90,7 +90,7 @@
 **动作**
 
 - [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md) 落回 design §6.3 的 R1–R4：
-  - R1：新增 §13「活动计划」，六张新表的字段、约束、索引照抄 design §6.1；开头第 10 条改为「已由 `a-activity-plan` 定义」；概述表数口径先按实际建表数统一（v2 第 8 行写 28、第 56 行与 §4.1 写 30，自相矛盾），再 +6，各处同改；
+  - R1：新增 §22「活动计划」（v2 的 §13 已被「核心查询」占用，2026-11-11 订正），六张新表的字段、约束、索引照抄 design §6.1；开头第 10 条改为「已由 `a-activity-plan` 定义」；概述表数口径先按实际建表数统一（v2 第 8 行写 28、第 56 行与 §4.1 写 30，自相矛盾），再 +6，各处同改；
   - R2：`staff_account_assignments.unreferenced_since` 与索引；注明 `unreferenced_15d` 沿用为「因无计划引用而关闭」，v2 第 487 行关于「恢复时只重开该原因」的描述保持；
   - R3：`import_batches` 增加 `resolving`、`submitter_branch_id`、roster 必填 `plan_id` 的 CHECK，并写明 `plan_id` 不加外键的原因；
   - R4：`import_row_results` 增加 `new_staff`、三个新 `outcome`、`resolve_task_id`；删除「名单导入由 `a-activity-plan` 扩展自己的分类」这句待办。

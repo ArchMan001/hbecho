@@ -14,5 +14,6 @@ export * from "./maintenance";
 export * from "./quality";
 export * from "./roles";
 export * from "./scope";
+export * from "./services";
 export * from "./service-principals";
 export * from "./users";

@@ -7,15 +7,12 @@ import type { Logger } from "pino";
 import type { Db } from "../../db/client";
 import { accessUsers, auditEvents, branches, brands, importRowResults, stores } from "../../db/schema";
 import type { Clock } from "../raw-capture/ports";
-import { createAuditWriter, purgeOlderThan, type AuditRow } from "./audit";
-import { createAuditReader } from "./audit-read";
+import { createAuditWriter, type AuditRow } from "./audit";
 import { createAuthenticator } from "./authenticate";
 import type { AccessAuth } from "./auth-instance";
-import { createAuthorizer, type AuthContext } from "./authorize";
-import { createStaffLinkage } from "./linkage";
-import { ISSUE_SCOPE_NOT_RESOLVABLE, recordAccessIssue } from "./quality";
-import { createOrgDirectory } from "./scope";
-import { createUserAdmin, createUserImport, type BatchView, type UserView } from "./users";
+import type { AuthContext } from "./authorize";
+import { createAccessServices } from "./services";
+import type { BatchView, UserView } from "./users";
 import { loadStaffPlacements } from "./users/shared";
 
 export interface OrgRef {
@@ -56,20 +53,9 @@ const SERVICE_NAMES: Record<string, string> = {
 export function createWebServices(d: { db: Db; clock: Clock; auth: AccessAuth; logger?: Logger }) {
   const { db, clock } = d;
   const audit = createAuditWriter({ db, clock, ...(d.logger ? { logger: d.logger } : {}) });
-  const dir = createOrgDirectory(db);
-  const linkage = createStaffLinkage({ db, clock, audit, dir, purgeAudit: () => purgeOlderThan(db, audit, clock) });
-  const authorizer = createAuthorizer();
-  const admin = createUserAdmin({ db, clock, audit, dir, authorizer });
-  const imp = createUserImport({ db, clock, audit, admin });
-  const auditReader = createAuditReader({ db, authorizer });
-  const authn = createAuthenticator({
-    db,
-    dir,
-    linkage,
-    auth: d.auth,
-    onUnresolvable: ({ userId, reason }) =>
-      recordAccessIssue(db, { code: ISSUE_SCOPE_NOT_RESOLVABLE, severity: "warning", entityType: "user", entityId: userId, discriminator: reason, detail: { reason }, now: clock.now() }),
-  });
+  const svc = createAccessServices({ db, clock, audit, ...(d.logger ? { logger: d.logger } : {}) });
+  const { admin, imp, auditReader, dir, linkage } = svc;
+  const authn = createAuthenticator({ db, dir, linkage, auth: d.auth, onUnresolvable: svc.onUnresolvable });
 
   /** 同名的人（超管、总部、分公司人员）可能重名，所以操作者带角色以外的信息交给调用方；这里只给姓名。 */
   async function userNames(ids: readonly bigint[]): Promise<Map<string, string>> {
@@ -84,6 +70,8 @@ export function createWebServices(d: { db: Db; clock: Clock; auth: AccessAuth; l
     admin,
     imp,
     auditReader,
+    /** 各域注册「撤权取消任务」用：`egress.registerJobCanceller`。 */
+    egress: svc.egress,
 
     /** 侧栏账号卡：姓名与可检索品牌的名称（超管 / 总部之外按授权品牌）。 */
     async profile(ctx: AuthContext): Promise<{ name: string; brandNames: string[] | "all" }> {
@@ -132,14 +120,27 @@ export function createWebServices(d: { db: Db; clock: Clock; auth: AccessAuth; l
         const p = v.mediaStaffId ? placements.get(BigInt(v.mediaStaffId)) : undefined;
         return {
           ...v,
-          brandNames: v.brandIds.map((x) => brandName.get(x) ?? "（已删除的品牌）"),
-          branchNames: v.branchIds.map((x) => branchName.get(x) ?? "（已删除的分公司）"),
+          // 门店专员的授权表里没有品牌 / 分公司行，范围由所在门店推出：展示用门店的品牌与分公司
+          brandNames: p ? [brandName.get(p.brandId.toString()) ?? "（已删除的品牌）"] : v.brandIds.map((x) => brandName.get(x) ?? "（已删除的品牌）"),
+          branchNames: p ? [branchName.get(p.branchId.toString()) ?? "（已删除的分公司）"] : v.branchIds.map((x) => branchName.get(x) ?? "（已删除的分公司）"),
           storeLabel: p ? `${p.storeCode} · ${storeName.get(p.storeId) ?? ""}`.trim() : null,
           lastLoginAt: loginBy.get(v.userId) ?? null,
           createdBy: e?.createdByUserId ? (creators.get(e.createdByUserId.toString()) ?? "（已不可见）") : (SERVICE_NAMES[e?.createdBy ?? ""] ?? "系统"),
           disabledReason: e?.disabledReason ?? null,
         };
       });
+    },
+
+    /** 门店专员所在门店的品牌 / 分公司（列表的品牌、分公司筛选要把他们算进去：授权表里他们没有这两类行）。 */
+    async staffPlacements(views: readonly UserView[]): Promise<Map<string, { brandId: string; branchId: string }>> {
+      const ids = views.flatMap((v) => (v.mediaStaffId ? [BigInt(v.mediaStaffId)] : []));
+      const placements = await loadStaffPlacements(db, ids);
+      const out = new Map<string, { brandId: string; branchId: string }>();
+      for (const v of views) {
+        const p = v.mediaStaffId ? placements.get(BigInt(v.mediaStaffId)) : undefined;
+        if (p) out.set(v.userId, { brandId: p.brandId.toString(), branchId: p.branchId.toString() });
+      }
+      return out;
     },
 
     /** 导入批次的原始行（提交人本人才读得到：先过 imp.get 的归属检查）。 */

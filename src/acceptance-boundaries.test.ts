@@ -72,8 +72,11 @@ const text = (p: string) => readFileSync(p, "utf8");
 const code = (p: string) => text(p).replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 describe("B-AX-6：业务代码只检查 Capability，不写角色条件", () => {
-  it("四个角色字面量只出现在 access-control、授权表 schema、access CLI 与页面（只用于角色名展示和表单选项，授权判断仍只查 Capability）里", () => {
-    const allowed = (r: string) => r.startsWith("modules/access-control/") || r === "db/schema/access.ts" || r.startsWith("worker/access-") || r.startsWith("app/");
+  // 页面里的角色字面量只用于「角色名展示」和「表单选项 / 筛选芯片」，授权判断一律 ctx.capabilities.has(...)。
+  // 白名单精确到这几个文件，页面新增文件出现角色字面量会被这条拦住，由人确认它不是在做授权判断。
+  const APP_DISPLAY_ONLY = new Set(["app/(app)/users/_scope.ts", "app/(app)/users/[id]/page.tsx", "app/(app)/users/page.tsx", "app/_lib/labels.ts", "app/_components/user-forms.tsx"]);
+  it("四个角色字面量只出现在 access-control、授权表 schema、access CLI 与页面的几个展示文件里", () => {
+    const allowed = (r: string) => r.startsWith("modules/access-control/") || r === "db/schema/access.ts" || r.startsWith("worker/access-") || APP_DISPLAY_ONLY.has(r);
     const offenders = nonTestSources.filter((p) => !allowed(rel(p)) && /\b(platform_admin|hq_manager|branch_manager|store_staff)\b/.test(code(p))).map(rel);
     expect(offenders).toEqual([]);
   });

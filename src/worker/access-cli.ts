@@ -1,4 +1,4 @@
-// CLI：`pnpm access ...`（design §9.3）。只调用 Module，不直接写库；输出 JSON，BIGINT 一律十进制字符串。
+// CLI：`pnpm run access ...`（design §9.3）。只调用 Module，不直接写库；输出 JSON，BIGINT 一律十进制字符串。
 // 退出码：0 成功 / 2 输入、授权 / 3 冲突 / 4 不存在 / 5 超过上限 / 1 其他（对齐 master-data）。
 // 没有 --force / --skip-auth：权限边界来自「以哪个真实用户的身份操作」，范围与能力一律从数据库里的该用户现算，
 // 不接受环境变量自行声明角色或范围。写命令不带 --apply 一律只预览，库里无变化。

@@ -36,7 +36,10 @@ describe("名称补全", () => {
     expect(bm.branchNames).toEqual(["北京分公司"]);
     const staff = rows.find((r) => r.name === "专员甲")!;
     expect(staff.storeLabel).toContain("北京海信店");
-    expect(staff.brandNames).toEqual([]); // 门店专员的范围由门店决定，授权表里没有品牌行
+    expect(staff.brandNames).toEqual(["海信"]); // 授权表里没有品牌行，展示的是所在门店的品牌
+    expect(staff.branchNames).toEqual(["北京分公司"]);
+    const placed = await web.staffPlacements(await web.admin.list(ctx));
+    expect(placed.get(staff.userId)).toEqual({ brandId: org.hisense.toString(), branchId: org.bj.toString() });
     expect(rows.find((r) => r.name === "超管甲")!.lastLoginAt).not.toBeNull(); // loginAs 写了一条登录成功审计
   });
 });

@@ -43,7 +43,7 @@ function save(fileName: string, text: string) {
   a.href = url;
   a.download = fileName;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 10_000); // 立刻回收会让部分浏览器取消下载
 }
 
 export function ImportWizard({ batch }: { batch: WizardBatch | null }) {
@@ -51,7 +51,7 @@ export function ImportWizard({ batch }: { batch: WizardBatch | null }) {
   const toast = useToast();
   const fileInput = useRef<HTMLInputElement>(null);
   const [pending, start] = useTransition();
-  const [error, setError] = useState<{ code: string; message: string } | null>(null);
+  const [error, setError] = useState<{ code: string; message: string; hint?: string | undefined } | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [filter, setFilter] = useState<"all" | "new" | "skip" | "error">("all");
   const [shown, setShown] = useState(SHOW_STEP);
@@ -65,7 +65,7 @@ export function ImportWizard({ batch }: { batch: WizardBatch | null }) {
       form.set("file", file);
       let r: Awaited<ReturnType<typeof precheckImport>>;
       try { r = await precheckImport(form); } catch { r = { ok: false, code: "network_error", message: "文件没有传上去，请检查网络后重试" }; }
-      if (!r.ok) { setError({ code: r.code, message: r.message }); return; }
+      if (!r.ok) { setError({ code: r.code, message: r.message, hint: r.hint }); return; }
       toast("已读取文件并完成预检；预检只读，还没有写入任何用户");
       router.replace(`/users/import?batch=${r.data.batchId}`);
     });
@@ -73,7 +73,7 @@ export function ImportWizard({ batch }: { batch: WizardBatch | null }) {
     start(async () => {
       if (!batch) return;
       const r = await returnFile(batch.batchId);
-      if (!r.ok) { setError({ code: r.code, message: r.message }); return; }
+      if (!r.ok) { setError({ code: r.code, message: r.message, hint: r.hint }); return; }
       save(r.data.fileName, r.data.csv);
       toast(`已下载回流文件（${r.data.rows} 行）`);
     });
@@ -83,7 +83,7 @@ export function ImportWizard({ batch }: { batch: WizardBatch | null }) {
       setError(null);
       let r: Awaited<ReturnType<typeof confirmImport>>;
       try { r = await confirmImport(batch.batchId); } catch { r = { ok: false, code: "network_error", message: "请求没有完成；已写入的行不会重复写入，刷新后可继续确认" }; }
-      if (!r.ok) { setError({ code: r.code, message: r.message }); return; }
+      if (!r.ok) { setError({ code: r.code, message: r.message, hint: r.hint }); return; }
       toast(`已创建 ${r.data.created} 个待激活用户`);
       setConfirming(false);
       router.refresh();
@@ -167,14 +167,14 @@ export function ImportWizard({ batch }: { batch: WizardBatch | null }) {
 
         {batch && step === 3 ? (
           <>
-            <Callout icon="alert" tone="warn" style={{ marginBottom: 14 }}>确认后同步写入 {batch.newRows} 个用户；每行走与单个邀请相同的创建逻辑，逐条记审计。任一行的审计写入失败，该行整体回滚，其余行继续。</Callout>
+            <Callout icon="alert" tone="warn" style={{ marginBottom: 14 }}>确认后同步写入 {batch.newRows} 个用户；每行走与单个邀请相同的创建逻辑，逐条记审计。任一行的审计写入失败，该行整体回滚，批次停在「写入中」，刷新后点「继续写入」从未处理的行续跑。</Callout>
             <div className="info-grid">
               <div><div className="info-label">将创建</div><div className="info-value num">{batch.newRows}</div></div>
               <div><div className="info-label">跳过</div><div className="info-value num">{batch.skippedRows}</div></div>
               <div><div className="info-label">错误回流</div><div className="info-value num">{batch.errorRows}</div></div>
               <div><div className="info-label">短信</div><div className="info-value">不发；用户自己到激活入口请求验证码</div></div>
             </div>
-            {error ? <div className="callout danger" role="alert" style={{ marginTop: 14 }}><Icon name="alert" /><span>{error.message}（错误码 {error.code}）</span></div> : null}
+            {error ? <div className="callout danger" role="alert" style={{ marginTop: 14 }}><Icon name="alert" /><span>{error.message}（错误码 {error.code}）{error.hint ? <small style={{ display: "block", marginTop: 4 }}>{error.hint}</small> : null}</span></div> : null}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 18 }}>
               <button type="button" className="btn" onClick={() => setConfirming(false)} disabled={pending || batch.status === "writing"}>上一步</button>
               <button type="button" className="btn btn-primary" onClick={confirm} disabled={pending}><Icon name="check" /> {pending ? "写入中…" : batch.status === "writing" ? "继续写入" : "确认写入"}</button>
@@ -194,7 +194,7 @@ export function ImportWizard({ batch }: { batch: WizardBatch | null }) {
           </div>
         ) : null}
 
-        {step !== 3 && error ? <div className="callout danger" role="alert" style={{ marginTop: 14 }}><Icon name="alert" /><span>{error.message}（错误码 {error.code}）</span></div> : null}
+        {step !== 3 && error ? <div className="callout danger" role="alert" style={{ marginTop: 14 }}><Icon name="alert" /><span>{error.message}（错误码 {error.code}）{error.hint ? <small style={{ display: "block", marginTop: 4 }}>{error.hint}</small> : null}</span></div> : null}
       </div>
     </div>
   );

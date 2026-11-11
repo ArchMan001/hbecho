@@ -32,7 +32,7 @@
 - `CONTEXT.md`：领域语言
 - `HBECHO设计方案/`：唯一设计文档根 —— `INDEX.md`、总 PRD `prd-platform.md`、子 PRD `prd-domain-<代号>-<slug>.md`、数据底座基线、运维手册、开发部署流程、宪法、ADR、统一归档 `archive/`
 - `.kiro/specs/`：spec 集；已实施的纵向切片有 `a-data-foundation-tracer`、`b-access-control`
-- `src/modules/access-control/`：访问控制（登录会话、Capability / DataScope、用户管理与导入、出口框架、审计）；**模块外只能从 `index.ts` 导入**（静态护栏 B-AX-14）；CLI 是 `pnpm access ...`（`src/worker/access-*.ts`），Web 入口只有 `src/app/api/{auth,health}`
+- `src/modules/access-control/`：访问控制（登录会话、Capability / DataScope、用户管理与导入、出口框架、审计）；**模块外只能从 `index.ts` 导入**（静态护栏 B-AX-14）；CLI 是 `pnpm run access ...`（`src/worker/access-*.ts`），Web 入口只有 `src/app/api/{auth,health}`
 - `.kiro/steering/`：自动加载的精简规则
 - `aimaster接口文档/`：供应商合同、探针脚本与 raw3 证据
 - `ui-lab/`：可点击界面原型（不进生产构建、不进 `src/app/`；ADR-0013）

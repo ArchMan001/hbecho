@@ -34,4 +34,6 @@ COPY --from=build /app/.next ./.next
 ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000
 EXPOSE 3000
 USER node
-CMD ["pnpm", "exec", "next", "start"]
+# 运行时不经过 pnpm/corepack（corepack 会在首次运行时去外网下载 pnpm，服务器上不可靠）：直接用 node_modules 里的可执行文件。
+# 迁移与 CLI 同理：`./node_modules/.bin/tsx src/db/migrate.ts`、`./node_modules/.bin/tsx src/worker/access-main.ts ...`
+CMD ["./node_modules/.bin/next", "start"]

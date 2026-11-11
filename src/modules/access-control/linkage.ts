@@ -5,7 +5,7 @@
 //   步骤 3 审计到期清理   任务 9 接入（deps.purgeAudit）
 //   步骤 4 清理   access_sms_sends / access_login_failures / access_bootstrap_tokens 的增长型行
 // 四步各自 try/catch、幂等；一步失败不影响其它步骤。
-import { and, eq, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import type { Db } from "../../db/client";
 import { accessBootstrapTokens, accessLoginFailures, accessSmsSends, accessUsers, mediaStaff } from "../../db/schema";
 import type { Clock } from "../raw-capture/ports";
@@ -20,7 +20,6 @@ const DAY = 86_400_000;
 const BJT_OFFSET_MS = 8 * 3_600_000;
 /** 清理的保留期（design §7.10）。 */
 export const RETENTION = { smsSendsDays: 35, loginFailureZeroDays: 7, loginFailureStaleDays: 90, bootstrapTokenDays: 30 } as const;
-const MAX_FAIL = 5;
 
 export interface LinkageDeps {
   db: Db;
@@ -29,6 +28,8 @@ export interface LinkageDeps {
   dir: OrgDirectory;
   /** 步骤 3（任务 9）：审计到期清理。 */
   purgeAudit?: () => Promise<unknown>;
+  /** 自动停用提交**之后**调用（取消该用户触发的未完成异步任务，与人工停用同一出口）；失败不回滚、不抛。 */
+  onRevoked?(userActor: string): Promise<void>;
   config?: { afterMinuteBjt?: number; maxPerRun?: number; retryAfterMs?: number };
   log?: (event: Record<string, unknown>, msg: string) => void;
 }
@@ -63,6 +64,17 @@ export function createStaffLinkage(deps: LinkageDeps) {
    * 跳过：用户已停用 / 没有绑定 / 专员其实有效 / 管理员人工恢复时已知情（binding_ack_staff_id 等于当前绑定）。
    */
   async function disableIfStaffInactive(userId: bigint): Promise<"disabled" | "skipped"> {
+    const r = await disableIfStaffInactiveTx(userId);
+    if (r === "disabled") {
+      try {
+        await deps.onRevoked?.(`user:${userId}`);
+      } catch {
+        // 取消任务失败不改变停用结果（各域任务自带过期与交付前复查兜底）
+      }
+    }
+    return r;
+  }
+  async function disableIfStaffInactiveTx(userId: bigint): Promise<"disabled" | "skipped"> {
     return db.transaction(async (tx) => {
       const u = await loadUserRecord(tx, userId, { forUpdate: true });
       if (!u || u.status === "disabled" || u.mediaStaffId === null) return "skipped";
@@ -152,7 +164,8 @@ export function createStaffLinkage(deps: LinkageDeps) {
     const [lf] = await db.delete(accessLoginFailures).where(
       or(
         and(eq(accessLoginFailures.failCount, 0), lt(accessLoginFailures.updatedAt, ago(RETENTION.loginFailureZeroDays))),
-        and(sql`${accessLoginFailures.failCount} < ${MAX_FAIL}`, isNull(accessLoginFailures.lockedUntil), lt(accessLoginFailures.updatedAt, ago(RETENTION.loginFailureStaleDays))),
+        // 90 天没有更新、且当前没有生效的锁定：包括 fail_count = 5 且锁定早已过期的行（否则匿名请求可以让这张表无限增长）
+        and(or(isNull(accessLoginFailures.lockedUntil), lte(accessLoginFailures.lockedUntil, now)), lt(accessLoginFailures.updatedAt, ago(RETENTION.loginFailureStaleDays))),
       ),
     );
     const cut = ago(RETENTION.bootstrapTokenDays);

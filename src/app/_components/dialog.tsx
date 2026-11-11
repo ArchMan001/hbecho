@@ -1,13 +1,14 @@
 "use client";
 // 确认弹窗（ui-foundation §6.5）：写明影响范围，按钮文字写动作本身，失败时留在弹窗里显示人话 + 稳定错误码。
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from "react";
 import type { ActionResult } from "../_lib/result";
 import { Icon, type IconName } from "./icon";
 import { useToast } from "./toast";
 
 export function Dialog({ open, title, onClose, children, foot }: { open: boolean; title: string; onClose: () => void; children: ReactNode; foot: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId(); // 同一页可能有多个弹窗，id 不能重复
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -18,7 +19,7 @@ export function Dialog({ open, title, onClose, children, foot }: { open: boolean
     <dialog
       ref={ref}
       className="modal"
-      aria-labelledby="dialog-title"
+      aria-labelledby={titleId}
       onClose={onClose}
       onClick={(e) => {
         if (e.target === ref.current) onClose();
@@ -26,7 +27,7 @@ export function Dialog({ open, title, onClose, children, foot }: { open: boolean
     >
       <div className="modal-card">
         <div className="modal-head">
-          <h2 id="dialog-title">{title}</h2>
+          <h2 id={titleId}>{title}</h2>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="关闭">
             ×
           </button>

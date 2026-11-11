@@ -244,7 +244,7 @@ export interface DisableOptions {
 }
 
 /** 锁住全部「未停用」超管行（按 ID 升序，固定锁顺序避免两个超管互停时死锁），返回其 ID。 */
-async function lockActiveAdmins(tx: DbTx): Promise<bigint[]> {
+export async function lockActiveAdmins(tx: DbTx): Promise<bigint[]> {
   const rows = await tx
     .select({ id: accessUsers.userId })
     .from(accessUsers)

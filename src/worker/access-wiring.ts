@@ -4,16 +4,8 @@ import type { Db } from "../db/client";
 import { branches, brands } from "../db/schema";
 import {
   AccessError,
-  createAuditReader,
+  createAccessServices,
   createAuditWriter,
-  createAuthorizer,
-  createBootstrap,
-  createContextResolver,
-  createOrgDirectory,
-  createStaffLinkage,
-  createUserAdmin,
-  createUserImport,
-  purgeOlderThan,
   userIdOf,
 } from "../modules/access-control";
 import type { AccessCliDeps } from "./access-cli";
@@ -27,17 +19,14 @@ export function buildAccessCliDeps(d: {
 }): AccessCliDeps {
   const { db, clock } = d;
   const audit = createAuditWriter({ db, clock, ...(d.logger ? { logger: d.logger } : {}) });
-  const dir = createOrgDirectory(db);
-  const linkage = createStaffLinkage({ db, clock, audit, dir, purgeAudit: () => purgeOlderThan(db, audit, clock), ...(d.logger ? { log: (e, m) => d.logger!.info(e, m) } : {}) });
-  const authorizer = createAuthorizer();
-  const admin = createUserAdmin({ db, clock, audit, dir, authorizer });
-  const resolver = createContextResolver({ db, dir, linkage });
+  const svc = createAccessServices({ db, clock, audit, ...(d.logger ? { logger: d.logger } : {}) });
+  const { admin, resolver } = svc;
   return {
     admin,
-    imp: createUserImport({ db, clock, audit, admin }),
-    boot: createBootstrap({ db, clock, audit }),
-    audit: createAuditReader({ db, authorizer }),
-    maintain: linkage,
+    imp: svc.imp,
+    boot: svc.boot,
+    audit: svc.auditReader,
+    maintain: svc.linkage,
     actorId: d.actorId,
     async context(actorId) {
       const id = userIdOf(actorId);

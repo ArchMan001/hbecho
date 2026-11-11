@@ -27,7 +27,8 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
 
   // 超管不能停用自己；自己、同级与上级只读（manageable 由 Module 判定）
   const editable = u.manageable;
-  const roles = allowedRoles(ctx.role).map((r) => ({ value: r, label: ROLE_LABEL[r] ?? r }));
+  // 已有用户不能被改成门店专员（专员要先在主数据里，按手机号 + 门店编码新建并绑定），所以编辑里不提供这个选项
+  const roles = allowedRoles(ctx.role).filter((r) => r !== "store_staff").map((r) => ({ value: r, label: ROLE_LABEL[r] ?? r }));
   const sub = `${u.phone} · 创建者 ${u.createdBy} · 最后登录 ${fmtTime(u.lastLoginAt)}`;
   return (
     <>

@@ -9,6 +9,13 @@ import type { Logger } from "pino";
 import type { Db, DbTx } from "../../db/client";
 import { auditEvents } from "../../db/schema";
 import type { Clock } from "../raw-capture/ports";
+import type { AuthContext, AuthorizeRequest, Decision } from "./authorize";
+
+/** reasonCode 是系统生成的稳定标识符（B-D30）：调用方无法传入自由文本。违反是编程错误，不论风险级别都抛。 */
+const REASON_CODE = /^[a-z0-9][a-z0-9_.-]{0,63}$/;
+const assertReasonCode = (code: string): void => {
+  if (!REASON_CODE.test(code)) throw new AuditWriteError("reasonCode 必须是稳定标识符（小写字母、数字、下划线、点、连字符），不能是自由文本");
+};
 
 export type AuditOutcome = "succeeded" | "denied" | "failed";
 export type AuditRisk = "high" | "low";
@@ -101,6 +108,7 @@ export function createMemoryAuditWriter(clock: Clock = { now: () => new Date() }
     events,
     failNext: (n = 1) => void (failures = n),
     async write(e, opts) {
+      assertReasonCode(e.reasonCode);
       if (opts.risk === "high" && !opts.tx) throw new AuditWriteError("高风险审计必须传 tx（与业务写入同一事务）");
       if (failures > 0) {
         failures -= 1;
@@ -155,6 +163,7 @@ export function createAuditWriter(deps: AuditWriterDeps): PersistentAuditWriter 
   return {
     lowRiskFailures: () => lowFailures,
     async write(e, opts) {
+      assertReasonCode(e.reasonCode);
       if (opts.risk === "high") {
         if (!opts.tx) throw new AuditWriteError("高风险审计必须传 tx（与业务写入同一事务）");
         try {
@@ -293,4 +302,25 @@ export async function listAudit(db: Db, q: AuditQuery = {}): Promise<AuditRow[]>
     scopeSummary: r.scopeSummary,
     detail: r.detail,
   }));
+}
+
+/**
+ * 授权拒绝的审计（低风险、尽力写入）：接到 `createAuthorizer({ onDenied })`。页面、CLI 和各域的 authorize 拒绝因此都留痕，
+ * 不再只有出口守卫里「需要审计」的那几个出口才记。reasonCode 取拒绝原因（稳定枚举）。
+ */
+export function denialAuditor(audit: AuditWriter) {
+  return async (info: { ctx: AuthContext; request: AuthorizeRequest; decision: Exclude<Decision, { ok: true }> }): Promise<void> => {
+    await audit.write(
+      {
+        actor: info.ctx.actor,
+        actorUserId: info.ctx.userId,
+        eventType: "authorization_denied",
+        outcome: "denied",
+        reasonCode: info.decision.reason,
+        ...(info.request.resource ? { targetType: info.request.resource.key } : {}),
+        detail: { capability: info.request.capability, kind: info.decision.kind },
+      },
+      { risk: "low" },
+    );
+  };
 }

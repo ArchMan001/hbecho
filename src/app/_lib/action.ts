@@ -19,6 +19,17 @@ const BY_CODE: Record<string, string> = {
   store_not_in_scope: "这个门店不在你的管理范围内。",
 };
 
+/** 文件级错误的失败项与样本（design §15.4）：只给上传者本人看，内容来自他自己上传的文件。 */
+function hintOf(code: string, detail: unknown): string | undefined {
+  const d = (detail ?? {}) as { expected?: unknown; got?: unknown; sample?: unknown; rows?: unknown; bytes?: unknown };
+  const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).slice(0, 40)).slice(0, 20).join("、") : "");
+  if (code === "header_mismatch") return `应为：${list(d.expected)}。你的文件是：${list(d.got) || "（空）"}`;
+  if (code === "encoding_unrecognized" && typeof d.sample === "string") return `文件开头的内容：${d.sample.slice(0, 80)}`;
+  if (code === "too_many_rows" && typeof d.rows === "number") return `你的文件有 ${d.rows} 行数据`;
+  if (code === "file_too_large" && typeof d.bytes === "number") return `你的文件有 ${(d.bytes / 1024 / 1024).toFixed(1)} MB`;
+  return undefined;
+}
+
 export async function run<T>(fn: (ctx: AuthContext) => Promise<T>): Promise<ActionResult<T>> {
   const s = await currentSession();
   if (!s.ok) {
@@ -29,7 +40,7 @@ export async function run<T>(fn: (ctx: AuthContext) => Promise<T>): Promise<Acti
   try {
     return ok(await fn(s.ctx));
   } catch (e) {
-    if (isAccessError(e)) return fail(e.code, BY_CODE[e.code] ?? e.message);
+    if (isAccessError(e)) return fail(e.code, BY_CODE[e.code] ?? e.message, hintOf(e.code, e.detail));
     // 只记错误类型与数据库错误码：驱动的错误信息里会带 SQL 参数（手机号等），不进日志
     const cause = (e as { cause?: { code?: string } } | null)?.cause;
     console.error("action_failed", e instanceof Error ? e.name : typeof e, cause?.code ?? "");

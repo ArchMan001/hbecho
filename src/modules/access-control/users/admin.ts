@@ -8,7 +8,7 @@ import type { DbTx } from "../../../db/client";
 import { accessUserBranches, accessUserBrands, accessUsers, authSessions, authUsers, brands, mediaStaff, stores } from "../../../db/schema";
 import { normalizePhone } from "../../phone";
 import type { AuthContext, Authorizer } from "../authorize";
-import { AccessError } from "../errors";
+import { AccessError, isDuplicateKey } from "../errors";
 import { canGrant, manages, type Principal, type ProposedGrant } from "../grants";
 import { isRoleCode, ROLE_RANK, type RoleCode } from "../roles";
 import {
@@ -17,6 +17,7 @@ import {
   loadStaffPlacements,
   loadUserRecord,
   loadUserRecords,
+  lockActiveAdmins,
   principalOf,
   restoreCore,
   targetsOf,
@@ -232,6 +233,10 @@ export function createUserAdmin(deps: UserAdminDeps) {
       const p = await requireManager(ctx);
       let narrowed = false;
       await db.transaction(async (tx) => {
+        // 锁顺序与 disableCore 一致：目标是超管时，先按 ID 升序锁全部未停用超管，再锁目标行。
+        // 先锁目标再锁全部超管，会与「另一个超管同时降级 / 停用你」互相等待而死锁（实测 8 轮并发互降 6 轮死锁）
+        const peek = await loadUserRecord(tx, userId);
+        if (peek?.role === "platform_admin") await lockActiveAdmins(tx);
         const u = await loadManaged(tx, p, userId, { forUpdate: true });
         if (u.status === "disabled") throw new AccessError("conflict", "user_disabled", "停用的用户不能变更，请先恢复");
 
@@ -243,6 +248,7 @@ export function createUserAdmin(deps: UserAdminDeps) {
           const n = change.displayName.trim();
           if (n === "" || n.length > 100) throw new AccessError("input", "name_invalid", "姓名为空或超过 100 个字符");
           set.displayName = n;
+          await tx.update(authUsers).set({ name: n, updatedAt: now }).where(eq(authUsers.id, u.userId)); // 认证库里的名字同步（会话里读到的是它）
         }
 
         const accessChanging = change.role !== undefined || change.brandIds !== undefined || change.branchIds !== undefined;
@@ -286,7 +292,7 @@ export function createUserAdmin(deps: UserAdminDeps) {
           try {
             await tx.update(authUsers).set({ phoneNumber: phone, updatedAt: now }).where(eq(authUsers.id, u.userId));
           } catch (e) {
-            if (String((e as { cause?: { code?: string } }).cause?.code ?? (e as { code?: string }).code) === "ER_DUP_ENTRY") throw new AccessError("conflict", "phone_exists", "该手机号已被待激活或有效的用户占用");
+            if (isDuplicateKey(e)) throw new AccessError("conflict", "phone_exists", "该手机号已被待激活或有效的用户占用");
             throw e;
           }
         }
@@ -295,7 +301,7 @@ export function createUserAdmin(deps: UserAdminDeps) {
         try {
           await tx.update(accessUsers).set({ ...set, updatedAt: now }).where(eq(accessUsers.userId, u.userId));
         } catch (e) {
-          if (String((e as { cause?: { code?: string } }).cause?.code ?? (e as { code?: string }).code) === "ER_DUP_ENTRY") throw new AccessError("conflict", "phone_exists", "该手机号已被待激活或有效的用户占用");
+          if (isDuplicateKey(e)) throw new AccessError("conflict", "phone_exists", "该手机号已被待激活或有效的用户占用");
           throw e;
         }
         await deps.audit.write(

@@ -26,10 +26,11 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
 
   const w = web();
   const [org, all] = await Promise.all([w.directory(), w.admin.list(ctx)]);
-  // 筛选条件与计数、分页总数用同一条谓词（ui-foundation §4.1）
-  const filtered = all.filter(
-    (u) => (!role || u.role === role) && (!status || u.status === status) && (!brand || u.brandIds.includes(brand)) && (!branch || u.branchIds.includes(branch)),
-  );
+  const placed = brand || branch ? await w.staffPlacements(all) : new Map<string, { brandId: string; branchId: string }>();
+  // 筛选条件与计数、分页总数用同一条谓词（ui-foundation §4.1）。门店专员的品牌 / 分公司由所在门店决定
+  const inBrand = (u: (typeof all)[number]) => !brand || u.brandIds.includes(brand) || placed.get(u.userId)?.brandId === brand;
+  const inBranch = (u: (typeof all)[number]) => !branch || u.branchIds.includes(branch) || placed.get(u.userId)?.branchId === branch;
+  const filtered = all.filter((u) => (!role || u.role === role) && (!status || u.status === status) && inBrand(u) && inBranch(u));
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const page = Math.min(pages, Math.max(1, Number(q.page) || 1));
   const rows = await w.decorateUsers(filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), org);
@@ -133,7 +134,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                     </td>
                     <td className="nowrap">
                       <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                        {u.brandNames.length ? u.brandNames.map((b) => <span key={b} className="tag">{b}</span>) : u.role === "store_staff" ? <span className="cell-sub">由门店决定</span> : "—"}
+                        {u.brandNames.length ? u.brandNames.map((b) => <span key={b} className="tag">{b}</span>) : "—"}
                       </div>
                       <div className="cell-sub">{u.storeLabel ?? (u.branchNames.length ? u.branchNames.join("、") : u.role === "platform_admin" || u.role === "hq_manager" ? "全部分公司" : "—")}</div>
                     </td>

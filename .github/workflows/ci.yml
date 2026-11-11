@@ -102,6 +102,23 @@ jobs:
           docker build -t "$image:$sha" .
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then docker tag "$image:$sha" "$image:main-latest"; fi
           echo "IMAGE=$image" >> "$GITHUB_ENV"; echo "SHA=$sha" >> "$GITHUB_ENV"
+      - name: 冒烟：以生产配置路径启动容器（不连数据库，不发短信）
+        if: steps.changed.outputs.build == 'true'
+        run: |
+          set -euo pipefail
+          # NODE_ENV=production 在镜像里已设置：这一步同时验证「生产配置解析 + next start + 非 root + 镜像里没有测试文件」
+          docker run -d --name smoke -p 3000:3000 \
+            -e HBECHO_DATABASE_URL="mysql://u:p@127.0.0.1:1/x" -e HBECHO_AUTH_SECRET="$(openssl rand -hex 32)" \
+            -e HBECHO_PUBLIC_ORIGIN="https://smoke.invalid" -e HBECHO_SMS_MODE=aliyun -e HBECHO_SMS_DAILY_CAP=1 -e HBECHO_TRUSTED_PROXIES=127.0.0.1 \
+            -e HBECHO_SMS_ACCESS_KEY_ID=x -e HBECHO_SMS_ACCESS_KEY_SECRET=x -e HBECHO_SMS_SIGN_NAME=x \
+            -e HBECHO_SMS_TEMPLATE_ACTIVATE=x -e HBECHO_SMS_TEMPLATE_LOGIN=x -e HBECHO_SMS_TEMPLATE_RESET=x \
+            "$IMAGE:$SHA" > /dev/null
+          ok=0
+          for i in $(seq 1 40); do if curl -fsS http://127.0.0.1:3000/api/health; then ok=1; break; fi; sleep 1; done
+          if [ "$ok" != 1 ]; then docker logs smoke | tail -30; exit 1; fi
+          [ "$(docker exec smoke id -un)" = "node" ]
+          [ "$(docker exec smoke find /app/src /app/tests -name '*.test.ts' 2>/dev/null | wc -l)" = "0" ]
+          docker rm -f smoke > /dev/null
       - name: 推送到 ACR
         if: steps.changed.outputs.build == 'true'
         env:

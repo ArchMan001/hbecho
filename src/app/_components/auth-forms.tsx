@@ -68,7 +68,10 @@ function useCooldown() {
   const [, tick] = useState(0);
   useEffect(() => {
     if (until <= Date.now()) return;
-    const t = setInterval(() => tick((n) => n + 1), 1000);
+    const t = setInterval(() => {
+      tick((n) => n + 1);
+      if (Date.now() >= until) clearInterval(t); // 倒计时结束就停，不让定时器一直空转
+    }, 1000);
     return () => clearInterval(t);
   }, [until]);
   return { remain: Math.max(0, Math.ceil((until - Date.now()) / 1000)), start: () => setUntil(Date.now() + 60_000) };

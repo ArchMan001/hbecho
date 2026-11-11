@@ -24,7 +24,8 @@ export type PlanAuditEventType =
   | "monitoring_closed_unreferenced"
   | "monitoring_reopened_on_reference"
   | "monitoring_reopened_by_import"
-  | "plan_maintenance_completed";
+  | "plan_maintenance_completed"
+  | "downstream_notify_failed";
 
 export interface PlanAuditEvent {
   event_type: PlanAuditEventType;

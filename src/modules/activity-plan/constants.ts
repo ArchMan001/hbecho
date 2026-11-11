@@ -21,3 +21,8 @@ export const PLAN_DESCRIPTION_MAX = 2_000;
 export const RESOLVE_CONCURRENCY = 2;
 /** 北京时间每日维护开始的小时。 */
 export const MAINTENANCE_HOUR_BJT = 4;
+/** 板块种类（水机 / 家装）。计划选的是种类，不是某分公司下的板块行。 */
+export const SECTOR_KEYS = ["water", "home"] as const;
+export const SECTOR_LABELS: Record<(typeof SECTOR_KEYS)[number], string> = { water: "水机", home: "家装" };
+/** 1.0 只允许这三个平台建计划（D-47）；视频号等被拒绝。 */
+export const PLAN_PLATFORMS = ["douyin", "xiaohongshu", "kuaishou"] as const;

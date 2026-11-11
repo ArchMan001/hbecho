@@ -515,6 +515,8 @@
 - 规模数字见 design §12.1；
 - 第一次推送（任务 1 之后）的 CI：`verify` job 通过；`image` job（构建并推送 ACR）超过 30 分钟上限被取消，是已知的 ACR 推送速度问题（见 `ci.yml` 注释与 ADR-0016），不是本 spec 的失败。
 
+- 第二次推送（`ff32782`，任务 12 收尾）的 CI run 42977226246：`verify` job 通过（9m22s，即同一套 `verify.sh`，含全部数据库测试）；`image` job 的构建与容器冒烟（含「镜像里没有测试文件」检查）通过，但「推送到 ACR」一步卡在某个层上，30 分钟超时被取消，重跑一次同样超时。两次推送都是这个现象，原因在 ACR / 网络，不在代码；**因此没有按 `dev-ci-cadence` 合并 `main`**，等刘学奎决定（重跑、排查 ACR，或接受 `verify` 通过作为合并条件）。
+
 **与原计划不同的地方**
 
 1. 任务 2 的 `csv-file` 与 `phone` 抽取已由 `b-access-control` 先做完（`src/modules/csv-file`、`src/modules/phone` 在本分支开始时就存在，`master-data-import` 已是薄封装），本 spec 只补了授权 / 审计 / 错误 / 常量骨架与测试挂具；

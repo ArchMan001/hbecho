@@ -4,7 +4,7 @@
 //   - 不写密码、令牌、Cookie、验证码、整行原文、文件内容：序列化前按键名过滤（sanitize）
 //   - 幂等键去重：sha256(event_type | actor | target | occurred_at 到秒 | detail 摘要)
 import { createHash } from "node:crypto";
-import { and, asc, count, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, lte, sql, type SQL } from "drizzle-orm";
 import type { Logger } from "pino";
 import type { Db, DbTx } from "../../db/client";
 import { auditEvents } from "../../db/schema";
@@ -234,6 +234,9 @@ export interface AuditQuery {
   targetId?: string;
   batchRef?: bigint;
   eventType?: string;
+  /** 操作者 / 对象是这些用户（页面按姓名或手机号解析出的用户 ID）；空数组 = 没有匹配，结果为空。 */
+  actorUserIds?: readonly bigint[];
+  targetUserIds?: readonly bigint[];
   from?: Date;
   to?: Date;
   limit?: number;
@@ -263,6 +266,11 @@ const auditConds = (q: AuditQuery): SQL[] => {
   if (q.targetId !== undefined) conds.push(eq(auditEvents.targetId, q.targetId));
   if (q.batchRef !== undefined) conds.push(eq(auditEvents.batchRef, q.batchRef));
   if (q.eventType !== undefined) conds.push(eq(auditEvents.eventType, q.eventType));
+  if (q.actorUserIds) conds.push(q.actorUserIds.length ? inArray(auditEvents.actorUserId, [...q.actorUserIds]) : sql`1 = 0`);
+  if (q.targetUserIds) {
+    const ids = q.targetUserIds.map(String);
+    conds.push(ids.length ? and(eq(auditEvents.targetType, "user"), inArray(auditEvents.targetId, ids))! : sql`1 = 0`);
+  }
   if (q.from) conds.push(gte(auditEvents.occurredAt, q.from));
   if (q.to) conds.push(lte(auditEvents.occurredAt, q.to));
   return conds;

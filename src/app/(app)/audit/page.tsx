@@ -7,7 +7,7 @@ import { requireUser, web } from "../../_lib/session";
 const PAGE_SIZE = 50;
 const DAYS: Record<string, number> = { "7d": 7, "30d": 30, "1y": 365 };
 
-export default async function AuditPage({ searchParams }: { searchParams: Promise<{ event?: string; range?: string; page?: string }> }) {
+export default async function AuditPage({ searchParams }: { searchParams: Promise<{ event?: string; range?: string; page?: string; actor?: string; target?: string }> }) {
   const ctx = await requireUser();
   // 审计只对超管开放；其他角色直接访问也只看到「无权访问」，不显示任何条数
   if (!ctx.capabilities.has("audit.read")) return <DeniedState text="审计日志仅平台超管可读。" />;
@@ -15,11 +15,16 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   const event = q.event && AUDIT_EVENT_OPTIONS.includes(q.event) ? q.event : "all";
   const range = q.range && q.range in DAYS ? q.range : "all";
   const days = DAYS[range];
+  const actor = (q.actor ?? "").trim().slice(0, 50);
+  const target = (q.target ?? "").trim().slice(0, 50);
+  const w = web();
+  // 姓名 / 手机号 → 用户 ID；输入了但没有匹配时结果为空（不是「忽略这个条件」）
   const filter = {
     ...(event !== "all" ? { eventType: event } : {}),
     ...(days ? { from: new Date(Date.now() - days * 86_400_000) } : {}),
+    ...(actor ? { actorUserIds: await w.resolveAuditUsers(ctx, actor) } : {}),
+    ...(target ? { targetUserIds: await w.resolveAuditUsers(ctx, target) } : {}),
   };
-  const w = web();
   const count = await w.auditReader.count(ctx, filter);
   const pages = Math.max(1, Math.ceil(count.total / PAGE_SIZE));
   const page = Math.min(pages, Math.max(1, Number(q.page) || 1));
@@ -36,6 +41,8 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
     const sp = new URLSearchParams();
     if (event !== "all") sp.set("event", event);
     if (range !== "all") sp.set("range", range);
+    if (actor) sp.set("actor", actor);
+    if (target) sp.set("target", target);
     if (p > 1) sp.set("page", String(p));
     const s = sp.toString();
     return s ? `/audit?${s}` : "/audit";
@@ -46,14 +53,14 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
       <section className="summary-band" aria-label="审计概览">
         <div>
           <div className="summary-title">{count.total} 条事件</div>
-          <div className="summary-sub">只读、追加写；到期按 365 天窗口清理。当前条件：{event === "all" ? "全部事件" : AUDIT_EVENT_LABEL[event]} · {AUDIT_RANGES.find(([v]) => v === range)?.[1]}</div>
+          <div className="summary-sub">只读、追加写；到期按 365 天窗口清理。当前条件：{event === "all" ? "全部事件" : AUDIT_EVENT_LABEL[event]} · {AUDIT_RANGES.find(([v]) => v === range)?.[1]}{actor ? ` · 操作者「${actor}」` : ""}{target ? ` · 对象「${target}」` : ""}</div>
         </div>
         <div className="summary-metrics">
           <div className="summary-metric"><span>{count.total}</span><small>事件</small></div>
           <div className="summary-metric"><span>{count.notSucceeded}</span><small>失败 / 拒绝</small></div>
         </div>
       </section>
-      <AuditFilters event={event} range={range} events={AUDIT_EVENT_OPTIONS.map((e) => [e, AUDIT_EVENT_LABEL[e] ?? e])} />
+      <AuditFilters event={event} range={range} actor={actor} target={target} events={AUDIT_EVENT_OPTIONS.map((e) => [e, AUDIT_EVENT_LABEL[e] ?? e])} />
       <div className="result-bar"><span>共 <strong>{count.total}</strong> 条</span><span className="hint">密码、令牌与验证码不记录。</span></div>
       {rows.length === 0 ? (
         <EmptyState title="该时间段无记录" text="换一个事件或时间范围试试。审计保留一年，更早的记录不可查。" />

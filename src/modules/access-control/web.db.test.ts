@@ -61,6 +61,28 @@ describe("审计页的读取", () => {
   });
 });
 
+describe("审计页的操作者 / 对象筛选", () => {
+  it("姓名（模糊）或手机号（精确）解析成用户；筛选后只剩相关事件；没有匹配时结果为空；非超管解析不出任何人", async () => {
+    await insertAccessUser(env, { role: "platform_admin", phone: "13000000001", name: "超管甲" });
+    const hq = await insertAccessUser(env, { role: "hq_manager", phone: "13000000002", name: "王敏", brandIds: [org.hisense] });
+    const bm = await insertAccessUser(env, { role: "branch_manager", phone: "13000000003", name: "李强", brandIds: [org.hisense], branchIds: [org.bj] });
+    const w = (id: bigint, target: bigint) => env.audit.write({ actor: `user:${id}`, actorUserId: id, eventType: "access_changed", outcome: "succeeded", reasonCode: "access_changed", targetType: "user", targetId: target.toString() }, { risk: "low" });
+    await w(hq, bm);
+    await w(bm, hq);
+    const admin = await ctxOf("13000000001");
+    expect(await web.resolveAuditUsers(admin, "王")).toEqual([hq]);
+    expect(await web.resolveAuditUsers(admin, "13000000003")).toEqual([bm]);
+    expect(await web.resolveAuditUsers(admin, "%")).toEqual([]); // 通配符按字面匹配，不会匹配所有人
+    const byActor = await web.auditReader.read(admin, { eventType: "access_changed", actorUserIds: await web.resolveAuditUsers(admin, "王敏") });
+    expect(byActor.map((r) => r.targetId)).toEqual([bm.toString()]);
+    const byTarget = await web.auditReader.read(admin, { eventType: "access_changed", targetUserIds: await web.resolveAuditUsers(admin, "王敏") });
+    expect(byTarget.map((r) => r.actorUserId)).toEqual([bm.toString()]);
+    expect(await web.auditReader.read(admin, { actorUserIds: [] })).toEqual([]);
+    expect((await web.auditReader.count(admin, { actorUserIds: [hq] })).total).toBe(1);
+    expect(await web.resolveAuditUsers(await ctxOf("13000000002"), "王")).toEqual([]);
+  });
+});
+
 describe("导入批次原始行", () => {
   it("提交人本人能读到原始行；其他人（含超管）读不到", async () => {
     await insertAccessUser(env, { role: "platform_admin", phone: "13000000001", name: "超管甲" });

@@ -2,7 +2,7 @@
 //   - 装配：认证器、用户管理、批量导入、审计读取，用的就是 CLI 同一批 Module（页面与 CLI 共用同一套授权与审计）；
 //   - 读取辅助：把 Module 返回的内部 ID 换成界面要显示的名字（品牌、分公司、门店、操作者），ID 不进界面（ui-foundation §6.6）；
 //   - `src/app` 只经这里取数，不自己碰数据库（ADR-0013、B-AX-12）。
-import { and, eq, inArray, max } from "drizzle-orm";
+import { and, eq, inArray, like, max, or } from "drizzle-orm";
 import type { Logger } from "pino";
 import type { Db } from "../../db/client";
 import { accessUsers, auditEvents, branches, brands, importRowResults, stores } from "../../db/schema";
@@ -129,6 +129,24 @@ export function createWebServices(d: { db: Db; clock: Clock; auth: AccessAuth; l
           disabledReason: e?.disabledReason ?? null,
         };
       });
+    },
+
+    /**
+     * 审计页的「操作者 / 对象」筛选：把输入的姓名（模糊）或 11 位手机号（精确）解析成用户 ID。
+     * 只有持有 audit.read 的主体能调用（否则这就是一个按姓名 / 手机号探测用户是否存在的口子）。
+     */
+    async resolveAuditUsers(ctx: AuthContext, text: string): Promise<bigint[]> {
+      const d = await svc.authorizer.authorize(ctx, { capability: "audit.read" });
+      if (!d.ok) return [];
+      const t = text.trim().slice(0, 50);
+      if (t === "") return [];
+      const escaped = t.replace(/[\\%_]/g, (c) => `\\${c}`);
+      const rows = await db
+        .select({ id: accessUsers.userId })
+        .from(accessUsers)
+        .where(or(eq(accessUsers.phone, t), like(accessUsers.displayName, `%${escaped}%`)))
+        .limit(50);
+      return rows.map((r) => r.id);
     },
 
     /** 门店专员所在门店的品牌 / 分公司（列表的品牌、分公司筛选要把他们算进去：授权表里他们没有这两类行）。 */

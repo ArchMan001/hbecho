@@ -9,7 +9,9 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Db, DbTx } from "../../../db/client";
 import { activityPlanOwners, activityPlanRoster, importBatches, importRowResults } from "../../../db/schema";
+import type { MonitoringResolver } from "../../monitoring";
 import { EVENTS, reconcileAccounts } from "../../plan-references";
+import { annotateUpstream } from "./upstream";
 import { UnsupportedCapabilityError, capabilityGate, classifyLocator, type Platform } from "../../provider-adapter";
 import { normalizePhone } from "../../phone";
 import { DEFAULT_CONFIG, type RosterSubmit, type TracerConfig } from "../../tracer-command";
@@ -34,6 +36,8 @@ export interface ConfirmDeps extends RosterDeps {
   maxMs?: number;
   staleMs?: number;
   newToken?: () => string;
+  /** 提示上级关闭（不改上级）；缺省不提示 */
+  monitoring?: MonitoringResolver;
   /** 批次确认完成（status=completed）之后调用，任务 8 用它触发补抓。失败不影响已提交的结果。 */
   onCompleted?: (batchId: bigint) => Promise<unknown>;
   /** 仅测试：抛错即模拟进程在该点被杀。 */
@@ -178,6 +182,7 @@ export async function confirm(deps: ConfirmDeps, batchIdText: string, actor: Pla
     result = { batchId: batchIdText, status, confirm: confirmCounts, alreadyConfirmed: false };
   });
   finalEvent.forEach((e) => deps.audit(e));
+  if (deps.monitoring) await annotateUpstream(db, deps.monitoring, batchId).catch(() => undefined);
   if (result.status === "completed") await deps.onCompleted?.(batchId).catch(() => undefined);
   return result;
 }

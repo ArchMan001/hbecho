@@ -103,6 +103,7 @@ export function createOwners(deps: { db: Db; clock: Clock; audit: PlanAuditSink 
    * 只有计划创建者与超管；仅采集中；默认只预览，apply 才写（AP-14）。分公司人员不能自己换。
    */
   async function assign(actor: PlanActor, a: { planId: bigint; branchId: bigint; owner: string; displayName?: string; slotNo?: number; apply?: boolean }): Promise<AssignResult> {
+    assert(actor, CAP_PLAN_CREATE);
     if (a.slotNo !== undefined && !(a.slotNo === 1 || a.slotNo === 2)) throw new PlanError("input", "slot_invalid", "槽位号只能是 1 或 2");
     if (a.owner.trim() === "") throw new PlanError("input", "owner_invalid", "负责人不能为空");
     const now = clock.now();

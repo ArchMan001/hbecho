@@ -179,21 +179,27 @@ export function createPlanQuery(deps: { db: Db; clock: Clock; resolver: Monitori
     };
   };
 
+  /** 回收站内（status=deleted、尚未清除）的计划不出现在任何业务查询里，包括它的批次；清除之后批次作为历史事实重新可见（J16）。 */
+  async function trashedPlanIds(): Promise<Set<bigint>> {
+    return new Set((await db.select({ id: activityPlans.planId }).from(activityPlans).where(eq(activityPlans.status, "deleted"))).map((r) => r.id));
+  }
   async function batches(actor: PlanActor, o: { planId?: bigint; offset?: number; limit?: number } = {}) {
     assertCanQuery(actor);
     const { offset, limit } = page(o);
+    const trashed = await trashedPlanIds();
+    if (o.planId !== undefined && trashed.has(o.planId)) notFound();
     const all = await db
       .select()
       .from(importBatches)
       .where(and(eq(importBatches.importKind, "roster"), ...(o.planId === undefined ? [] : [eq(importBatches.planId, o.planId)])))
       .orderBy(desc(importBatches.importBatchId));
-    return all.filter((b) => batchVisible(actor, b)).slice(offset, offset + limit).map(batchItem);
+    return all.filter((b) => batchVisible(actor, b) && (b.planId === null || !trashed.has(b.planId))).slice(offset, offset + limit).map(batchItem);
   }
   async function loadBatch(actor: PlanActor, batchIdText: string): Promise<BatchRow> {
     assertCanQuery(actor);
     if (!/^[1-9]\d*$/.test(batchIdText)) throw new PlanError("input", "invalid_batch_id", "批次 ID 必须是十进制数字");
     const [b] = await db.select().from(importBatches).where(eq(importBatches.importBatchId, BigInt(batchIdText)));
-    return b && batchVisible(actor, b) ? b : notFound();
+    return b && batchVisible(actor, b) && (b.planId === null || !(await trashedPlanIds()).has(b.planId)) ? b : notFound();
   }
   async function batch(actor: PlanActor, batchIdText: string) {
     return { ...batchItem(await loadBatch(actor, batchIdText)), rowsVisible: canSeeRows(actor) };

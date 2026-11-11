@@ -35,7 +35,7 @@ export function createActivityPlan(deps: ActivityPlanDeps) {
   const downstream = deps.downstream ?? noDownstream;
   const base = { db, clock, audit };
   const finalize = deps.supplement ? createRosterFinalizer({ db, clock, supplement: deps.supplement }) : undefined;
-  const confirmDeps: ConfirmDeps = { ...base, tracer: deps.tracer, ...(deps.tracerConfig ? { tracerConfig: deps.tracerConfig } : {}), ...(finalize ? { onCompleted: finalize } : {}) };
+  const confirmDeps: ConfirmDeps = { ...base, monitoring: deps.monitoring, tracer: deps.tracer, ...(deps.tracerConfig ? { tracerConfig: deps.tracerConfig } : {}), ...(finalize ? { onCompleted: finalize } : {}) };
   return {
     plans: createPlans({ ...base, downstream }),
     participation: createParticipation(base),
@@ -44,7 +44,7 @@ export function createActivityPlan(deps: ActivityPlanDeps) {
       precheck: (input: PrecheckInput, actor: PlanActor) => precheck(base, input, actor),
       confirm: (batchId: string, actor: PlanActor) => confirm(confirmDeps, batchId, actor),
       maintenance: createRosterMaintenance(base),
-      resolver: deps.runRoot && finalize ? createRosterResolver({ ...base, runRoot: deps.runRoot, finalize, ...(deps.tracerConfig ? { tracerConfig: deps.tracerConfig } : {}) }) : undefined,
+      resolver: deps.runRoot && finalize ? createRosterResolver({ ...base, monitoring: deps.monitoring, runRoot: deps.runRoot, finalize, ...(deps.tracerConfig ? { tracerConfig: deps.tracerConfig } : {}) }) : undefined,
     },
     query: createPlanQuery({ ...base, resolver: deps.monitoring }),
     reader: createPlanReader({ db, resolver: deps.monitoring }),

@@ -169,6 +169,7 @@ export function createPlans(deps: PlansDeps) {
   }
 
   async function edit(actor: PlanActor, planId: bigint, patch: EditPlanInput & Record<string, unknown>): Promise<{ plan: PlanView; changed: string[] }> {
+    assert(actor, CAP_PLAN_CREATE); // Capability 先于任何读库（连事务都不开）
     const immutable = IMMUTABLE_KEYS.filter((k) => k in patch);
     if (immutable.length > 0) throw new PlanError("input", "immutable_field", `${immutable.join("、")} 创建后不可修改`);
     const unknown = Object.keys(patch).filter((k) => !["name", "description", "startsOn", "endsOn"].includes(k));
@@ -207,6 +208,7 @@ export function createPlans(deps: PlansDeps) {
     resume: { from: ["paused", "archived"], to: "collecting", event: "planResumed" },
   };
   async function setStatus(actor: PlanActor, planId: bigint, action: StatusAction): Promise<{ plan: PlanView; from: string; to: string }> {
+    assert(actor, CAP_PLAN_CREATE);
     const tr = TRANSITIONS[action];
     if (!tr) bad("invalid_action", `未知操作 ${String(action)}`);
     const now = clock.now();
@@ -278,6 +280,7 @@ export function createPlans(deps: PlansDeps) {
   }
 
   async function restore(actor: PlanActor, planId: bigint): Promise<{ plan: PlanView; accountsReopened: number }> {
+    assert(actor, CAP_PLAN_CREATE);
     const now = clock.now();
     let events: PlanAuditEvent[] = [];
     const out = await db.transaction(async (tx) => {

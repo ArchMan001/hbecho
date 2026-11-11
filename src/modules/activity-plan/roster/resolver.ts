@@ -6,6 +6,7 @@ import { and, asc, eq } from "drizzle-orm";
 import type { Db } from "../../../db/client";
 import { importBatches, importRowResults, platforms, syncTasks } from "../../../db/schema";
 import { UnsupportedCapabilityError, capabilityGate, type Platform } from "../../provider-adapter";
+import type { MonitoringResolver } from "../../monitoring";
 import type { Clock } from "../../raw-capture";
 import { DEFAULT_CONFIG, type TracerConfig } from "../../tracer-command";
 import type { PlanAuditSink } from "../audit";
@@ -13,6 +14,7 @@ import { RESOLVE_CONCURRENCY } from "../constants";
 import type { RosterFinalizer } from "./finalize";
 import { countOutcomes } from "./confirm";
 import { settleExpired, settleRow, WORKER_ACTOR } from "./settle";
+import { annotateUpstream } from "./upstream";
 
 /** runTracerRoot 的窄端口（kind 与 orchestrator.RunKind 一致）。 */
 export type RunRoot = (rootTaskId: bigint) => Promise<{ kind: string }>;
@@ -22,6 +24,8 @@ export interface ResolverDeps {
   audit: PlanAuditSink;
   runRoot: RunRoot;
   finalize: RosterFinalizer;
+  /** 提示上级关闭（不改上级）；缺省不提示 */
+  monitoring?: MonitoringResolver;
   tracerConfig?: TracerConfig;
   concurrency?: number;
 }
@@ -54,11 +58,13 @@ export function createRosterResolver(deps: ResolverDeps) {
       .orderBy(asc(importRowResults.importBatchId), asc(importRowResults.rowNo))
       .limit(o.limit ?? 50);
     const completed = new Set<bigint>();
+    const touchedBatches = new Set<bigint>();
     report.examined = rows.length;
     const queue = rows.filter((r) => r.batchId !== undefined);
     const afterSettle = (s: Awaited<ReturnType<typeof settleRow>>) => {
       if (!s.settled) return;
       report.settled++;
+      if (s.batchId !== null) touchedBatches.add(s.batchId);
       s.events.forEach((e) => deps.audit(e));
       if (s.completedBatchId !== null) completed.add(s.completedBatchId);
     };
@@ -111,6 +117,8 @@ export function createRosterResolver(deps: ResolverDeps) {
         completed.add(b.importBatchId);
       }
     }
+    // 本 tick 归并过的批次：给「账号已被引用但上级关闭」的行补提示（不改上级开关）
+    if (deps.monitoring) for (const b of touchedBatches) await annotateUpstream(db, deps.monitoring, b).catch(() => undefined);
     for (const id of completed) {
       report.completedBatches.push(id.toString());
       deps.audit({ event_type: "roster_batch_confirmed", actor: WORKER_ACTOR, occurred_at: clock.now().toISOString(), reason_code: "resolving_completed", target_type: "import_batch", target_id: id.toString(), batch_id: id.toString() });

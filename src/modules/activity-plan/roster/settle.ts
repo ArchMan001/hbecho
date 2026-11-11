@@ -37,11 +37,12 @@ export function decideRow(root: { status: string; stopReason: string | null; las
 
 export interface SettleResult {
   settled: boolean;
+  batchId: bigint | null;
   /** 本次让批次变成 completed（事务提交后调用 finalize） */
   completedBatchId: bigint | null;
   events: PlanAuditEvent[];
 }
-const nothing: SettleResult = { settled: false, completedBatchId: null, events: [] };
+const nothing: SettleResult = { settled: false, batchId: null, completedBatchId: null, events: [] };
 
 /** 根任务已被清理（一年保留期后 resolve_task_id 置空）而行仍挂起：落为 resolve_failed/root_expired，不让它永远悬挂。 */
 export async function settleExpired(db: Db, rowId: bigint, now: Date): Promise<SettleResult> {
@@ -122,6 +123,6 @@ async function settle(db: Db, rowId: bigint, now: Date, mode: "task" | "expired"
         updatedAt: now,
       })
       .where(eq(importBatches.importBatchId, batch.importBatchId));
-    return { settled: true, completedBatchId: done ? batch.importBatchId : null, events };
+    return { settled: true, batchId: batch.importBatchId, completedBatchId: done ? batch.importBatchId : null, events };
   });
 }

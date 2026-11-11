@@ -107,6 +107,7 @@ if (isWorkerCommand) {
       audit: (e) => app.logger.info(e, "activity_plan.audit"),
       runRoot: (id) => runTracerRoot({ db: app.db, clock: app.clock, gateway, workerId: `${cfg.actorId}:roster:${process.pid}`, config: tracerConfig, leaseMs: cfg.leaseMs }, id),
       finalize,
+      monitoring: app.resolver,
       tracerConfig,
     });
     resolveRosters = async () => {

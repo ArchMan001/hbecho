@@ -11,6 +11,7 @@
 //  - 业务阻塞（归属冲突、名额已满）在发出列表调用之前终止：默认不再继续付费。
 import { and, eq } from "drizzle-orm";
 import type { Db } from "../../db/client";
+import { retryOnDeadlock } from "../../db/deadlock";
 import { odsProviderCalls, platforms, syncSettings, syncTasks } from "../../db/schema";
 import { jcsSha256 } from "../canonical-json";
 import { bindDominantListAuthor, bindSecondaryIdentifier, intakeAccount, loadOwnerSnapshot, type IdentifierRef, type IntakeResult } from "../identity";
@@ -647,10 +648,12 @@ async function currentRootCancelled(db: Db, rootId: bigint): Promise<boolean> {
 }
 
 async function retryDuplicate<T>(fn: () => Promise<T>): Promise<T> {
+  // 死锁时整个事务已回滚，intake / 整页投影都是幂等的整笔操作，原样重跑即可（名单导入的解析驱动并发运行多个根任务时会遇到：a-activity-plan 规模演练）
+  const run = () => retryOnDeadlock(fn);
   try {
-    return await fn();
+    return await run();
   } catch (e) {
-    if (isDuplicateKey(e)) return fn(); // 并发的另一个 worker 先建立了同一个账号 / 标识：再来一次会命中已有行
+    if (isDuplicateKey(e)) return run(); // 并发的另一个 worker 先建立了同一个账号 / 标识：再来一次会命中已有行
     throw e;
   }
 }

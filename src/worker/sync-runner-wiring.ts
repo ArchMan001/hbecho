@@ -85,6 +85,8 @@ export function buildAccountRunners(o: {
   env: Record<string, string | undefined>;
   gate?: Gate;
   factories?: RunnerWiringFactories;
+  /** 拿到共用的网关：名单解析驱动（a-activity-plan）与周期 Runner 必须是同一个网关，限流 / 熔断 / 成本护栏才只有一套。 */
+  onGateway?: (gateway: RawCaptureGateway) => void;
 }): RunnerRegistry {
   assertWorkerCanRun(o.cfg, o.gate); // 先于读 secret
   const f = o.factories ?? defaultRunnerFactories();
@@ -99,6 +101,7 @@ export function buildAccountRunners(o: {
     location: { providerCode: "aliyun-oss", region: secrets.oss.region, bucket: secrets.oss.bucket },
     policy: createBatchBudgetPolicy(o.db, { maxCalls: o.cfg.batchBudget.maxCalls, maxPoints: o.cfg.batchBudget.maxPoints }),
   });
+  o.onGateway?.(gateway);
   const deps = { db: o.db, clock: o.clock, gateway, environment: o.cfg.environment, sleep: f.sleep, async: DEFAULT_ASYNC };
   // 媒资：真实 HTTP transport（连接前拒绝非公网地址）+ Python 能力服务客户端（同一个对象实现图片转换与音频抽取）
   const transport = new HttpMediaTransport();

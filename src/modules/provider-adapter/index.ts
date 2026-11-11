@@ -5,7 +5,7 @@ export { decodeComments } from "./decode-comments";
 export { decodeDetail, expandCandidates } from "./decode-detail";
 export { decodeProfile, isSuspectedEmptyProfile } from "./decode-profile";
 export { decodeVideoList } from "./decode-video-list";
-export { checkLocatorPlatform, classifyLocator, type LocatorDecision, type PlatformCheck } from "./locator";
+export { checkLocatorPlatform, classifyLocator, detectLocatorPlatform, type LocatorDecision, type PlatformCheck } from "./locator";
 export { buildRequest, type BuildRequestInput } from "./request";
 export * from "./strategy";
 export { pickVideoSource, rankVideoSources } from "./video-source";

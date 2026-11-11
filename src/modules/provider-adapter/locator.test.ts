@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkLocatorPlatform, classifyLocator } from "./locator";
+import { checkLocatorPlatform, classifyLocator, detectLocatorPlatform } from "./locator";
 
 const DY_SHARE = "9- 长按复制此条消息，打开抖音搜索，查看TA的更多作品。 https://v.douyin.com/MPOAlEqWpec/ 1@3.com :1pm";
 const XHS_SHARE = "@日立中央空调 在小红书已经有7.8万个粉丝，点击链接或复制口令查看Ta的主页>> https://xhslink.cn/o/E2W9yK1ctR";
@@ -148,5 +148,31 @@ describe("快手入口", () => {
     expect(checkLocatorPlatform("kuaishou", DY_SHARE)).toEqual({ ok: false, reason: "platform_mismatch", detected: "douyin" });
     expect(checkLocatorPlatform("douyin", "https://v.kuaishou.com/abc")).toEqual({ ok: false, reason: "platform_mismatch", detected: "kuaishou" });
     expect(checkLocatorPlatform("kuaishou", "https://notkuaishou.com/x")).toEqual({ ok: true });
+  });
+});
+
+describe("detectLocatorPlatform（a-activity-plan 预检：含 URL 但域名未知 → null；纯口令 → no_url）", () => {
+  it.each([
+    ["https://v.douyin.com/MPOAlEqWpec/", "douyin"],
+    ["https://www.iesdouyin.com/share/user/1", "douyin"],
+    ["https://xhslink.com/abc", "xiaohongshu"],
+    ["https://xhslink.cn/o/E2W9yK1ctR", "xiaohongshu"],
+    ["https://www.xiaohongshu.com/user/profile/49328995493", "xiaohongshu"],
+    ["https://v.kuaishou.com/abc", "kuaishou"],
+  ])("%s → %s", (url, expected) => {
+    expect(detectLocatorPlatform(url)).toBe(expected);
+  });
+  it("分享文案里的第一个 URL 决定平台", () => {
+    expect(detectLocatorPlatform(DY_SHARE)).toBe("douyin");
+    expect(detectLocatorPlatform(XHS_SHARE)).toBe("xiaohongshu");
+  });
+  it("未知域名 → null；域名后缀欺骗（evil-douyin.com）不算抖音", () => {
+    expect(detectLocatorPlatform("https://example.com/user/1")).toBeNull();
+    expect(detectLocatorPlatform("https://evil-douyin.com/user/1")).toBeNull();
+    expect(detectLocatorPlatform("https://douyin.com.evil.test/user/1")).toBeNull();
+  });
+  it("没有 URL 的纯口令 / 空串 → no_url", () => {
+    expect(detectLocatorPlatform("9.99 复制打开抖音，看看【某某的作品】 aB1:/ 12345")).toBe("no_url");
+    expect(detectLocatorPlatform("")).toBe("no_url");
   });
 });

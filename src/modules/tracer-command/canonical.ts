@@ -53,3 +53,31 @@ export function buildTaskParameters(effectiveLimit: number): TaskParametersV1 {
 }
 
 export const sha256Of = (text: string): Buffer => createHash("sha256").update(text, "utf8").digest();
+
+/** 名单导入的根任务（a-activity-plan design §10.2）：自己的 closed schema，版本号与 tracer 命令不同，不会碰撞。 */
+export const ROSTER_COMMAND_SCHEMA_VERSION = "roster-resolve.v1";
+export const ROSTER_TASK_PARAMETERS_VERSION = "roster-resolve-task-parameters.v1";
+const rosterCommand = z.strictObject({
+  schema_version: z.literal(ROSTER_COMMAND_SCHEMA_VERSION),
+  platform_id_decimal: decimalId,
+  media_staff_id_decimal: decimalId,
+  home_locator_exact_utf8: z.string().min(1).refine((s) => s.isWellFormed(), "含孤立代理项"),
+  import_batch_id_decimal: decimalId,
+  row_no: z.number().int().min(1),
+});
+export function rosterCommandDigest(p: { platformId: bigint; staffId: bigint; locator: string; importBatchId: bigint; rowNo: number }): Buffer {
+  return jcsSha256(
+    rosterCommand.parse({
+      schema_version: ROSTER_COMMAND_SCHEMA_VERSION,
+      platform_id_decimal: p.platformId.toString(),
+      media_staff_id_decimal: p.staffId.toString(),
+      home_locator_exact_utf8: p.locator,
+      import_batch_id_decimal: p.importBatchId.toString(),
+      row_no: p.rowNo,
+    }),
+  );
+}
+/** 名单根任务只采主页（profile_only），所以没有 effective_initial_content_limit。 */
+export function buildRosterTaskParameters(importBatchId: bigint, rowNo: number) {
+  return { schema_version: ROSTER_TASK_PARAMETERS_VERSION, profile_only: true as const, import_batch_id: importBatchId.toString(), row_no: rowNo };
+}

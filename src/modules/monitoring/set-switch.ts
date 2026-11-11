@@ -11,6 +11,7 @@ import { CAP_MONITORING_MANAGE, type ActorContext } from "../tracer-command";
 import type { SyncAuditEvent, SyncAuditSink } from "../sync-schedule/audit";
 import { inPlatformScope, inStaffScope, requireCap, requireFullScope, requirePlatformAdmin } from "../sync-schedule/authz";
 import { SyncError } from "../sync-schedule/errors";
+import { markGrace } from "../plan-references";
 
 export const SWITCH_LEVELS = ["branch", "dealer", "store", "staff", "account"] as const;
 export type SwitchLevel = (typeof SWITCH_LEVELS)[number];
@@ -76,10 +77,15 @@ export function createMonitoringSwitch(deps: { db: Db; clock: Clock; audit: Sync
           return { kind: "noop", level, id: id.toString(), enabled };
         }
         // 账号级只影响一个对象：直接写。关闭写 manual（CHECK 要求关闭必须有原因）；开启清空原因
-        await db
-          .update(aa)
-          .set({ monitoringEnabled: enabled, monitoringClosedReason: enabled ? null : "manual", updatedAt: clock.now() })
-          .where(eq(aa.accountId, id));
+        // 开启时在同一事务里给无引用账号重置 15 天宽限起点（a-activity-plan design §10.3），免得下一次扫描立即再关
+        const now = clock.now();
+        await db.transaction(async (tx) => {
+          await tx
+            .update(aa)
+            .set({ monitoringEnabled: enabled, monitoringClosedReason: enabled ? null : "manual", updatedAt: now })
+            .where(eq(aa.accountId, id));
+          if (enabled) await markGrace(tx, id, now, actor.actorId);
+        });
         emit({ outcome: "applied", actorId: actor.actorId, detail: { level, id: id.toString(), enabled, previous_enabled: a.on } });
         return { kind: "applied", level, id: id.toString(), enabled, previousEnabled: a.on, affectedAccounts: 1 };
       }

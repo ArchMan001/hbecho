@@ -17,7 +17,7 @@
 冲突时按此顺序裁决，不在代码或局部 SQL 里暗中选择一方：
 
 1. `CONTEXT.md` —— 领域词汇、语义边界、不变量
-2. `HBECHO设计方案/domains/data-foundation/database-design-v2.md` —— 数据底座实施基线（30 表）
+2. `HBECHO设计方案/domains/data-foundation/database-design-v2.md` —— 数据底座实施基线（35 表：29 张数据底座 + 6 张活动计划）
 3. `aimaster接口文档/` 的 V1.2 文档与 `raw3` 实测 —— 外部合同与证据
 4. `.kiro/specs/*` —— 各模块需求、设计、任务
 5. `HBECHO设计方案/prd-platform.md` —— 产品方向与阶段
@@ -31,8 +31,9 @@
 
 - `CONTEXT.md`：领域语言
 - `HBECHO设计方案/`：唯一设计文档根 —— `INDEX.md`、总 PRD `prd-platform.md`、子 PRD `prd-domain-<代号>-<slug>.md`、数据底座基线、运维手册、开发部署流程、宪法、ADR、统一归档 `archive/`
-- `.kiro/specs/`：spec 集；已实施的纵向切片有 `a-data-foundation-tracer`、`b-access-control`
+- `.kiro/specs/`：spec 集；已实施的纵向切片有 `a-data-foundation-tracer`、`b-access-control`、`a-activity-plan`
 - `src/modules/access-control/`：访问控制（登录会话、Capability / DataScope、用户管理与导入、出口框架、审计）；**模块外只能从 `index.ts` 导入**（静态护栏 B-AX-14）；CLI 是 `pnpm run access ...`（`src/worker/access-*.ts`），Web 入口：`src/app/api/{auth,health}` 两个 Route Handler，加 9 个页面（登录 / 激活 / 忘记密码 / 修改密码、用户管理、批量导入、审计日志，页面样式是已确认原型的纯 CSS）；页面只经 `src/modules/access-control/web.ts` 与 `services.ts` 取数
+- `src/modules/activity-plan/`：活动计划（计划生命周期与回收站、分公司参与、负责人名额、名单导入 `roster/`：模板 → 预检 → 确认 → 解析驱动 → 归并，名单维护、查询与综合状态、`reader.rosterSnapshot` 给 D / E、每日维护 `maintenance.ts`）；`src/modules/plan-references/`：**引用计数与监控联动的唯一实现**（`reconcileAccounts`；只有它写 `unreferenced_since` 与 `unreferenced_15d`，静态护栏守护）；CLI 是 `pnpm run plan ...`（`src/worker/plan-*.ts`），解析驱动与每日维护由 sync worker 装配（`sync-main.ts`）；**没有页面**
 - `.kiro/steering/`：自动加载的精简规则
 - `aimaster接口文档/`：供应商合同、探针脚本与 raw3 证据
 - `ui-lab/`：可点击界面原型（不进生产构建、不进 `src/app/`；ADR-0013）

@@ -27,7 +27,7 @@ describe("R9：只有按需模块 / 详情 Runner 能创建按需任务", () => 
 
 describe("R5：同步相关数据库测试里没有 Promise.all（避免抢同一行锁，dev-ci-cadence 第 3 条）", () => {
   it("a-full-sync 新增 / 改动的 *.db.test.ts", () => {
-    const dirs = ["sync-schedule", "sync-runner", "demand", "comments", "sync-ops", "sync-status", "maintenance", "monitoring", "media-archive"].map((d) => join(SRC, "modules", d));
+    const dirs = ["sync-schedule", "sync-runner", "demand", "comments", "sync-ops", "sync-status", "maintenance", "monitoring", "media-archive", "activity-plan", "plan-references"].map((d) => join(SRC, "modules", d));
     const files = [...dirs.flatMap(walk), ...walk(join(SRC, "worker"))].filter((f) => f.endsWith(".db.test.ts"));
     expect(files.length).toBeGreaterThan(10);
     // 本文件之外的测试不得出现；用字符串拼接避免本文件自己命中
@@ -155,5 +155,51 @@ describe("csv-parse 只在 csv-file 里被导入（ADR-0014）", () => {
   it("其余模块拿到的是项目自己的行结构", () => {
     const offenders = nonTestSources.filter((p) => /from\s+["']csv-parse/.test(code(p)) && rel(p) !== "modules/csv-file/index.ts").map(rel);
     expect(offenders).toEqual([]);
+  });
+});
+
+// ---- a-activity-plan（design §10.3 三条静态护栏）----------------------------------------------------------------
+describe("AP 护栏：无引用起点与 unreferenced_15d 只由 plan-references 写", () => {
+  // 匹配的是「写位置」（对象字面量里的属性赋值），不是任意出现：schema、迁移、读取（aa.unreferencedSince）都不命中
+  const WRITE = [/\bunreferencedSince\s*:/, /monitoringClosedReason\s*:\s*["']unreferenced_15d["']/];
+  const findViolations = (files: Array<{ rel: string; text: string }>): string[] =>
+    files.filter((f) => !f.rel.startsWith("db/schema/") && !f.rel.startsWith("modules/plan-references/") && WRITE.some((re) => re.test(f.text))).map((f) => f.rel);
+  const scanned = nonTestSources.filter((p) => p.endsWith(".ts")).map((p) => ({ rel: rel(p), text: code(p) }));
+  it("src 下除 plan-references 与 db/schema 外没有写这两处的代码", () => {
+    expect(scanned.length).toBeGreaterThan(100);
+    expect(findViolations(scanned)).toEqual([]);
+  });
+  it("反向用例：放进一个故意违规的文件，护栏必须报错", () => {
+    const bad = [
+      { rel: "modules/zz-violation/a.ts", text: "await tx.update(aa).set({ unreferencedSince: now })" },
+      { rel: "modules/zz-violation/b.ts", text: 'await tx.update(aa).set({ monitoringClosedReason: "unreferenced_15d" })' },
+      { rel: "modules/zz-violation/c.ts", text: "const x = a.unreferencedSince; // 只读不算" },
+    ];
+    expect(findViolations(bad)).toEqual(["modules/zz-violation/a.ts", "modules/zz-violation/b.ts"]);
+    expect(findViolations([{ rel: "modules/plan-references/reconcile.ts", text: bad[0]!.text }])).toEqual([]);
+  });
+});
+describe("AP 护栏：活动计划不创建详情 / 评论任务", () => {
+  it("activity-plan 目录不调用 insertDemandTask", () => {
+    const files = nonTestSources.filter((p) => rel(p).startsWith("modules/activity-plan/") || rel(p).startsWith("modules/plan-references/"));
+    expect(files.length).toBeGreaterThan(3);
+    expect(files.filter((p) => /\binsertDemandTask\b/.test(code(p))).map(rel)).toEqual([]);
+  });
+});
+describe("AP：名单解析驱动与周期 Runner 共用同一个网关（装配静态检查）", () => {
+  it("sync-main 用 onGateway 取出 buildAccountRunners 的网关给 createRosterResolver，且没有自建 RawCaptureGateway", () => {
+    const main = readFileSync(join(SRC, "worker", "sync-main.ts"), "utf8");
+    expect(main).toMatch(/onGateway:\s*\(g\)\s*=>/);
+    expect(main).toMatch(/createRosterResolver\(/);
+    expect(main).not.toMatch(/new RawCaptureGateway\(/);
+  });
+});
+describe("AP：计划每日维护不依赖 OSS（装配静态检查，AP-D15）", () => {
+  it("sync-main 在 OSS 维护的 try/catch 之外装配 createPlanMaintenance，并接入 runForever", () => {
+    const main = readFileSync(join(SRC, "worker", "sync-main.ts"), "utf8");
+    expect(main).toMatch(/planMaintain:\s*\(\)\s*=>\s*planMaintenance\.runDaily\(\)/);
+    expect(main.indexOf("createPlanMaintenance({")).toBeGreaterThan(main.indexOf('"daily maintenance disabled"'));
+    // 与 createMaintenance 没有任何依赖关系
+    expect(readFileSync(join(SRC, "modules", "activity-plan", "maintenance.ts"), "utf8")).not.toMatch(/OssObjectStore|modules\/maintenance|raw-capture\/oss/);
   });
 });

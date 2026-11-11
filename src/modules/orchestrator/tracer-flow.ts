@@ -11,6 +11,7 @@
 //  - 业务阻塞（归属冲突、名额已满）在发出列表调用之前终止：默认不再继续付费。
 import { and, eq } from "drizzle-orm";
 import type { Db } from "../../db/client";
+import { retryOnDeadlock } from "../../db/deadlock";
 import { odsProviderCalls, platforms, syncSettings, syncTasks } from "../../db/schema";
 import { jcsSha256 } from "../canonical-json";
 import { bindDominantListAuthor, bindSecondaryIdentifier, intakeAccount, loadOwnerSnapshot, type IdentifierRef, type IntakeResult } from "../identity";
@@ -153,9 +154,10 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
   const platform = plat?.platformCode as Platform | undefined;
   const strategy = platform ? strategies[platform] : undefined;
   if (!platform || !strategy) return failRoot("unsupported_capability", "platform_strategy_unavailable");
-  // 外部监控账号（FS-13.5）只采主页：不要求列表 capability
+  // 外部监控账号（FS-13.5）与名单导入根任务（a-activity-plan，task_parameters.profile_only）只采主页：不要求列表 capability
   const isExternal = root.subjectType === "external";
-  for (const action of isExternal ? (["media_user_info"] as const) : (["media_user_info", "user_video_list"] as const)) {
+  const profileOnly = isExternal || (root.taskParameters as { profile_only?: unknown } | null)?.profile_only === true;
+  for (const action of profileOnly ? (["media_user_info"] as const) : (["media_user_info", "user_video_list"] as const)) {
     try {
       capabilityGate.require({ platform, action, mode: config.modes[action], environment: config.environment });
     } catch (e) {
@@ -440,7 +442,7 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
           detail: { follower_state: profile.data.followerCount.state, post_state: profile.data.postCount.state },
           now,
         });
-        await finishRoot(tx, rootRow, { status: "succeeded", entryOutcome: "suspected_empty", stopReason: "suspected_empty", summary: { returned_entries: 0 }, accountId: r.accountId, assignmentId: r.assignmentId }, now);
+        await finishRoot(tx, rootRow, { status: "succeeded", entryOutcome: "suspected_empty", stopReason: "suspected_empty", summary: { returned_entries: 0, account_created: r.accountCreated, assignment_created: r.assignmentCreated }, accountId: r.accountId, assignmentId: r.assignmentId }, now);
       }
       return r;
     }),
@@ -449,9 +451,20 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
   const intake: IntakeResult = intakeTx.value;
   if (intake.kind !== "ready") return result("blocked");
   if (intake.intakeStatus === "suspected_empty") return result("succeeded");
-  // 外部监控账号只有主页快照：不建列表子任务、不请求列表
-  if (isExternal) {
-    return terminateRoot({ status: "succeeded", entryOutcome: "normal", stopReason: "external_profile_only", summary: { profile_only: true }, accountId: intake.accountId, assignmentId: intake.assignmentId }, "succeeded");
+  // 外部监控账号与名单导入账号（profile_only）只有主页快照：不建列表子任务、不请求列表（A §11.2 ⑥：新账号首次只采主页）
+  // 仍然先经 intakeAccount：判重、归属冲突、D-69 名额冲突都照常裁判（外部型没有专员，所以没有后两者）
+  if (profileOnly) {
+    return terminateRoot(
+      {
+        status: "succeeded",
+        entryOutcome: "normal",
+        stopReason: isExternal ? "external_profile_only" : "profile_only",
+        summary: { profile_only: true, account_created: intake.accountCreated, assignment_created: intake.assignmentCreated },
+        accountId: intake.accountId,
+        assignmentId: intake.assignmentId,
+      },
+      "succeeded",
+    );
   }
 
   // ── 首个完整返回页（子任务 fetch_content_list，同步） ───────────────
@@ -463,7 +476,7 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
   if (cc.kind === "terminal") {
     // 上一次运行已经完成列表阶段；只补 root 的终态
     if (cc.task.status !== "succeeded") return failRoot("list", cc.task.lastErrorCode ?? "list_stage_failed");
-    return terminateRoot({ status: "succeeded", entryOutcome: "normal", summary: (cc.task.resultSummary as Record<string, unknown> | null) ?? {}, accountId: intake.accountId, assignmentId: intake.assignmentId }, "succeeded");
+    return terminateRoot({ status: "succeeded", entryOutcome: "normal", summary: { ...((cc.task.resultSummary as Record<string, unknown> | null) ?? {}), account_created: intake.accountCreated, assignment_created: intake.assignmentCreated }, accountId: intake.accountId, assignmentId: intake.assignmentId }, "succeeded");
   }
   const ctoken = cc.token;
   const childLock = { taskId: child.taskId, token: ctoken };
@@ -604,7 +617,7 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
           },
           now,
         );
-        await finishRoot(tx, tasks.get(rootId)!, { status: "succeeded", entryOutcome: "normal", summary, warnings, accountId: intake.accountId, assignmentId: intake.assignmentId }, now);
+        await finishRoot(tx, tasks.get(rootId)!, { status: "succeeded", entryOutcome: "normal", summary: { ...summary, account_created: intake.accountCreated, assignment_created: intake.assignmentCreated }, warnings, accountId: intake.accountId, assignmentId: intake.assignmentId }, now);
       }),
     );
 
@@ -635,10 +648,12 @@ async function currentRootCancelled(db: Db, rootId: bigint): Promise<boolean> {
 }
 
 async function retryDuplicate<T>(fn: () => Promise<T>): Promise<T> {
+  // 死锁时整个事务已回滚，intake / 整页投影都是幂等的整笔操作，原样重跑即可（名单导入的解析驱动并发运行多个根任务时会遇到：a-activity-plan 规模演练）
+  const run = () => retryOnDeadlock(fn);
   try {
-    return await fn();
+    return await run();
   } catch (e) {
-    if (isDuplicateKey(e)) return fn(); // 并发的另一个 worker 先建立了同一个账号 / 标识：再来一次会命中已有行
+    if (isDuplicateKey(e)) return run(); // 并发的另一个 worker 先建立了同一个账号 / 标识：再来一次会命中已有行
     throw e;
   }
 }

@@ -27,3 +27,9 @@ export function mapMainBusiness(code: string): { brand: string; sector: SectorKe
 }
 
 export const sectorCodeOf = (branchCode: string, key: SectorKey): string => `${branchCode}-${key}`;
+
+/** sectorCodeOf 的反函数：从板块编码 `{分公司编码}-{water|home}` 取种类；不是这个形态返回 undefined（a-activity-plan 预检用）。 */
+export const sectorKeyOf = (sectorCode: string): SectorKey | undefined => {
+  const key = sectorCode.slice(sectorCode.lastIndexOf("-") + 1);
+  return sectorCode.includes("-") && (key === "water" || key === "home") ? key : undefined;
+};

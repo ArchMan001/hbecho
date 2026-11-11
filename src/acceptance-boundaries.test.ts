@@ -194,3 +194,12 @@ describe("AP：名单解析驱动与周期 Runner 共用同一个网关（装配
     expect(main).not.toMatch(/new RawCaptureGateway\(/);
   });
 });
+describe("AP：计划每日维护不依赖 OSS（装配静态检查，AP-D15）", () => {
+  it("sync-main 在 OSS 维护的 try/catch 之外装配 createPlanMaintenance，并接入 runForever", () => {
+    const main = readFileSync(join(SRC, "worker", "sync-main.ts"), "utf8");
+    expect(main).toMatch(/planMaintain:\s*\(\)\s*=>\s*planMaintenance\.runDaily\(\)/);
+    expect(main.indexOf("createPlanMaintenance({")).toBeGreaterThan(main.indexOf('"daily maintenance disabled"'));
+    // 与 createMaintenance 没有任何依赖关系
+    expect(readFileSync(join(SRC, "modules", "activity-plan", "maintenance.ts"), "utf8")).not.toMatch(/OssObjectStore|modules\/maintenance|raw-capture\/oss/);
+  });
+});

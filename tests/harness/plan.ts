@@ -19,7 +19,7 @@ export const T0 = new Date("2026-11-11T02:00:00.000000Z");
 export function planActor(kind: "hq" | "branch" | "admin" | "none", over: Partial<PlanActor> & { branches?: bigint[] } = {}): PlanActor {
   const { branches = [], ...rest } = over;
   const base: Record<typeof kind, PlanActor> = {
-    hq: { actor: "user:hq", capabilities: new Set([CAP_PLAN_CREATE, CAP_PLAN_JOIN]), brandScope: new Set(["HITACHI"]), branchScope: "all", platformAdmin: false },
+    hq: { actor: "user:hq", capabilities: new Set([CAP_PLAN_CREATE, CAP_PLAN_JOIN, CAP_ACCOUNT_MANAGE]), brandScope: new Set(["HITACHI"]), branchScope: "all", platformAdmin: false },
     branch: { actor: "user:branch", capabilities: new Set([CAP_PLAN_JOIN, CAP_ACCOUNT_MANAGE]), brandScope: new Set(["HITACHI"]), branchScope: new Set(branches), platformAdmin: false },
     admin: { actor: "user:admin", capabilities: new Set([CAP_PLAN_CREATE, CAP_PLAN_JOIN, CAP_ACCOUNT_MANAGE]), brandScope: "all", branchScope: "all", platformAdmin: true },
     none: { actor: "user:nobody", capabilities: new Set(), brandScope: new Set(), branchScope: new Set(), platformAdmin: false },

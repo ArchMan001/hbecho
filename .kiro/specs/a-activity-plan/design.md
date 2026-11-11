@@ -6,7 +6,7 @@
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
-> **实施计划**：[`tasks.md`](tasks.md)（仅规划，尚未执行）
+> **实施计划**：[`tasks.md`](tasks.md)（任务 0–12 已于 2026-11-11 实施完成）
 >
 > **验收**：[`acceptance.md`](acceptance.md)
 >

@@ -1,0 +1,11 @@
+门店编码,专员姓名,手机号,主页链接
+示例门店编码,示例姓名,13800138000,https://www.douyin.com/user/示例主页链接
+S-W1,新人甲,13800020001,https://www.douyin.com/user/AAA
+S-W1,老张,13800010001,https://www.douyin.com/user/BBB
+S-W1,老赵,13800010004,https://www.douyin.com/user/CCC
+S-W1,老钱,13800010005,https://www.douyin.com/user/DDD
+NOPE,某某,13800020002,https://www.douyin.com/user/EEE
+S-W1,某某,1.38E+10,https://www.douyin.com/user/FFF
+S-W1,某某,13800020003,https://www.douyin.com/video/123456
+S-W1,某某,13800020004,https://www.xiaohongshu.com/user/profile/49328995493
+S-H2,某某,13800020005,https://www.douyin.com/user/GGG

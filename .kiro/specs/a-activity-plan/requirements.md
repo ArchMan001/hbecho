@@ -4,7 +4,7 @@
 >
 > **模式**：Design-First
 >
-> **实现状态**：未开始（2026-11-06 初建；未获评审批准前不写实现代码，见 [`tasks.md`](tasks.md)）
+> **实现状态**：任务 0–12 已于 2026-11-11 在分支 `a-activity-plan` 实施完成（本机 `verify.sh`、测试 ECS 运行记录见 [`tasks.md`](tasks.md) 实施记录；状态保持 `draft`，待确认后升 current；页面未做）
 >
 > **所属域**：A 数据底座 · **目录命名**：`a-activity-plan`，符合 `<代号>-<切片>`
 >

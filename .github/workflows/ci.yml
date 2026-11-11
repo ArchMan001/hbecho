@@ -64,7 +64,9 @@ jobs:
     # PR 不推镜像（push 事件已经覆盖同一提交）
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # GitHub runner 推到北京 ACR 的实测速度约 1 MB/s：依赖层（约 450 MB）首次推送要 15–20 分钟，所以放到 60 分钟。
+    # 之后镜像里没有变化的层 ACR 已经有，只推变化的层。
+    timeout-minutes: 60
     env:
       REGISTRY: hbecho-registry-registry.cn-beijing.cr.aliyuncs.com
       NAMESPACE: hbecho

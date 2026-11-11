@@ -37,17 +37,17 @@
 
 | 列 | 类型 | 约束 | 说明 |
 |---|---|---|---|
-| `id` | BIGINT | PK | |
+| `course_id` | BIGINT | PK | 与全仓库命名一致（原写 `id`；`tag_id`、`progress_id` 同理） |
 | `title` | VARCHAR(200) | NOT NULL | |
 | `kind` | VARCHAR(16) | NOT NULL, CHECK in ('video','document') | |
 | `description` | TEXT | NULL | 纯文本 |
 | `status` | VARCHAR(16) | NOT NULL, CHECK in ('published','unpublished','archived') | 无草稿态；`archived` 由下架满 30 天的清理任务自动置位 |
 | `brand_scope` | VARCHAR(16) | NOT NULL, CHECK in ('specified','all') | |
 | `audience_level` | VARCHAR(24) | NOT NULL DEFAULT 'all', CHECK in ('all','branch_and_above','hq_and_above') | 适用人员级别（G-D40） |
-| `cover_key` | VARCHAR(512) | NOT NULL | OSS object key |
+| `cover_key` | VARCHAR(512) ascii_bin | NULL | OSS object key；**video 必填，document 可选**（PRD G-D11；本表原写 NOT NULL，与 PRD 冲突，2026-11-11 以 PRD 为准）。唯一 |
 | `vod_video_id` | VARCHAR(64) | NULL | video 必填，document 必须为 NULL |
 | `vod_video_status` | VARCHAR(16) | NULL, CHECK in ('uploading','transcoding','normal','failed') | video 必填 |
-| `file_key` | VARCHAR(512) | NULL | document 必填 |
+| `file_key` | VARCHAR(512) ascii_bin | NULL | document 必填；唯一（同一对象不能被两门课引用） |
 | `file_mime` | VARCHAR(128) | NULL | `application/pdf` / `image/jpeg` / `image/png` |
 | `file_size` | BIGINT | NULL | 字节 |
 | `duration_sec` | INT | NULL | 由 VOD 转码结果回填 |
@@ -56,8 +56,9 @@
 | `updated_at` | DATETIME(6) | NOT NULL | |
 
 CHECK 组合约束：
-- `kind='video'` → `vod_video_id`、`vod_video_status` 非空，`file_key` 为空；
-- `kind='document'` → `file_key`、`file_mime`、`file_size` 非空，`vod_video_id` 为空；
+- `kind='video'` → `vod_video_id`、`vod_video_status`、`cover_key` 非空，`file_key`、`file_mime`、`file_size` 为空；
+- `kind='document'` → `file_key`、`file_mime`、`file_size` 非空，`vod_video_id`、`vod_video_status` 为空；
+- `file_mime` 只能是 PDF / JPEG / PNG；`file_size > 0`；`duration_sec >= 0`；
 - `brand_scope='all'` → `course_brand_scopes` 无行（由应用约束 + 测试保证，MySQL 无跨表 CHECK）。
 
 ### 3.2 `course_brand_scopes`
@@ -69,9 +70,9 @@ CHECK 组合约束：
 
 主键 (`course_id`, `brand_id`)。`brand_scope='all'` 时不写行。
 
-> **暂不建到 `brands` 的外键**（D15，2026-10-30）：A 域的 `brands` 表尚未落地，G 只存 `brand_id` 并由应用层校验；A 域建表后补一条 FK 迁移。不建平行品牌表。
+> **到 `brands` 的外键已建**（D15 于 2026-11-11 关闭）：A 域 `brands` 表已落地，`course_brand_scopes.brand_id` 直接带 RESTRICT 外键。不建平行品牌表。
 
-> **`user_id` 同样暂不建到 B 域用户表的外键**（D15）：B 域用户表尚无迁移。
+> **`courses.created_by`、`learning_progress.user_id` 同样已建到 `access_users.user_id` 的外键**（D15 于 2026-11-11 关闭）：B 域用户表已落地。
 
 ### 3.3 `tags` 与 `course_tags`
 
@@ -318,6 +319,15 @@ WHERE c.brand_scope='all' OR EXISTS (
 | D22 | 品牌名称与列表缓存 5 分钟 | 品牌极少变化；接受新品牌最多 5 分钟延迟生效 | 2026-10-30 |
 | D23 | 不预留学习明细表 | 1.0 用不到；2.0 需要时再加，不影响现有累计值 | 2026-10-30 |
 | D24 | 课程可见性增加「适用人员级别」，与品牌取交集 | 管理类内容不该给门店看；复用 RoleCode，不建职级字段、不挂 DataScope | 2026-10-30 |
+| D25 | 资料课程的封面可选，`cover_key` 可空，视频课程仍必填（CHECK 强制） | PRD G-D11；原 §3.1 写 NOT NULL 与 PRD 冲突 | 2026-11-11 |
+| D26 | 人员级别取 B 的 `DataScope.level`，品牌取 `DataScope.brands`；本域注册资源 `learning_course` 的 ScopeStrategy，用 B 的授权器与出口 10，不写适配层。D16 的「薄适配层」作废 | B 已落地（`authorize`、`createEgress`、`buildDataScope`） | 2026-11-11 |
+| D27 | 范围外一律 403（B 对外默认是 404）：本域把授权器的任何拒绝都映射为 403；对象不存在才是 404。无 `learning.read` 的人先被 403，探不到课程是否存在 | requirements §5.5；tasks 的「必须停下来问」 | 2026-11-11 |
+| D28 | 列表在范围为空（如门店专员本人绑定失效）时返回 403，不返回空页 | tasks 任务 5 验证「范围外返回 403 而非空页」 | 2026-11-11 |
+| D29 | 标签列表归 `learning.read`（筛选要用）；增删改与「带引用数的列表」归 `learning.tag.manage` | tasks 任务 2 的「只接受 learning.tag.manage」按写操作解释；否则学员无法按标签筛选 | 2026-11-11 |
+| D30 | 下载守卫通过后链接签发失败：补一条 `failed` 审计并返回 503，不让审计里留一条假的成功 | 出口 10 先记「允许」再签发 | 2026-11-11 |
+| D31 | 校验失败只删失败的那个对象（封面失败不删已通过的资料文件）；被他课占用的对象永不删 | 让客户端能只重传失败的一项；防止误删他人文件 | 2026-11-11 |
+
+
 ## 11. 界面
 
 > 本节按 [`ui-foundation.md`](../../../HBECHO设计方案/ui/ui-foundation.md) §8 模板编写；视觉沿用 2026-11-10 确认的 v2 基线。可点击原型：[`ui-lab/g-learning-min/`](../../../ui-lab/g-learning-min/README.md)。**已确认（2026-11-10，刘学奎）**，见 §11.6；页面任务另行排期。

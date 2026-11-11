@@ -3,6 +3,7 @@ export * from "./accounts";
 export * from "./auth";
 export * from "./content";
 export * from "./import";
+export * from "./learning";
 export * from "./media";
 export * from "./org";
 export * from "./reference";

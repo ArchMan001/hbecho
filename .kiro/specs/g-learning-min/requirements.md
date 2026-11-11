@@ -93,8 +93,8 @@
 | U3 | 下载是否独立 Capability（PRD §10.4） | 1.0 用 `learning.read` + 审计；不新增 `learning.download` |
 | U4 | 学习数据是否进入 E 域指标（PRD §10.5） | 不进入；不建投影表 |
 | U5 | Office 文档 | 2.0，不实现 |
-| U6 | A 域 `brands` 表尚未落地 | 暂不建跨域外键，只存 `brand_id`，A 域建表后补 FK 迁移（D15） |
-| U7 | B 域 Capability 尚无实现 | 用薄适配层，接口名按 B 域 PRD；B 域落地后只换适配层（D16） |
+| U6 | ~~A 域 `brands` 表尚未落地~~ | **已关闭（2026-11-11）**：`brands`、`access_users` 均已落地，外键直接建在 g-learning-min 的迁移里（D15） |
+| U7 | ~~B 域 Capability 尚无实现~~ | **已关闭（2026-11-11）**：B 已落地，直接用 B 的授权器、出口 10 与 DataScope，没有适配层（D26） |
 
 ## 5. PRD 真空：实现必须现在定的地方
 

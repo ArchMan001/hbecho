@@ -33,7 +33,7 @@
 - [x] 任务 10 · 数据出口框架 — 完成（2026-11-10）；在各进程里把 `cancelUserJobs` 接到 `onRevoked` 随任务 11
 - [x] 任务 11 · 到现有模块的适配、审计装配替换、CLI 收口 — 完成（2026-11-10）
 - [x] 任务 12 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾 — 完成（2026-11-10）；第二次推送与合并见实施记录
-- [ ] 页面任务：**本轮不写**。界面设计已于 2026-11-10 确认（design §15.6）；页面任务另行排期，按确认范围拆
+- [x] 页面任务 P1–P5（界面设计已于 2026-11-10 确认，design §15.6；2026-11-11 排期并实施，范围不超出确认范围）— 见下方「页面任务」；部署到测试 ECS 的结果见实施记录
 
 ## Planning rules
 
@@ -472,6 +472,20 @@
 
 **Requirements:** 全部；**Design:** §11、§12。
 
+## 页面任务（P1–P5）
+
+> **进入条件已满足**：design §15.6 已记录刘学奎 2026-11-10 对 [`ui-lab/hbecho-ui-v2/`](../../../ui-lab/hbecho-ui-v2/README.md) 的确认（登录、激活、忘记密码、修改密码、用户列表、新建用户、用户详情 / 编辑、批量导入用户、审计日志）。**确认范围之外一律不做**：活动计划、判定计划、报表、门店端「我的考核」等页面不在本 spec，导航里也不显示。
+>
+> **实现形态**：Next.js App Router 的服务端页面 + 服务端动作，只调用 Module（`src/modules/access-control/web.ts` 装配的 `UserAdmin` / `UserImport` / `AuditReader`，与 CLI 同一套授权与审计）；认证表单直接调用既有的 better-auth Route Handler（白名单与限流不变）；`src/app` 不写 SQL（B-AX-12 的扫描现在也覆盖 `.tsx`）。视觉用已确认原型的 CSS（`src/app/globals.css`），**没有引入 Tailwind / shadcn**：ui-foundation §6.4 写的是 shadcn，原型阶段用纯 CSS 确认的视觉，落地沿用，避免为同一套视觉再引入一整套组件依赖；这是对 ui-foundation 的一处偏离，见实施记录待确认项。
+
+- [x] **P1 · 外壳与全局页**：根布局与样式、侧栏 / 顶栏 / 账号菜单（修改密码、退出）、`not-found` / `error` / `loading` / 无权访问页、ICP 备案号页脚（运维手册 §10.6 第 5 条）、Toast 与确认弹窗；导航按 Capability 显示，无入口不显示。
+- [x] **P2 · 登录、激活、忘记密码、修改密码**：手机号 + 密码 / 短信验证码两种登录；激活与找回密码走同一条库内路径；60 秒重发倒计时；错误文案 + 稳定错误码；登录失败不暴露账号是否存在。
+- [x] **P3 · 用户列表与新建用户**：角色 → 状态 → 品牌 → 分公司筛选（URL 即状态）、分页、整行下钻、停用 / 恢复弹窗、「状态 = 待激活」下的批量停用；新建时按角色显示字段，门店专员可先「核对」。
+- [x] **P4 · 用户详情 / 编辑与批量导入**：详情只提交改动字段；强制下线 / 停用 / 恢复弹窗写明影响；导入向导四步，批次编号进 URL，刷新后回到同一步；预检含错误 / 跳过分类，回流文件由提交人本人下载。
+- [x] **P5 · 审计日志与交付件**：事件 / 时间筛选（进 URL）、概要带、分页；非超管直接访问显示「无权访问」且不显示计数；`Dockerfile` / `.dockerignore`、CI 的 `image` job（推 ACR，标签 = git 短 sha）。
+
+**验证**：`pnpm typecheck`；`web.db.test.ts`（名称补全、审计读取授权、导入原始行归属）；`acceptance-boundaries` 扫描 `.tsx`；本机一次性 MySQL + `next dev` 用 Chrome 走完整流程（激活 → 登录 → 新建总部 / 分公司 / 门店专员 → 筛选 → 编辑 → 分公司人员导入含越权行 → 回流 → 停用 / 恢复 → 审计 → 改密 → 忘记密码 → 退出）；镜像在本机构建并以 `NODE_ENV=development` 起容器冒烟（健康检查、备案号页脚、镜像内无测试文件、非 root、`access maintain` 预览）。
+
 ## 需要停下来并报告的情况
 
 出现下列任一情况，停止实现，先改文档或找刘学奎：
@@ -623,3 +637,11 @@
 
 - `services/capability` 的 `tests/test_app.py::test_image_errors_are_structured_json` 在本机**间歇性失败**：单独连续跑 10 次，9 次通过、1 次失败（`urllib.error.HTTPError: 415` 在 `call()` 的 `except` 之外被抛出，疑似 Python 3.14 + 测试服务器的连接处理细节）；整个套件连跑 3 次全过。我没有改过该目录，也没有深挖，只记录证据。更早一次 verify 还出现过 HEIC 用例失败，当时下的「ffmpeg 版本」结论站不住，同样应视为间歇性；
 - **CI 不验证 Python 侧**：`ci.yml` 没有安装 pytest / ffmpeg / 建 venv，`verify.sh` 第 9 步在 CI 上走 `SKIPPED（Python 侧未验证）`。所以 CI 绿不代表 Python 侧通过，这与 `dev-ci-cadence` 里「CI 绿 ≠ Python 侧验过」的措辞一致，但这条边界目前没有被任何文档明确写成现状。
+
+**2026-11-11 · 页面任务 P1–P5**
+- 代码：`src/app/`（页面、服务端动作、组件、样式）、`src/modules/access-control/web.ts`（装配与名称补全）、`audit.ts` / `audit-read.ts` 增加 `countAudit` / `count`（审计页的总数与失败数，与列表同一条谓词）；
+- **本机点击走查发现并已修的一处真问题**：服务端动作里用 `instanceof AccessError` 判断业务拒绝，在 Next 的服务端打包下会误判为内部错误（邀请总部人员不选品牌，应得「角色与范围的组合不对」，实际显示「内部错误」）。改为按错误名识别（`isAccessError`），并按原因码给出更具体的人话（`shape_invalid` 等）；
+- `tsconfig` 增加 `jsx` 与 DOM 库（页面需要）；DOM 的 `BodyInit` 不接受 `Uint8Array<ArrayBufferLike>`，`capability-client.ts` 与 `http-transport.ts` 各加一处只影响类型的转换，运行时不复制字节；
+- **`pnpm access ...` 在 pnpm 11 里被内置命令 `pnpm access` 截获**（报 Unknown subcommand）。本机与镜像里一律用 `pnpm run access ...`；`package.json` 的脚本名没有改（改名会影响文档与测试里的所有引用，另行决定）；
+- 偏离与取舍（待你确认）：① 视觉沿用原型 CSS 而非 shadcn（见上）；② 审计事件筛选用单个事件下拉，不做原型第一版的「事件分类」；③ 「批量停用待激活用户」只在状态筛选 = 待激活时出现；④ 列表每页固定 20 行（ui-foundation 写可选 20 / 50 / 100，未做切换）；⑤ 登录页默认「密码」页签（原型默认验证码），避免每次登录都产生短信费用；⑥ 门店专员登录后只看到「门店端页面还没有开放」说明页（「我的考核」「学习」不在本 spec）；
+- 镜像约 1.5 GB（含 devDependencies，因为同一镜像要跑 `tsx` 迁移与 `access` CLI）；拆成运行镜像与工具镜像是后续优化，不阻塞。

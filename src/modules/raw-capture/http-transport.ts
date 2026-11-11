@@ -80,7 +80,8 @@ export class HttpProviderTransport implements ProviderTransport {
       res = await this.fetchImpl(url, {
         method: request.method,
         headers,
-        ...(request.body === null ? {} : { body: request.body }),
+        // 类型转换只为让 DOM 的 BodyInit（不接受 SharedArrayBuffer 背后的视图）放行；运行时不复制字节
+        ...(request.body === null ? {} : { body: request.body as Uint8Array<ArrayBuffer> }),
         redirect: "manual",
         signal: AbortSignal.timeout(this.timeoutMs),
       });

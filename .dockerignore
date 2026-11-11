@@ -1,0 +1,16 @@
+# 镜像上下文只留构建需要的文件；其余（含密钥、测试、原型、设计文档）一律不进镜像
+**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!tsconfig.json
+!next.config.ts
+!drizzle.config.ts
+!drizzle
+!drizzle/**
+!src
+!src/**
+# src 里与测试同目录的文件不进镜像
+**/*.test.ts
+**/*.db.test.ts
+src/**/__spike__

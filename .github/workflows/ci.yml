@@ -6,11 +6,11 @@
 #
 # 刻意没有 continue-on-error：失败就是失败。CI 显示绿但实际没验，比没有 CI 更糟。
 #
-# 应用代码继续落地后按 HBECHO设计方案/runbooks/dev-test-deploy-workflow.md §5.2 增加：
-#   image       —— 仅在应用/worker 路径变化或手动触发时构建并推 ACR
-#   deploy-test —— 手动触发，测试 ECS 拉同一标签验收
-#   deploy-prod —— 手动触发 + 环境审批
-# 在这些 job 真正可跑之前，不要创建空壳。
+# image job（2026-11-11 起）：verify 通过后，仅在应用路径变化或手动触发时构建镜像并推 ACR（ADR-0016），标签 = git 短 sha（main 另加 main-latest）。
+#   推送凭证是 GitHub secret ACR_PUSH_PASSWORD（RAM 子账号 hbecho-acr-push，只能推 hbecho 命名空间）。
+# 仍未建（按 HBECHO设计方案/runbooks/dev-test-deploy-workflow.md §5.2，等真正可跑再建，不创建空壳）：
+#   deploy-test —— 现在由人经 Workbench 拉同一标签部署（runbook §P6）
+#   deploy-prod —— 没有生产 ECS
 name: ci
 on:
   push:
@@ -59,3 +59,50 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: 本机验证入口
         run: ./scripts/verify.sh
+  image:
+    needs: verify
+    # PR 不推镜像（push 事件已经覆盖同一提交）
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      REGISTRY: hbecho-registry-registry.cn-beijing.cr.aliyuncs.com
+      NAMESPACE: hbecho
+      REPO: app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 应用路径是否变化（手动触发一律构建）
+        id: changed
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "build=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          base="${{ github.event.before }}"
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            base="$(git merge-base origin/main HEAD 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -1)"
+          fi
+          if git diff --name-only "$base" HEAD | grep -qE '^(src/|drizzle/|Dockerfile$|\.dockerignore$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|next\.config\.ts$|tsconfig\.json$|drizzle\.config\.ts$)'; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"; echo "应用路径没有变化，跳过镜像构建"
+          fi
+      - name: 构建镜像（标签 = git 短 sha）
+        if: steps.changed.outputs.build == 'true'
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse --short=12 HEAD)"
+          image="$REGISTRY/$NAMESPACE/$REPO"
+          docker build -t "$image:$sha" .
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then docker tag "$image:$sha" "$image:main-latest"; fi
+          echo "IMAGE=$image" >> "$GITHUB_ENV"; echo "SHA=$sha" >> "$GITHUB_ENV"
+      - name: 推送到 ACR
+        if: steps.changed.outputs.build == 'true'
+        env:
+          ACR_PUSH_PASSWORD: ${{ secrets.ACR_PUSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          echo "$ACR_PUSH_PASSWORD" | docker login --username "hbecho-acr-push@1241086349153033" --password-stdin "$REGISTRY"
+          docker push "$IMAGE:$SHA"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then docker push "$IMAGE:main-latest"; fi
+          echo "已推送 $IMAGE:$SHA" >> "$GITHUB_STEP_SUMMARY"

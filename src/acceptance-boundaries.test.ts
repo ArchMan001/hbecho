@@ -66,14 +66,14 @@ describe("Q5 / R7：启动接线（静态检查）", () => {
 // ---- b-access-control（AX-6、AX-11、AX-12）-----------------------------------------------------------------
 import { CAPABILITIES } from "./modules/access-control/roles";
 
-const nonTestSources = all.filter((p) => p.endsWith(".ts") && !isTest(p));
+const nonTestSources = all.filter((p) => /\.tsx?$/.test(p) && !isTest(p));
 const text = (p: string) => readFileSync(p, "utf8");
 /** 去掉注释，避免说明文字触发扫描。 */
 const code = (p: string) => text(p).replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 describe("B-AX-6：业务代码只检查 Capability，不写角色条件", () => {
-  it("四个角色字面量只出现在 access-control、授权表 schema 与 access CLI 里", () => {
-    const allowed = (r: string) => r.startsWith("modules/access-control/") || r === "db/schema/access.ts" || r.startsWith("worker/access-");
+  it("四个角色字面量只出现在 access-control、授权表 schema、access CLI 与页面（只用于角色名展示和表单选项，授权判断仍只查 Capability）里", () => {
+    const allowed = (r: string) => r.startsWith("modules/access-control/") || r === "db/schema/access.ts" || r.startsWith("worker/access-") || r.startsWith("app/");
     const offenders = nonTestSources.filter((p) => !allowed(rel(p)) && /\b(platform_admin|hq_manager|branch_manager|store_staff)\b/.test(code(p))).map(rel);
     expect(offenders).toEqual([]);
   });

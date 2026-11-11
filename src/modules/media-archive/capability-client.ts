@@ -59,7 +59,7 @@ export class HttpCapabilityClient implements ImageConverter, CapabilityClient {
   }
 
   async toNormalizedJpeg(input: { bytes: Uint8Array; mimeType: string }): Promise<NormalizedImage> {
-    const res = await this.post("/v1/image/normalize", { body: input.bytes, headers: { "Content-Type": input.mimeType } }, this.opts.imageTimeoutMs ?? IMAGE_TIMEOUT_MS);
+    const res = await this.post("/v1/image/normalize", { body: input.bytes as Uint8Array<ArrayBuffer>, headers: { "Content-Type": input.mimeType } }, this.opts.imageTimeoutMs ?? IMAGE_TIMEOUT_MS);
     if (!res.ok) {
       await this.fail(res);
       throw new ConverterError("unsupported", "图片接口不应返回 no_audio_track");

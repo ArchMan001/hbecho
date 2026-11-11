@@ -4,7 +4,7 @@
 //   - 不写密码、令牌、Cookie、验证码、整行原文、文件内容：序列化前按键名过滤（sanitize）
 //   - 幂等键去重：sha256(event_type | actor | target | occurred_at 到秒 | detail 摘要)
 import { createHash } from "node:crypto";
-import { and, asc, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
 import type { Logger } from "pino";
 import type { Db, DbTx } from "../../db/client";
 import { auditEvents } from "../../db/schema";
@@ -247,8 +247,7 @@ export interface AuditRow {
   detail: unknown;
 }
 
-/** 读取审计：调用方（`audit.read` 的授权）负责鉴权；这里只做查询。BIGINT 一律十进制字符串。 */
-export async function listAudit(db: Db, q: AuditQuery = {}): Promise<AuditRow[]> {
+const auditConds = (q: AuditQuery): SQL[] => {
   const conds: SQL[] = [];
   if (q.actor !== undefined) conds.push(eq(auditEvents.actor, q.actor));
   if (q.targetType !== undefined) conds.push(eq(auditEvents.targetType, q.targetType));
@@ -257,6 +256,22 @@ export async function listAudit(db: Db, q: AuditQuery = {}): Promise<AuditRow[]>
   if (q.eventType !== undefined) conds.push(eq(auditEvents.eventType, q.eventType));
   if (q.from) conds.push(gte(auditEvents.occurredAt, q.from));
   if (q.to) conds.push(lte(auditEvents.occurredAt, q.to));
+  return conds;
+};
+
+/** 同一筛选条件下的总数与失败 / 拒绝数（审计页的概要带与分页用；与 listAudit 用同一条谓词）。 */
+export async function countAudit(db: Db, q: AuditQuery = {}): Promise<{ total: number; notSucceeded: number }> {
+  const conds = auditConds(q);
+  const [r] = await db
+    .select({ total: count(), notSucceeded: sql<string>`COALESCE(SUM(${auditEvents.outcome} <> 'succeeded'), 0)` })
+    .from(auditEvents)
+    .where(conds.length ? and(...conds) : undefined);
+  return { total: Number(r?.total ?? 0), notSucceeded: Number(r?.notSucceeded ?? 0) };
+}
+
+/** 读取审计：调用方（`audit.read` 的授权）负责鉴权；这里只做查询。BIGINT 一律十进制字符串。 */
+export async function listAudit(db: Db, q: AuditQuery = {}): Promise<AuditRow[]> {
+  const conds = auditConds(q);
   const rows = await db
     .select()
     .from(auditEvents)

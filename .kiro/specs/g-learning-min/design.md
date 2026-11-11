@@ -12,7 +12,7 @@
 | 类别 | 内容 | 说明 |
 |---|---|---|
 | 新增模块 | `courses`、`learning-progress`、`learning-summary`、`learning-tags` | 按资源聚合，不建「学习中心」大模块 |
-| 新增表 | `courses`、`course_brand_scopes`、`tags`、`course_tags`、`learning_progress` | 5 张，全部新表，不改 A/B 域既有表 |
+| 新增表 | `courses`、`course_brand_scopes`、`tags`、`course_tags`、`learning_progress`、`course_media_deletions` | 6 张，全部新表，不改 A/B 域既有表 |
 | 复用 | B 域 Capability / DataScope / 审计表；OSS SDK；VOD SDK | 不新建权限或审计实现 |
 | 不建 | 事件表、物化汇总表、版本表、下载中心、消息通知 | 见 §9 |
 
@@ -51,6 +51,8 @@
 | `file_mime` | VARCHAR(128) | NULL | `application/pdf` / `image/jpeg` / `image/png` |
 | `file_size` | BIGINT | NULL | 字节 |
 | `duration_sec` | INT | NULL | 由 VOD 转码结果回填 |
+| `unpublished_at` | DATETIME(6) | NULL | 下架时刻，满 30 天归档的起点（G-D37）；CHECK：已发布为空、下架 / 归档必有；重新上架清空 |
+| `create_key` | VARCHAR(64) | NULL | 视频课程创建请求的 `Idempotency-Key`；唯一 (`created_by`, `create_key`) |
 | `created_by` | BIGINT | NOT NULL | User ID |
 | `created_at` | DATETIME(6) | NOT NULL | |
 | `updated_at` | DATETIME(6) | NOT NULL | |
@@ -97,6 +99,18 @@ CHECK 组合约束：
 | `last_learned_at` | DATETIME(6) | NOT NULL |
 
 唯一键 (`user_id`, `course_id`)。资料课程只更新首末时间与 `watched_sec` 不增长。
+
+### 3.4a `course_media_deletions`（待删除媒体队列）
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| `deletion_id` | BIGINT PK | |
+| `target_kind` / `target_id` | VARCHAR | `vod_video`（VideoId）或 `oss_object`（对象 key）；唯一 (kind, id)，重复入队无操作 |
+| `course_id` | BIGINT NULL | 排查线索，不建外键（残渣没有课程；归档课程行永远保留） |
+| `reason` | VARCHAR(16) | `replaced` / `archived` / `orphan` / `create_failed` |
+| `status` / `attempts` / `next_attempt_at` / `last_error` / `created_at` / `done_at` | | `pending` → `done`；失败后按 1、2、4…分钟退避，封顶 6 小时；创建 24 小时仍失败触发告警（G-D46） |
+
+替换的旧文件、归档课程的媒体、无引用残渣都经它删除：业务先提交，删除失败不回滚业务。
 
 ### 3.5 索引
 
@@ -148,7 +162,7 @@ CHECK 组合约束：
 1. 校验 learning.read + 课程品牌范围 + 状态
    - `status='archived'` → 403（媒体已删除，不可恢复）
    - `status='unpublished'` → 403
-2. kind=document → 返回短期签名 URL（预览）
+2. kind=document → 返回类型与大小；预览内容由 `GET /api/learning/courses/:id/preview` 鉴权后**流式转发**（D32），不给存储地址
 3. kind=video → 校验 vod_video_status
    - transcoding → 返回 202 + 状态，不返回凭证
    - failed → 返回 409
@@ -327,6 +341,14 @@ WHERE c.brand_scope='all' OR EXISTS (
 | D29 | 标签列表归 `learning.read`（筛选要用）；增删改与「带引用数的列表」归 `learning.tag.manage` | tasks 任务 2 的「只接受 learning.tag.manage」按写操作解释；否则学员无法按标签筛选 | 2026-11-11 |
 | D30 | 下载守卫通过后链接签发失败：补一条 `failed` 审计并返回 503，不让审计里留一条假的成功 | 出口 10 先记「允许」再签发 | 2026-11-11 |
 | D31 | 校验失败只删失败的那个对象（封面失败不删已通过的资料文件）；被他课占用的对象永不删 | 让客户端能只重传失败的一项；防止误删他人文件 | 2026-11-11 |
+| D32 | 资料预览由本服务鉴权后流式转发，不给 OSS 签名链接；该路径 `X-Frame-Options: SAMEORIGIN`，其余仍 `DENY` | 2026-11-11 真实桶实测：OSS 默认域名对所有对象强制 `attachment`（`x-oss-force-download: true`），PDF 进 iframe 会变下载；见 ADR-0017 | 2026-11-11 |
+| D33 | 新增第 6 张表 `course_media_deletions`，替换 / 归档 / 残渣的删除统一入队重试 | G-D46 要求失败指数退避；没有持久队列就无法跨进程重启重试 | 2026-11-11 |
+| D34 | 创建幂等键存在 `courses.create_key`，(用户, 键) 永久唯一，不是 24 小时过期 | 比「保留 24 小时」严格；客户端每次提交新生成 UUID，永久唯一不会误伤，也不需要过期清理任务 | 2026-11-11 |
+| D35 | 加 `courses.unpublished_at`；`status` 与它由 CHECK 绑定 | 30 天归档需要起算点，不能用 `updated_at`（编辑会刷新它） | 2026-11-11 |
+| D36 | 维护范围 = 超管全部；hq 为「全部品牌课 + 指定品牌完全落在自己授权品牌内」；与可见性是两套谓词（`canManage` / `manageSql`），各自有「对象判断 ≡ 查询条件」对照测试 | PRD §4.5 / G-D42 | 2026-11-11 |
+| D37 | 视频替换后新视频转码期间课程学员侧暂不可播（旧视频已入删除队列） | 简单；转码通常数分钟。要无缝切换需要 `pending_vod_video_id`，1.0 不做 | 2026-11-11 |
+| D38 | 汇总的品牌范围按**课程**的品牌范围判断，不看学习者的品牌；转码失败视频上的进度不计 | requirements §5.7 / G-D27 | 2026-11-11 |
+| D39 | 视频课程创建时 VOD 还没报时长则不能在创建时校验 60 分钟上限；已报告的在创建 / 替换时校验，超限则拒绝并删除该视频 | VOD 转码前可能没有时长；定时回填不追溯拒绝 | 2026-11-11 |
 
 
 ## 11. 界面

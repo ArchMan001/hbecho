@@ -4,7 +4,8 @@ import { useTestDb } from "../../../tests/harness/db";
 import { auditOf, fails, learningEnv, type LearningEnv } from "../../../tests/harness/learning";
 import { learningProgress } from "../../db/schema";
 import { unpublishCourse } from "./manage";
-import { getPlayback } from "./playback";
+import { createPreviewHandler } from "./http";
+import { getPlayback, openDocumentPreview } from "./playback";
 
 const t = useTestDb();
 let e: LearningEnv;
@@ -72,19 +73,63 @@ describe("视频", () => {
 });
 
 describe("资料预览（F7）", () => {
-  it("返回短期签名地址（不带附件名），不产生下载审计", async () => {
+  const upload = (key: string) => e.store.upload(key, new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31]), "application/pdf");
+  it("getPlayback 对资料只给类型与大小，不给任何存储地址；预览走服务端转发，不产生下载审计", async () => {
     const staff = await e.actor("store_staff", { staff: e.org.staffA });
-    const id = await e.insertCourse({});
+    const id = await e.insertCourse({ fileSize: 6 });
     const p = await getPlayback(e.deps, staff, id.toString());
-    expect(p).toMatchObject({ state: "ready", kind: "document", mime: "application/pdf", url: expect.stringContaining("doc/") });
-    expect(e.store.signedGet.at(-1)).toMatchObject({ ttlSeconds: 300 });
-    expect(e.store.signedGet.at(-1)).not.toHaveProperty("downloadName");
+    expect(p).toEqual({ state: "ready", kind: "document", mime: "application/pdf", fileSize: 6 });
+    expect(e.store.signedGet).toEqual([]);
     expect(await auditOf(t, "egress.learning_download")).toEqual([]);
   });
-  it("范围外的资料不签发预览地址", async () => {
+  it("openDocumentPreview：范围内流式返回，类型取库里校验过的 MIME；不写下载审计", async () => {
+    const staff = await e.actor("store_staff", { staff: e.org.staffA });
+    const key = "doc/00000000-0000-0000-0000-0000000000a1.pdf";
+    upload(key);
+    const id = await e.insertCourse({ fileKey: key });
+    const f = await openDocumentPreview(e.deps, staff, id.toString());
+    expect(f).toMatchObject({ size: 6, mime: "application/pdf" });
+    expect(Buffer.from(await new Response(f.body).arrayBuffer()).toString()).toBe("%PDF-1");
+    expect(await auditOf(t, "egress.learning_download")).toEqual([]);
+  });
+  it("范围外 / 下架 / 无权限 403 且不读存储；视频没有预览 409；对象丢失 / 存储故障 503", async () => {
     const hitachi = await e.actor("store_staff", { staff: e.org.staffB });
-    const id = await e.insertCourse({ brandIds: [e.org.hisense] });
-    await fails(getPlayback(e.deps, hitachi, id.toString()), 403);
-    expect(e.store.signedGet).toEqual([]);
+    const staff = await e.actor("store_staff", { staff: e.org.staffA });
+    const key = "doc/00000000-0000-0000-0000-0000000000a2.pdf";
+    upload(key);
+    const id = await e.insertCourse({ fileKey: key, brandIds: [e.org.hisense] });
+    let reads = 0;
+    const getObject = e.store.getObject.bind(e.store);
+    e.store.getObject = async (k: string) => (reads++, getObject(k));
+    await fails(openDocumentPreview(e.deps, hitachi, id.toString()), 403);
+    await fails(openDocumentPreview(e.deps, { ...staff, capabilities: new Set() }, id.toString()), 403);
+    const admin = await e.actor("platform_admin");
+    const off = await e.insertCourse({ status: "unpublished" });
+    await fails(openDocumentPreview(e.deps, admin, off.toString()), 403);
+    expect(reads).toBe(0);
+    await fails(openDocumentPreview(e.deps, staff, "99999"), 404);
+    const vid = await video();
+    await fails(openDocumentPreview(e.deps, staff, vid.toString()), 409, "not_a_document");
+    const lost = await e.insertCourse({ fileKey: "doc/00000000-0000-0000-0000-0000000000a3.pdf" }); // 对象不在桶里
+    await fails(openDocumentPreview(e.deps, staff, lost.toString()), 503, "preview_unavailable");
+    e.store.failGetObject = true;
+    await fails(openDocumentPreview(e.deps, staff, id.toString()), 503, "preview_unavailable");
+  });
+  it("Route Handler：内联、禁嗅探、不缓存；未登录 401；非 GET 405；范围外 403", async () => {
+    const staff = await e.actor("store_staff", { staff: e.org.staffA });
+    const key = "doc/00000000-0000-0000-0000-0000000000a4.pdf";
+    upload(key);
+    const id = await e.insertCourse({ fileKey: key });
+    const h = createPreviewHandler({ authenticate: async () => ({ ok: true, ctx: staff }), deps: () => e.deps });
+    const res = await h(new Request("https://x.test/api/learning/courses/1/preview"), id.toString());
+    expect(res.status).toBe(200);
+    expect(Object.fromEntries(res.headers)).toMatchObject({ "content-type": "application/pdf", "content-disposition": "inline", "x-content-type-options": "nosniff", "cache-control": "private, no-store", "content-length": "6" });
+    expect(Buffer.from(await res.arrayBuffer()).toString()).toBe("%PDF-1");
+    expect((await createPreviewHandler({ authenticate: async () => ({ ok: false, kind: "unauthenticated" }), deps: () => e.deps })(new Request("https://x.test/p"), id.toString())).status).toBe(401);
+    expect((await h(new Request("https://x.test/p", { method: "POST" }), id.toString())).status).toBe(405);
+    const hitachi = await e.actor("store_staff", { staff: e.org.staffB });
+    const hh = createPreviewHandler({ authenticate: async () => ({ ok: true, ctx: hitachi }), deps: () => e.deps });
+    const other = await e.insertCourse({ fileKey: "doc/00000000-0000-0000-0000-0000000000a5.pdf", brandIds: [e.org.hisense] });
+    expect((await hh(new Request("https://x.test/p"), other.toString())).status).toBe(403);
   });
 });

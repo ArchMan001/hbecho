@@ -7,6 +7,8 @@ export interface CourseObjectStore {
   head(key: string): Promise<{ size: number; contentType: string } | null>;
   /** 读取 [start, endInclusive] 字节（校验文件魔数用）；对象不存在返回 null。 */
   getRange(key: string, start: number, endInclusive: number): Promise<Uint8Array | null>;
+  /** 以流读取整个对象（预览由本服务转发，见 playback.ts）；对象不存在返回 null。 */
+  getObject(key: string): Promise<{ body: ReadableStream<Uint8Array>; size: number } | null>;
   /** 短期签名下载地址；给了 downloadName 就以附件形式下载。 */
   signedGetUrl(key: string, ttlSeconds: number, opts?: { downloadName?: string }): Promise<string>;
   /** 幂等：对象不存在也成功。 */

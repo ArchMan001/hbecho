@@ -1,6 +1,7 @@
 // `hbecho-course` 桶的 CourseObjectStore 实现（ADR-0005 登记的 ali-oss 官方 SDK）。
 // 默认测试用 tests/harness/fake-course-store.ts；本文件只被注入的假客户端单测，真实调用只在部署与已批准的 smoke 里出现。
 // 错误一律去掉可能夹带签名 / 凭证的原始 message，只保留可分类的信息（同 raw-capture/oss-store.ts）。
+import { Readable } from "node:stream";
 import OSS from "ali-oss";
 import type { CourseObjectStore } from "./store";
 
@@ -8,6 +9,7 @@ import type { CourseObjectStore } from "./store";
 export interface CourseOssClientLike {
   head(name: string, options?: { timeout?: number }): Promise<{ res: { headers: Record<string, unknown> } }>;
   get(name: string, options?: { headers?: Record<string, string>; timeout?: number }): Promise<{ content?: unknown }>;
+  getStream(name: string, options?: { timeout?: number }): Promise<{ stream: unknown; res: { headers: Record<string, unknown> } }>;
   delete(name: string, options?: { timeout?: number }): Promise<unknown>;
   list(query: { prefix?: string; marker?: string; "max-keys": number }, options?: { timeout?: number }): Promise<{ objects?: Array<{ name: string; lastModified: string }>; isTruncated?: boolean; nextMarker?: string }>;
   signatureUrl(name: string, options?: { expires?: number; method?: string; "Content-Type"?: string; response?: Record<string, string> }): string;
@@ -23,6 +25,9 @@ export interface CourseStoreOptions {
   /** 测试注入点：给了就不再构造真实客户端。 */
   client?: CourseOssClientLike;
 }
+
+/** 环境变量里是 `cn-beijing`（与 OSS_REGION 一致），ali-oss 要 `oss-cn-beijing`；两种写法都接受。 */
+export const normalizeOssRegion = (r: string): string => (r.startsWith("oss-") ? r : `oss-${r}`);
 
 function isNotFound(e: unknown): boolean {
   for (let cur = e as { code?: unknown; status?: unknown; name?: unknown } | undefined; cur; cur = (cur as { cause?: unknown }).cause as typeof cur) {
@@ -54,7 +59,7 @@ export class OssCourseStore implements CourseObjectStore {
       (new OSS({
         accessKeyId: opts.accessKeyId,
         accessKeySecret: opts.accessKeySecret,
-        region: opts.region,
+        region: normalizeOssRegion(opts.region),
         bucket: opts.bucket,
         ...(opts.endpoint === undefined ? {} : { endpoint: opts.endpoint }),
         secure: true,
@@ -93,6 +98,18 @@ export class OssCourseStore implements CourseObjectStore {
     if (content instanceof Uint8Array) return content;
     if (Buffer.isBuffer(content)) return new Uint8Array(content);
     throw new Error("OSS get 返回了无法识别的响应体");
+  }
+
+  async getObject(key: string): Promise<{ body: ReadableStream<Uint8Array>; size: number } | null> {
+    try {
+      const r = await this.client.getStream(key, { timeout: this.timeoutMs });
+      const size = Number(r.res.headers["content-length"]);
+      if (!(r.stream instanceof Readable) || !Number.isSafeInteger(size) || size < 0) throw new Error("OSS getStream 返回了无法识别的响应");
+      return { body: Readable.toWeb(r.stream) as ReadableStream<Uint8Array>, size };
+    } catch (e) {
+      if (isNotFound(e)) return null;
+      throw e instanceof Error && e.message.startsWith("OSS ") ? e : wrap(e, "getStream");
+    }
   }
 
   async signedGetUrl(key: string, ttlSeconds: number, opts: { downloadName?: string } = {}): Promise<string> {

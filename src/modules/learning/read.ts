@@ -137,6 +137,8 @@ export interface CourseDetail extends Omit<CourseListItem, "updatedAt"> {
   fileMime: string | null;
   fileSize: number | null;
   positionSec: number;
+  watchedSec: number;
+  playCount: number;
   createdByName: string | null;
   updatedAt: string;
 }
@@ -170,7 +172,9 @@ export async function getCourse(deps: LearningDeps, ctx: AuthContext, rawId: unk
     coverUrl: await deps.store.signedGetUrl(c.coverKey, deps.config.coverUrlTtlSeconds),
     inProgress: prog !== undefined,
     lastLearnedAt: prog?.lastLearnedAt.toISOString() ?? null,
-    positionSec: prog?.positionSec ?? 0,
+    positionSec: prog ? (c.durationSec === null ? prog.positionSec : Math.min(prog.positionSec, c.durationSec)) : 0,
+    watchedSec: prog?.watchedSec ?? 0,
+    playCount: prog?.playCount ?? 0,
     tags: tagRows.map((t) => ({ tagId: t.tagId.toString(), name: t.name })),
     createdByName: author?.name ?? null,
     updatedAt: c.updatedAt.toISOString(),

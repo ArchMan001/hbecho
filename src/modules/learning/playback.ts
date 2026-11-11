@@ -11,7 +11,8 @@ import { loadCourse } from "./read";
 
 export type Playback =
   | { state: "ready"; kind: "video"; videoId: string; playAuth: string; durationSec: number | null; positionSec: number }
-  | { state: "ready"; kind: "document"; url: string; mime: string; expiresAt: string }
+  /** 资料：页面把 `/api/learning/courses/<id>/preview`（由本服务转发，见 openDocumentPreview）嵌进 iframe / img。 */
+  | { state: "ready"; kind: "document"; mime: string; fileSize: number }
   /** 转码中：调用方应回 HTTP 202，不给凭证。 */
   | { state: "processing"; kind: "video"; vodVideoStatus: "uploading" | "transcoding" };
 
@@ -25,8 +26,7 @@ export async function getPlayback(deps: LearningDeps, ctx: AuthContext, rawId: u
   await authorizeOrThrow(deps, ctx, "learning.read", { key: "learning_course", ref }); // 范围 + 级别 + 已发布；失败 403，不碰 VOD
 
   if (c.kind === "document") {
-    const ttl = deps.config.previewUrlTtlSeconds;
-    return { state: "ready", kind: "document", url: await deps.store.signedGetUrl(c.fileKey!, ttl), mime: c.fileMime!, expiresAt: new Date(deps.clock.now().getTime() + ttl * 1000).toISOString() };
+    return { state: "ready", kind: "document", mime: c.fileMime!, fileSize: c.fileSize! };
   }
   switch (c.vodVideoStatus) {
     case "uploading":
@@ -54,4 +54,29 @@ export async function readPosition(deps: Pick<LearningDeps, "db">, userId: bigin
   const [p] = await deps.db.select({ pos: learningProgress.positionSec }).from(learningProgress).where(and(eq(learningProgress.courseId, courseId), eq(learningProgress.userId, userId))).limit(1);
   const pos = p?.pos ?? 0;
   return { positionSec: durationSec === null ? pos : Math.min(pos, durationSec) };
+}
+
+/**
+ * 资料预览：服务端鉴权后把对象流式转发给浏览器（内联显示）。
+ * 为什么不给签名链接：OSS 默认域名对所有对象强制 `Content-Disposition: attachment`（2026-11-11 真实桶实测，x-oss-force-download=true），
+ * PDF 放进 iframe 会变成下载；要内联只能自有域名（同视频的备案前置）或由本服务转发。每次请求都重过范围，撤权 / 下架后立即 403。
+ * 预览不是下载，不写下载审计（F7）。
+ */
+export async function openDocumentPreview(deps: LearningDeps, ctx: AuthContext, rawId: unknown): Promise<{ body: ReadableStream<Uint8Array>; size: number; mime: string }> {
+  requireUser(ctx);
+  const courseId = parseId(rawId, "courseId");
+  await authorizeOrThrow(deps, ctx, "learning.read");
+  const loaded = await loadCourse(deps, courseId);
+  if (!loaded) throw new LearningError("not_found", "course_not_found", "课程不存在");
+  const { course: c, ref } = loaded;
+  await authorizeOrThrow(deps, ctx, "learning.read", { key: "learning_course", ref });
+  if (c.kind !== "document" || !c.fileKey || !c.fileMime) throw new LearningError("conflict", "not_a_document", "这门课没有可预览的资料");
+  let obj;
+  try {
+    obj = await deps.store.getObject(c.fileKey);
+  } catch {
+    throw new LearningError("unavailable", "preview_unavailable", "资料暂时无法预览，请稍后重试");
+  }
+  if (!obj) throw new LearningError("unavailable", "preview_unavailable", "资料暂时无法预览，请稍后重试");
+  return { body: obj.body, size: obj.size, mime: c.fileMime }; // 类型以入库时校验过的为准，不信对象元数据
 }

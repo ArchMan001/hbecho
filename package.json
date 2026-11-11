@@ -17,7 +17,9 @@
     "smoke": "tsx src/worker/smoke-main.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
-    "sms-smoke": "tsx src/worker/sms-smoke-main.ts"
+    "sms-smoke": "tsx src/worker/sms-smoke-main.ts",
+    "learning-smoke": "tsx src/worker/learning-smoke.ts",
+    "learning-worker": "tsx src/worker/learning-main.ts"
   },
   "devDependencies": {
     "@types/ali-oss": "^6.23.4",

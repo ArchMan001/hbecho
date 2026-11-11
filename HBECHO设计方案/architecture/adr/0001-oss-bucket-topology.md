@@ -61,6 +61,12 @@
 - OSS 生命周期规则已实测：media 无过期规则。
 - runbook §13.3 把「验证一个不存在」写成固定验收项。
 
+## 2026-11-11 补记：`hbecho-course` 的实测（g-learning-min）
+- 应用使用的 AccessKey 对该桶实测有 `PutObject`、`GetObject`、`DeleteObject`、`ListObjects`（`pnpm learning-smoke`，见 ADR-0017）；`DeleteObject` 在该桶是预期行为，与 media 桶相反。
+- 该桶**没有 CORS 配置**（`NoSuchCORSConfiguration`）。浏览器直传前必须配置允许生产来源、`PUT`、`Content-Type` 头；这是云端写操作，待确认生产域名后由人批准。
+- 默认域名对该桶所有对象的签名 GET 都返回 `Content-Disposition: attachment`、`x-oss-force-download: true`：不能用来做浏览器内联预览，预览改由应用转发（ADR-0017）。
+- 桶内前缀：资料 `doc/`、封面 `cover/`；对象 key 由应用生成（`<前缀>/<uuid>.<扩展名>`）。无引用超过 24 小时的对象由 `learning-worker` 清理。
+
 ## 原文
 
 `HBECHO设计方案/runbooks/server-operations-runbook.md` §7.2–§7.7、§13.3；`CONTEXT.md` MediaAsset、FormalMediaRetention；`database-design-v2.md` §11。

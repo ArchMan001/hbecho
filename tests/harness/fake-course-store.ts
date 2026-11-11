@@ -26,6 +26,14 @@ export class FakeCourseStore implements CourseObjectStore {
   async getRange(key: string, start: number, endInclusive: number) {
     return this.objects.get(key)?.bytes.slice(start, endInclusive + 1) ?? null;
   }
+  failGetObject = false;
+  async getObject(key: string) {
+    if (this.failGetObject) throw new Error("fake course store: getObject 失败（注入）");
+    const o = this.objects.get(key);
+    if (!o) return null;
+    const bytes = o.bytes.slice();
+    return { size: bytes.byteLength, body: new ReadableStream<Uint8Array>({ start(c) { c.enqueue(bytes); c.close(); } }) };
+  }
   async signedGetUrl(key: string, ttlSeconds: number, opts: { downloadName?: string } = {}) {
     if (this.failSignGet) throw new Error("fake course store: 签名失败（注入）");
     this.signedGet.push({ key, ttlSeconds, ...(opts.downloadName === undefined ? {} : { downloadName: opts.downloadName }) });

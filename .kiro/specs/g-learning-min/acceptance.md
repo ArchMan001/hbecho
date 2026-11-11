@@ -51,6 +51,7 @@
 | C5 | G-5 | 上传 `.docx` | 400 |
 | C6 | G-5 | 上传 60 MiB 资料（上限 50 MiB，G-D44） | 400 |
 | C7 | G-5 | 把 `.exe` 改名成 `.pdf` 上传 | 魔数校验失败，400 且对象被删 |
+| C8 | G-D48 | 新建视频课程或资料课程不传封面 | 400 `invalid_input`，不建课程行 |
 
 ### D. 上传与播放
 
@@ -140,7 +141,10 @@
 | E1 | VOD 转码（720p/480p）真实结果 | 模板组已建，未上传过视频 | 首次真实上传后 |
 | E2 | VOD 播放（short-lived 凭证） | 播放域名未配置，等 ICP 备案；备案前用 OSS 签名 URL 联调视频播放（G-D47） | 备案通过 + 域名生效后；联调可先用 OSS 签名 URL |
 | E3 | 自动截图 | 1.0 不做：`AddVodTemplate`（Snapshot）连续 `InternalError`，封面人工上传（G-D11） | 2.0 再评估 |
-| E4 | 资料 OSS 直传 | 桶与权限已就绪 | 首批应用代码落地后 |
+| E4 | 资料 OSS 直传（服务端链路） | **已验证（2026-11-11）**：真实 `hbecho-course` 桶，签名 PUT / Content-Type 绑定 / HEAD / Range / 流式读取 / 附件名 / List / Delete 全部通过，命令 `HBECHO_LEARNING_SMOKE=approved pnpm learning-smoke` | 已完成，可重复运行 |
+| E5 | 浏览器跨域直传（资料 / 封面 / 视频） | `hbecho-course` 桶**没有 CORS 配置**（`NoSuchCORSConfiguration`）；VOD 存储桶未查。配置前上传会被浏览器拦 | 确认生产域名并由人批准配置 CORS 后 |
+| E6 | Aliplayer 播放 | 需要与播放页面域名绑定的 License + 备案域名（ADR-0017、G-D47） | License 与域名就绪后 |
+| E7 | 资料内联预览 | 服务端转发已用真实桶 + 本机 `next dev` 验证响应头；**手机浏览器 iframe 渲染 PDF 未验** | 手工 M3 |
 
 ## 覆盖不了的
 

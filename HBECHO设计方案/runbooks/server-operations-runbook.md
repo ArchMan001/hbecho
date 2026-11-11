@@ -1688,6 +1688,22 @@ ossutil --endpoint oss-cn-beijing-internal.aliyuncs.com --region cn-beijing \
 
 ---
 
+### 7.9 学习平台上线清单（g-learning-min，2026-11-11）
+
+代码已就绪，下面几项是**云端与部署侧**要人确认或批准的事；做完前对应功能不可用。
+
+| # | 事项 | 现状 | 谁 |
+|---|---|---|---|
+| 1 | `hbecho-course` 桶 CORS：允许生产来源、方法 `PUT`、头 `Content-Type` | 未配置（2026-11-11 `NoSuchCORSConfiguration`）。**未配置前新建课程的资料 / 封面上传会被浏览器拦** | 确认生产域名后由人批准 |
+| 2 | VOD 存储桶 CORS（视频分片上传：`PUT`/`POST`/`GET`/`HEAD`，暴露 `ETag`） | 未查 | 同上 |
+| 3 | 运行期 RAM 身份的 VOD 动作（ADR-0007 §6：`CreateUploadVideo`、`GetVideoInfo`、`GetVideoPlayAuth`、`DeleteVideo`、`UpdateVideoInfo`、`GetVideoList`）；注意 ADR 清单里没有 `GetVideoInfo` / `UpdateVideoInfo` / `GetVideoList`，**需要补进策略** | 未核 | 人 |
+| 4 | 环境变量：`HBECHO_LEARNING_ACCESS_KEY_ID/SECRET`（缺省回退 `OSS_*`）、`HBECHO_COURSE_OSS_*`、`HBECHO_PLAYER_LICENSE_*`，见 `.env.example` | 测试 ECS 未配 | 人 |
+| 5 | `learning-worker`（`pnpm learning-worker`）进程：转码回填、删除重试、归档、残渣清理 | 未进 compose / Dockerfile | 部署任务 |
+| 6 | Aliplayer License（与播放域名绑定）与 ICP 备案 | 阻塞（G-D47） | 业务 |
+| 7 | 标签：上线前超管先建标签，否则无法保存任何课程 | — | 超管 |
+
+真实桶 smoke：`HBECHO_LEARNING_SMOKE=approved pnpm learning-smoke`（1 个 33 字节对象，用完即删，约 10 次请求）。
+
 ## 8. 密钥与配置管理
 
 ### 8.1 当前工作区的两个真实风险

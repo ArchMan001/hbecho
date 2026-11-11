@@ -4,6 +4,7 @@
 import type { AuthContext } from "../access-control";
 import type { LearningDeps } from "./deps";
 import { LearningError } from "./errors";
+import { openDocumentPreview } from "./playback";
 import { reportProgress } from "./progress";
 
 const json = (status: number, body: unknown): Response =>
@@ -34,6 +35,32 @@ export function createProgressHandler(d: { authenticate: AuthenticateFn; deps: (
     } catch (e) {
       if (e instanceof LearningError) return json(e.status, { code: e.code, message: e.message });
       console.error("progress_failed", e instanceof Error ? e.name : typeof e);
+      return json(500, { code: "internal_error", message: "内部错误，请稍后重试" });
+    }
+  };
+}
+
+/** GET 资料预览：同源 iframe / img 使用，内联显示。响应类型取库里校验过的 MIME，禁止嗅探，不缓存。 */
+export function createPreviewHandler(d: { authenticate: AuthenticateFn; deps: () => LearningDeps }) {
+  return async (req: Request, courseId: string): Promise<Response> => {
+    if (req.method !== "GET") return json(405, { code: "METHOD_NOT_ALLOWED", message: "method not allowed" });
+    const authn = await d.authenticate(req.headers);
+    if (!authn.ok) return json(authn.kind === "unauthenticated" ? 401 : authn.kind === "forbidden" ? 403 : 503, { code: authn.kind, message: "登录状态不可用" });
+    try {
+      const f = await openDocumentPreview(d.deps(), authn.ctx, courseId);
+      return new Response(f.body, {
+        status: 200,
+        headers: {
+          "content-type": f.mime,
+          "content-length": String(f.size),
+          "content-disposition": "inline",
+          "x-content-type-options": "nosniff",
+          "cache-control": "private, no-store",
+        },
+      });
+    } catch (e) {
+      if (e instanceof LearningError) return json(e.status, { code: e.code, message: e.message });
+      console.error("preview_failed", e instanceof Error ? e.name : typeof e);
       return json(500, { code: "internal_error", message: "内部错误，请稍后重试" });
     }
   };

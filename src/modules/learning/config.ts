@@ -13,8 +13,6 @@ export interface LearningConfig {
   uploadUrlTtlSeconds: number;
   /** 下载签名地址有效期，秒；实际取它与出口框架上限 MAX_SIGNED_LINK_TTL_SECONDS 的较小值。 */
   downloadUrlTtlSeconds: number;
-  /** 资料预览签名地址有效期，秒。 */
-  previewUrlTtlSeconds: number;
   /** 封面展示用签名地址有效期，秒。 */
   coverUrlTtlSeconds: number;
 }
@@ -26,6 +24,5 @@ export const DEFAULT_LEARNING_CONFIG: LearningConfig = {
   coverMaxBytes: 5 * 1024 * 1024,
   uploadUrlTtlSeconds: 600,
   downloadUrlTtlSeconds: 300,
-  previewUrlTtlSeconds: 300,
   coverUrlTtlSeconds: 300,
 };

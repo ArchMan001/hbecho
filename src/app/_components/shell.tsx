@@ -53,6 +53,13 @@ export function MobileTabs({ items }: { items: NavItem[] }) {
 }
 
 const CRUMBS: Array<[RegExp, string[]]> = [
+  [/^\/learning\/manage\/new$/, ["学习", "课程管理", "新建课程"]],
+  [/^\/learning\/manage\/[^/]+$/, ["学习", "课程管理", "编辑课程"]],
+  [/^\/learning\/manage$/, ["学习", "课程管理"]],
+  [/^\/learning\/summary$/, ["学习", "学习汇总"]],
+  [/^\/learning\/tags$/, ["学习", "标签管理"]],
+  [/^\/learning\/[^/]+$/, ["学习", "课程详情"]],
+  [/^\/learning$/, ["学习"]],
   [/^\/users\/new$/, ["用户与权限", "新建用户"]],
   [/^\/users\/import$/, ["用户与权限", "批量导入"]],
   [/^\/users\/[^/]+$/, ["用户与权限", "用户详情"]],

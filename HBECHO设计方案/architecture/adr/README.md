@@ -32,6 +32,7 @@
 | [0014](0014-csv-parser-dependency.md) | CSV 解析用 csv-parse（严格模式）；编码判定仍用 `TextDecoder`；星标线下调为 3,000 | accepted | 2026-11-05 | 刘学奎 |
 | [0015](0015-auth-boundary-and-disabled-phone.md) | 认证边界：better-auth 1.7.18 拥有 user / session，授权表自有；停用用户的登录手机号改写为墓碑值；库外必须补的五处 | accepted | 2026-11-10 | 刘学奎 |
 | [0016](0016-container-registry.md) | 容器镜像仓库：hbecho 自建 ACR 经济版，不复用 hbdam 的实例；ghcr 不作为分发目标 | accepted | 2026-11-10 | 刘学奎 |
+| [0017](0017-learning-vod-sdk-and-player.md) | 学习域云 SDK 与播放器：VOD 官方 SDK 3.12.1、浏览器端用已有 ali-oss、Aliplayer 走 CDN；资料预览由本服务转发（OSS 默认域名强制下载） | accepted | 2026-11-11 | 刘学奎 |
 
 ## 未决选型登记
 

@@ -1,8 +1,10 @@
 // learning 模块的纯函数与 OSS 适配器（离线，无数据库）。
+import { Readable } from "node:stream";
 import { describe, expect, it } from "vitest";
 import type { DataScope } from "../access-control";
 import { DEFAULT_LEARNING_CONFIG } from "./config";
 import { LearningError } from "./errors";
+import { LearningConfigError, parseLearningEnv } from "./runtime";
 import { downloadFileName, hasMagic, keyMatches, newKey } from "./files";
 import { parseId } from "./ids";
 import { attachmentDisposition, OssCourseStore, type CourseOssClientLike } from "./oss-course-store";
@@ -116,6 +118,12 @@ describe("OssCourseStore（注入假客户端）", () => {
         calls.push({ op: "delete", args: [name] });
         if (!objects.delete(name)) throw notFound;
       },
+      async getStream(name) {
+        calls.push({ op: "getStream", args: [name] });
+        const o = objects.get(name);
+        if (!o) throw notFound;
+        return { stream: Readable.from([o]), res: { headers: { "content-length": String(o.length) } } };
+      },
       async list() {
         return { objects: [] };
       },
@@ -148,6 +156,18 @@ describe("OssCourseStore（注入假客户端）", () => {
     expect(Buffer.from((await s.getRange("doc/a.pdf", 0, 7))!).toString()).toBe("%PDF-1.4");
     expect((calls.find((c) => c.op === "get")!.args[1] as { headers: Record<string, string> }).headers.Range).toBe("bytes=0-7");
     expect(await s.getRange("doc/none.pdf", 0, 7)).toBeNull();
+  });
+  it("getObject：流式返回对象与大小；不存在返回 null", async () => {
+    const { client } = fakeClient();
+    const s = store(client);
+    const o = await s.getObject("doc/a.pdf");
+    expect(o?.size).toBe(14);
+    expect(await new Response(o!.body).text()).toBe("%PDF-1.4 hello");
+    expect(await s.getObject("doc/none.pdf")).toBeNull();
+  });
+  it("region 两种写法都接受", async () => {
+    const { normalizeOssRegion } = await import("./oss-course-store");
+    expect([normalizeOssRegion("cn-beijing"), normalizeOssRegion("oss-cn-beijing")]).toEqual(["oss-cn-beijing", "oss-cn-beijing"]);
   });
   it("delete 幂等；其它错误不带原始 message（可能夹带凭证）", async () => {
     const { client } = fakeClient();
@@ -202,5 +222,22 @@ describe("VOD 适配器（注入假 SDK）", () => {
     const { s, calls } = sdk();
     expect(await createVodClient(s).listVideosBefore(new Date("2026-11-10T00:00:00.123Z"))).toEqual([{ videoId: "v9", createdAt: new Date("2026-11-10T01:02:03Z") }]);
     expect(calls[0]!.arg).toEqual({ endTime: "2026-11-10T00:00:00Z", pageNo: 1, pageSize: 100, sortBy: "CreationTime:Asc" });
+  });
+});
+
+describe("装配配置", () => {
+  it("缺少凭证 / 地域时只报键名，不带任何值", () => {
+    expect(() => parseLearningEnv({})).toThrow(LearningConfigError);
+    try {
+      parseLearningEnv({ OSS_ACCESS_KEY_ID: "id-secret-value" });
+    } catch (e) {
+      expect((e as LearningConfigError).keys).toEqual(["HBECHO_LEARNING_ACCESS_KEY_SECRET", "HBECHO_COURSE_OSS_REGION"]);
+      expect((e as Error).message).not.toContain("id-secret-value");
+    }
+  });
+  it("专用凭证优先，缺省回退到 OSS_*；桶缺省 hbecho-course", () => {
+    const cfg = parseLearningEnv({ OSS_ACCESS_KEY_ID: "a", OSS_ACCESS_KEY_SECRET: "b", OSS_REGION: "cn-beijing", HBECHO_LEARNING_ACCESS_KEY_ID: "x" });
+    expect(cfg).toMatchObject({ accessKeyId: "x", accessKeySecret: "b", region: "cn-beijing", bucket: "hbecho-course" });
+    expect(parseLearningEnv({ HBECHO_LEARNING_ACCESS_KEY_ID: "a", HBECHO_LEARNING_ACCESS_KEY_SECRET: "b", HBECHO_COURSE_OSS_REGION: "oss-cn-beijing", HBECHO_COURSE_OSS_BUCKET: "other" }).bucket).toBe("other");
   });
 });

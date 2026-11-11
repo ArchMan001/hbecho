@@ -7,12 +7,15 @@ import pino from "pino";
 import { z } from "zod";
 import { createDb, createPool } from "../db/client";
 import { createAccessMaintenance, createAuditWriter, fromSyncAudit, fromTracerAudit } from "../modules/access-control";
+import { createPlanMaintenance, noDownstream } from "../modules/activity-plan";
+import { createRosterFinalizer, createRosterResolver } from "../modules/activity-plan/roster";
 import { createDemandModule } from "../modules/demand";
 import { createMaintenance, type Maintenance } from "../modules/maintenance";
 import { cleanStaleTmp } from "../modules/media-archive";
 import { createMonitoringResolver } from "../modules/monitoring";
 import { createMonitoringSwitch } from "../modules/monitoring/set-switch";
-import { OssObjectStore } from "../modules/raw-capture";
+import { runTracerRoot } from "../modules/orchestrator";
+import { OssObjectStore, type RawCaptureGateway } from "../modules/raw-capture";
 import { readOssSecrets } from "../modules/smoke";
 import { createSyncOps } from "../modules/sync-ops";
 import { createLogSyncAuditSink, createSyncCommands, createSyncScheduler } from "../modules/sync-schedule";
@@ -52,6 +55,7 @@ const actorFor = (id: string, admin: boolean): ActorContext => ({
 });
 
 if (isWorkerCommand) {
+  let sharedGateway: RawCaptureGateway | undefined;
   let cfg;
   try {
     cfg = parseSyncWorkerConfig(process.env);
@@ -62,7 +66,7 @@ if (isWorkerCommand) {
   let app;
   try {
     assertWorkerCanRun(cfg); // 先于连接池与 secret：没有已批准的 capability 就不启动
-    app = buildSyncApp(cfg, { makeRunners: ({ db, clock }) => buildAccountRunners({ db, clock, cfg, env: process.env }) });
+    app = buildSyncApp(cfg, { makeRunners: ({ db, clock }) => buildAccountRunners({ db, clock, cfg, env: process.env, onGateway: (g) => void (sharedGateway = g) }) });
   } catch (e) {
     process.stderr.write(`${e instanceof Error ? e.message : String(e)}\n`);
     process.exit(1);
@@ -87,7 +91,31 @@ if (isWorkerCommand) {
   }
   // 访问控制维护不依赖 OSS：无论上面是否启用，都接入
   const accessMaintenance = createAccessMaintenance({ db: app.db, clock: app.clock, logger: app.logger });
-  await runForever(app, cfg, process, { ...(maintain ? { maintain } : {}), accessMaintain: () => accessMaintenance.runDaily() });
+  // 计划每日维护（15 天无引用停采、回收站清除）同样不依赖 OSS，在上面的 try/catch 之外装配，OSS 配置不全时它仍然运行（AP-D15）。
+  // 下游端口（D / E）未建，用默认空实现；D / E 落地后在这里替换。
+  const planMaintenance = createPlanMaintenance({ db: app.db, clock: app.clock, downstream: noDownstream, audit: (e) => app.logger.info(e, "activity_plan.audit") });
+  // 名单解析驱动：与周期 Runner 共用同一个网关；服务身份 service:plan-worker 只持有 data.sync.trigger，范围限于名单内账号（补抓）
+  let resolveRosters: (() => Promise<unknown>) | undefined;
+  if (sharedGateway) {
+    const gateway = sharedGateway;
+    const tracerConfig = { environment: cfg.environment, modes: cfg.modes };
+    const planWorker: ActorContext = { actorId: "service:plan-worker", capabilities: new Set([CAP_SYNC_TRIGGER]), scope: { platformCodes: "all", mediaStaffIds: "all" } };
+    const finalize = createRosterFinalizer({ db: app.db, clock: app.clock, supplement: (input) => app.commands.createSupplement(input, planWorker) });
+    const rosterResolver = createRosterResolver({
+      db: app.db,
+      clock: app.clock,
+      audit: (e) => app.logger.info(e, "activity_plan.audit"),
+      runRoot: (id) => runTracerRoot({ db: app.db, clock: app.clock, gateway, workerId: `${cfg.actorId}:roster:${process.pid}`, config: tracerConfig, leaseMs: cfg.leaseMs }, id),
+      finalize,
+      monitoring: app.resolver,
+      tracerConfig,
+    });
+    resolveRosters = async () => {
+      const r = await rosterResolver.runOnce();
+      if (r.examined > 0 || r.failed.length > 0) app.logger.info(r, "roster resolver tick");
+    };
+  }
+  await runForever(app, cfg, process, { ...(maintain ? { maintain } : {}), accessMaintain: () => accessMaintenance.runDaily(), planMaintain: () => planMaintenance.runDaily(), ...(resolveRosters ? { resolveRosters } : {}) });
   await app.close();
   process.exit(0);
 }

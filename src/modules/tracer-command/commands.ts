@@ -10,7 +10,7 @@ import { UnsupportedCapabilityError, capabilityGate, type Platform } from "../pr
 import type { Clock } from "../raw-capture";
 import { inScope, requireCapability, type ActorContext } from "./actor";
 import type { AuditEvent, AuditSink } from "./audit";
-import { buildCommandV1, buildTaskParameters, commandDigest, decimalId, sha256Of } from "./canonical";
+import { buildCommandV1, buildRosterTaskParameters, buildTaskParameters, commandDigest, decimalId, rosterCommandDigest, sha256Of } from "./canonical";
 import { DEFAULT_CONFIG, ONE_YEAR_MS, type TracerConfig } from "./config";
 import { TracerError } from "./errors";
 import { ACTIVE_STATUSES, createTracerStatusQuery, parseRootId, type TracerStatusFound } from "./status";
@@ -39,6 +39,22 @@ export interface TracerCommands {
    */
   submitExternal(input: { platform: string; homeLocator: string; idempotencyKey: string; actorId: string }): Promise<SubmitOutcome>;
   cancel(rootTaskId: string, actor: ActorContext): Promise<TracerStatusFound>;
+  /**
+   * 名单导入的批量根任务（a-activity-plan design §10.2）：在**调用方给定的事务**里创建，一个导入批次共用**一个** intake 同步批次
+   * （批次键由导入批次推出，续跑不重复创建）；每行一个 profile_only 的 resolve_account 根任务，幂等键 `roster:<导入批次>:<行号>`。
+   * **不做授权**：调用方（activity-plan.confirm）已校验；只校验输入与主页 capability。不做任何网络 IO。
+   */
+  submitRoster(tx: DbTx, input: RosterSubmit): Promise<RosterSubmitResult>;
+}
+export interface RosterSubmit {
+  importBatchId: bigint;
+  actorId: string;
+  platform: string;
+  items: ReadonlyArray<{ rowNo: number; staffId: bigint; locator: string }>;
+}
+export interface RosterSubmitResult {
+  syncBatchId: bigint;
+  tasks: Array<{ rowNo: number; rootTaskId: bigint; deduplicated: boolean }>;
 }
 
 const externalInput = z.strictObject({
@@ -199,17 +215,7 @@ export function createTracerCommands(deps: { db: Db; clock: Clock; audit: AuditS
       logicalAt: now,
       status: "running",
       settingsVersion: s.configVersion,
-      settingsSnapshot: {
-        timezone: s.timezone,
-        schedule_slots: s.scheduleSlots,
-        initial_content_limit: s.initialContentLimit,
-        list_safety_page_limit: s.listSafetyPageLimit,
-        comment_page_limit: s.commentPageLimit,
-        comment_item_limit: s.commentItemLimit,
-        account_resolve_max_attempts: s.accountResolveMaxAttempts,
-        task_max_attempts: s.taskMaxAttempts,
-        config_version: s.configVersion.toString(),
-      },
+      settingsSnapshot: snapshotOf(s),
       plannedTaskCount: 1,
       startedAt: now,
       createdAt: now,
@@ -315,7 +321,96 @@ export function createTracerCommands(deps: { db: Db; clock: Clock; audit: AuditS
       }
     }
   }
-  return { submit, submitExternal, cancel };
+  async function submitRoster(tx: DbTx, input: RosterSubmit): Promise<RosterSubmitResult> {
+    try {
+      capabilityGate.require({ platform: input.platform as Platform, action: "media_user_info", mode: config.modes.media_user_info, environment: config.environment });
+    } catch (e) {
+      if (e instanceof UnsupportedCapabilityError) throw new TracerError("unsupported_capability", e.message);
+      throw e;
+    }
+    for (const it of input.items) {
+      if (it.locator.length < 1 || it.locator.length > 2048 || !it.locator.isWellFormed()) throw new TracerError("invalid_input", `第 ${it.rowNo} 行的主页入口不合法`);
+    }
+    const now = clock.now();
+    const [platform] = await tx.select().from(platforms).where(eq(platforms.platformCode, input.platform));
+    if (!platform) throw new TracerError("unsupported_capability", `平台 ${input.platform} 未登记`);
+    const [settings] = await tx.select().from(syncSettings).where(eq(syncSettings.settingsId, 1));
+    if (!settings) throw new TracerError("sync_settings_missing", "sync_settings 未配置");
+    const [provider] = await tx.query.dataProviders.findMany({ where: (d, { eq: e }) => e(d.providerCode, "aimaster"), limit: 1 });
+    if (!provider) throw new TracerError("unsupported_capability", "数据供应商 aimaster 未登记");
+    // 一个导入批次一个同步批次：批次键由导入批次推出，续跑 / 重复调用命中同一行
+    const batchKey = jcsSha256({ kind: "roster_import_sync_batch", import_batch_id: input.importBatchId.toString() });
+    let [batch] = await tx.select().from(syncBatches).where(eq(syncBatches.batchKey, batchKey));
+    if (!batch) {
+      const [ins] = await tx.insert(syncBatches).values({
+        batchKey,
+        triggerType: "manual",
+        purpose: "intake",
+        logicalAt: now,
+        status: "running",
+        settingsVersion: settings.configVersion,
+        settingsSnapshot: snapshotOf(settings),
+        plannedTaskCount: 0,
+        startedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+      [batch] = await tx.select().from(syncBatches).where(eq(syncBatches.batchId, BigInt(ins.insertId)));
+    }
+    const out: RosterSubmitResult = { syncBatchId: batch!.batchId, tasks: [] };
+    let created = 0;
+    for (const it of input.items) {
+      const callerKeySha = sha256Of(`roster:${input.importBatchId}:${it.rowNo}`);
+      const [existing] = await tx
+        .select({ taskId: syncTasks.taskId })
+        .from(syncTasks)
+        .where(and(eq(syncTasks.submittedByActor, input.actorId), eq(syncTasks.callerIdempotencyKeySha256, callerKeySha)));
+      if (existing) {
+        out.tasks.push({ rowNo: it.rowNo, rootTaskId: existing.taskId, deduplicated: true });
+        continue;
+      }
+      const [task] = await tx.insert(syncTasks).values({
+        batchId: batch!.batchId,
+        providerId: provider.providerId,
+        platformId: platform.platformId,
+        requestedAction: "resolve_account",
+        subjectType: "media_staff",
+        subjectId: it.staffId,
+        subjectKey: it.locator,
+        subjectKeySha256: sha256Of(it.locator),
+        taskParameters: buildRosterTaskParameters(input.importBatchId, it.rowNo),
+        idempotencyKey: jcsSha256({ kind: "roster_root", import_batch_id: input.importBatchId.toString(), row_no: it.rowNo }),
+        submittedByActor: input.actorId,
+        callerIdempotencyKeySha256: callerKeySha,
+        canonicalCommandSha256: rosterCommandDigest({ platformId: platform.platformId, staffId: it.staffId, locator: it.locator, importBatchId: input.importBatchId, rowNo: it.rowNo }),
+        status: "pending",
+        attemptCount: 0,
+        maxAttempts: settings.accountResolveMaxAttempts,
+        expiresAt: new Date(now.getTime() + retentionMs),
+        createdAt: now,
+        updatedAt: now,
+      });
+      created++;
+      out.tasks.push({ rowNo: it.rowNo, rootTaskId: BigInt(task.insertId), deduplicated: false });
+    }
+    if (created > 0) await tx.update(syncBatches).set({ plannedTaskCount: batch!.plannedTaskCount + created, updatedAt: now }).where(eq(syncBatches.batchId, batch!.batchId));
+    return out;
+  }
+  return { submit, submitExternal, cancel, submitRoster };
+}
+/** 批次创建时冻结的同步设置快照（手动 tracer 批次与名单导入批次共用）。 */
+function snapshotOf(s: typeof syncSettings.$inferSelect) {
+  return {
+    timezone: s.timezone,
+    schedule_slots: s.scheduleSlots,
+    initial_content_limit: s.initialContentLimit,
+    list_safety_page_limit: s.listSafetyPageLimit,
+    comment_page_limit: s.commentPageLimit,
+    comment_item_limit: s.commentItemLimit,
+    account_resolve_max_attempts: s.accountResolveMaxAttempts,
+    task_max_attempts: s.taskMaxAttempts,
+    config_version: s.configVersion.toString(),
+  };
 }
 
 function pick(meta: Partial<AuditEvent>): Partial<AuditEvent> {

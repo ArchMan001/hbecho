@@ -68,8 +68,15 @@
     {
       "idx": 9,
       "version": "5",
-      "when": 1794379475701,
-      "tag": "0009_learning_schema",
+      "when": 1794375160516,
+      "tag": "0009_activity_plan_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1794391365410,
+      "tag": "0010_learning_schema",
       "breakpoints": true
     }
   ]

@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "a6c181a9-7dbc-4753-b8db-f58cc23c5700",
+  "id": "57b82e1a-5e30-4f6e-b9dd-9b9a3d4b69fa",
   "prevId": "2c4084aa-0519-4acc-b929-525245f4df98",
   "tables": {
     "access_bootstrap_tokens": {
@@ -789,6 +789,873 @@
         }
       }
     },
+    "activity_plan_branches": {
+      "name": "activity_plan_branches",
+      "columns": {
+        "plan_id": {
+          "name": "plan_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "branch_id": {
+          "name": "branch_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "joined_at": {
+          "name": "joined_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "joined_by_actor": {
+          "name": "joined_by_actor",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "exited_at": {
+          "name": "exited_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "exited_by_actor": {
+          "name": "exited_by_actor",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_plan_branches_branch_status": {
+          "name": "idx_plan_branches_branch_status",
+          "columns": [
+            "branch_id",
+            "status"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "fk_plan_branches_plan": {
+          "name": "fk_plan_branches_plan",
+          "tableFrom": "activity_plan_branches",
+          "tableTo": "activity_plans",
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "plan_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "fk_plan_branches_branch": {
+          "name": "fk_plan_branches_branch",
+          "tableFrom": "activity_plan_branches",
+          "tableTo": "branches",
+          "columnsFrom": [
+            "branch_id"
+          ],
+          "columnsTo": [
+            "branch_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pk_plan_branches": {
+          "name": "pk_plan_branches",
+          "columns": [
+            "plan_id",
+            "branch_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {
+        "ck_plan_branches_status": {
+          "name": "ck_plan_branches_status",
+          "value": "`activity_plan_branches`.`status` IN ('joined','exited')"
+        },
+        "ck_plan_branches_exited": {
+          "name": "ck_plan_branches_exited",
+          "value": "(`activity_plan_branches`.`status` = 'exited') = (`activity_plan_branches`.`exited_at` IS NOT NULL)"
+        }
+      }
+    },
+    "activity_plan_changes": {
+      "name": "activity_plan_changes",
+      "columns": {
+        "change_id": {
+          "name": "change_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "plan_id": {
+          "name": "plan_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "branch_id": {
+          "name": "branch_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actor": {
+          "name": "actor",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "detail": {
+          "name": "detail",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_plan_changes_plan_time": {
+          "name": "idx_plan_changes_plan_time",
+          "columns": [
+            "plan_id",
+            "occurred_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "fk_plan_changes_plan": {
+          "name": "fk_plan_changes_plan",
+          "tableFrom": "activity_plan_changes",
+          "tableTo": "activity_plans",
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "plan_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "activity_plan_changes_change_id": {
+          "name": "activity_plan_changes_change_id",
+          "columns": [
+            "change_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "activity_plan_owners": {
+      "name": "activity_plan_owners",
+      "columns": {
+        "plan_id": {
+          "name": "plan_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "branch_id": {
+          "name": "branch_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slot_no": {
+          "name": "slot_no",
+          "type": "tinyint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_actor": {
+          "name": "owner_actor",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_user_id": {
+          "name": "owner_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "owner_display_name": {
+          "name": "owner_display_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "claimed_at": {
+          "name": "claimed_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "claimed_via": {
+          "name": "claimed_via",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "claimed_batch_id": {
+          "name": "claimed_batch_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "uq_plan_owners_actor": {
+          "name": "uq_plan_owners_actor",
+          "columns": [
+            "plan_id",
+            "branch_id",
+            "owner_actor"
+          ],
+          "isUnique": true
+        },
+        "idx_plan_owners_batch": {
+          "name": "idx_plan_owners_batch",
+          "columns": [
+            "claimed_batch_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "fk_plan_owners_participation": {
+          "name": "fk_plan_owners_participation",
+          "tableFrom": "activity_plan_owners",
+          "tableTo": "activity_plan_branches",
+          "columnsFrom": [
+            "plan_id",
+            "branch_id"
+          ],
+          "columnsTo": [
+            "plan_id",
+            "branch_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "fk_plan_owners_batch": {
+          "name": "fk_plan_owners_batch",
+          "tableFrom": "activity_plan_owners",
+          "tableTo": "import_batches",
+          "columnsFrom": [
+            "claimed_batch_id"
+          ],
+          "columnsTo": [
+            "import_batch_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pk_plan_owners": {
+          "name": "pk_plan_owners",
+          "columns": [
+            "plan_id",
+            "branch_id",
+            "slot_no"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {
+        "ck_plan_owners_slot": {
+          "name": "ck_plan_owners_slot",
+          "value": "`activity_plan_owners`.`slot_no` IN (1,2)"
+        },
+        "ck_plan_owners_via": {
+          "name": "ck_plan_owners_via",
+          "value": "`activity_plan_owners`.`claimed_via` IN ('import','replace')"
+        }
+      }
+    },
+    "activity_plan_roster": {
+      "name": "activity_plan_roster",
+      "columns": {
+        "roster_entry_id": {
+          "name": "roster_entry_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "plan_id": {
+          "name": "plan_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "platform_id": {
+          "name": "platform_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "branch_id": {
+          "name": "branch_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "staff_id": {
+          "name": "staff_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entry_state": {
+          "name": "entry_state",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "added_at": {
+          "name": "added_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "added_by_actor": {
+          "name": "added_by_actor",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "added_batch_id": {
+          "name": "added_batch_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removed_by_actor": {
+          "name": "removed_by_actor",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removed_reason": {
+          "name": "removed_reason",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "uq_roster_plan_account": {
+          "name": "uq_roster_plan_account",
+          "columns": [
+            "plan_id",
+            "account_id"
+          ],
+          "isUnique": true
+        },
+        "idx_roster_plan_branch_state": {
+          "name": "idx_roster_plan_branch_state",
+          "columns": [
+            "plan_id",
+            "branch_id",
+            "entry_state"
+          ],
+          "isUnique": false
+        },
+        "idx_roster_account_state": {
+          "name": "idx_roster_account_state",
+          "columns": [
+            "account_id",
+            "entry_state"
+          ],
+          "isUnique": false
+        },
+        "idx_roster_staff": {
+          "name": "idx_roster_staff",
+          "columns": [
+            "staff_id"
+          ],
+          "isUnique": false
+        },
+        "idx_roster_batch": {
+          "name": "idx_roster_batch",
+          "columns": [
+            "added_batch_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "fk_roster_plan_platform": {
+          "name": "fk_roster_plan_platform",
+          "tableFrom": "activity_plan_roster",
+          "tableTo": "activity_plans",
+          "columnsFrom": [
+            "plan_id",
+            "platform_id"
+          ],
+          "columnsTo": [
+            "plan_id",
+            "platform_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "fk_roster_account_platform": {
+          "name": "fk_roster_account_platform",
+          "tableFrom": "activity_plan_roster",
+          "tableTo": "external_accounts",
+          "columnsFrom": [
+            "account_id",
+            "platform_id"
+          ],
+          "columnsTo": [
+            "account_id",
+            "platform_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "fk_roster_branch": {
+          "name": "fk_roster_branch",
+          "tableFrom": "activity_plan_roster",
+          "tableTo": "branches",
+          "columnsFrom": [
+            "branch_id"
+          ],
+          "columnsTo": [
+            "branch_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "fk_roster_store": {
+          "name": "fk_roster_store",
+          "tableFrom": "activity_plan_roster",
+          "tableTo": "stores",
+          "columnsFrom": [
+            "store_id"
+          ],
+          "columnsTo": [
+            "store_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "fk_roster_staff": {
+          "name": "fk_roster_staff",
+          "tableFrom": "activity_plan_roster",
+          "tableTo": "media_staff",
+          "columnsFrom": [
+            "staff_id"
+          ],
+          "columnsTo": [
+            "staff_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "fk_roster_batch": {
+          "name": "fk_roster_batch",
+          "tableFrom": "activity_plan_roster",
+          "tableTo": "import_batches",
+          "columnsFrom": [
+            "added_batch_id"
+          ],
+          "columnsTo": [
+            "import_batch_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "activity_plan_roster_roster_entry_id": {
+          "name": "activity_plan_roster_roster_entry_id",
+          "columns": [
+            "roster_entry_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {
+        "ck_roster_state": {
+          "name": "ck_roster_state",
+          "value": "`activity_plan_roster`.`entry_state` IN ('in_roster','removed')"
+        },
+        "ck_roster_removed_reason": {
+          "name": "ck_roster_removed_reason",
+          "value": "`activity_plan_roster`.`removed_reason` IS NULL OR `activity_plan_roster`.`removed_reason` IN ('manual_remove','branch_exit')"
+        },
+        "ck_roster_removed_fields": {
+          "name": "ck_roster_removed_fields",
+          "value": "(`activity_plan_roster`.`entry_state` = 'removed') = (`activity_plan_roster`.`removed_at` IS NOT NULL)"
+        }
+      }
+    },
+    "activity_plan_sectors": {
+      "name": "activity_plan_sectors",
+      "columns": {
+        "plan_id": {
+          "name": "plan_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sector_key": {
+          "name": "sector_key",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "fk_plan_sectors_plan": {
+          "name": "fk_plan_sectors_plan",
+          "tableFrom": "activity_plan_sectors",
+          "tableTo": "activity_plans",
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "plan_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pk_plan_sectors": {
+          "name": "pk_plan_sectors",
+          "columns": [
+            "plan_id",
+            "sector_key"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {
+        "ck_plan_sectors_key": {
+          "name": "ck_plan_sectors_key",
+          "value": "`activity_plan_sectors`.`sector_key` IN ('water','home')"
+        }
+      }
+    },
+    "activity_plans": {
+      "name": "activity_plans",
+      "columns": {
+        "plan_id": {
+          "name": "plan_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "plan_name": {
+          "name": "plan_name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(2000)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "brand_id": {
+          "name": "brand_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "platform_id": {
+          "name": "platform_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "starts_on": {
+          "name": "starts_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ends_on": {
+          "name": "ends_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status_changed_at": {
+          "name": "status_changed_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status_before_delete": {
+          "name": "status_before_delete",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deleted_by_actor": {
+          "name": "deleted_by_actor",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "purge_after": {
+          "name": "purge_after",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_by_actor": {
+          "name": "created_by_actor",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "uq_plans_id_platform": {
+          "name": "uq_plans_id_platform",
+          "columns": [
+            "plan_id",
+            "platform_id"
+          ],
+          "isUnique": true
+        },
+        "idx_plans_brand_status": {
+          "name": "idx_plans_brand_status",
+          "columns": [
+            "brand_id",
+            "status"
+          ],
+          "isUnique": false
+        },
+        "idx_plans_creator_status": {
+          "name": "idx_plans_creator_status",
+          "columns": [
+            "created_by_actor",
+            "status"
+          ],
+          "isUnique": false
+        },
+        "idx_plans_status_purge": {
+          "name": "idx_plans_status_purge",
+          "columns": [
+            "status",
+            "purge_after"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "fk_plans_brand": {
+          "name": "fk_plans_brand",
+          "tableFrom": "activity_plans",
+          "tableTo": "brands",
+          "columnsFrom": [
+            "brand_id"
+          ],
+          "columnsTo": [
+            "brand_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "fk_plans_platform": {
+          "name": "fk_plans_platform",
+          "tableFrom": "activity_plans",
+          "tableTo": "platforms",
+          "columnsFrom": [
+            "platform_id"
+          ],
+          "columnsTo": [
+            "platform_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "activity_plans_plan_id": {
+          "name": "activity_plans_plan_id",
+          "columns": [
+            "plan_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {
+        "ck_plans_status": {
+          "name": "ck_plans_status",
+          "value": "`activity_plans`.`status` IN ('collecting','paused','archived','deleted')"
+        },
+        "ck_plans_dates": {
+          "name": "ck_plans_dates",
+          "value": "`activity_plans`.`ends_on` IS NULL OR `activity_plans`.`ends_on` >= `activity_plans`.`starts_on`"
+        },
+        "ck_plans_before_delete": {
+          "name": "ck_plans_before_delete",
+          "value": "`activity_plans`.`status_before_delete` IS NULL OR `activity_plans`.`status_before_delete` IN ('collecting','paused','archived')"
+        },
+        "ck_plans_deleted_fields": {
+          "name": "ck_plans_deleted_fields",
+          "value": "(`activity_plans`.`status` = 'deleted') = (`activity_plans`.`deleted_at` IS NOT NULL AND `activity_plans`.`status_before_delete` IS NOT NULL AND `activity_plans`.`purge_after` IS NOT NULL)"
+        }
+      }
+    },
     "account_profile_snapshots": {
       "name": "account_profile_snapshots",
       "columns": {
@@ -1520,6 +2387,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "unreferenced_since": {
+          "name": "unreferenced_since",
+          "type": "datetime(6)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "active_staff_platform": {
           "name": "active_staff_platform",
           "type": "bigint",
@@ -1574,7 +2448,8 @@
           "name": "idx_assignments_watch_monitoring",
           "columns": [
             "watch_type",
-            "monitoring_enabled"
+            "monitoring_enabled",
+            "unreferenced_since"
           ],
           "isUnique": false
         }
@@ -3245,6 +4120,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "submitter_branch_id": {
+          "name": "submitter_branch_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "uploaded_by_actor": {
           "name": "uploaded_by_actor",
           "type": "varchar(128)",
@@ -3413,9 +4295,31 @@
             "uploaded_at"
           ],
           "isUnique": false
+        },
+        "idx_import_batches_plan_branch": {
+          "name": "idx_import_batches_plan_branch",
+          "columns": [
+            "plan_id",
+            "submitter_branch_id"
+          ],
+          "isUnique": false
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "fk_import_batches_submitter_branch": {
+          "name": "fk_import_batches_submitter_branch",
+          "tableFrom": "import_batches",
+          "tableTo": "branches",
+          "columnsFrom": [
+            "submitter_branch_id"
+          ],
+          "columnsTo": [
+            "branch_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {
         "import_batches_import_batch_id": {
           "name": "import_batches_import_batch_id",
@@ -3426,13 +4330,17 @@
       },
       "uniqueConstraints": {},
       "checkConstraint": {
+        "ck_import_batches_roster_plan": {
+          "name": "ck_import_batches_roster_plan",
+          "value": "`import_batches`.`import_kind` <> 'roster' OR `import_batches`.`plan_id` IS NOT NULL"
+        },
         "ck_import_batches_kind": {
           "name": "ck_import_batches_kind",
           "value": "`import_batches`.`import_kind` IN ('master_data','roster','user_import')"
         },
         "ck_import_batches_status": {
           "name": "ck_import_batches_status",
-          "value": "`import_batches`.`status` IN ('prechecking','precheck_failed','awaiting_confirm','writing','completed','failed')"
+          "value": "`import_batches`.`status` IN ('prechecking','precheck_failed','awaiting_confirm','writing','resolving','completed','failed')"
         },
         "ck_import_batches_rows": {
           "name": "ck_import_batches_rows",
@@ -3520,6 +4428,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "resolve_task_id": {
+          "name": "resolve_task_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "resolved_at": {
           "name": "resolved_at",
           "type": "datetime(6)",
@@ -3587,6 +4502,13 @@
             "account_id"
           ],
           "isUnique": false
+        },
+        "idx_import_rows_resolve_task": {
+          "name": "idx_import_rows_resolve_task",
+          "columns": [
+            "resolve_task_id"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -3602,6 +4524,19 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "fk_import_rows_resolve_task": {
+          "name": "fk_import_rows_resolve_task",
+          "tableFrom": "import_row_results",
+          "tableTo": "sync_tasks",
+          "columnsFrom": [
+            "resolve_task_id"
+          ],
+          "columnsTo": [
+            "task_id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
@@ -3616,701 +4551,17 @@
       "checkConstraint": {
         "ck_import_rows_precheck": {
           "name": "ck_import_rows_precheck",
-          "value": "`import_row_results`.`precheck_class` IS NULL OR `import_row_results`.`precheck_class` IN ('new','update','unchanged','error','needs_superadmin')"
+          "value": "`import_row_results`.`precheck_class` IS NULL OR `import_row_results`.`precheck_class` IN ('new','new_staff','update','unchanged','error','needs_superadmin')"
         },
         "ck_import_rows_outcome": {
           "name": "ck_import_rows_outcome",
-          "value": "`import_row_results`.`outcome` IS NULL OR `import_row_results`.`outcome` IN ('imported','unchanged','conflict','invalid')"
+          "value": "`import_row_results`.`outcome` IS NULL OR `import_row_results`.`outcome` IN ('imported','unchanged','conflict','invalid','pending_account','suspected_empty','resolve_failed')"
         },
         "ck_import_rows_row_no": {
           "name": "ck_import_rows_row_no",
           "value": "`import_row_results`.`row_no` >= 1"
         }
       }
-    },
-    "course_brand_scopes": {
-      "name": "course_brand_scopes",
-      "columns": {
-        "course_id": {
-          "name": "course_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "brand_id": {
-          "name": "brand_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_course_brand_scopes_brand": {
-          "name": "idx_course_brand_scopes_brand",
-          "columns": [
-            "brand_id",
-            "course_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "fk_course_brand_scopes_course": {
-          "name": "fk_course_brand_scopes_course",
-          "tableFrom": "course_brand_scopes",
-          "tableTo": "courses",
-          "columnsFrom": [
-            "course_id"
-          ],
-          "columnsTo": [
-            "course_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "fk_course_brand_scopes_brand": {
-          "name": "fk_course_brand_scopes_brand",
-          "tableFrom": "course_brand_scopes",
-          "tableTo": "brands",
-          "columnsFrom": [
-            "brand_id"
-          ],
-          "columnsTo": [
-            "brand_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "pk_course_brand_scopes": {
-          "name": "pk_course_brand_scopes",
-          "columns": [
-            "course_id",
-            "brand_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraint": {}
-    },
-    "course_media_deletions": {
-      "name": "course_media_deletions",
-      "columns": {
-        "deletion_id": {
-          "name": "deletion_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "target_kind": {
-          "name": "target_kind",
-          "type": "varchar(16)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "target_id": {
-          "name": "target_id",
-          "type": "varchar(512) character set ascii collate ascii_bin",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "course_id": {
-          "name": "course_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "reason": {
-          "name": "reason",
-          "type": "varchar(16)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "varchar(16)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "attempts": {
-          "name": "attempts",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "next_attempt_at": {
-          "name": "next_attempt_at",
-          "type": "datetime(6)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "last_error": {
-          "name": "last_error",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "datetime(6)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "done_at": {
-          "name": "done_at",
-          "type": "datetime(6)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "uq_course_media_deletions_target": {
-          "name": "uq_course_media_deletions_target",
-          "columns": [
-            "target_kind",
-            "target_id"
-          ],
-          "isUnique": true
-        },
-        "idx_course_media_deletions_due": {
-          "name": "idx_course_media_deletions_due",
-          "columns": [
-            "status",
-            "next_attempt_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "course_media_deletions_deletion_id": {
-          "name": "course_media_deletions_deletion_id",
-          "columns": [
-            "deletion_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraint": {
-        "ck_course_media_deletions_kind": {
-          "name": "ck_course_media_deletions_kind",
-          "value": "`course_media_deletions`.`target_kind` IN ('vod_video','oss_object')"
-        },
-        "ck_course_media_deletions_reason": {
-          "name": "ck_course_media_deletions_reason",
-          "value": "`course_media_deletions`.`reason` IN ('replaced','archived','orphan','create_failed')"
-        },
-        "ck_course_media_deletions_status": {
-          "name": "ck_course_media_deletions_status",
-          "value": "`course_media_deletions`.`status` IN ('pending','done')"
-        },
-        "ck_course_media_deletions_done": {
-          "name": "ck_course_media_deletions_done",
-          "value": "(`course_media_deletions`.`status` = 'done') = (`course_media_deletions`.`done_at` IS NOT NULL)"
-        },
-        "ck_course_media_deletions_attempts": {
-          "name": "ck_course_media_deletions_attempts",
-          "value": "`course_media_deletions`.`attempts` >= 0"
-        }
-      }
-    },
-    "course_tags": {
-      "name": "course_tags",
-      "columns": {
-        "course_id": {
-          "name": "course_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "tag_id": {
-          "name": "tag_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_course_tags_tag": {
-          "name": "idx_course_tags_tag",
-          "columns": [
-            "tag_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "fk_course_tags_course": {
-          "name": "fk_course_tags_course",
-          "tableFrom": "course_tags",
-          "tableTo": "courses",
-          "columnsFrom": [
-            "course_id"
-          ],
-          "columnsTo": [
-            "course_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "fk_course_tags_tag": {
-          "name": "fk_course_tags_tag",
-          "tableFrom": "course_tags",
-          "tableTo": "tags",
-          "columnsFrom": [
-            "tag_id"
-          ],
-          "columnsTo": [
-            "tag_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "pk_course_tags": {
-          "name": "pk_course_tags",
-          "columns": [
-            "course_id",
-            "tag_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraint": {}
-    },
-    "courses": {
-      "name": "courses",
-      "columns": {
-        "course_id": {
-          "name": "course_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "title": {
-          "name": "title",
-          "type": "varchar(200)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "kind": {
-          "name": "kind",
-          "type": "varchar(16)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "varchar(16)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "brand_scope": {
-          "name": "brand_scope",
-          "type": "varchar(16)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "audience_level": {
-          "name": "audience_level",
-          "type": "varchar(24)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'all'"
-        },
-        "cover_key": {
-          "name": "cover_key",
-          "type": "varchar(512) character set ascii collate ascii_bin",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "vod_video_id": {
-          "name": "vod_video_id",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "vod_video_status": {
-          "name": "vod_video_status",
-          "type": "varchar(16)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "file_key": {
-          "name": "file_key",
-          "type": "varchar(512) character set ascii collate ascii_bin",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "file_mime": {
-          "name": "file_mime",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "file_size": {
-          "name": "file_size",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "duration_sec": {
-          "name": "duration_sec",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "unpublished_at": {
-          "name": "unpublished_at",
-          "type": "datetime(6)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "create_key": {
-          "name": "create_key",
-          "type": "varchar(64) character set ascii collate ascii_bin",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "datetime(6)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "datetime(6)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "uq_courses_file_key": {
-          "name": "uq_courses_file_key",
-          "columns": [
-            "file_key"
-          ],
-          "isUnique": true
-        },
-        "uq_courses_cover_key": {
-          "name": "uq_courses_cover_key",
-          "columns": [
-            "cover_key"
-          ],
-          "isUnique": true
-        },
-        "uq_courses_create_key": {
-          "name": "uq_courses_create_key",
-          "columns": [
-            "created_by",
-            "create_key"
-          ],
-          "isUnique": true
-        },
-        "idx_courses_unpublished": {
-          "name": "idx_courses_unpublished",
-          "columns": [
-            "status",
-            "unpublished_at"
-          ],
-          "isUnique": false
-        },
-        "idx_courses_status_updated": {
-          "name": "idx_courses_status_updated",
-          "columns": [
-            "status",
-            "updated_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "fk_courses_created_by": {
-          "name": "fk_courses_created_by",
-          "tableFrom": "courses",
-          "tableTo": "access_users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "courses_course_id": {
-          "name": "courses_course_id",
-          "columns": [
-            "course_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraint": {
-        "ck_courses_unpublished_at": {
-          "name": "ck_courses_unpublished_at",
-          "value": "(`courses`.`status` = 'published') = (`courses`.`unpublished_at` IS NULL)"
-        },
-        "ck_courses_kind": {
-          "name": "ck_courses_kind",
-          "value": "`courses`.`kind` IN ('video','document')"
-        },
-        "ck_courses_status": {
-          "name": "ck_courses_status",
-          "value": "`courses`.`status` IN ('published','unpublished','archived')"
-        },
-        "ck_courses_brand_scope": {
-          "name": "ck_courses_brand_scope",
-          "value": "`courses`.`brand_scope` IN ('specified','all')"
-        },
-        "ck_courses_audience": {
-          "name": "ck_courses_audience",
-          "value": "`courses`.`audience_level` IN ('all','branch_and_above','hq_and_above')"
-        },
-        "ck_courses_vod_status": {
-          "name": "ck_courses_vod_status",
-          "value": "`courses`.`vod_video_status` IS NULL OR `courses`.`vod_video_status` IN ('uploading','transcoding','normal','failed')"
-        },
-        "ck_courses_file_mime": {
-          "name": "ck_courses_file_mime",
-          "value": "`courses`.`file_mime` IS NULL OR `courses`.`file_mime` IN ('application/pdf','image/jpeg','image/png')"
-        },
-        "ck_courses_file_size": {
-          "name": "ck_courses_file_size",
-          "value": "`courses`.`file_size` IS NULL OR `courses`.`file_size` > 0"
-        },
-        "ck_courses_duration": {
-          "name": "ck_courses_duration",
-          "value": "`courses`.`duration_sec` IS NULL OR `courses`.`duration_sec` >= 0"
-        },
-        "ck_courses_kind_fields": {
-          "name": "ck_courses_kind_fields",
-          "value": "(`courses`.`kind` = 'video' AND `courses`.`vod_video_id` IS NOT NULL AND `courses`.`vod_video_status` IS NOT NULL\n            AND `courses`.`file_key` IS NULL AND `courses`.`file_mime` IS NULL AND `courses`.`file_size` IS NULL)\n        OR (`courses`.`kind` = 'document' AND `courses`.`file_key` IS NOT NULL AND `courses`.`file_mime` IS NOT NULL AND `courses`.`file_size` IS NOT NULL\n            AND `courses`.`vod_video_id` IS NULL AND `courses`.`vod_video_status` IS NULL)"
-        }
-      }
-    },
-    "learning_progress": {
-      "name": "learning_progress",
-      "columns": {
-        "progress_id": {
-          "name": "progress_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "course_id": {
-          "name": "course_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "position_sec": {
-          "name": "position_sec",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "watched_sec": {
-          "name": "watched_sec",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "play_count": {
-          "name": "play_count",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "first_learned_at": {
-          "name": "first_learned_at",
-          "type": "datetime(6)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "last_learned_at": {
-          "name": "last_learned_at",
-          "type": "datetime(6)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "uq_learning_progress_user_course": {
-          "name": "uq_learning_progress_user_course",
-          "columns": [
-            "user_id",
-            "course_id"
-          ],
-          "isUnique": true
-        },
-        "idx_learning_progress_user_last": {
-          "name": "idx_learning_progress_user_last",
-          "columns": [
-            "user_id",
-            "last_learned_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "fk_learning_progress_user": {
-          "name": "fk_learning_progress_user",
-          "tableFrom": "learning_progress",
-          "tableTo": "access_users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "fk_learning_progress_course": {
-          "name": "fk_learning_progress_course",
-          "tableFrom": "learning_progress",
-          "tableTo": "courses",
-          "columnsFrom": [
-            "course_id"
-          ],
-          "columnsTo": [
-            "course_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "learning_progress_progress_id": {
-          "name": "learning_progress_progress_id",
-          "columns": [
-            "progress_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraint": {
-        "ck_learning_progress_nonneg": {
-          "name": "ck_learning_progress_nonneg",
-          "value": "`learning_progress`.`position_sec` >= 0 AND `learning_progress`.`watched_sec` >= 0 AND `learning_progress`.`play_count` >= 0"
-        }
-      }
-    },
-    "tags": {
-      "name": "tags",
-      "columns": {
-        "tag_id": {
-          "name": "tag_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(32)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "datetime(6)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "uq_tags_name": {
-          "name": "uq_tags_name",
-          "columns": [
-            "name"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "tags_tag_id": {
-          "name": "tags_tag_id",
-          "columns": [
-            "tag_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraint": {}
     },
     "media_assets": {
       "name": "media_assets",

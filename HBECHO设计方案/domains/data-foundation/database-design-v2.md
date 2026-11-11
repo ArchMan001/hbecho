@@ -5,7 +5,7 @@
 - **开发语言**：TypeScript、Python
 - **文档状态**：`draft`（2026-10-27 起，待 A 域 PRD 逐表复核；2026-11-04 已按修订清单完成归属、内容粒度、值状态等十项修订，见下方「2026-11-04 修订」）
 - **设计日期**：2026-09-02
-- **表数量**：28
+- **表数量**：35（29 张数据底座表 + 6 张活动计划表；口径订正见下方「2026-11-11 修订」第 27 条）
 - **前版关系**：v1 的历史正文保留并已标 archived；本文件是依据新业务口径重新设计的唯一当前 v2
 - **待修订（2026-10-27 起）**：① §8.3 归属表去掉有效区间，改为账号上的当前归属；② §10.3 取消独立 `content_discoveries`，位置信息并入内容快照；③ §12.5–§12.6 去掉跨账号 fan-in；④ §20 验收项 3 改为“一个账号只有一条当前归属”；⑤ §9.2 批次状态增加 `queued`（串行排队）
 - **2026-11-04 修订（按 PRD 修订清单 R6-05 / D-69 / D-70）**：以下各项已在本文正文改完，实现以正文为准：
@@ -18,7 +18,7 @@
   7. §6.3 命名空间改为代码枚举（D-25）：不建 `identifier_namespaces` 表，所有 `*_namespace_id` 外键改为 `*_namespace_code VARCHAR(128)` + CHECK；
   8. §9.2 批次状态增加 `queued` 与 `expired`（D-33）；
   9. 上面待修订列表第 ② 项（取消 `content_discoveries`）**撤回**：CONTEXT 的 ContentDiscovery 与不变量 19 仍要求保留「列表出现 + 当时归属快照」，tracer 也在用；
-  10. 活动计划、参与关系、负责人名额、名单、监控判定计划的表**不在本文**，由 `a-activity-plan` 与 `d-rule-engine` 的 design 定义，引用本文的账号与组织主档。
+  10. 活动计划、参与关系、负责人名额、名单的表**已由 `a-activity-plan` 定义**（2026-11-11 落回本文 §22）；监控判定计划的表**不在本文**，由 `d-rule-engine` 的 design 定义，引用本文的账号与组织主档。
 - **2026-11-04 修订（tracer 任务 2–4 实施中发现，已在正文改完）**：
   11. §10.3 `content_discoveries` 新增 `owner_staff_id/owner_store_id/owner_brand_id` 三列与同空同非空 CHECK（采集当时的归属快照）；
   12. §9.5 `reconciled_by_provider_call_id` 的外键由 `ON DELETE SET NULL` 改为 `RESTRICT`（MySQL 禁止 CHECK 引用 SET NULL 列，错误 3823），「不等于自身」由触发器 `trg_calls_reconciled_not_self` 保证（CHECK 不能引用自增列，错误 3818）；
@@ -38,6 +38,11 @@
   24. （R6）§6.3 命名空间增补 `kuaishou.user_id`；
   25. （R7）§8.3 / §12.3：`watch_type='external'` 只生成主页任务；
   26. （R8）§12.3 第 2 条与 §9.2 对齐为 `queued/skipped/expired`；§9.2 的 `skipped` 放宽为「没有执行任何任务的批次」，`skip_reason` 增 `no_targets`、`all_targets_closed`。
+- **2026-11-11 修订（`a-activity-plan` 任务 0，对应该 spec design §6.3 的 R1–R4；实现以正文为准）**：
+  27. （R1）新增 §22「活动计划」：`activity_plans`、`activity_plan_sectors`、`activity_plan_branches`、`activity_plan_owners`、`activity_plan_roster`、`activity_plan_changes` 六张表。**表数口径订正**：本文原来第 8 行写 28、第 56 行与 §4.1 写 30，互相矛盾；实际建表数是 29（§4.1 列的 `identifier_namespaces` 按 D-25 不建表，命名空间是代码枚举 + CHECK），加上本次 6 张共 35；`a-activity-plan` 的 design 与 tasks 写的「新增 §13」是笔误（本文 §13 已是「核心查询」），实际落在 §22；
+  28. （R2）§8.3 `staff_account_assignments` 增加 `unreferenced_since`（无计划引用的起点）与扫描索引；`monitoring_enabled` / `monitoring_closed_reason` 的语义与 CHECK 不变，`unreferenced_15d` 沿用为「因无计划引用而关闭」；
+  29. （R3）§9.8 `import_batches` 增加 `resolving` 状态、`submitter_branch_id`、`CHECK (import_kind <> 'roster' OR plan_id IS NOT NULL)`；`plan_id` 不加外键，原因见 §9.8；
+  30. （R4）§9.9 `import_row_results` 增加 `new_staff` 预检类、`pending_account / suspected_empty / resolve_failed` 三个 `outcome`、`resolve_task_id`；删除「名单导入由 `a-activity-plan` 扩展自己的分类」这句待办。
 
 ---
 
@@ -53,7 +58,7 @@ v2 采用五层模型：
 4. **长期业务快照层**：账号主页快照、内容批次快照、列表出现记录和评论最新态；
 5. **长期媒资层**：OSS 对象、SHA-256 字节资产和快照媒资引用。
 
-v1 的 37 张表压缩并补齐业务主档后，v2 共 30 张表。主要简化：
+v1 的 37 张表压缩并补齐业务主档后，v2 数据底座共 29 张表（原计划 30 张，`identifier_namespaces` 按 D-25 不建表），加 `a-activity-plan` 的 6 张共 35 张。主要简化：
 
 - 删除 `monitoring_targets`，账号监控职责进入账号归属；
 - 删除 `projection_runs`，快照保存 `adapter_version`，必要时使用维护脚本；
@@ -196,16 +201,17 @@ flowchart TD
   RP --> OO
 ```
 
-### 4.1 30 张表总览
+### 4.1 35 张表总览
 
 | 分组 | 表 |
 |---|---|
-| 平台参考（3） | `platforms`, `data_providers`, `identifier_namespaces` |
+| 平台参考（2） | `platforms`, `data_providers`（`identifier_namespaces` 按 D-25 不建表，命名空间是代码枚举 + CHECK，见 §6.3） |
 | 组织主档（7） | `brands`, `regions`, `branches`, `sectors`, `dealers`, `stores`, `media_staff` |
 | 账号与画像（4） | `external_accounts`, `external_account_identifiers`, `staff_account_assignments`, `account_profile_snapshots` |
 | 同步、导入与 ODS（9） | `sync_settings`, `sync_batches`, `sync_tasks`, `sync_checkpoints`, `ods_provider_calls`, `ods_payloads`, `data_quality_issues`, `import_batches`, `import_row_results` |
 | 内容与评论（4） | `contents`, `content_snapshots`, `content_discoveries`, `comments` |
 | OSS 与媒资（3） | `oss_objects`, `media_assets`, `media_references` |
+| 活动计划（6，§22） | `activity_plans`, `activity_plan_sectors`, `activity_plan_branches`, `activity_plan_owners`, `activity_plan_roster`, `activity_plan_changes` |
 
 ---
 
@@ -313,7 +319,7 @@ SHA-256 = 2ecbbeebd4d015bb5685d288c0230ab92646f1d0cba08a0937b2a5def673b36d
 
 ---
 
-## 6. 平台参考表（3）
+## 6. 平台参考表（2）
 
 ### 6.1 `platforms`
 
@@ -484,12 +490,13 @@ SHA-256 = 2ecbbeebd4d015bb5685d288c0230ab92646f1d0cba08a0937b2a5def673b36d
 - `previous_home_locator LONGTEXT NULL`、`previous_home_locator_sha256 BINARY(32) NULL`；
 - `resolved_home_url LONGTEXT NOT NULL`、`resolved_home_url_sha256 BINARY(32) NOT NULL`：**当前存的是清洗后的入口，不是供应商确认的主页 URL**（2026-11-04）。raw3 保存的 `media_user_info` 响应（抖音、小红书）里没有主页 URL 字段（URL 只出现在请求里），所以 tracer 写入「最小清洗后的入口」（与 `current_home_locator` 的清洗值一致，区别是后者另存原文）。供应商以后返回可确认的主页 URL 时，由新的 Adapter 版本改写这一列并在本说明中去掉这条限定；在此之前下游不得把它当成已确认的主页地址；
 - `intake_status VARCHAR(32) NOT NULL`：录入状态 `normal/suspected_empty`（A §11.6；`invalid_link` 不建归属行，只出现在根任务与导入行结果中）。**实际监控 = 本行 `monitoring_enabled` 且上级链有效 且 `intake_status='normal'`**；疑似空账号不关闭开关，人工确认后改为 `normal` 即开始采集；
-- `monitoring_closed_reason VARCHAR(32) NULL`：`manual/unreferenced_15d`；`monitoring_enabled = FALSE` 时必填（A §11.5：计划恢复时只重开 `unreferenced_15d`）；
+- `monitoring_closed_reason VARCHAR(32) NULL`：`manual/unreferenced_15d`；`monitoring_enabled = FALSE` 时必填（A §11.5：计划恢复时只重开 `unreferenced_15d`）。`unreferenced_15d` 沿用为「因无计划引用而关闭」：既包括满 15 天自动关闭，也包括显式移出、分公司退出、计划删除后的立即关闭（2026-11-11，`a-activity-plan` R2）；
+- `unreferenced_since DATETIME(6) NULL`：账号引用数降到 0 的时刻，满 15 天自动停采的计时起点；引用数大于 0 时为 NULL。**只由 `plan-references` 模块写**（2026-11-11，`a-activity-plan` R2）；
 - `slot_released_at DATETIME(6) NULL`：账号被人工确认已删除时写入，释放该专员在该平台的名额（D-69）；改绑是更新本行的 `staff_id`，原专员的名额随之自然释放，不需要写这一列；
 - `active_staff_platform BIGINT GENERATED ALWAYS AS (CASE WHEN watch_type='staff' AND slot_released_at IS NULL THEN staff_id END) STORED`；
 - `created_at/updated_at DATETIME(6) NOT NULL`。
 
-约束/索引：`CHECK ((watch_type='staff' AND staff_id IS NOT NULL) OR (watch_type='external' AND staff_id IS NULL))`；`UQ(account_id)` 保证一个账号只有一条当前记录，两种类型都适用（D-16 / D-28：改绑是更新这一行并记审计，不建区间历史）；`UQ(active_staff_platform, platform_id)` 保证一个专员在同一平台最多一个占用名额的账号（D-69，外部型与已释放的行该列为 NULL，不受约束）；上一入口值与摘要同空同非空；`CHECK(monitoring_enabled OR monitoring_closed_reason IS NOT NULL)`；`IDX(staff_id, platform_id)`；`IDX(watch_type, monitoring_enabled)`。
+约束/索引：`CHECK ((watch_type='staff' AND staff_id IS NOT NULL) OR (watch_type='external' AND staff_id IS NULL))`；`UQ(account_id)` 保证一个账号只有一条当前记录，两种类型都适用（D-16 / D-28：改绑是更新这一行并记审计，不建区间历史）；`UQ(active_staff_platform, platform_id)` 保证一个专员在同一平台最多一个占用名额的账号（D-69，外部型与已释放的行该列为 NULL，不受约束）；上一入口值与摘要同空同非空；`CHECK(monitoring_enabled OR monitoring_closed_reason IS NOT NULL)`；`IDX(staff_id, platform_id)`；`IDX(watch_type, monitoring_enabled, unreferenced_since)`（每日 15 天扫描）。
 
 **两种类型的行为差异**：
 
@@ -738,18 +745,19 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 
 - `import_batch_id BIGINT PK`；
 - `import_kind VARCHAR(16) NOT NULL`：`master_data`（权威主档）/ `roster`（活动计划名单）；
-- `plan_id BIGINT NULL`：`roster` 时必填，逻辑引用 A 域活动计划；`master_data` 时为空；
+- `plan_id BIGINT NULL`：`roster` 时必填（`CHECK (import_kind <> 'roster' OR plan_id IS NOT NULL)`），逻辑引用 `activity_plans`；`master_data` 时为空。**不加外键**：批次是历史事实，要比计划活得久；计划进入回收站期满后会被物理清除（§22），加 RESTRICT 外键会让清除永远失败，加 CASCADE 又违反「历史事实不级联」。计划清除后批次靠 `summary` 里写入时快照的计划名、平台、品牌自描述（2026-11-11，`a-activity-plan` AP-D08）；
+- `submitter_branch_id BIGINT NULL`：仅 `roster`，提交人所属分公司（FK → `branches`），分公司人员按它看自己提交的批次（2026-11-11）；
 - `uploaded_by_actor VARCHAR(128) NOT NULL`（与 `sync_tasks.submitted_by_actor` 同形）；`uploaded_by_user_id BIGINT NULL`（B 域接入后回填，不得造假用户 ID）；`uploaded_at DATETIME(6) NOT NULL`；
 - `file_name VARCHAR(512) NULL`；`file_sha256 BINARY(32) NULL`；`template_version VARCHAR(32) NULL`；
 - `brand_scope JSON NULL`：本次可写入的品牌集合，用于解释被跳过的行；
 - `total_rows INT NOT NULL`（表头之后的数据行数）；`new_rows/skipped_rows/error_rows/conflict_rows INT NOT NULL DEFAULT 0`（名单导入使用；主数据导入不写，保持 0）；
 - `summary JSON NULL`：按 `import_kind` 存放的分类汇总。`master_data` 预检时 `{new, update, unchanged, error, needs_superadmin, pending_closure_stores, suspect_incomplete_export}`，确认完成时追加 `{imported, unchanged_written, conflict}`；
-- `status VARCHAR(16) NOT NULL`：`prechecking / precheck_failed / awaiting_confirm / writing / completed / failed`；
+- `status VARCHAR(16) NOT NULL`：`prechecking / precheck_failed / awaiting_confirm / writing / resolving / completed / failed`。`resolving`（2026-11-11）仅 `roster`：已写完，仍有行在等账号解析（`pending_account`）；`completed` 表示全部行都有终态；
 - `writing_token VARCHAR(36) NULL`；`heartbeat_at DATETIME(6) NULL`：确认写入的租约与 fencing，每个块的事务开头核对 token，陈旧租约可被接手；
 - `confirmed_by_actor VARCHAR(128) NULL`；`confirmed_by_user_id BIGINT NULL`；`confirmed_at DATETIME(6) NULL`；
 - `created_at/updated_at DATETIME(6) NOT NULL`。
 
-约束/索引：`IDX(import_kind, uploaded_at)`；`IDX(plan_id, uploaded_at)`；status 取值受 CHECK 约束；批次不物理删除，失败批次保留以便重试与追责。
+约束/索引：`IDX(import_kind, uploaded_at)`；`IDX(plan_id, uploaded_at)`；`IDX(plan_id, submitter_branch_id)`；status 取值受 CHECK 约束；批次不物理删除，失败批次保留以便重试与追责。
 
 > 预检阶段只写本表与 `import_row_results`，不改业务表；确认后才进入 `writing`。这是「解析与落库分阶段」的落点，见 §12.1。
 
@@ -763,17 +771,21 @@ CHECK 约束按矩阵实现，并要求：reconciled 终态的 `reconciled_by_pr
 - `import_batch_id BIGINT NOT NULL FK`；
 - `row_no INT NOT NULL`：文件内行号，从 1 开始，不含表头；
 - `raw_row JSON NOT NULL`：原始单元格按模板列名的快照，不做规范化；
-- `precheck_class VARCHAR(32) NULL`：预检分类，`new / update / unchanged / error / needs_superadmin`（CHECK 允许 NULL）。主数据导入的行必填（由应用保证）；名单导入由 `a-activity-plan` 扩展自己的分类；
-- `outcome VARCHAR(32) NULL`：`imported / unchanged / conflict / invalid`；预检阶段为空，确认写入后才有值；`error` / `needs_superadmin` 行没有写入，确认后仍为空；
+- `precheck_class VARCHAR(32) NULL`：预检分类，`new / new_staff / update / unchanged / error / needs_superadmin`（CHECK 允许 NULL）。主数据导入的行必填（由应用保证）；`new_staff`（将新建专员）与 `needs_superadmin` 分属名单导入与主数据导入，各自只出现在自己的批次里（2026-11-11）；
+- `outcome VARCHAR(32) NULL`：`imported / unchanged / conflict / invalid / pending_account / suspected_empty / resolve_failed`；预检阶段为空，确认写入后才有值；`error` / `needs_superadmin` 行没有写入，确认后仍为空。后三个值仅名单导入使用（2026-11-11）：`pending_account` 账号解析中，`suspected_empty` 疑似空账号，`resolve_failed` 解析技术失败（与 `invalid` 是两个不同结果）；
 - `reason_code VARCHAR(64) NULL`；`reason_detail VARCHAR(1024) NULL`；
 - `store_id/account_id/staff_id BIGINT NULL`：命中对象；
+- `resolve_task_id BIGINT NULL`：名单导入行挂起的 `resolve_account` 根任务（FK → `sync_tasks`，`ON DELETE SET NULL`，与 `parent_task_id` 同一做法；一年保留期后根任务被清理时置空）（2026-11-11）；
 - `resolved_at DATETIME(6) NULL`；`resolved_by_actor VARCHAR(128) NULL`；`resolved_by_user_id BIGINT NULL`（B 域接入后回填）；
 - `created_at DATETIME(6) NOT NULL`。
 
-约束/索引：`UQ(import_batch_id, row_no)`；`IDX(precheck_class, created_at)`；`IDX(outcome, created_at)`；`IDX(store_id)`；`IDX(account_id)`；行结果与批次同寿命保留，不随业务数据删除。
+约束/索引：`UQ(import_batch_id, row_no)`；`IDX(precheck_class, created_at)`；`IDX(outcome, created_at)`；`IDX(store_id)`；`IDX(account_id)`；`IDX(resolve_task_id)`；行结果与批次同寿命保留，不随业务数据删除。
 
 | `outcome` | 含义 | 是否需要人处理 |
 |---|---|---|
+| `pending_account` | 名单行已确认，账号解析中（仅名单导入） | 否，等待 |
+| `suspected_empty` | 解析成功但疑似空账号；名单项已建，账号待人工确认（仅名单导入） | 是 |
+| `resolve_failed` | 解析的技术失败（限流耗尽、5xx、根任务被清理等），不自动重试（仅名单导入） | 是 |
 | `imported` | 本次写入成功 | 否 |
 | `unchanged` | 与库中一致、未写入；名单中即「账号已存在且归属同一专员」 | 否 |
 | `conflict` | 与既有事实冲突（归属他人、编码重复等） | 是 |
@@ -1251,7 +1263,7 @@ Pydantic 使用 `model_fields_set` 区分缺失与显式 null。外部 ID 即使
 
 ## 20. 上线验收清单
 
-1. 30 张表与本文总览完全一致；
+1. 35 张表与本文总览完全一致；
 2. 同手机号不能创建两个专员业务身份；
 3. 同账号不能有两个同时有效归属；
 4. 上级监控关闭后下级自身开关不被改写；
@@ -1281,7 +1293,7 @@ Pydantic 使用 `model_fields_set` 区分缺失与显式 null。外部 ID 即使
 
 ## 21. 最终决策摘要
 
-- v2 为 30 张表；v1 保留，不覆盖。
+- v2 为 35 张表（29 张数据底座 + 6 张活动计划）；v1 保留，不覆盖。
 - 单企业、无 tenant、无旧库迁移。
 - 组织、专员、账号和归属分离；业务状态与监控开关分离。
 - 全局北京时间，当前每周一次，支持每周最多两个时点；错过不补跑；全量批次不重叠，新批次排队最多一个。
@@ -1295,3 +1307,52 @@ Pydantic 使用 `model_fields_set` 区分缺失与显式 null。外部 ID 即使
 - 正式媒资长期保存，SHA-256 全局精确去重，下载复用同步任务；归档状态独立于结构化快照终态。
 - 不提前设计规则引擎、合规、AI、权限、看板、API 和 UI。
 - 初期普通 InnoDB 与基础组合索引足够，不启用原生分区。
+
+---
+
+## 22. 活动计划（6）
+
+> 2026-11-11 由 `a-activity-plan`（[design §6.1](../../../.kiro/specs/a-activity-plan/design.md)）落回本文。字段与约束以本节为准，spec 引用本节。通用约定同 §5：signed BIGINT 内部 ID，API 十进制字符串；时间 UTC `DATETIME(6)`；计划起止日期是**北京时间自然日**，用 `DATE`，无时区换算；状态 `VARCHAR + CHECK`；业务表无 `ON DELETE CASCADE`。
+
+### 22.1 `activity_plans`
+
+- `plan_id BIGINT PK`；`plan_name VARCHAR(200) NOT NULL`；`description VARCHAR(2000) NULL`（仅展示，不参与判定）；
+- `brand_id BIGINT NOT NULL FK → brands`、`platform_id BIGINT NOT NULL FK → platforms`（RESTRICT）；创建后不可改（无更新路径 + 测试守护）；
+- `starts_on DATE NOT NULL`、`ends_on DATE NULL`：`CHECK (ends_on IS NULL OR ends_on >= starts_on)`；
+- `status VARCHAR(16) NOT NULL`：`collecting / paused / archived / deleted`；`status_changed_at DATETIME(6) NOT NULL`（无引用起点的计算依据）；
+- `status_before_delete VARCHAR(16) NULL`、`deleted_at DATETIME(6) NULL`、`deleted_by_actor VARCHAR(128) NULL`、`purge_after DATETIME(6) NULL`：`CHECK ((status='deleted') = (deleted_at IS NOT NULL AND status_before_delete IS NOT NULL AND purge_after IS NOT NULL))`；
+- `created_by_actor VARCHAR(128) NOT NULL`（创建者谓词比较它）、`created_by_user_id BIGINT NULL`（B 域接入后回填，不造假）；`created_at/updated_at DATETIME(6) NOT NULL`。
+
+约束/索引：`UQ(plan_id, platform_id)`（供名单项的复合外键）；`IDX(brand_id, status)`；`IDX(created_by_actor, status)`；`IDX(status, purge_after)`。
+
+### 22.2 `activity_plan_sectors`
+
+`PK(plan_id, sector_key)`；`sector_key IN ('water','home')`（板块**种类**，与 `a-master-data-import` 的 `SectorKey` 同一套，不是某分公司下的板块行）；FK → `activity_plans`（RESTRICT）。创建时写入，之后只读。
+
+### 22.3 `activity_plan_branches`（参与关系）
+
+`PK(plan_id, branch_id)`；FK → `activity_plans`、`branches`（RESTRICT）；`status VARCHAR(16) NOT NULL`：`joined / exited`；`joined_at`、`joined_by_actor`、`exited_at NULL`、`exited_by_actor NULL`；`CHECK ((status='exited') = (exited_at IS NOT NULL))`；`updated_at`；`IDX(branch_id, status)`。该行也是名额与名单操作的**串行化锁点**（`SELECT … FOR UPDATE`）。
+
+### 22.4 `activity_plan_owners`（负责人名额）
+
+`PK(plan_id, branch_id, slot_no)`，`slot_no IN (1,2)`；`owner_actor VARCHAR(128) NOT NULL`、`owner_user_id BIGINT NULL`、`owner_display_name VARCHAR(100) NULL`；`claimed_at DATETIME(6) NOT NULL`、`claimed_via VARCHAR(16) NOT NULL`（`import / replace`）、`claimed_batch_id BIGINT NULL FK → import_batches`；`UQ(plan_id, branch_id, owner_actor)`；复合 FK `(plan_id, branch_id)` → `activity_plan_branches`。行存在即占用；释放 = 删除该行并写 `activity_plan_changes`（名额表只保当前态）。
+
+### 22.5 `activity_plan_roster`（名单项 = 计划 × 账号）
+
+- `roster_entry_id BIGINT PK`；`plan_id`、`platform_id`：复合 FK `(plan_id, platform_id)` → `activity_plans(plan_id, platform_id)`，**数据库保证名单项平台等于计划平台**；
+- `account_id BIGINT NOT NULL`：复合 FK `(account_id, platform_id)` → `external_accounts`；
+- `branch_id`、`store_id`、`staff_id`：FK → `branches`、`stores`、`media_staff`（RESTRICT）；`branch_id` 是**加入名单当时**门店所属分公司，用于可见范围，之后门店换板块不改它；
+- `entry_state VARCHAR(16) NOT NULL`：`in_roster / removed`；`added_at`、`added_by_actor`、`added_batch_id`（FK → `import_batches`）；
+- `removed_at`、`removed_by_actor`、`removed_reason`：`removed_reason IN ('manual_remove','branch_exit')`；`CHECK ((entry_state='removed') = (removed_at IS NOT NULL))`；`updated_at`。
+
+约束/索引：`UQ(plan_id, account_id)`（恢复原行，不新增第二行）；`IDX(plan_id, branch_id, entry_state)`；`IDX(account_id, entry_state)`（引用计数）；`IDX(staff_id)`。
+
+**名单项只在账号解析成功后创建**：账号层的失败（归属冲突、入口无效、技术失败）只留在 `import_row_results`，不进名单。名单上只有「在名单 / 已移出」两态；A PRD 的「待解析 / 冲突 / 无效」对应批次行结果。
+
+### 22.6 `activity_plan_changes`（变更记录）
+
+`change_id BIGINT PK`；`plan_id`（FK → `activity_plans`，RESTRICT）；`branch_id BIGINT NULL`；`event_type VARCHAR(48) NOT NULL`；`actor VARCHAR(128) NOT NULL`；`occurred_at DATETIME(6) NOT NULL`；`detail JSON NULL`（仅关键字段，不含整行原文）；`IDX(plan_id, occurred_at)`。随计划一起清除。它与审计日志并存：审计面向安全追溯，变更记录面向业务查看。
+
+### 22.7 回收站清除
+
+已删除计划满 `purge_after` 后由每日维护物理清除：先调下游端口 `purge`（事务之外、幂等），成功后在**一个事务内**按 `activity_plan_changes → activity_plan_roster → activity_plan_owners → activity_plan_branches → activity_plan_sectors → activity_plans` 的顺序**显式 DELETE**（不是级联）。`import_batches` / `import_row_results`、账号、归属、专员、门店不动。

@@ -6,7 +6,7 @@
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
-> **实施计划**：[`tasks.md`](tasks.md)（仅规划，尚未执行）
+> **实施计划**：[`tasks.md`](tasks.md)（任务 0–12 已于 2026-11-11 实施完成）
 >
 > **验收**：[`acceptance.md`](acceptance.md)
 >
@@ -228,7 +228,7 @@ daily scan                   → 补记起点；满 15 天关闭
 
 | # | 目标 | 内容 |
 |---:|---|---|
-| R1 | v2 | 新增 §13「活动计划」：六张新表（§6.1）；开头第 10 条改为已定义；概述表数口径 +6 |
+| R1 | v2 | 新增 §22「活动计划」（v2 的 §13 已被「核心查询」占用，2026-11-11 订正）：六张新表（§6.1）；开头第 10 条改为已定义；表数口径统一为 29 + 6 = 35 |
 | R2 | v2 §8.3 | `unreferenced_since`；说明 `unreferenced_15d` 沿用为「因无计划引用而关闭」 |
 | R3 | v2 §9.8 | `resolving`、`submitter_branch_id`、roster 必填 `plan_id` 的 CHECK；说明 `plan_id` 不加外键的原因 |
 | R4 | v2 §9.9 | `new_staff`、三个新 `outcome`、`resolve_task_id` |
@@ -520,6 +520,7 @@ interface PlanActor {
 
 - 授权入口 `assert(actor, capability, resource)`：先 Capability，再 actor 自带的品牌 / 分公司范围，这两步先于任何数据库读取；再读计划行判断资源谓词（创建者、对象状态），读发生在任何业务写入之前（越权对象表现为未找到）；业务模块**只**调它；
 - **与 B 的关系**：`assert` 是本模块的入口，不是第二个独立的授权体系。[`b-access-control`](../b-access-control/design.md) 落地后，`assert` 的 Capability / 范围 / 谓词判定委托给 B 的 `authorize`（`activity_plan` 注册为 `ScopeStrategy`，创建者与分公司判断注册为谓词 `plan_creator` / `plan_branch`），`assert` 退化为一层薄封装；B 的「唯一授权入口」措辞因此成立；
+  - **实施现状（2026-11-11）**：本轮 `assert` 仍是独立实现（Capability → 品牌 / 分公司范围 → 创建者谓词），由 `toPlanActor` 适配出的 `PlanActor` 驱动；与 B 的 `authorize` 只有「角色 × create / join」的契约测试，**谓词没有注册到 B，也没有委托**。委托与谓词注册留到页面接入、`AuthContext` 能贯穿到模块入口时做。
 - 创建者谓词：`plan.created_by_actor === actor.actor || actor.platformAdmin`；
 - 名额豁免：`branchScope === "all"`；
 - CLI 身份来自环境变量，缺任一启动失败：`HBECHO_AP_ACTOR`、`HBECHO_AP_CAPABILITIES`、`HBECHO_AP_BRAND_SCOPE`（`all` 或品牌编码，逗号分隔）、`HBECHO_AP_BRANCH_SCOPE`（`all` 或分公司编码，逗号分隔，启动时解析成 ID）、`HBECHO_AP_PLATFORM_ADMIN`（`true` / `false`，缺省 `false`）；
@@ -604,13 +605,31 @@ interface PlanDownstream {
 - 名额占用的已知偏差（§7.4）；
 - 主页链接修改不做（§1.4 第 11 项）；
 - 同一专员已有账号的冲突需要一次多余的主页调用才能发现（§7.1）；
-- 解析吞吐受现网 QPS≈2 限制，2,000 行约 17 分钟以上；production capability 放行前不运行；
+- 解析吞吐受现网 QPS≈2 限制，2,000 行约 17 分钟以上（fixture 离线上限见 §12.1）；production capability 放行前不运行；
 - 单次引用重算 ≤ 10,000 个账号（§7.7）；
 - 综合状态里对「已停用 / 已撤店」的文案是显示扩展，不是 PRD 原文；
 - `owner_actor` 在 B 接入前是自由文本的服务身份标识，不能证明负责人真的是该分公司的人；B 接入时补校验；
 - 手机号规则是临时规则（§1.4 第 14 项）；
 - 下游端口默认空实现，计划删除对 D / E 的级联在它们落地前没有实际效果；
 - 回收站期满清除是显式 DELETE：计划层对象的行数（至多数千）在一个事务内删除，超过时需要分块（`ponytail:`）。
+
+### 12.1 规模演练与实施发现（2026-11-11）
+
+用例：`src/modules/activity-plan/scale.perf.db.test.ts`（离线：fixture transport、fake OSS、真实 MySQL 8.4）。2,000 行 = 1,000 个将新建的专员 + 1,000 个已存在的专员，全部是新账号；解析驱动并发 2、每个 tick 最多 100 行。
+
+| 项 | 本机（Mac，一次性 docker MySQL） | 测试 ECS（一次性库容器） |
+|---|---|---|
+| 预检 2,000 行（含全部本地命中查询） | 172 ms | 156 ms |
+| 确认写入 2,000 行（新建 1,000 位专员 + 2,000 个根任务，块 200） | 2.5 s | 1.24 s |
+| 解析 2,000 行（`runTracerRoot` profile_only，20 个 tick） | 36.0 s | 24.9 s |
+| 进程 RSS（演练前 → 后） | 206 → 248 MB | 222 → 344 MB |
+| 1,200 个账号的一次引用重算（一个事务） | 271 ms | 129 ms |
+
+- 数字是 fixture transport 的**离线上限**，不含供应商网络耗时；真实解析吞吐仍受现网限速（QPS≈2）约束，2,000 行约需 17 分钟以上（§12 已列）；
+- 确认写入 2.5 s 说明 10 分钟 / 2,000 行的上限有两个数量级的余量；超时与续跑只在块边界发生，用例用 fake clock 验证；
+- **并发解析暴露了一个既有问题**：同时运行多个 `resolve_account` 根任务时，`intakeAccount` 事务（建账号 / 标识 / 归属）会在唯一索引间隙上互相死锁（本次约 2–6% 的根任务）。事务本身是幂等的整笔操作，所以在 `tracer-flow.ts` 的 `retryDuplicate` 里统一加了有界的死锁重试（沿用 `src/db/deadlock.ts`）；加之前，死锁的根任务会带着租约退出、要等租约过期才能再被领取。该改动只影响死锁路径，tracer / full-sync 既有 130 个用例不变；
+- **`account_created` 的重放偏差**（已知限制）：根任务在 intake 提交之后、写终态之前被杀，重放时 `intakeAccount` 看到账号已存在，终态会写 `account_created=false`，这一行会被归为 `unchanged`（已存在并引用）而不是 `imported`。名单与监控不受影响（两者都建名单项、开启监控），只是标签不同；
+- **夹具被 `.gitignore` 排除**：`*.csv` 全局忽略，roster 夹具第一次提交时没有进库；测试机上 `git archive` 运行时 15 个用例 ENOENT 才发现。已在 `.gitignore` 加 `!tests/fixtures/roster/*.csv`。
 
 ## 13. Decision records
 

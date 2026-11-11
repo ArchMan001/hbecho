@@ -128,13 +128,18 @@ export interface PlanAuditEventShape {
   target_type?: string;
   target_id?: string;
   batch_id?: string;
+  /** a-activity-plan 实际发出的事件形状（2026-11-11 对齐）：对象编码与改前改后、计数放这些字段里，适配器统一收进 detail。 */
+  target_code?: string;
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+  counts?: Record<string, unknown>;
   detail?: Record<string, unknown>;
 }
 export function fromPlanAudit<E extends PlanAuditEventShape>(writer: AuditWriter, inner?: (e: E) => void) {
   return (e: E): void => {
     inner?.(e);
     const eventType = `activity_plan.${e.event_type}`;
-    const outcome = e.outcome ?? "succeeded";
+    const outcome = e.outcome ?? (e.event_type.endsWith("_rejected") ? "denied" : "succeeded");
     const batchRef = bigintOrUndefined(e.batch_id);
     sink(writer, {
       occurredAt: new Date(e.occurred_at),
@@ -145,7 +150,7 @@ export function fromPlanAudit<E extends PlanAuditEventShape>(writer: AuditWriter
       ...(e.target_type ? { targetType: e.target_type } : e.plan_id ? { targetType: "activity_plan" } : {}),
       ...(e.target_id ? { targetId: e.target_id } : e.plan_id ? { targetId: e.plan_id } : {}),
       ...(batchRef !== undefined ? { batchRef } : {}),
-      detail: compact({ planId: e.plan_id, ...(e.detail ?? {}) }),
+      detail: compact({ planId: e.plan_id, targetCode: e.target_code, before: e.before, after: e.after, counts: e.counts, ...(e.detail ?? {}) }),
     });
   };
 }

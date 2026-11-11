@@ -37,7 +37,14 @@ describe("导入表与约束（任务 1）", () => {
       "SELECT table_name t, column_name c FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND referenced_table_name = 'import_batches'",
     );
     const pairs = (fks as Array<{ t: string; c: string }>).map((x) => `${x.t}.${x.c}`).sort();
-    expect(pairs).toEqual(["data_quality_issues.import_batch_id", "import_row_results.import_batch_id", "stores.source_batch_id"]);
+    // activity_plan_* 的两个外键是 a-activity-plan（v2 §22）加的：名额与名单项记录来源批次
+    expect(pairs).toEqual([
+      "activity_plan_owners.claimed_batch_id",
+      "activity_plan_roster.added_batch_id",
+      "data_quality_issues.import_batch_id",
+      "import_row_results.import_batch_id",
+      "stores.source_batch_id",
+    ]);
   });
 
   const batch = (over: Record<string, unknown> = {}) =>
@@ -151,10 +158,10 @@ describe("bootstrap（任务 2）", () => {
     const { runMigrations } = await import("../../db/client");
     const { createDb } = await import("../../db/client");
     await runMigrations(createDb(t.pool));
-    // v2 的 29 张表；b-access-control 的 11 张（auth_* / access_* / audit_events）不属于 v2，单独不计
+    // v2 的 35 张表（29 张数据底座 + 6 张活动计划）；b-access-control 的 11 张（auth_* / access_* / audit_events）不属于 v2，单独不计
     const [tables] = await t.pool.query(
       "SELECT COUNT(*) n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type='BASE TABLE' AND table_name <> '__drizzle_migrations' AND table_name NOT LIKE 'auth\\_%' AND table_name NOT LIKE 'access\\_%' AND table_name <> 'audit_events' AND table_name NOT IN ('courses','course_brand_scopes','tags','course_tags','learning_progress','course_media_deletions')",
     );
-    expect(Number((tables as Array<{ n: string }>)[0]!.n)).toBe(29);
+    expect(Number((tables as Array<{ n: string }>)[0]!.n)).toBe(35);
   });
 });

@@ -14,6 +14,7 @@
     "sync": "tsx src/worker/sync-main.ts",
     "access": "tsx src/worker/access-main.ts",
     "master-data": "tsx src/worker/master-data-main.ts",
+    "plan": "tsx src/worker/plan-main.ts",
     "smoke": "tsx src/worker/smoke-main.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",

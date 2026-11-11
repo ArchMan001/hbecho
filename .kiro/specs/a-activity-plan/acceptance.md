@@ -14,7 +14,7 @@
 >
 > **最近核对**：2026-11-06
 >
-> **更新日期**：2026-11-06（初建；尚未实施，下面所有条目的结果列为空）
+> **更新日期**：2026-11-11（任务 12 回填：`[自动]` 项逐条通过；`[手工]` 项未执行；`[环境]` 见文末）
 
 ## 怎么用
 
@@ -28,7 +28,28 @@
 
 ## 逐条结果
 
-未实施。任务 12 完成时在此回填「组 / 结果 / 测试文件」表，格式同 `a-master-data-import/acceptance.md`。
+2026-11-11 回填。本机 `./scripts/verify.sh` 通过（类型检查 + 离线单元测试 853 个 + 数据库测试 1,095 个通过 / 1 个既有 skip + 迁移一致 + 文档与密钥；Python 侧已验证）。`[自动]` 项全部有对应测试，**通过**；`[手工]` 项**未执行**（M1–M5 需要业务人员或评审人）；`[环境]` 见文末。
+
+| 组 | 结果 | 测试文件（`src/` 下） |
+|---|---|---|
+| A 计划创建与状态 | 通过 | `modules/activity-plan/plans.db.test.ts`、`worker/plan-cli.db.test.ts`（A4 的命令行入口） |
+| B 参与与名额 | 通过 | `modules/activity-plan/participation.db.test.ts`（含 B15 显式闸门并发）、`roster/confirm.db.test.ts`（B8–B12 确认时占用） |
+| C 模板与文件级校验 | 通过 | `roster/template.test.ts`、`roster/return-file.test.ts`（C10）、`roster/precheck.db.test.ts` |
+| D 预检 | 通过 | `roster/classify.test.ts`（D4–D25 逐码）、`roster/precheck.db.test.ts`（D1–D3、D26–D30、真实库原因）、`acceptance-gaps.db.test.ts`（D24、D25） |
+| E 专员新建与确认写入 | 通过 | `roster/confirm.db.test.ts`（含 2,000 行、第 3 块后杀进程、租约接手、超时续跑）、`orchestrator/tracer-flow.profile-only.db.test.ts` |
+| F 解析与归并 | 通过 | `roster/resolver.db.test.ts`、`roster/settle.test.ts`、`acceptance-gaps.db.test.ts`（F14 用真实 `supplement`、F17、F18） |
+| G 名单维护 | 通过 | `roster/maintain.db.test.ts` |
+| H 监控联动与引用计数 | 通过 | `plan-references/rules.test.ts`、`plan-references/reconcile.db.test.ts`、`acceptance-gaps.db.test.ts`（H13）、`roster/resolver.db.test.ts`、`plans.db.test.ts` |
+| I 每日维护 | 通过 | `maintenance.db.test.ts`、`acceptance-gaps.db.test.ts`（I6）、`acceptance-boundaries.test.ts`（I8 装配静态检查） |
+| J 查询与读取契约 | 通过 | `query.db.test.ts`、`status.test.ts`、`roster/return-file.test.ts`、`acceptance-gaps.db.test.ts`（J5、J7、J18） |
+| K 授权与审计 | 通过 | `authz.test.ts`、`acceptance-gaps.db.test.ts`（K2 查询计数器、K2a 与 B 的 `authorize` 契约、K8、K10）、`worker/plan-cli.db.test.ts`（K3–K6） |
+| L 离线与一致性 | 通过 | `db/activity-plan-schema.db.test.ts`（L3–L7）、`acceptance-boundaries.test.ts`（L8–L10）、全量 `verify.sh`（L11–L12） |
+
+说明：
+
+- K3「缺 `HBECHO_AP_BRANCH_SCOPE` 启动失败」由 `actorFromEnv` 的单元测试守护（`authz.test.ts`）；`plan-main.ts` 在它抛错时直接 `exit(1)`，进程级入口本身没有自动化测试；
+- D18（解析后判为无效的行是 `invalid` 而不是预检错误）由 `roster/settle.test.ts` 的映射表和 `resolver.db.test.ts` 的 `invalid` 行覆盖；
+- L13（production capability 保持 disabled）：本 spec 没有改动 `provider-adapter/capability.ts`；`plan resolve --once` 与 sync worker 的名单驱动都在 `assertWorkerCanRun` 之后才装配，没有已批准 capability 时不会运行。
 
 ## 自动项
 
@@ -303,8 +324,8 @@
 
 | # | 需求 | 内容 | 当前状态 |
 |---|---|---|---|
-| ENV-1 | AP-8 | 测试 ECS 上 2,000 行文件的预检 / 确认 / 解析耗时与内存（fixture transport） | 未执行 |
-| ENV-2 | AP-15 | 测试 ECS 一次性库容器跑 `pnpm test:db`（仅 Workbench；`_test` 库；用完 `down -v`） | 未执行 |
+| ENV-1 | AP-8 | 测试 ECS 上 2,000 行文件的预检 / 确认 / 解析耗时与内存（fixture transport） | **已执行（2026-11-11）**：预检 156 ms、确认 1.24 s、解析 24.9 s（并发 2，20 个 tick），进程 RSS 222 → 344 MB；1,200 账号引用重算 129 ms。本机（Mac）同一用例：172 ms / 2.5 s / 36 s / 206 → 248 MB / 271 ms。详见 design §12.1 |
+| ENV-2 | AP-15 | 测试 ECS 一次性库容器跑 `pnpm test:db`（仅 Workbench；`_test` 库；用完 `down -v`） | **已执行（2026-11-11）**：84 个测试文件、1,096 个用例全部通过，472 秒（含 a-full-sync 的 6,000 账号演练）；容器内存峰值 node 840 MiB、MySQL 720 MiB。第一次运行发现 `*.csv` 被 `.gitignore` 排除、roster 夹具没有提交（15 个用例 ENOENT），已修复后重跑 |
 | ENV-3 | AP-9 | **真实付费 smoke**：用少量真实主页入口走完整条链路 | **不属于本 spec 的自动验收。** 需要刘学奎批准、显式开关、固定预算与审计摘要，通过 `a-full-sync` 的批准式 smoke 机制另行申请；批准前 production capability 保持 disabled |
 
 ## 不在本 spec 验收内

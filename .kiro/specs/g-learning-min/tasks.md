@@ -1,7 +1,7 @@
 # G Learning Min Implementation Plan
 
 > **状态**：`draft`
-> **执行状态**：任务 1–12 与页面任务 P1–P4 已实现并经真实环境验证（2026-11-11，见各任务「复核」）；仍未解决的只剩 Aliplayer 线上 License、真实手机 / 微信渲染、首次部署。分支 `g-learning-min`
+> **执行状态**：任务 1–12 与页面任务 P1–P4 已实现并经真实环境验证（2026-11-11，见各任务「复核」）；仍未解决的只剩 Aliplayer 线上 License、真实手机 / 微信渲染、首次部署。分支 `g-learning-min`，已推送；CI run 42990449510（verify + image）全绿，本机 `verify.sh` 通过（单元 760、数据库 1052）
 > **需求**：[`requirements.md`](requirements.md)
 > **设计**：[`design.md`](design.md)
 > **所属域**：G 学习平台 · **目录命名**：新名 `g-learning-min`，符合 `<代号>-<切片>`

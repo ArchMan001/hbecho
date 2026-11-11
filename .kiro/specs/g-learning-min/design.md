@@ -2,17 +2,17 @@
 
 > **状态**：`draft`
 > **需求**：[`requirements.md`](requirements.md)
-> **上游 PRD**：[`prd-domain-g-learning.md`](../../../HBECHO设计方案/prd-domain-g-learning.md) v0.4
+> **上游 PRD**：[`prd-domain-g-learning.md`](../../../HBECHO设计方案/prd-domain-g-learning.md) v1.0.2
 > **所属域**：G 学习平台 · **目录命名**：新名 `g-learning-min`，符合 `<代号>-<切片>`
-> **最近核对**：2026-10-29
-> **更新日期**：2026-10-29
+> **最近核对**：2026-11-11
+> **更新日期**：2026-11-11
 
 ## 1. 形状
 
 | 类别 | 内容 | 说明 |
 |---|---|---|
 | 新增模块 | `courses`、`learning-progress`、`learning-summary`、`learning-tags` | 按资源聚合，不建「学习中心」大模块 |
-| 新增表 | `courses`、`course_brand_scopes`、`tags`、`course_tags`、`learning_progress` | 5 张，全部新表，不改 A/B 域既有表 |
+| 新增表 | `courses`、`course_brand_scopes`、`tags`、`course_tags`、`learning_progress`、`course_media_deletions` | 6 张，全部新表，不改 A/B 域既有表 |
 | 复用 | B 域 Capability / DataScope / 审计表；OSS SDK；VOD SDK | 不新建权限或审计实现 |
 | 不建 | 事件表、物化汇总表、版本表、下载中心、消息通知 | 见 §9 |
 
@@ -37,27 +37,30 @@
 
 | 列 | 类型 | 约束 | 说明 |
 |---|---|---|---|
-| `id` | BIGINT | PK | |
+| `course_id` | BIGINT | PK | 与全仓库命名一致（原写 `id`；`tag_id`、`progress_id` 同理） |
 | `title` | VARCHAR(200) | NOT NULL | |
 | `kind` | VARCHAR(16) | NOT NULL, CHECK in ('video','document') | |
 | `description` | TEXT | NULL | 纯文本 |
 | `status` | VARCHAR(16) | NOT NULL, CHECK in ('published','unpublished','archived') | 无草稿态；`archived` 由下架满 30 天的清理任务自动置位 |
 | `brand_scope` | VARCHAR(16) | NOT NULL, CHECK in ('specified','all') | |
 | `audience_level` | VARCHAR(24) | NOT NULL DEFAULT 'all', CHECK in ('all','branch_and_above','hq_and_above') | 适用人员级别（G-D40） |
-| `cover_key` | VARCHAR(512) | NOT NULL | OSS object key |
+| `cover_key` | VARCHAR(512) ascii_bin | NOT NULL | OSS object key（`hbecho-course` 桶 `cover/` 前缀）；所有课程必填（G-D48）。唯一 |
 | `vod_video_id` | VARCHAR(64) | NULL | video 必填，document 必须为 NULL |
 | `vod_video_status` | VARCHAR(16) | NULL, CHECK in ('uploading','transcoding','normal','failed') | video 必填 |
-| `file_key` | VARCHAR(512) | NULL | document 必填 |
+| `file_key` | VARCHAR(512) ascii_bin | NULL | document 必填；唯一（同一对象不能被两门课引用） |
 | `file_mime` | VARCHAR(128) | NULL | `application/pdf` / `image/jpeg` / `image/png` |
 | `file_size` | BIGINT | NULL | 字节 |
 | `duration_sec` | INT | NULL | 由 VOD 转码结果回填 |
+| `unpublished_at` | DATETIME(6) | NULL | 下架时刻，满 30 天归档的起点（G-D37）；CHECK：已发布为空、下架 / 归档必有；重新上架清空 |
+| `create_key` | VARCHAR(64) | NULL | 视频课程创建请求的 `Idempotency-Key`；唯一 (`created_by`, `create_key`) |
 | `created_by` | BIGINT | NOT NULL | User ID |
 | `created_at` | DATETIME(6) | NOT NULL | |
 | `updated_at` | DATETIME(6) | NOT NULL | |
 
 CHECK 组合约束：
-- `kind='video'` → `vod_video_id`、`vod_video_status` 非空，`file_key` 为空；
-- `kind='document'` → `file_key`、`file_mime`、`file_size` 非空，`vod_video_id` 为空；
+- `kind='video'` → `vod_video_id`、`vod_video_status` 非空，`file_key`、`file_mime`、`file_size` 为空；
+- `kind='document'` → `file_key`、`file_mime`、`file_size` 非空，`vod_video_id`、`vod_video_status` 为空；
+- `file_mime` 只能是 PDF / JPEG / PNG；`file_size > 0`；`duration_sec >= 0`；
 - `brand_scope='all'` → `course_brand_scopes` 无行（由应用约束 + 测试保证，MySQL 无跨表 CHECK）。
 
 ### 3.2 `course_brand_scopes`
@@ -69,9 +72,9 @@ CHECK 组合约束：
 
 主键 (`course_id`, `brand_id`)。`brand_scope='all'` 时不写行。
 
-> **暂不建到 `brands` 的外键**（D15，2026-10-30）：A 域的 `brands` 表尚未落地，G 只存 `brand_id` 并由应用层校验；A 域建表后补一条 FK 迁移。不建平行品牌表。
+> **到 `brands` 的外键已建**（D15 于 2026-11-11 关闭）：A 域 `brands` 表已落地，`course_brand_scopes.brand_id` 直接带 RESTRICT 外键。不建平行品牌表。
 
-> **`user_id` 同样暂不建到 B 域用户表的外键**（D15）：B 域用户表尚无迁移。
+> **`courses.created_by`、`learning_progress.user_id` 同样已建到 `access_users.user_id` 的外键**（D15 于 2026-11-11 关闭）：B 域用户表已落地。
 
 ### 3.3 `tags` 与 `course_tags`
 
@@ -97,6 +100,18 @@ CHECK 组合约束：
 
 唯一键 (`user_id`, `course_id`)。资料课程只更新首末时间与 `watched_sec` 不增长。
 
+### 3.4a `course_media_deletions`（待删除媒体队列）
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| `deletion_id` | BIGINT PK | |
+| `target_kind` / `target_id` | VARCHAR | `vod_video`（VideoId）或 `oss_object`（对象 key）；唯一 (kind, id)，重复入队无操作 |
+| `course_id` | BIGINT NULL | 排查线索，不建外键（残渣没有课程；归档课程行永远保留） |
+| `reason` | VARCHAR(16) | `replaced` / `archived` / `orphan` / `create_failed` |
+| `status` / `attempts` / `next_attempt_at` / `last_error` / `created_at` / `done_at` | | `pending` → `done`；失败后按 1、2、4…分钟退避，封顶 6 小时；创建 24 小时仍失败触发告警（G-D46） |
+
+替换的旧文件、归档课程的媒体、无引用残渣都经它删除：业务先提交，删除失败不回滚业务。
+
 ### 3.5 索引
 
 - `courses(status, updated_at)`：列表默认排序；
@@ -108,7 +123,8 @@ CHECK 组合约束：
 
 | 内容 | 位置 | 理由 |
 |---|---|---|
-| 课程视频与封面 | VOD（媒资地域华北2） | ADR-0007；封面用 VOD 图片媒资 |
+| 课程视频 | VOD（媒资地域华北2） | ADR-0007 |
+| 封面 | `hbecho-course` 桶，前缀 `cover/` | G-D48 / D25：视频与资料同一路径，不用 VOD 图片媒资 |
 | 资料文件 | **`hbecho-course` 桶**（2026-10-30 已建），前缀 `doc/` | 资料需要替换时删除旧对象；`hbecho-media` 的 RAM 策略明确没有 `DeleteObject`，不能复用（ADR-0001 现行承诺） |
 
 课程对象**不写入** A 域的 `media_assets` / `oss_objects` 表。新增 `hbecho-course` 桶需要在 ADR-0001 补一条修订，并为应用角色 `hbecho-ecs-role` 增加该桶的 `Put/Get/Delete/List` 权限。
@@ -146,7 +162,7 @@ CHECK 组合约束：
 1. 校验 learning.read + 课程品牌范围 + 状态
    - `status='archived'` → 403（媒体已删除，不可恢复）
    - `status='unpublished'` → 403
-2. kind=document → 返回短期签名 URL（预览）
+2. kind=document → 返回类型与大小；预览内容由 `GET /api/learning/courses/:id/preview` 鉴权后**流式转发**（D32），不给存储地址
 3. kind=video → 校验 vod_video_status
    - transcoding → 返回 202 + 状态，不返回凭证
    - failed → 返回 409
@@ -286,6 +302,7 @@ WHERE c.brand_scope='all' OR EXISTS (
 | 9 | 按具体分公司/大区定向发课 | 1.0 只有品牌与角色级别；组织级定向留 2.0（G-D40） |
 
 已知上限：
+- 残渣清理有一个极窄竞态：对象 / 视频被列出之后、入队删除之前，有人恰好把它挂到新课程上（要求「上传超过 24 小时才提交课程」，实际几乎不会发生）；删除前不复查引用；
 - 汇总为全表聚合，课程数上万时需要改预聚合；
 - 进度写入为逐次 upsert，高频上报会产生写放大，必要时前端节流；
 - 替换时旧 VOD 视频删除是异步补偿，极端情况下会残留孤儿视频（成本影响，不影响正确性）。
@@ -311,13 +328,31 @@ WHERE c.brand_scope='all' OR EXISTS (
 | D15 | 暂不建跨域外键（`brand_id`、`user_id`） | 对端表尚未落地；不建平行主档，落地后补迁移 | 2026-10-30 |
 | D16 | B 域权限用薄适配层接入 | B 域 Capability 名已在 PRD 定稿，先按接口写，实现后替换 | 2026-10-30 |
 | D17 | 课程不物理删除，下架满 30 天转 `archived` 并删媒体 | 保住进度、汇总与审计；存储真正释放 | 2026-10-30 |
-| D18 | 视频上传校验 MP4/H.264/AAC | 提高转码成功率，失败可排查 | 2026-10-30 |
+| D18 | 视频上传校验 MP4/H.264/AAC | 提高转码成功率，失败可排查 | 2026-10-30 **实现现状（2026-11-11）：只在前端和取凭证时检查 `.mp4` 扩展名；服务端不解析 H.264 / AAC 编码，不符的视频靠 VOD 转码失败暴露（`failed` 状态，维护者可替换）。** |
 | D19 | 微信内下载改为「去浏览器打开」提示 | 微信不允许网页触发文件下载，适配无法绕过 | 2026-10-30 |
 | D20 | 课程数不统计 `archived`；人数/时长/次数**仍计入** | 归档只是删媒体，学习历史仍然存在，不能让「累计」下降 | 2026-10-30 |
 | D21 | 所有课程查询走统一范围过滤器 | 条件散落在各接口必有遗漏；配越权测试兜底 | 2026-10-30 |
 | D22 | 品牌名称与列表缓存 5 分钟 | 品牌极少变化；接受新品牌最多 5 分钟延迟生效 | 2026-10-30 |
 | D23 | 不预留学习明细表 | 1.0 用不到；2.0 需要时再加，不影响现有累计值 | 2026-10-30 |
 | D24 | 课程可见性增加「适用人员级别」，与品牌取交集 | 管理类内容不该给门店看；复用 RoleCode，不建职级字段、不挂 DataScope | 2026-10-30 |
+| D25 | 所有课程封面必填，`cover_key NOT NULL`，视频与资料都存 `hbecho-course` 桶 `cover/` 前缀（不用 VOD 图片媒资） | G-D48（刘学奎 2026-11-11 修订 G-D11）；封面走同一条已验证的 OSS 路径，且展示不依赖 VOD 域名 / 备案 | 2026-11-11 |
+| D26 | 人员级别取 B 的 `DataScope.level`，品牌取 `DataScope.brands`；本域注册资源 `learning_course` 的 ScopeStrategy，用 B 的授权器与出口 10，不写适配层。D16 的「薄适配层」作废 | B 已落地（`authorize`、`createEgress`、`buildDataScope`） | 2026-11-11 |
+| D27 | 范围外一律 403（B 对外默认是 404）：本域把授权器的任何拒绝都映射为 403；对象不存在才是 404。无 `learning.read` 的人先被 403，探不到课程是否存在 | requirements §5.5；tasks 的「必须停下来问」 | 2026-11-11 |
+| D28 | 列表在范围为空（如门店专员本人绑定失效）时返回 403，不返回空页 | tasks 任务 5 验证「范围外返回 403 而非空页」 | 2026-11-11 |
+| D29 | 标签列表归 `learning.read`（筛选要用）；增删改与「带引用数的列表」归 `learning.tag.manage` | tasks 任务 2 的「只接受 learning.tag.manage」按写操作解释；否则学员无法按标签筛选 | 2026-11-11 |
+| D30 | 下载守卫通过后链接签发失败：补一条 `failed` 审计并返回 503，不让审计里留一条假的成功 | 出口 10 先记「允许」再签发 | 2026-11-11 |
+| D31 | 校验失败只删失败的那个对象（封面失败不删已通过的资料文件）；被他课占用的对象永不删 | 让客户端能只重传失败的一项；防止误删他人文件 | 2026-11-11 |
+| D32 | 资料预览由本服务鉴权后流式转发，不给 OSS 签名链接；该路径 `X-Frame-Options: SAMEORIGIN`，其余仍 `DENY` | 2026-11-11 真实桶实测：OSS 默认域名对所有对象强制 `attachment`（`x-oss-force-download: true`），PDF 进 iframe 会变下载；见 ADR-0017 | 2026-11-11 |
+| D33 | 新增第 6 张表 `course_media_deletions`，替换 / 归档 / 残渣的删除统一入队重试 | G-D46 要求失败指数退避；没有持久队列就无法跨进程重启重试 | 2026-11-11 |
+| D34 | 创建幂等键存在 `courses.create_key`，(用户, 键) 永久唯一，不是 24 小时过期 | 比「保留 24 小时」严格；客户端每次提交新生成 UUID，永久唯一不会误伤，也不需要过期清理任务 | 2026-11-11 |
+| D35 | 加 `courses.unpublished_at`；`status` 与它由 CHECK 绑定 | 30 天归档需要起算点，不能用 `updated_at`（编辑会刷新它） | 2026-11-11 |
+| D36 | 维护范围 = 超管全部；hq 为「全部品牌课 + 指定品牌完全落在自己授权品牌内」；与可见性是两套谓词（`canManage` / `manageSql`），各自有「对象判断 ≡ 查询条件」对照测试 | PRD §4.5 / G-D42 | 2026-11-11 |
+| D37 | 视频替换后新视频转码期间课程学员侧暂不可播（旧视频已入删除队列） | 简单；转码通常数分钟。要无缝切换需要 `pending_vod_video_id`，1.0 不做 | 2026-11-11 |
+| D38 | 汇总的品牌范围按**课程**的品牌范围判断，不看学习者的品牌；转码失败视频上的进度不计 | requirements §5.7 / G-D27 | 2026-11-11 |
+| D40 | 审计在业务事务**提交之后**用低风险写入：失败只记日志、累加计数并触发 `audit_write_failed` 告警，不回滚业务（G-D24、acceptance I3）。归档任务同理。代价：提交与写审计之间崩溃会「有变更、无审计」，PRD §6.7 已接受 | 此前实现误用高风险同事务审计，审计故障会让建课 / 编辑 / 归档全部失败，与 G-D24 相反；2026-11-11 审查发现并改正 | 2026-11-11 |
+| D39 | 视频课程创建时 VOD 还没报时长则不能在创建时校验 60 分钟上限；已报告的在创建 / 替换时校验，超限则拒绝并删除该视频 | VOD 转码前可能没有时长；定时回填不追溯拒绝 | 2026-11-11 |
+
+
 ## 11. 界面
 
 > 本节按 [`ui-foundation.md`](../../../HBECHO设计方案/ui/ui-foundation.md) §8 模板编写；视觉沿用 2026-11-10 确认的 v2 基线。可点击原型：[`ui-lab/g-learning-min/`](../../../ui-lab/g-learning-min/README.md)。**已确认（2026-11-10，刘学奎）**，见 §11.6；页面任务另行排期。

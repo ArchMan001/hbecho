@@ -160,7 +160,7 @@ describe("bootstrap（任务 2）", () => {
     await runMigrations(createDb(t.pool));
     // v2 的 35 张表（29 张数据底座 + 6 张活动计划）；b-access-control 的 11 张（auth_* / access_* / audit_events）不属于 v2，单独不计
     const [tables] = await t.pool.query(
-      "SELECT COUNT(*) n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type='BASE TABLE' AND table_name <> '__drizzle_migrations' AND table_name NOT LIKE 'auth\\_%' AND table_name NOT LIKE 'access\\_%' AND table_name <> 'audit_events'",
+      "SELECT COUNT(*) n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type='BASE TABLE' AND table_name <> '__drizzle_migrations' AND table_name NOT LIKE 'auth\\_%' AND table_name NOT LIKE 'access\\_%' AND table_name <> 'audit_events' AND table_name NOT IN ('courses','course_brand_scopes','tags','course_tags','learning_progress','course_media_deletions')",
     );
     expect(Number((tables as Array<{ n: string }>)[0]!.n)).toBe(35);
   });

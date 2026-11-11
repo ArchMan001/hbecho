@@ -51,6 +51,8 @@ describe("迁移与参考数据", () => {
       "auth_users", "auth_sessions", "auth_accounts", "auth_verifications",
       "access_users", "access_user_brands", "access_user_branches", "access_login_failures",
       "access_sms_sends", "access_bootstrap_tokens", "audit_events",
+      // 域 G 自有的 6 张表（g-learning-min design §3），同样不属于 v2
+      "courses", "course_brand_scopes", "tags", "course_tags", "learning_progress", "course_media_deletions",
     ];
     const names = (tables as Array<{ n: string }>).map((r) => r.n);
     expect(B_TABLES.filter((n) => !names.includes(n))).toEqual([]);

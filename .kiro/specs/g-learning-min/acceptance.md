@@ -4,8 +4,8 @@
 > **需求**：[`requirements.md`](requirements.md)
 > **设计**：[`design.md`](design.md)
 > **所属域**：G 学习平台 · **目录命名**：新名 `g-learning-min`，符合 `<代号>-<切片>`
-> **最近核对**：2026-10-29
-> **更新日期**：2026-10-29
+> **最近核对**：2026-11-11
+> **更新日期**：2026-11-11
 
 ## 怎么用
 
@@ -49,8 +49,9 @@
 | C3 | G-3 | `platform_admin` 删除被引用标签 | 409 + 引用数 |
 | C4 | G-3 | 传多个标签筛选参数 | 拒绝或只取第一个（实现前定死并写测试） |
 | C5 | G-5 | 上传 `.docx` | 400 |
-| C6 | G-5 | 上传 120 MiB 资料（上限 100 MiB） | 400 |
+| C6 | G-5 | 上传 60 MiB 资料（上限 50 MiB，G-D44） | 400 |
 | C7 | G-5 | 把 `.exe` 改名成 `.pdf` 上传 | 魔数校验失败，400 且对象被删 |
+| C8 | G-D48 | 新建视频课程或资料课程不传封面 | 400 `invalid_input`，不建课程行 |
 
 ### D. 上传与播放
 
@@ -137,10 +138,13 @@
 
 | # | 依赖 | 当前状态 | 何时可验 |
 |---|---|---|---|
-| E1 | VOD 转码（720p/480p）真实结果 | 模板组已建，未上传过视频 | 首次真实上传后 |
-| E2 | VOD 播放（short-lived 凭证） | 播放域名未配置，等 ICP 备案；备案前用 OSS 签名 URL 联调视频播放（G-D47） | 备案通过 + 域名生效后；联调可先用 OSS 签名 URL |
+| E1 | VOD 转码（720p/480p）真实结果 | **部分验证（2026-11-11）**：真实 VOD 上传 → 转码 → `normal`、时长回填通过（`pnpm learning-smoke-vod` 与浏览器端到端）；测试源 320×240 只出了一档，**720p / 480p 两档未验** | 用 ≥720p 的真实视频上传一次 |
+| E2 | VOD 播放（短期凭证） | **已验证（localhost）**：真实 Chrome + Aliplayer 2.25.1 + `GetVideoPlayAuth`；播放地址是 VOD 存储桶 OSS 默认域名，**无需自有播放域名**（ADR-0017，修正 G-D47 的前提）。**`echo.hbmarketer.com` 上的 Aliplayer License 未验** | 控制台申请 License 后在线上验一次 |
 | E3 | 自动截图 | 1.0 不做：`AddVodTemplate`（Snapshot）连续 `InternalError`，封面人工上传（G-D11） | 2.0 再评估 |
-| E4 | 资料 OSS 直传 | 桶与权限已就绪 | 首批应用代码落地后 |
+| E4 | 资料 OSS 直传（服务端链路） | **已验证（2026-11-11）**：真实 `hbecho-course` 桶，签名 PUT / Content-Type 绑定 / HEAD / Range / 流式读取 / 附件名 / List / Delete 全部通过（`HBECHO_LEARNING_SMOKE=approved pnpm learning-smoke`）；运行期角色 `hbecho-ecs-role` 在测试 ECS 容器里同样通过 | 已完成，可重复运行 |
+| E5 | 浏览器跨域直传（资料 / 封面 / 视频） | **已验证（2026-11-11）**：`hbecho-course` 已配 CORS（`https://echo.hbmarketer.com`）；真实 Chrome 直传资料 / 封面成功，VOD 分片上传成功（VOD 存储桶无需配置） | 新增域名要同步追加来源 |
+| E6 | Aliplayer 线上 License | 未申请；官方文档要求与页面域名绑定。localhost 无 License 可播 | 控制台为 `echo.hbmarketer.com` 申请后线上验 |
+| E7 | 资料内联预览 | **桌面 Chrome 已验**：iframe 加载服务端转发的 PDF（`inline`、`nosniff`）；**手机 / 微信里的渲染未验** | 手工 M3、M8 |
 
 ## 覆盖不了的
 

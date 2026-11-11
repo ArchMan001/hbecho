@@ -43,6 +43,12 @@
 7. **1.0 不开启 VOD 智能审核**：内容是总部自传，审核是额外付费能力，且未验证。
 8. **课程素材与 A 域媒资互不引用**：课程不写 `media_assets`，A 域也不读 VOD。
 
+## 2026-11-11 补记（g-learning-min 实现）
+- 决定 6 的运行期动作清单**不完整**，且当时没有真正建出来（`hbecho-ecs-role` 只挂了 `hbecho-oss-rw`）。2026-11-11 已建 `hbecho-vod-runtime` 并挂到 `hbecho-ecs-role`：`CreateUploadVideo`、`RefreshUploadVideo`、`GetVideoInfo`（取状态与时长）、`GetVideoPlayAuth`、`GetPlayInfo`（PlayAuth 内嵌的权限来自调用身份）、`UpdateVideoInfo`（课程改名同步标题，G-D36）、`GetVideoList`（残渣清理）、`DeleteVideo`、`DeleteStream`；去掉 `CreateUploadImage`（封面不走 VOD）。已在测试 ECS 上用实例角色实测放行。
+- **决定 4 / 5 的前提被实测修正**：没有配置播放域名时，`GetPlayInfo` 仍返回 VOD 存储桶 OSS 默认域名上的播放地址，真实 Chrome + Aliplayer 可播放（详见 ADR-0017）。ICP 已于 2026-11-09 通过。自有播放域名不再是「能不能播」的前置，只是 CDN 加速 / 防盗链 / 统一域名的可选项；Aliplayer License 仍需在控制台为页面域名申请。
+- 课程封面不走 VOD 图片媒资，存 `hbecho-course` 桶（G-D48）。
+- npm 包与播放器的登记见 [ADR-0017](0017-learning-vod-sdk-and-player.md)。
+
 ## 备选与不选原因
 
 | 方案 | 不选原因 |

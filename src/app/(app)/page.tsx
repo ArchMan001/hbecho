@@ -9,6 +9,7 @@ export default async function Home() {
   const ctx = await requireUser();
   if (ctx.capabilities.has("user.manage")) redirect("/users");
   if (ctx.capabilities.has("audit.read")) redirect("/audit");
+  if (ctx.capabilities.has("learning.read")) redirect("/learning");
   return (
     <>
       <PageHead title="你好" sub="账号已激活。" />

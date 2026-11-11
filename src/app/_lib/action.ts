@@ -41,6 +41,11 @@ export async function run<T>(fn: (ctx: AuthContext) => Promise<T>): Promise<Acti
     return ok(await fn(s.ctx));
   } catch (e) {
     if (isAccessError(e)) return fail(e.code, BY_CODE[e.code] ?? e.message, hintOf(e.code, e.detail));
+    // 同上按名字识别（不用 instanceof）。学习模块的 message 本来就是面向业务的人话；detail 里只有引用数这类计数
+    if (e instanceof Error && e.name === "LearningError") {
+      const le = e as Error & { code: string; detail?: { referenceCount?: number } };
+      return fail(le.code, le.message, typeof le.detail?.referenceCount === "number" ? `共有 ${le.detail.referenceCount} 门课程在使用` : undefined);
+    }
     // 只记错误类型与数据库错误码：驱动的错误信息里会带 SQL 参数（手机号等），不进日志
     const cause = (e as { cause?: { code?: string } } | null)?.cause;
     console.error("action_failed", e instanceof Error ? e.name : typeof e, cause?.code ?? "");

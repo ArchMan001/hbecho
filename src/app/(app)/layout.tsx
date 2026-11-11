@@ -10,6 +10,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const ctx = await requireUser();
   const profile = await web().profile(ctx);
   const groups: NavGroup[] = [];
+  // 「学习」排在管理之前（ui-foundation §2）；按 Capability 裁剪，页面与动作各自再判断一次
+  if (ctx.capabilities.has("learning.read")) groups.push({ label: "学习", items: [{ href: "/learning", label: "学习", icon: "book" }] });
   if (ctx.capabilities.has("user.manage")) groups.push({ label: "管理", items: [{ href: "/users", label: "用户与权限", icon: "users" }] });
   if (ctx.capabilities.has("audit.read")) groups.push({ label: "系统", items: [{ href: "/audit", label: "审计日志", icon: "settings" }] });
   const scopeLabel = profile.brandNames === "all" ? "全部品牌" : profile.brandNames.join("、") || "本人";

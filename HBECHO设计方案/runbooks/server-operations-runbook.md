@@ -1688,6 +1688,21 @@ ossutil --endpoint oss-cn-beijing-internal.aliyuncs.com --region cn-beijing \
 
 ---
 
+### 7.9 学习平台上线清单（g-learning-min，2026-11-11）
+
+| # | 事项 | 现状 |
+|---|---|---|
+| 1 | `hbecho-course` 桶 CORS | ✅ 2026-11-11 已配：`https://echo.hbmarketer.com`，PUT / GET / HEAD，头 `Content-Type`，暴露 `ETag`（真实 Chrome 直传验证通过）。**新增域名（例如正式生产域名）要同步追加来源** |
+| 2 | VOD 存储桶 CORS | ✅ 无需配置：归 VOD 服务所有，实测已放行浏览器分片上传 |
+| 3 | 运行期 RAM：`hbecho-ecs-role` 的 VOD 动作 | ✅ 2026-11-11 建 `hbecho-vod-runtime`（9 个动作，见 ADR-0007 补记）并挂到角色；在测试 ECS 上用实例角色实测放行 |
+| 4 | 环境变量（写入 `/data/app/web.env`，root 600）：`HBECHO_LEARNING_CREDENTIALS=ecs_role`、`HBECHO_COURSE_OSS_REGION=cn-beijing`、`HBECHO_PLAYER_LICENSE_DOMAIN` / `_KEY`（见 `.env.example`） | ⏳ 随首次部署（本分支合并后）。**不要**设 `OSS_*` 的回退 |
+| 5 | `learning-worker` 进程 | ⏳ 随首次部署：compose 增加服务，见 §10.3「学习平台 worker」 |
+| 6 | 迁移：`0009_learning_schema`（含 6 张表） | ⏳ 随首次部署。若 `a-activity-plan` 先合并，本迁移改名为下一个序号 |
+| 7 | Aliplayer License（与页面域名绑定） | ⏳ 控制台为 `echo.hbmarketer.com` 申请，填入第 4 项；未申请时本机 localhost 可播，线上是否放行**未验证** |
+| 8 | 标签：上线前超管先建标签，否则无法保存任何课程 | ⏳ 超管 |
+
+真实验证入口（人工，需要批准，不在 CI）：`HBECHO_LEARNING_SMOKE=approved pnpm learning-smoke`（真实桶，33 字节，用完即删）；`HBECHO_LEARNING_SMOKE_VOD=approved pnpm learning-smoke-vod`（真实 VOD，3 秒 MP4，需 ffmpeg，用完即删）。
+
 ## 8. 密钥与配置管理
 
 ### 8.1 当前工作区的两个真实风险
@@ -2127,6 +2142,19 @@ docker image prune -f
 ```
 容器里**不经过 pnpm / corepack**（corepack 首次运行会去外网下载 pnpm）：直接调用 `./node_modules/.bin/…`。
 **镜像分发**：CI（GitHub Actions）经公网域名推送，服务器经内网域名拉取（几十秒，ADR-0016）。GitHub runner → 北京 ACR 的链路本身不慢（2026-11-11 探针：300 MB 不可压缩大文件 32 秒，约 9.4 MB/s，与 hbdam 的 12 MB/s 同量级）；慢的是 docker 对「大量小文件」的单层打包压缩（同样 100 MB 数据拆成 2 万个小文件，推送 54 秒，约 1.85 MB/s），所以 node_modules 这种层首次推送要数分钟；依赖不变时层已在 ACR，推送只要约 30 秒。稳态 CI：`verify` 约 5 分钟 + `image` 约 1.5 分钟。
+
+#### 学习平台 worker（g-learning-min，2026-11-11）
+同一个镜像再起一个服务，只换启动命令（镜像里已有 `src/` 和 `tsx`）。**运行账号**即可（只用 SELECT / INSERT / UPDATE / DELETE）：
+```yaml
+  learning-worker:
+    image: hbecho-registry-registry-vpc.cn-beijing.cr.aliyuncs.com/hbecho/app:${WEB_TAG}
+    container_name: hbecho-learning-worker
+    restart: unless-stopped
+    env_file: /data/app/web.env
+    command: ["./node_modules/.bin/tsx", "src/worker/learning-main.ts"]
+    depends_on: [mysql]
+```
+每分钟一轮（转码回填、待删除媒体重试），每小时加一轮归档与残渣清理；日志在容器 stderr（JSON）。有步骤失败时日志级别是 error，消息 `learning_maintenance_errors`——**这是 VOD / OSS 不可用的唯一信号，需要接日志告警**。回滚 = 改回上一个 `WEB_TAG`。
 
 ### 10.4 部署后必检
 

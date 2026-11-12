@@ -3,9 +3,12 @@
   GET  /healthz
   POST /v1/image/normalize   body：原始图片字节，Content-Type 为图片 MIME → JPEG q80 / 540 宽，X-Width / X-Height
   POST /v1/audio/extract     JSON {source_url, max_bytes} → m4a 字节，X-Duration-Ms；无音轨 → 422 no_audio_track
+  POST /v1/image/match       JSON {reference_url, candidate_url, mode, max_bytes} → JSON {score, capability, evidence}；错误体带 side
 只在 compose 内网暴露，无数据库 / OSS 凭证。ponytail: 不限并发，靠 Node 侧 mediaConcurrency 约束；上限与升级路径：ffmpeg 子进程多了拖慢同机其它服务时，加 Semaphore。
 """
 from __future__ import annotations
+
+from typing import Literal
 
 from fastapi import FastAPI, Request, Response
 from fastapi.concurrency import run_in_threadpool
@@ -13,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import audio, image
+from . import audio, image, match
 
 VERSION = "0.1.0"
 HEADERS = {"X-Capability-Version": VERSION}
@@ -21,8 +24,11 @@ HEADERS = {"X-Capability-Version": VERSION}
 app = FastAPI(title="hbecho-capability", version=VERSION, docs_url=None, redoc_url=None, openapi_url=None)
 
 
-def _error(status: int, code: str, message: str = "") -> JSONResponse:
-    return JSONResponse(status_code=status, content={"code": code, "message": message[:300]}, headers=HEADERS)
+def _error(status: int, code: str, message: str = "", side: str | None = None) -> JSONResponse:
+    body: dict[str, object] = {"code": code, "message": message[:300]}
+    if side is not None:
+        body["side"] = side  # 图片匹配：出问题的是 reference 还是 candidate（调用方据此区分「候选图坏了」与「配置错误」）
+    return JSONResponse(status_code=status, content=body, headers=HEADERS)
 
 
 @app.exception_handler(RequestValidationError)
@@ -84,3 +90,29 @@ async def extract_audio(req: AudioRequest) -> Response:
     except audio.ExtractionError as e:
         return _error(422, "convert_failed", str(e))
     return Response(content=out.data, media_type=out.mime_type, headers={**HEADERS, "X-Duration-Ms": str(out.duration_ms)})
+
+
+class MatchRequest(BaseModel):
+    reference_url: str = Field(min_length=1, max_length=4096)
+    candidate_url: str = Field(min_length=1, max_length=4096)
+    mode: Literal["template", "element"]
+    max_bytes: int = Field(ge=1, le=2**31 - 1)
+
+
+_MATCH_STATUS = {
+    "invalid_request": 400,
+    "input_too_large": 413,
+    "unsupported_media_type": 415,
+    "convert_failed": 422,
+    "source_missing": 422,
+    "source_unavailable": 502,
+}
+
+
+@app.post("/v1/image/match")
+async def match_image(req: MatchRequest) -> Response:
+    try:
+        out = await run_in_threadpool(match.run_match, req.reference_url, req.candidate_url, req.mode, req.max_bytes)
+    except match.MatchError as e:
+        return _error(_MATCH_STATUS[e.code], e.code, str(e), e.side)
+    return JSONResponse(content=out, headers=HEADERS)

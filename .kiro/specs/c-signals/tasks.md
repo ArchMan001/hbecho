@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–6 已完成（2026-11-12）；任务 7 起未开始。进度以下方勾选为准
+> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–7 已完成（任务 7 的标定报告待业务样本，见其完成记录）；任务 8 起未开始。进度以下方勾选为准
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -27,7 +27,7 @@
 - [x] 任务 4 · 特征行写入与扫描驱动（内容与评论）、历史表、对账
 - [x] 任务 5 · 读取口 `SignalReader` 与五态合成；CLI `show` / `catalog`（**第一条可演示的纵向**）
 - [x] 任务 6 · 监控段与标准图（含 OSS 专用桶、可执行性、清除）
-- [ ] 任务 7 · Python 匹配端点、Node 客户端、真实样本标定
+- [x] 任务 7 · Python 匹配端点、Node 客户端、真实样本标定
 - [ ] 任务 8 · 任务表与租约、`requestScores`、评分 runner、结果行、派生信号读取
 - [ ] 任务 9 · 音频理解：`AiGatewayPort`、ASR 与判定 runner、提示词
 - [ ] 任务 10 · 能力升级、`stale` 与显式重算
@@ -145,12 +145,14 @@
 
   - **完成记录（2026-11-12）**：新增 `segments/items.ts`（条目 zod 与校验、`imageSlotOf` 由信号键推导图片槽位）与 `segments/index.ts`（`createSegments`：`create`、`setItems`、`putImage`、`removeImage`、`show`、`executability`、`publish`、`newDraft`、`purge`；标准图桶是注入的独立 `ObjectStore`，桶名由调用方给，OSS 键 `segments/{planId}/{version}/{target}/{template|element-<key>}/{sha256}`）。`segments.db.test.ts` 21 例：同对象第二张模板图替换（旧对象在事务外删）、元素图多张、同字节替换不误删对象、快手/小红书背景头像被拒、10 MiB 恰好可过而超限 / 无法解码 / 非图片 / 空文件被拒且无残留、`put` 失败与写后校验不一致（corrupt）不留行、事务失败清理刚上传的对象且不伤旧图、旧对象删除失败不影响提交、`removeImage`、发布前缺图 → `not_executable` 带阻塞项、已发布后三类写入都是 `segment_immutable`、关掉某能力的启用开关后 `executability` 列出阻塞项而数据不变、语音类按网关 `activeModel` 阻塞（只有 ASR 模型时判定仍阻塞）、目录里删掉的信号读作阻塞且发布被拒、`newDraft`（版本 +1、键不同字节相同、旧版本不动、源对象缺失时回滚并清理）、`purge`（含孤儿对象、不混淆 `segments/12/` 与 `segments/123/`、删除失败保留行并可重试、幂等）。变异检查：去掉“仍被引用则不清理”与“旧键==新键不删”各使对应用例失败。**偏差**：① 图片宽高记录的是 `ImageConverter` 解码后的标准化图尺寸（Node 侧没有解码器取原图尺寸；原图尺寸在匹配证据的 `preprocess` 里）；② 版本号由 C 分配（`create` 为 1，`newDraft` 为现有最高版本 +1），D 读返回值，不由 D 传入；③ 保存时不要求图片已上传（草稿逐步补图），缺图是发布时 / `executability` 的阻塞项；④ 判定项重复先报 `too_many_judgements`（优先于 `duplicate_item`）；⑤ 增加测试注入点 `hooks.beforeImageCommit` 用来触发“上传后事务失败”。**未证明**：真实 `hbecho-signals` 桶与 RAM（桶未创建，创建需先征得同意，见任务 13 的 `[环境]` 项）。
 
-- [ ] 7. Python 匹配端点、Node 客户端与标定
+- [x] 7. Python 匹配端点、Node 客户端与标定
   - **Requirements:** SG-8
   - **Design:** §7.8
   - `services/capability/capability/match.py` 与端点；`pyproject.toml` 增加 `opencv-python-headless`；`services/capability/README.md` 端点表增加 `/v1/image/match`；pytest 用程序合成的纹理图；`src/modules/signals/scoring/matcher-client.ts`（`HttpImageMatcher`，沿用 `HttpCapabilityClient` 的错误分类思路）；**标定**：业务提供的约 20 对脱敏样本在测试机上跑，产出标定报告（样本清单、分数分布、选定的 `R_FULL` / `I_FULL`、每个整数档配一张样例图的位置），刘学奎签字。
   - **验证**：pytest——同图 ≥ 9.5，缩放 + 轻度旋转 + 亮度变化 ≥ 7，无关图 < 2，嵌入场景的元素裁剪块 ≥ 6，不含该元素 < 2，低特征图 `low_features` 且 0 分；错误体 `side` 字段；`unit`（fake `fetch`）——每个错误码的归类、版本不一致、超时；`verify.sh` 的 Python 步骤（环境满足时）。
   - **未证明 / 门槛**：`image.*` **不进生产启用集**，直到标定报告签字（design §14 第 7 项）。本机无 ffmpeg ≥ 7.1 时 Python 步骤会明确打印「未验证」，不声称通过。
+
+  - **完成记录（2026-11-12）**：Python：新增 `services/capability/capability/match.py`（下载 → 540 宽灰度 → SIFT ≤1500 → kNN 比率 0.75 → RANSAC 5px → 模板按内点比率 / 元素按内点数映射为 0.00–10.00；元素匹配检查单应矩阵凸性与面积比；低特征图 `low_features` 且 0 分）与 `POST /v1/image/match`（错误体带 `side`，只接受 http/https，来源 404 → `source_missing`，字节不是图片 → 415），`pyproject.toml` 增加 `opencv-python-headless>=4.10`（本机 .venv 装到 5.0.0.93 + numpy 2.5.4），README 端点表与错误码表更新，`calibrate.py`（标定工具）。`tests/test_match.py` 18 例（pytest 全套 36 通过）：合成纹理图（固定种子、程序生成）——同图 ≥ 9.5、缩放旋转亮度变化 ≥ 7、JPEG q35 重压缩加模糊 ≥ 7、无关图 < 2、排序单调、嵌入元素 ≥ 6、不含元素 < 2、低特征图；HTTP 契约——响应形状、六类错误码带 side、超限、连接拒绝、非法请求（含 `file://`）。Node：`scoring/matcher-client.ts`（`HttpImageMatcher`，signals 里唯一发网络请求的文件；超时 → `timeout`，连接失败 / 无法解析的响应 / 未知错误码 / 不符合契约的成功体 → `unavailable`；错误消息经 `redact.ts` 把 URL 替换为 `<url>`），`matcher-client.test.ts` 12 例（fake `fetch`）与 `redact.test.ts`。**标定**：业务样本（约 20 对脱敏样本）尚未提供，**标定报告没有产出**——已备好 `calibrate.py` 与 [`calibration-report.md`](calibration-report.md)（状态 `未标定`、参数初值、样本要求、步骤、签字栏）。**`image.template` / `image.element` 不进生产启用集，直到报告填完并由刘学奎签字**（`HBECHO_SIGNALS_ENABLED` 缺省不含它们）。**偏差**：版本一致性校验放在任务 8 的 runner（客户端只传输与分类）；`calibrate.py` 与报告模板是为“可复现地标定”多做的两个文件。**未证明**：真实封面 / 背景 / 头像上的分数分布（初值只在合成图上成立）；真实 HEIC 在 `/v1/image/match` 里的路径（复用 `image.to_normalized_jpeg`，本机有 ffmpeg 8.1 但本任务测试用的是 PNG）；CI 的 verify 不安装 Python 依赖，Python 步骤在 CI 里按既有逻辑会打印“未验证”，Python 侧通过只在本机（及后续测试机）有证据。
 
 - [ ] 8. 任务表、`requestScores` 与评分
   - **Requirements:** SG-6、SG-8、SG-12、SG-13

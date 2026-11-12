@@ -17,3 +17,5 @@ export * from "./ttl";
 export * from "./compose";
 export * from "./reader";
 export * from "./segments";
+export * from "./redact";
+export * from "./scoring/matcher-client";

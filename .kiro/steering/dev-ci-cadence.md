@@ -18,6 +18,7 @@ inclusion: always
 4. **一个 spec 一条分支**（如 `a-data-foundation-tracer`），**不按批次开新分支**；一次性修复用 `fix/<主题>`。`main` 永远保持 CI 全绿、可部署。
 5. **一个 spec 推两次**：① 建表/迁移那批做完之后（尽早在干净库上跑一次 migrate + 全量 verify，同时把工作推到远端做异地备份）；② 收尾（全部 task 做完、验收文档就绪）。中间不推。
 6. 只改文档的 push 同样会跑 CI；它不会构建镜像，也不会产生付费调用。
+6a. 分支 push 改了应用路径时，`image` job 会构建并做生产配置冒烟，但**不推 ACR**（2026-11-12）；`main` 才推。需要测试 ECS 拉某个分支的镜像时，手动 `gh workflow run ci.yml --ref <分支>`。合并前等的是 `verify` 与 image 的构建 + 冒烟，不用等推送。
 7. push 之后**不要停下来等**，继续写下一个 task。只有**合并前**那一次需要等。
 8. 在一个你打算合并的 run 结束之前，不要再往同一分支 push；新的 push 会取消上一个 run（`cancel-in-progress`）。
 

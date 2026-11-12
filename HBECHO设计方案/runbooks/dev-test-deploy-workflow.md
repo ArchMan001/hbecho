@@ -19,7 +19,7 @@
 |---|---|---|
 | Mac 开发 | ✅ | 设计基线与探针脚本已就位 |
 | `./scripts/verify.sh` | ✅ | 九步：Node 版本、类型检查、离线单元测试、迁移一致、MySQL 8.4 数据库测试、密钥、文档链接、文档登记、Python 能力服务（2026-11-11 起） |
-| GitHub Actions | ✅ | `ci.yml`：`verify`（MySQL 服务容器上跑 `verify.sh`）+ `image`（应用路径变化时构建镜像 → 生产配置路径容器冒烟 → 推 ACR；稳态约 1.5 分钟，job 超时 30 分钟；首次推送依赖层较慢，原因与对照见 server-operations-runbook §10.3）；无付费调用 |
+| GitHub Actions | ✅ | `ci.yml`：`verify`（MySQL 服务容器上跑 `verify.sh`）+ `image`（应用路径变化时构建镜像 → 生产配置路径容器冒烟 →（仅 main 与手动触发）推 ACR；稳态约 1.5 分钟，job 超时 30 分钟；首次推送依赖层较慢，原因与对照见 server-operations-runbook §10.3）；无付费调用 |
 | 应用代码 | ✅ | 数据底座 tracer、全量同步、主数据导入、访问控制（含 9 个页面，2026-11-11）已合并 `main` |
 | DDL / 迁移 | ✅ | `drizzle/` 版本化迁移，CI 与本机都在空库上从头执行 |
 | 测试套件 | ✅ | 单元 733、数据库 908（2026-11-11） |
@@ -137,7 +137,7 @@ Mac：写代码 + 离线测试
 | job | 触发条件 | 内容 |
 |---|---|---|
 | `app-verify` | 每次 push / PR | MySQL 8.4 服务容器 → 空库跑迁移 → typecheck → 测试 → 静态门禁 → 生产构建 |
-| `image` | 仅在应用/worker 相关路径变化或手动触发 | 构建镜像 → 镜像内测试 → 推 ACR，标签 = git 短 sha |
+| `image` | 仅在应用/worker 相关路径变化或手动触发。**分支 push：构建 + 生产配置冒烟，不推 ACR；`main` 与手动触发（`workflow_dispatch`）才推**（2026-11-12） | 构建镜像 → 冒烟 → 推 ACR，标签 = git 短 sha（main 另加 `main-latest`） |
 | `deploy-test` | 手动触发 | 测试 ECS 拉同一标签、一次性库迁移、端到端 |
 | `deploy-prod` | 手动触发 + 环境审批 | 生产 ECS 按 §7 顺序上线 |
 
@@ -250,3 +250,4 @@ Mac：写代码 + 离线测试
 |---|---|---|
 | 2026-10-25 | 首次编写：建立 verify → CI → 测试 ECS → 生产 ECS 的目标流程、当前状态表、过渡期硬规则与验收方法 | Claude |
 | 2026-10-25 | 按用户更正环境定位：现有唯一实例 `i-2zef8qpi1d2mldntjgrv` **就是测试 ECS**，当前没有生产 ECS。改写 §0、§2.2、§2.3、§5、§7、§9、§11 | Claude |
+| 2026-11-12 | `image` job 的推送步骤只在 `main` 与 `workflow_dispatch` 时执行，分支 push 只构建 + 冒烟。原因：跨境推送最后一层单次可超 25 分钟（c-signals 的 only 修复两次超时），且 `--no-ff` 合并后 main 的 sha 与分支不同，分支镜像不是上线镜像。要让测试 ECS 拉分支镜像：`gh workflow run ci.yml --ref <分支>`（会同时再跑一次 verify）。测试 ECS 当前运行的镜像 `69595423c6d3` 本就是 main 的合并提交 | Kiro |

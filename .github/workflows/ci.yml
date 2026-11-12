@@ -120,7 +120,10 @@ jobs:
           [ "$(docker exec smoke find /app/src /app/tests -name '*.test.ts' 2>/dev/null | wc -l)" = "0" ]
           docker rm -f smoke > /dev/null
       - name: 推送到 ACR
-        if: steps.changed.outputs.build == 'true'
+        # 2026-11-12:分支 push 只构建 + 冒烟,不推镜像。runner → 北京 ACR 的跨境推送,最后一层(.next)整层重推,
+        # 单次可超过 25 分钟(fix/c-signals-request-scores-only 两次都超时),而合并(--no-ff)后的 main sha 与分支 sha 不同,
+        # 分支镜像本来就不是上线的那个镜像。main 照常推(短 sha + main-latest);要让测试 ECS 拉某个分支的镜像,手动触发 workflow_dispatch。
+        if: steps.changed.outputs.build == 'true' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
         env:
           ACR_PUSH_PASSWORD: ${{ secrets.ACR_PUSH_PASSWORD }}
         run: |

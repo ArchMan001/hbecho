@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–5 已完成（2026-11-12）；任务 6 起未开始。进度以下方勾选为准
+> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–6 已完成（2026-11-12）；任务 7 起未开始。进度以下方勾选为准
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -26,7 +26,7 @@
 - [x] 任务 3 · 文本纯函数：归一化、话题解析、平台字段表
 - [x] 任务 4 · 特征行写入与扫描驱动（内容与评论）、历史表、对账
 - [x] 任务 5 · 读取口 `SignalReader` 与五态合成；CLI `show` / `catalog`（**第一条可演示的纵向**）
-- [ ] 任务 6 · 监控段与标准图（含 OSS 专用桶、可执行性、清除）
+- [x] 任务 6 · 监控段与标准图（含 OSS 专用桶、可执行性、清除）
 - [ ] 任务 7 · Python 匹配端点、Node 客户端、真实样本标定
 - [ ] 任务 8 · 任务表与租约、`requestScores`、评分 runner、结果行、派生信号读取
 - [ ] 任务 9 · 音频理解：`AiGatewayPort`、ASR 与判定 runner、提示词
@@ -136,12 +136,14 @@
 
   - **完成记录（2026-11-12）**：新增 `compose.ts`（`composeState` 纯函数、`SignalValue` 与原因码）、`reader.ts`（`createReader` → `read` / `readMany`，`ResultLookup` 接口留给任务 8，`stalePolicy` 缺省 `use_stale`，`requires` 让 CLI 用 `data.*.read`）、`facts.platformsOf`、`src/worker/signals-cli.ts`（`catalog`、`show`，退出码与 plan-cli 一致）、`signals-main.ts`、`package.json` 的 `signals` 脚本。测试：`compose.test.ts` 16 例表驱动覆盖 §7.6 每个分支（含平台不支持、平台无字段、最高版本 failed 读作 missing、只升 text.normalize 时话题 stale 且 normalizerVersion 为旧值、已存储的值不受启用开关影响、素材缺口优先于开关）；`reader.db.test.ts` 15 例（纵向：造内容→推进 current→扫描→读到并再推进读到新值；真实的版本表临时升级得到 stale / failed_under_old_version；`readMany` 查询次数与主体数无关；读取不改任务表；缺 Capability / 目录外信号 / 缺 param / 主体种类不符 / 超 5,000 都在读库之前被拒绝——**任务 2 遗留的“读库前拒绝”用 `QueryCounter` 在这里首次落地**；封面五种素材情形的原因码互不相同；语音类要网关 activeModel 非空，只有 ASR 模型时转写可用、判定 capability_disabled）；`signals-cli.db.test.ts` 6 例（演示：`signals show --content` 看到归一化标题与话题、版本与时间；BIGINT 输出十进制字符串；缺 Capability 退出码 2 且零查询；不存在 4）。**偏差**：design §7.6 第 2 步“字段缺失”先于“平台不支持”判断（已回写）；读取返回按主体 ID 为键（同一信号的主体种类一致），不是 `Map<subject,…>`；`show` 输出归一化后的值（C 自己的派生值），不含 A 的原文。**未证明**：派生信号（匹配分、ASR、判定）的取数，任务 8、9 补齐；5,000 主体的实际耗时（任务 13 规模演练，目前只证明了查询次数为常数）。
 
-- [ ] 6. 监控段与标准图
+- [x] 6. 监控段与标准图
   - **Requirements:** SG-7
   - **Design:** §5.2、§7.9
   - `segments.create` / `putImage` / `removeImage` / `setItems` / `publish` / `newDraft` / `show` / `executability` / `purge`；OSS 键规则；`signalsStore`（独立于 media 的 `MediaObjectStore` 实例，桶名来自 `OSS_BUCKET_SIGNALS`）；上传校验用 `sniffImage` + `ImageConverter`。
   - **验证**（`FakeObjectStore` 故障注入）：同对象第二张模板图替换前一张且旧对象被删；元素图按 `element_key` 多张；`published` 上任何写入 `segment_immutable`；两个判定项 / 快手含 `account.bg_*` / 目录外信号被拒；超 10 MiB 与无法解码被拒且无残留；`put` 失败不留行；事务失败后对象被清理；旧对象删除失败不影响提交；关闭某能力启用开关后 `executability` 列出阻塞项而数据不变；`newDraft` 复制出的对象键与原版本不同、字节相同；`purge` 失败可重试、幂等、会清掉孤儿对象。
   - **未证明**：真实 `hbecho-signals` 桶与 RAM（任务 13 的 `[环境]` 项，需先征得同意创建）。
+
+  - **完成记录（2026-11-12）**：新增 `segments/items.ts`（条目 zod 与校验、`imageSlotOf` 由信号键推导图片槽位）与 `segments/index.ts`（`createSegments`：`create`、`setItems`、`putImage`、`removeImage`、`show`、`executability`、`publish`、`newDraft`、`purge`；标准图桶是注入的独立 `ObjectStore`，桶名由调用方给，OSS 键 `segments/{planId}/{version}/{target}/{template|element-<key>}/{sha256}`）。`segments.db.test.ts` 21 例：同对象第二张模板图替换（旧对象在事务外删）、元素图多张、同字节替换不误删对象、快手/小红书背景头像被拒、10 MiB 恰好可过而超限 / 无法解码 / 非图片 / 空文件被拒且无残留、`put` 失败与写后校验不一致（corrupt）不留行、事务失败清理刚上传的对象且不伤旧图、旧对象删除失败不影响提交、`removeImage`、发布前缺图 → `not_executable` 带阻塞项、已发布后三类写入都是 `segment_immutable`、关掉某能力的启用开关后 `executability` 列出阻塞项而数据不变、语音类按网关 `activeModel` 阻塞（只有 ASR 模型时判定仍阻塞）、目录里删掉的信号读作阻塞且发布被拒、`newDraft`（版本 +1、键不同字节相同、旧版本不动、源对象缺失时回滚并清理）、`purge`（含孤儿对象、不混淆 `segments/12/` 与 `segments/123/`、删除失败保留行并可重试、幂等）。变异检查：去掉“仍被引用则不清理”与“旧键==新键不删”各使对应用例失败。**偏差**：① 图片宽高记录的是 `ImageConverter` 解码后的标准化图尺寸（Node 侧没有解码器取原图尺寸；原图尺寸在匹配证据的 `preprocess` 里）；② 版本号由 C 分配（`create` 为 1，`newDraft` 为现有最高版本 +1），D 读返回值，不由 D 传入；③ 保存时不要求图片已上传（草稿逐步补图），缺图是发布时 / `executability` 的阻塞项；④ 判定项重复先报 `too_many_judgements`（优先于 `duplicate_item`）；⑤ 增加测试注入点 `hooks.beforeImageCommit` 用来触发“上传后事务失败”。**未证明**：真实 `hbecho-signals` 桶与 RAM（桶未创建，创建需先征得同意，见任务 13 的 `[环境]` 项）。
 
 - [ ] 7. Python 匹配端点、Node 客户端与标定
   - **Requirements:** SG-8

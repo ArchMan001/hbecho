@@ -16,3 +16,4 @@ export * from "./features/scan";
 export * from "./ttl";
 export * from "./compose";
 export * from "./reader";
+export * from "./segments";

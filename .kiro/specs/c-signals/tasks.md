@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2 起未开始。进度以下方勾选为准
+> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2 进行中（除 `coverMaterial` 外已完成，等待一项语义决策，见任务 2 的进展记录）；任务 3 起未开始。进度以下方勾选为准
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -103,6 +103,11 @@
   - 测试挂具：`tests/harness` 补 `insertFeature`、`insertSegment`、`FakeAiGateway`（计费计数器、`callKey` 去重、可切换 `activeModel`）、`FakeMatcher`（可编程返回分数 / 错误）；沿用 `FakeObjectStore`、`FakeClock`。
   - 静态护栏（`acceptance-boundaries.test.ts`，SG-16 四条）及各自的反向用例。
   - **验证**：目录键集合与 requirements SG-1 逐项相等；`platformSignals('kuaishou')` 不含 `account.*` 与 `comment.*`；`facts` 的素材状态映射六种输入各一例（SG-2 验收第一条的输入侧）；缺 `HBECHO_SIG_*` 任一项 `actorFromEnv` 失败；缺 Capability 的调用在读库之前被拒绝（查询计数器）；四条护栏的反向用例使护栏报错。
+
+  - **进展记录（2026-11-12，任务未完成，故不勾选）**：已完成并通过本机 `./scripts/verify.sh`（unit 933 / db 1281 通过，Python 18）——`errors.ts`、`catalog.ts`（12 个信号、能力版本表、`platformSignals`、启用集解析）、`config.ts`（11 项数值配置无代码默认值，缺项一次列全）、`authz.ts`（`SignalActor`、`assert`、`actorFromEnv`）、`audit.ts`、`facts.ts`（`contentFacts`、`commentFacts`、`profileMaterial`、`audioMaterial`、`mediaObjectOf`、`scopeSubjects`、素材状态映射 `materialOf`）、`assemble.ts` 空壳、端口 `scoring/ports.ts` 与 `speech/ports.ts`、挂具 `tests/harness/signals.ts`（`insertFeature`、`insertSegment`、`insertMediaReference`、`QueryCounter`、`FakeAiGateway`、`FakeMatcher`）、SG-16 四条静态护栏与反向用例。facts 的几处关键断言做过变异检查（改坏后用例失败）。
+  - **未完成：`coverMaterial`。** design §7.6 / requirements §1.4 第 7 项写「内容主体取其 current 快照的引用，无引用行 → `not_applicable`」，但已合并的 A 代码（`projection/content-list.ts` 的 `hasArchivedCover`，`list-walker.ts:155` 传入）按「封面首次规则」在内容已有 `archived` / `carried_forward` 封面后**不再为新快照建 `cover` 引用**。结果：内容在第二个及以后批次成为 current 后，current 快照上没有封面引用，按现写法会把绝大多数有封面的内容读成 `not_applicable(no_reference)`。属于「C PRD / spec 与 A 已合并代码矛盾」，按下面「必须停下来问的条件」停在这里，等刘学奎定夺，不自行选择。
+  - **与 design 的补充 / 偏差**：① `AiGatewayPort.activeModel` 返回 `Promise<string | null>`（design 伪代码未区分同步 / 异步；异步签名让需要查配置的 H1 实现也能满足）；② 静态护栏比 requirements SG-16 ① 更严，对齐 design §4：除 `facts.ts` 外的 signals 文件不得引用 A 域表（含只读），所以任务 4 的扫描查询（`contents` 游标、特征行所基于快照的批次序）要作为 `facts` 的读取函数加入，而不是放宽护栏；③ `scopeSubjects` 对账号类信号带 `publishedFrom/To` 或 `contentIds` 时拒绝（`scope_not_applicable`），范围一项都没有时拒绝（`scope_required`），发布时间区间取 `[from, to)`，`brandId` 是内部品牌 ID（编码到 ID 与品牌范围校验归任务 10 的 `ScopeResolver`）；④ 素材 `archived` 但资产为 `quarantined` 读作 `missing(media_failed)`，不当作 ready。
+  - **未证明**：「缺 Capability 的调用在读库之前被拒绝（查询计数器）」——任务 2 还没有会读库的对外入口，现在只证明了 `assert` 的行为与 `QueryCounter` 挂具可用；这条断言要随任务 5（读取口）、6（监控段）、8（`requestScores`）、10（重算）的第一个入口落地。
 
 - [ ] 3. 文本纯函数
   - **Requirements:** SG-3

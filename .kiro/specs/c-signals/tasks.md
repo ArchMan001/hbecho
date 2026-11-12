@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–13 已完成（任务 7 的标定报告待业务样本，见其完成记录；任务 13 的 push 与合并见其完成记录）。进度以下方勾选为准。**新会话先读 [`handoff-2026-11-12-b.md`](handoff-2026-11-12-b.md)**
+> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–13 已完成（任务 7 的标定报告待业务样本，见其完成记录；第二次 push 与合并 `main` 已完成,见任务 13 完成记录末条）。进度以下方勾选为准。**新会话先读 [`handoff-2026-11-12-b.md`](handoff-2026-11-12-b.md)**
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -212,6 +212,7 @@
     - **顺带的改动**：`signals show` 增加 `--plan --version`（MAN-1 要求在 CLI 看到匹配点数与能力版本，而 `show` 原先不读参数化信号）；`test_match.py` 的响应头断言改为大小写无关（ECS 上暴露）；`.env.example`、`INDEX.md`、运维手册、ADR-0001、C PRD 版本记录已更新。
     - **本机 `./scripts/verify.sh` 全绿**：类型检查、单元 996、迁移一致、数据库测试 1429（+1 个既有 skip）、密钥、链接、登记、Python 36。更早的一次本机运行与第一次 ECS 运行撞上 `activity-plan/scale.perf.db.test.ts` 的偶发失败（与 C 无关），重跑通过。
     - **与 design 的偏差 / 取舍**：① `signals-main` 只支持 AccessKey 环境变量，实例角色凭证没有接入（ECS 上没有 AccessKey，所以 CLI 的 `put-image` 没在 ECS 上做，由 `signals-smoke` 走实例角色代替；接入属于部署形态）；② 规模演练的评分用进程内 `FakeMatcher`，不含真实 Python 的吞吐；③ MAN-1、MAN-4、ENV-6 需要一个带 C 的表和真实同步数据的库，测试 ECS 的 `hbecho` 库没有迁移 C 的表，对现有库做 DDL 需另行同意，所以没有做。
+    - **推送与合并(2026-11-12)**:第二次 push 后 `c-signals` 分支 CI run 43200930507 全绿(verify + image);因 `main` 已前进 8 个提交,先在独立 worktree 里把 `c-signals` 以 `--no-ff` 合入 `origin/main`(无冲突),推到 `merge/c-signals` 分支,合并后的树 CI run 43209822790 全绿(verify + image),再把该合并提交快进推到 `main`(`5e9897b`)。刘学奎事先同意合并。
     - **未证明**：匹配分标定（缺业务样本，`image.template` / `image.element` 不进生产启用集）；HEIC 封面经 ffmpeg ≥ 7.1 的匹配；回看窗口在真实同步并发下是否足够；真实 Python 上的评分吞吐；D 对读取口 / 监控段 / `retainUntil` 的消费（`d-rule-engine` 未实施）；ASR 与判定的真实模型质量与计费（`h-ai-min`）。
 
 ## 对已有代码与测试的改动

@@ -11,3 +11,6 @@ export * from "./speech/ports";
 export * from "./text/fields";
 export * from "./text/hashtags";
 export * from "./text/normalize";
+export * from "./features/ingest";
+export * from "./features/scan";
+export * from "./ttl";

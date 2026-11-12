@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2、3 已完成（2026-11-12）；任务 4 起未开始。进度以下方勾选为准
+> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–4 已完成（2026-11-12）；任务 5 起未开始。进度以下方勾选为准
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -24,7 +24,7 @@
 - [x] 任务 1 · schema 与迁移（2026-11-12 完成并推第一次）
 - [x] 任务 2 · 骨架：目录、错误、配置、授权审计、A 事实读取口、测试挂具、静态护栏
 - [x] 任务 3 · 文本纯函数：归一化、话题解析、平台字段表
-- [ ] 任务 4 · 特征行写入与扫描驱动（内容与评论）、历史表、对账
+- [x] 任务 4 · 特征行写入与扫描驱动（内容与评论）、历史表、对账
 - [ ] 任务 5 · 读取口 `SignalReader` 与五态合成；CLI `show` / `catalog`（**第一条可演示的纵向**）
 - [ ] 任务 6 · 监控段与标准图（含 OSS 专用桶、可执行性、清除）
 - [ ] 任务 7 · Python 匹配端点、Node 客户端、真实样本标定
@@ -118,12 +118,14 @@
   - **完成记录（2026-11-12）**：新增 `text/normalize.ts`（`NORMALIZERS`、`normalizeKeyword(raw, version?)`、`normalizeText`）、`text/hashtags.ts`（三平台解析器表、`extractHashtags`，解析器可注入）、`text/fields.ts`（`PLATFORM_TEXT_FIELDS`）；测试 68 例全过（unit）。**两处订正 design**：① 幂等性的固定种子属性测试（5000 个串）找到反例，删不可见字符改到 NFKC 之前（v1 尚无存储数据，直接订正 v1）；② 话题正则原稿的 `#?` 会吃掉 `#a#b` 的第二个 `#`，改为 `(?:\[话题\]#?)?`。**§14 第 6 项关闭**：fixture 核对结果——快手列表 63 条从未返回正文，`text.body_normalized` 对快手读作 `not_applicable`，目录里该信号的可得平台随之不含快手（`catalog` 由 `PLATFORM_TEXT_FIELDS` 派生）；依据由 `fields.test.ts` 逐平台重算守护。
   - **未证明**：真实平台上线后新出现的话题写法；快手正文结论仅来自 3 份快手列表 fixture（63 条）。
 
-- [ ] 4. 特征行写入与扫描驱动
+- [x] 4. 特征行写入与扫描驱动
   - **Requirements:** SG-3、SG-4、SG-5
   - **Design:** §5.1、§7.3、§7.4、§7.5
   - `ingestContent` / `ingestComment`（`mode='normal'|'recompute'`；锁特征行、`isNewer` 排序检查、素材指纹比较、历史写入，`recompute` 跳过素材未变的短路且历史原因记 `capability_upgraded`）；`runScan`（`content_scan`、`comment_scan` 两个游标，回看窗口「迟到」查询）；`runReconcile`（`content_reconcile` 分页）；`signal_history` 写入（含 `normalizer_version`）与 `expires_at`。
   - **验证**（`*.db.test.ts`，`FakeClock`）：新内容 → 特征行三信号 `valid`；评论正文 `NULL` 与空串指纹不同但都读 `valid` 空值；同一快照重复处理 → 无写入；新批次、素材未变 → 只前移所持快照；标题变化 → 特征行更新且历史新增一行（`material_changed`，`normalizer_version` 为写入时的 `nv`）；素材未变的 `stale` 信号在 `mode='recompute'` 下仍重算（批次相同也不被 `skipped_older` 挡住；历史 `capability_upgraded`，`nv` 更新）；批次 5 之后迟到批次 3 → `skipped_older`，特征行不变；注入话题解析异常 → `hashtags` 为 `failed`，标题与正文照常；回看窗口：构造「游标已越过、但提交更晚」的内容，下一 tick 的迟到查询补上；窗口外的由对账补上；扫描中途杀进程后重做，特征行恰好一行；`suspected_deleted` 评论不被新抽取；C 的表不含评论作者列；`content_features` 值与信封的三态一致。
   - **未证明**：真实 A 同步写入并发下的回看窗口是否足够——测试机上用 `a-full-sync` 的 smoke 数据复核一次（任务 13）。
+
+  - **完成记录（2026-11-12）**：新增 `features/compute.ts`（纯计算：素材指纹、三个文本信号、评论信号、信封）、`features/ingest.ts`（`ingestContent` / `ingestComment`，`normal` 与 `recompute` 两种模式，事务内只做锁行、排序检查、写历史、更新，死锁重试）、`features/scan.ts`（`scanContents`、`scanComments`、`reconcileContents` 及三个游标）、`ttl.ts`（保留期）；`facts.ts` 增加扫描读取函数（`batchOrders`、`contentsAfter`、`contentsLate`、`contentPage`、`commentsAfter`、`commentsInWindow`），护栏要求的“A 域表只经 facts”由此保持。`features.db.test.ts` 20 例：新内容三信号 valid；NULL 与空串素材指纹不同；快手无正文条目；重复处理无写入；新批次素材未变只前移快照；标题变化写 3 行历史（material_changed、nv、一年保留）；批次 5 后迟到批次 3 → skipped_older；话题解析器抛错 → hashtags failed、标题正文照常、失败详情不含原文；recompute 在批次相同时仍重算（capability_upgraded），且已是目标版本则不再写；**真实的 text.normalize 1→2 版本升级**（测试内临时改版本表并注册 v2 实现，历史保留 nv=1）；评论 NULL/空串/改正文/suspected_deleted/快手；游标与空转；回看窗口迟到；窗口外由对账补；对账分页与归零；游标未推进时重做恰好一行。做过三处变异检查（去掉排序检查、去掉迟到查询、去掉“素材未变只前移”，对应用例失败）。**偏差**：`recompute` 在素材未变且信封已是当前版本时返回 `unchanged`（不写空历史）；对账多读一行才判断一圈是否结束（刚好满页不误判）；评论的“迟到”查询按“特征行缺失或 `comments.updated_at` 晚于特征行”判断（评论没有快照，无法在 SQL 里比指纹）。**未证明**：真实 A 同步并发写入下回看窗口是否足够（任务 13 在测试机用 `a-full-sync` 的 smoke 数据复核）；评论 runner 每次看到是否 bump `updated_at` 未核对（只影响重复比较的开销，不影响正确性）。
 
 - [ ] 5. 读取口与五态合成（第一条纵向）
   - **Requirements:** SG-2、SG-12

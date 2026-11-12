@@ -1,8 +1,8 @@
 // A 事实读取口（design §4）：C 读 A 的表的**唯一**入口，全部批量、只读。A 改表结构时只改这一个文件；
 // 静态护栏（acceptance-boundaries）保证别的 signals 文件不 import A 的表，也不写 A 的表。
-import { and, asc, desc, eq, gt, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, ne, or } from "drizzle-orm";
 import type { Db, DbTx } from "../../db/client";
-import { comments, contentSnapshots, contents, externalAccounts, mediaAssets, mediaReferences, ossObjects, platforms, staffAccountAssignments, stores, syncBatches, mediaStaff } from "../../db/schema";
+import { commentFeatures, comments, contentFeatures, contentSnapshots, contents, externalAccounts, mediaAssets, mediaReferences, ossObjects, platforms, staffAccountAssignments, stores, syncBatches, mediaStaff } from "../../db/schema";
 import { requireSignal } from "./catalog";
 import { SignalError } from "./errors";
 
@@ -272,6 +272,80 @@ export function createFacts(db: Q) {
     return rows.map((r) => r.id);
   }
 
-  return { contentFacts, commentFacts, coverMaterial, profileMaterial, audioMaterial, mediaObjectOf, scopeSubjects };
+  // ───────────── 扫描驱动用的读取（design §7.3）；扫描器本身不碰 A 域表，全部经这里 ─────────────
+  // 游标里的时间来自 JS Date（毫秒精度），而列是 DATETIME(6)：截断只会让游标略早于真实值，
+  // 于是同一行可能被再读一次，不会漏行；ingest 是幂等的，重读无害。
+
+  /** 这些内容快照所属批次的 (logical_at, batch_id)，用来判断特征行能否被覆盖。 */
+  async function batchOrders(snapshotIds: readonly bigint[]): Promise<Map<bigint, BatchOrder>> {
+    if (snapshotIds.length === 0) return new Map();
+    const rows = await db
+      .select({ snapshotId: contentSnapshots.contentSnapshotId, ...batchCols })
+      .from(contentSnapshots)
+      .innerJoin(syncBatches, eq(syncBatches.batchId, contentSnapshots.batchId))
+      .where(inArray(contentSnapshots.contentSnapshotId, [...snapshotIds]));
+    return new Map(rows.map((r) => [r.snapshotId, { logicalAt: r.logicalAt, batchId: r.batchId }]));
+  }
+
+  /** current 指针在游标 (at, id) 之后推进过的内容，按 (selected_at, content_id) 升序。 */
+  async function contentsAfter(after: { at: Date; id: bigint }, limit: number): Promise<Array<{ contentId: bigint; selectedAt: Date }>> {
+    const selected = contents.currentSnapshotSelectedAt;
+    const rows = await db
+      .select({ contentId: contents.contentId, selectedAt: selected })
+      .from(contents)
+      .where(and(isNotNull(contents.currentSnapshotId), isNotNull(selected), or(gt(selected, after.at), and(eq(selected, after.at), gt(contents.contentId, after.id)))))
+      .orderBy(asc(selected), asc(contents.contentId))
+      .limit(limit);
+    return rows.map((r) => ({ contentId: r.contentId, selectedAt: r.selectedAt! }));
+  }
+
+  /** 「迟到提交」：游标已越过、但提交更晚的内容——回看窗口 (from, to] 内、特征行缺失或所持快照不是 current。 */
+  async function contentsLate(from: Date, to: Date, limit: number): Promise<bigint[]> {
+    const selected = contents.currentSnapshotSelectedAt;
+    const rows = await db
+      .select({ id: contents.contentId })
+      .from(contents)
+      .leftJoin(contentFeatures, eq(contentFeatures.contentId, contents.contentId))
+      .where(and(isNotNull(contents.currentSnapshotId), gt(selected, from), lte(selected, to), or(isNull(contentFeatures.contentId), ne(contentFeatures.contentSnapshotId, contents.currentSnapshotId))))
+      .orderBy(asc(contents.contentId))
+      .limit(limit);
+    return rows.map((r) => r.id);
+  }
+
+  /** 对账分页：content_id > afterId 的有 current 快照的内容；missing 表示特征行缺失或所持快照不是 current。 */
+  async function contentPage(afterId: bigint, limit: number): Promise<Array<{ contentId: bigint; missing: boolean }>> {
+    const rows = await db
+      .select({ id: contents.contentId, featureSnapshot: contentFeatures.contentSnapshotId, current: contents.currentSnapshotId })
+      .from(contents)
+      .leftJoin(contentFeatures, eq(contentFeatures.contentId, contents.contentId))
+      .where(and(isNotNull(contents.currentSnapshotId), gt(contents.contentId, afterId)))
+      .orderBy(asc(contents.contentId))
+      .limit(limit);
+    return rows.map((r) => ({ contentId: r.id, missing: r.featureSnapshot === null || r.featureSnapshot !== r.current }));
+  }
+
+  /** active 评论在游标 (at, id) 之后被看到过的，按 (last_seen_at, comment_id) 升序。 */
+  async function commentsAfter(after: { at: Date; id: bigint }, limit: number): Promise<Array<{ commentId: bigint; lastSeenAt: Date }>> {
+    return db
+      .select({ commentId: comments.commentId, lastSeenAt: comments.lastSeenAt })
+      .from(comments)
+      .where(and(eq(comments.status, "active"), or(gt(comments.lastSeenAt, after.at), and(eq(comments.lastSeenAt, after.at), gt(comments.commentId, after.id)))))
+      .orderBy(asc(comments.lastSeenAt), asc(comments.commentId))
+      .limit(limit);
+  }
+
+  /** 评论的回看窗口 (from, to] 内 active 的评论；评论没有快照，无法用 SQL 判断特征是否落后，由 ingest 的指纹比较去重。 */
+  async function commentsInWindow(from: Date, to: Date, limit: number): Promise<bigint[]> {
+    const rows = await db
+      .select({ id: comments.commentId })
+      .from(comments)
+      .leftJoin(commentFeatures, eq(commentFeatures.commentId, comments.commentId))
+      .where(and(eq(comments.status, "active"), gt(comments.lastSeenAt, from), lte(comments.lastSeenAt, to), or(isNull(commentFeatures.commentId), gt(comments.updatedAt, commentFeatures.updatedAt))))
+      .orderBy(asc(comments.commentId))
+      .limit(limit);
+    return rows.map((r) => r.id);
+  }
+
+  return { contentFacts, commentFacts, batchOrders, contentsAfter, contentsLate, contentPage, commentsAfter, commentsInWindow, coverMaterial, profileMaterial, audioMaterial, mediaObjectOf, scopeSubjects };
 }
 export type Facts = ReturnType<typeof createFacts>;

@@ -1,8 +1,9 @@
 // c-signals 的测试挂具：特征行 / 监控段工厂、媒资引用工厂、FakeAiGateway、FakeMatcher、查询计数器。
 // 只填 NOT NULL 字段，其余由各测试按需覆盖。FakeObjectStore / FakeClock 沿用 fake-oss.ts / fake-clock.ts。
 import type { Db, QueryLogger } from "../../src/db/client";
-import { contentFeatures, mediaReferences, monitoringSegments } from "../../src/db/schema";
-import { sha } from "./factories";
+import { eq } from "drizzle-orm";
+import { comments, contentFeatures, contentSnapshots, contents, mediaReferences, monitoringSegments } from "../../src/db/schema";
+import { insertBatch, insertContent, insertContentSnapshot, sha } from "./factories";
 import type { ImageMatcher, MatchRequest, MatchResult } from "../../src/modules/signals/scoring/ports";
 import { MatcherError } from "../../src/modules/signals/scoring/ports";
 import type { AiGatewayPort, JudgeRequest, JudgeResult, ModelPurpose, TranscribeRequest, TranscribeResult } from "../../src/modules/signals/speech/ports";
@@ -135,4 +136,50 @@ export class FakeMatcher implements ImageMatcher {
     if (out instanceof MatcherError) throw out;
     return { score: out, capability: { id: req.mode === "template" ? "image.template" : "image.element", version: this.capabilityVersion }, evidence: { good_matches: 10, inliers: 8 } };
   }
+}
+
+/**
+ * 内容 + 一个快照（落在 logicalAt 批次上）。current=true 时把它设为 current，指针时间为 selectedAt（缺省 logicalAt）。
+ * 返回 contentId / snapshotId / batchId，便于在同一内容上追加更新批次的快照。
+ */
+export async function seedContent(
+  db: Db,
+  c: { accountId: bigint; pcid: string; platform?: string; logicalAt?: Date; selectedAt?: Date; title?: string | null; body?: string | null; tagText?: string | null; current?: boolean; contentId?: bigint },
+): Promise<{ contentId: bigint; snapshotId: bigint; batchId: bigint }> {
+  const logicalAt = c.logicalAt ?? SIGNALS_T0;
+  const batchId = await insertBatch(db, logicalAt);
+  const contentId = c.contentId ?? (await insertContent(db, { platform: c.platform ?? "douyin", accountId: c.accountId, platformContentId: c.pcid, now: SIGNALS_T0 }));
+  const snapshotId = await addSnapshot(db, { contentId, batchId, title: c.title, body: c.body, tagText: c.tagText });
+  if (c.current ?? true) await setCurrent(db, contentId, snapshotId, c.selectedAt ?? logicalAt);
+  return { contentId, snapshotId, batchId };
+}
+/** 给已有内容追加一个 finalized 快照，批次逻辑时间为 logicalAt。 */
+export async function addSnapshot(db: Db, s: { contentId: bigint; batchId?: bigint | undefined; logicalAt?: Date | undefined; title?: string | null | undefined; body?: string | null | undefined; tagText?: string | null | undefined }): Promise<bigint> {
+  const batchId = s.batchId ?? (await insertBatch(db, s.logicalAt ?? SIGNALS_T0));
+  const snapshotId = await insertContentSnapshot(db, { batchId, contentId: s.contentId, now: SIGNALS_T0, status: "finalized" });
+  await db
+    .update(contentSnapshots)
+    .set({ title: s.title === undefined ? null : s.title, body: s.body === undefined ? null : s.body, tagText: s.tagText === undefined ? null : s.tagText })
+    .where(eq(contentSnapshots.contentSnapshotId, snapshotId));
+  return snapshotId;
+}
+export async function setCurrent(db: Db, contentId: bigint, snapshotId: bigint, selectedAt: Date): Promise<void> {
+  await db.update(contents).set({ currentSnapshotId: snapshotId, currentSnapshotSelectedAt: selectedAt }).where(eq(contents.contentId, contentId));
+}
+export async function insertComment(db: Db, c: { contentId: bigint; pcid: string; text: string | null; status?: string; lastSeenAt?: Date }): Promise<bigint> {
+  const at = c.lastSeenAt ?? SIGNALS_T0;
+  const [r] = await db.insert(comments).values({
+    contentId: c.contentId,
+    platformCommentId: c.pcid,
+    platformCommentIdSha256: sha(c.pcid),
+    status: c.status ?? "active",
+    contentText: c.text,
+    likeState: "missing",
+    replyState: "missing",
+    firstSeenAt: at,
+    lastSeenAt: at,
+    createdAt: at,
+    updatedAt: at,
+  });
+  return BigInt(r.insertId);
 }

@@ -97,6 +97,7 @@
 | 43 | ✅ Kiro | 两个库账号：迁移账号 = `mysql.env` 里的 `MYSQL_USER`（`hbecho` 库全部权限，只在迁移时用，`/data/app/migrate.env`）；运行账号 `hbecho_web`（只有 `SELECT/INSERT/UPDATE/DELETE`，`/data/app/web.env`） | §10.2 |
 | 44 | ✅ Kiro | `echo.hbmarketer.com` 的 nginx 由静态占位页改为反代到 `127.0.0.1:3000`（`X-Forwarded-For` 用 `$remote_addr` 覆盖，`client_max_body_size 12m`，HSTS 一天）；旧配置备份 `/data/backup/echo.hbmarketer.com.conf.bak-20261111`，回滚 = 还原该文件并 `systemctl reload nginx` | §10.7 |
 | 45 | ✅ 刘学奎 | 首个超管已用真实短信验证码激活并登录（2026-11-11）；当前镜像标签 `93bff48bf251` | tasks 实施记录 |
+| 46 | ✅ Kiro | 2026-11-12 经刘学奎同意上线：镜像标签 `69595423c6d3`（main 合并提交，CI run 43160976258 verify + image 全绿；含活动计划页面 P1–P5 与主数据导入页面）。`pull` → 迁移（无新迁移，`migrations applied`）→ `WEB_TAG` 切换并 `docker compose up -d web learning-worker`；`/api/health` 正常，`/plans`、`/accounts`、`/master-data/import`、`/batches` 未登录 307 到 `/login`，公网 `/login` 200 且页脚有备案号，除 22/80/443 外无公网监听。回滚 = `WEB_TAG` 改回 `718a8a4bfef3`。页面进程默认 `HBECHO_ENV=production`，名单确认的 `media_user_info` capability 未放行，所以真实环境里「确认写入」会被拒绝并说明原因，直到 capability 获批 | §10.3 |
 
 ### 待触发（有前置条件，暂不做）
 

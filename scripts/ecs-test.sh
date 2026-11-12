@@ -12,14 +12,15 @@ remote() { workbench exec -P "$PROFILE" -i "$INSTANCE" -c "$1"; }
 case "${1:-}" in
   start)
     drill=""; [ "${2:-}" = "--drill" ] && drill="1"
+    # 额外开关经环境变量透传给远端脚本：SUITE=full、SIGNALS_DRILL=full、PY=1（见 ecs-test-remote.sh 文首）
     tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
     git -C "$here" archive --format=tar.gz -o "$tmp/hbecho-src.tar.gz" HEAD
     remote "mkdir -p $DIR && rm -f $DIR/run.log $DIR/mem.log" >/dev/null
     workbench upload "$tmp/hbecho-src.tar.gz" "$DIR/" -i "$INSTANCE" -f >/dev/null
     workbench upload "$here/scripts/ecs-test-remote.sh" "$DIR/" -i "$INSTANCE" -f >/dev/null
-    remote "cd $DIR && chmod +x ecs-test-remote.sh && DRILL=$drill nohup ./ecs-test-remote.sh > nohup.out 2>&1 & sleep 1; echo started" | tail -1
+    remote "cd $DIR && chmod +x ecs-test-remote.sh && DRILL=$drill SUITE=${SUITE:-db} SIGNALS_DRILL=${SIGNALS_DRILL:-} PY=${PY:-} nohup ./ecs-test-remote.sh > nohup.out 2>&1 & sleep 1; echo started" | tail -1
     echo "已启动；用 ./scripts/ecs-test.sh log 查看（普通套件约 2–3 分钟含安装，带演练约 7 分钟）" ;;
   log)
-    remote "cd $DIR; grep -E '^==|Test Files|Tests |FAIL|Duration|scale-drill\\]' run.log | cut -c1-600 | tail -12; for n in hbecho-ci-node hbecho-ci-mysql; do echo \$n \$(grep \"^\$n \" mem.log 2>/dev/null | awk '{v=\$2; if (v ~ /GiB/) {sub(/GiB/,\"\",v); v=v*1024} else sub(/MiB/,\"\",v); if (v>m) m=v} END{print m\" MiB peak\"}'); done" ;;
+    remote "cd $DIR; grep -E '^==|Test Files|Tests |FAIL|Duration|scale-drill\\]|signals-scale\\]|passed|failed' run.log | cut -c1-600 | tail -12; for n in hbecho-ci-node hbecho-ci-mysql; do echo \$n \$(grep \"^\$n \" mem.log 2>/dev/null | awk '{v=\$2; if (v ~ /GiB/) {sub(/GiB/,\"\",v); v=v*1024} else sub(/MiB/,\"\",v); if (v>m) m=v} END{print m\" MiB peak\"}'); done" ;;
   *) echo "用法：$0 start [--drill] | log" >&2; exit 2 ;;
 esac

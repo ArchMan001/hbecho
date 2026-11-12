@@ -250,7 +250,7 @@ describe("SG-16 护栏：signals 模块与 A 域、供应商、模型的边界",
       .map((f) => f.rel);
   // ③ signals 下的数据库测试没有 Promise.all
   const PROMISE_ALL = ["Promise", "all("].join(".");
-  const dbTests = [...walk(join(SRC, "modules", "signals")), join(SRC, "db", "signals-schema.db.test.ts")].filter((f) => f.endsWith(".db.test.ts"));
+  const dbTests = [...walk(join(SRC, "modules", "signals")), ...walk(join(SRC, "worker")).filter((f) => /signals-[\w.-]*\.db\.test\.ts$/.test(f)), join(SRC, "db", "signals-schema.db.test.ts")].filter((f) => f.endsWith(".db.test.ts"));
 
   it("扫描到了 signals 的源文件（避免目录改名后护栏空转）", () => {
     expect(sources.length).toBeGreaterThan(6);
@@ -325,5 +325,10 @@ describe("SG-16 护栏：signals 模块与 A 域、供应商、模型的边界",
     expect(strayNetwork(bad)).toEqual(bad.map((b) => b.rel));
     expect(strayNetwork([{ rel: MATCHER_CLIENT, text: "const r = await fetch(url);" }])).toEqual([]); // 唯一允许的网络出口
     expect(strayNetwork([{ rel: MATCHER_CLIENT, text: 'import OpenAI from "openai";' }])).toEqual([MATCHER_CLIENT]); // 但它也不能调模型
+  });
+  it("E5：读取路径不引用 ODS 表（特征读取不依赖原始载荷，ODS 一年后清理不影响它）", () => {
+    const odsRef = /\bods_\w+|\bods[A-Z]\w*/;
+    expect(sources.filter((f) => odsRef.test(f.text)).map((f) => f.rel)).toEqual([]);
+    expect(odsRef.test("db.select().from(odsPayloads)")).toBe(true); // 反向：扫描条件本身能识别
   });
 });

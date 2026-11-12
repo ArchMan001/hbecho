@@ -33,7 +33,7 @@ export interface SignalsCliDeps {
 const USAGE = [
   "用法：",
   "  signals catalog [--object content|account|comment] [--platform douyin|xiaohongshu|kuaishou]",
-  "  signals show --content <ID> | --account <ID> | --comment <ID>",
+  "  signals show --content <ID> | --account <ID> | --comment <ID> [--plan <ID> --version <n>]   # 带监控段时一并读取其参数化信号",
   "  signals segment create --plan <ID> --platform <平台> | show|check|publish --plan <ID> --version <n> | new-draft --plan <ID> --from-version <n> | purge --plan <ID> --apply",
   "  signals segment set-items --plan <ID> --version <n> --items '<JSON 数组>'",
   "  signals segment put-image --plan <ID> --version <n> --kind template|element --target cover|background|avatar [--element-key <键>] --file <路径>",
@@ -106,26 +106,33 @@ export async function runSignalsCli(argv: string[], deps: SignalsCliDeps): Promi
         return done({ signals: list });
       }
       case "show": {
-        const { values } = parse(rest, { content: { type: "string" }, account: { type: "string" }, comment: { type: "string" } });
+        const { values } = parse(rest, { content: { type: "string" }, account: { type: "string" }, comment: { type: "string" }, plan: { type: "string" }, version: { type: "string" } });
         const given = (["content", "account", "comment"] as const).filter((k) => values[k] !== undefined);
         if (given.length !== 1) bad("需要且只需要 --content、--account、--comment 之一");
+        if ((values.plan === undefined) !== (values.version === undefined)) bad("--plan 与 --version 要一起给");
         const kind = given[0]!;
         const subject: Subject = { kind, id: id(values[kind], `--${kind}`) };
         const requires = kind === "account" ? CAP_ACCOUNT_READ : CAP_CONTENT_READ;
         assert(actor, requires); // 先于任何读库
-        // 参数化信号需要监控段里的图片 / 判定项才能读，show 只列出它们的名字
+        // 参数化信号需要监控段里的图片 / 判定项才能读：给了 --plan --version 就按该监控段的条目读，否则只列出它们的名字
+        const segment = values.plan === undefined ? undefined : segKey(values);
+        const items = segment === undefined ? [] : (await signals.segments.show(actor, segment)).items;
         const entries = CATALOG.filter((e) => e.object === kind);
         const list = [];
         const needParam: string[] = [];
         for (const e of entries) {
-          if (e.scope === "parameterized") {
+          if (e.scope !== "parameterized") {
+            list.push({ signal: e.key, ...(await signals.reader.read(actor, subject, e.key, { requires })) });
+          } else if (segment === undefined) {
             needParam.push(e.key);
-            continue;
+          } else {
+            for (const it of items.filter((i) => i.signal === e.key)) {
+              const param = { segment, ...(it.element_key === undefined ? {} : { elementKey: it.element_key }) };
+              list.push({ signal: e.key, ...(it.element_key === undefined ? {} : { elementKey: it.element_key }), ...(await signals.reader.read(actor, subject, e.key, { requires, param })) });
+            }
           }
-          const v = await signals.reader.read(actor, subject, e.key, { requires });
-          list.push({ signal: e.key, ...v });
         }
-        return done({ subject, signals: list, requiresParam: needParam });
+        return done({ subject, ...(segment === undefined ? {} : { segment }), signals: list, requiresParam: needParam });
       }
       case "segment": {
         const [sub, ...args] = rest;

@@ -88,3 +88,13 @@ describe("解析器抛错", () => {
     expect(extractHashtags("douyin", { title: null, body: "", tagText: null }, { douyin: boom })).toEqual({ ok: true, tags: [] });
   });
 });
+
+describe("确定性", () => {
+  it("O5：同一组样本连续运行 3 次，归一化与话题结果完全一致", () => {
+    const samples = ["#日立中央空调 #全效Ⅱ三管制", "ＨＩＴＡＣＨＩ　空调 #618", "#一键节能更省心#金秋焕新首选", "#来拍照了[话题]#", "", "  ", "emoji 😀 #标签\u200b#x"];
+    const run = () => samples.map((x) => [normalizeText(x), tags(x)]);
+    const first = JSON.stringify(run());
+    expect(JSON.stringify(run())).toBe(first);
+    expect(JSON.stringify(run())).toBe(first);
+  });
+});

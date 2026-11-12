@@ -96,6 +96,21 @@ describe("score 与 tasks", () => {
     expect((await cli(w, ["tasks", "list", "--status", "succeeded"])).json!.tasks).toHaveLength(2);
   });
 
+  it("show --plan --version：读出该监控段的参数化信号（分数、能力版本、时间、匹配点证据），不含原文；plan 与 version 要成对", async () => {
+    const w = await createWorld(t);
+    const s = await makeSubject(t, "archived");
+    await cli(w, ["score", "--plan", "1", "--version", "1", "--contents", String(s.id)]);
+    await drain(w);
+    const r = await cli(w, ["show", "--content", String(s.id), "--plan", "1", "--version", "1"]);
+    expect(r.code).toBe(0);
+    const cover = r.json!.signals.find((x: { signal: string }) => x.signal === "content.cover_template_score");
+    expect(cover).toMatchObject({ state: "valid", score: 8, capability: { id: "image.template", version: 1 }, evidence: { raw: { good_matches: 10, inliers: 8 } }, producedAt: expect.any(String) });
+    expect(r.json!.requiresParam).toEqual([]);
+    expect(r.json!.segment).toEqual({ planId: "1", version: 1 });
+    expect((await cli(w, ["show", "--content", String(s.id), "--plan", "1"])).code).toBe(2);
+    expect((await cli(w, ["show", "--content", String(s.id)])).json!.requiresParam).toContain("content.cover_template_score");
+  });
+
   it("score 的参数：--contents 与 --accounts 恰有一个；缺 rule.run.execute 被拒；监控段不存在 → 4", async () => {
     const w = await createWorld(t);
     expect((await cli(w, ["score", "--plan", "1", "--version", "1"])).code).toBe(2);

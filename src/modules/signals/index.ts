@@ -33,3 +33,4 @@ export * from "./speech/runner";
 export * from "./recompute";
 export * from "./recompute/scope";
 export * from "./tasks/revive";
+export * from "./tasks/list";

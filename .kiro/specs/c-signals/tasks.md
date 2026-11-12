@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–11 已完成（任务 7 的标定报告待业务样本，见其完成记录）；任务 12 起未开始。进度以下方勾选为准。**新会话先读 [`handoff-2026-11-12-b.md`](handoff-2026-11-12-b.md)**
+> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–12 已完成（任务 7 的标定报告待业务样本，见其完成记录）；任务 13 未开始。进度以下方勾选为准。**新会话先读 [`handoff-2026-11-12-b.md`](handoff-2026-11-12-b.md)**
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -32,7 +32,7 @@
 - [x] 任务 9 · 音频理解：`AiGatewayPort`、ASR 与判定 runner、提示词
 - [x] 任务 10 · 能力升级、`stale` 与显式重算
 - [x] 任务 11 · 保留期、`retainUntil` 与清理器
-- [ ] 任务 12 · CLI 全集与 `signals run` 装配
+- [x] 任务 12 · CLI 全集与 `signals run` 装配
 - [ ] 任务 13 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾（**完成后推第二次**）
 - [ ] 页面任务：**无**。本 spec 没有页面（design §15）
 
@@ -189,12 +189,13 @@
   - **验证**（`FakeClock`）：推进 13 个月，未引用成功结果被清理；推进 4 个月，失败行被清理；`retainUntil` 延后后到原时间点仍在、传较早时间不缩短；清理后读取 `missing` 且任务表无新行；特征行不被清理；分块删除中途退出可重跑；`retainUntil` 的契约测试（fake D 的调用序列）。
   - **完成记录（2026-11-12）**：新增 `retention.ts`：`retainUntil(actor, resultIds, until)`（`UPDATE … SET expires_at = GREATEST(expires_at, :until)`，只接受结果行 ID、去重、每 1000 个一批；授权 `rule.run.execute`，先于读库；`until` 非法 → `invalid_until`）与 `purgeExpired({chunkSize?, shouldStop?})`（按 `expires_at` 升序分块删除结果行、历史行、**终态**任务 `succeeded` / `dead`，每块 1000，循环到该表无过期行；`shouldStop` 在每块之后检查，返回 `completed: false`，重跑从剩下的继续；不入队、不调能力服务）；`assemble` 返回 `retention.{retainUntil, purgeExpired}`；`index.ts` 导出。写入时的 `expires_at`（结果 +1 年 / 失败 +3 个月 / 历史 +1 年 / 任务 +1 年）在任务 4、8 已落地，本任务不改。`retention.db.test.ts` 6 例：推进 4 个月只清失败行、13 个月清成功行与任务，清理后读取 `missing(not_computed)`、任务表无新行、没有再调用能力服务；运行中的过期任务不删、重复运行幂等；特征行不被清理，历史行按取代时刻 +1 年清理，`chunkSize=2` 删完第一块就停，再跑清完；`retainUntil` 延后后到原时间点仍在、较早时间不缩短、过新时间点才被清；fake D 的调用序列（读取 → 对 `resultId` 去重 → `retainUntil(读取时刻 + 3 个月)`，已清理的 ID 不报错，不碰历史与别的结果行）；缺 Capability 与非法 `until` 在读库前被拒（以“碰库即抛错”的代理断言）。变异检查两处（`GREATEST` 改为直接赋值、任务清理不限终态，各使对应用例失败）。**偏差**：① `retainUntil` 返回 `{ matched }`（命中的行数）而不是“实际延长的行数”：连接按命中行计数，值未变的行也算，要精确区分需要多一次查询，D 用不到；② `retainUntil` 的 Capability 定为 `rule.run.execute`，已写入 requirements SG-14；③ 清理器的每日调度点不在本任务，放在任务 12 的 `signals run`（`signals retention --once` 调 `purgeExpired`）；④ `chunkSize` 与 `shouldStop` 是为测试和优雅退出加的注入点，`chunkSize` 缺省是 design 写死的 1000。**未证明**：真实数据量下清理的耗时与锁等待（任务 13 规模演练里补一次大批量过期行的删除耗时）；`retainUntil` 与清理器并发（同一行被同时延长与删除）只靠单语句的原子性保证，没有并发测试。
 
-- [ ] 12. CLI 全集与常驻装配
+- [x] 12. CLI 全集与常驻装配
   - **Requirements:** SG-14、SG-15
   - **Design:** §9
   - `signals-cli.ts`（全部子命令）、`signals-main.ts`（装配真实依赖：池、日志、两个 OSS 实例、能力服务地址、网关选择 = 默认 `DisabledAiGateway`）、`package.json` 脚本、`.env.example` 变量名；`signals run` 的循环（扫描 tick、任务领取、每小时对账、每日清理、优雅退出）。
   - **验证**：CLI 单元 / db 测试（假依赖）——每个子命令的成功与拒绝路径、退出码、JSON 输出无原文（含 `recompute cancel` 的 `run_not_cancellable`）；缺身份环境变量启动失败；启用集里写目录外能力标识启动失败；缺必填数值配置启动失败并指出缺哪项；`signals run` 在 fake 依赖下跑完一个「入库 → 扫描 → 读到」循环并响应停止信号。
   - **未证明**：compose 服务与资源上限（本 spec 不交付部署形态）。
+  - **完成记录（2026-11-12）**：`src/worker/signals-cli.ts` 重写为全集：`catalog`、`show`（原有）、`segment create | set-items | put-image | remove-image | show | check | publish | new-draft | purge`、`score`（`--contents` / `--accounts`，值是 ID 清单或文件）、`recompute preview | apply | cancel`、`scan | reconcile | retention --once`、`tasks list | revive`、`run`；`parseArgs` strict，输出 JSON、BIGINT 为十进制字符串，退出码沿用 plan-cli；`score` 只输出每个信号的处置与原因分布和 `needMedia`，不逐主体展开；没有 `--force` / `--skip-auth` / `recompute --all`，`--scope` 只认六个已知键。新增 `src/worker/signals-loop.ts`（`runSignalsLoop`：每 `scanIntervalMs` 扫描内容与评论，每 `reconcileIntervalMs` 对账，启动时与此后每 24 小时清理，再各跑一轮评分 / 语音 / 重算 runner；没领到任务才睡 `scanIntervalMs`；某一步抛错只记日志；停止信号打断睡眠并让清理在块间退出）；`signals-main.ts` 装配真实依赖（连接池、pino、两个 `OssObjectStore`、`HttpCapabilityClient` 当转换器、`HttpImageMatcher`、缺省 `DisabledAiGateway`），数值配置走 `parseSignalsConfig`；`signals run` 缺 OSS / 能力服务变量直接失败并点名，其余命令缺这些时只在真正用到时报“未配置”；`assemble.ts` 增 `scanner.{contents,comments,reconcile}`；新增 `tasks/list.ts`（`tasks.list`，不返回 params）；`.env.example` 增全部变量名（无值，起始值写在上方注释并声明不是合同）。测试：`signals-cli.commands.db.test.ts` 8 例（segment 全流程含发布后写入被拒、`purge` 无 `--apply` 不删；`score` 清单 / 文件输入与分布输出；`tasks list` / `revive` 的成功与拒绝；`recompute` 的范围拒绝、apply、cancel 与重复 cancel 的 `run_not_cancellable`；`scan` / `reconcile` / `retention` 的 `--once` 与授权；输出不含标题原文；`run` 与严格解析）、`signals-loop.db.test.ts` 4 例（入库 → 扫描 → 读到、任务被执行、首轮清理、空闲睡眠后停止；间隔门控；步骤抛错不退出；已停止时不执行）、`signals-main.db.test.ts` 2 例（真实入口以子进程启动：缺库地址 / 缺身份 / 缺数值配置 / 启用集写目录外标识都退出码 1 并点名；`catalog`、`tasks list`、`segment check` 不需要 OSS，`run` 缺 OSS 变量失败）；原 `signals-cli.db.test.ts` 改用 `createSignals` 装配。变异检查三处（步骤不捕获异常、`purge` 不要求 `--apply`、空闲不睡眠，各使对应用例失败 / 挂起）。**偏差 / 取舍**：① CLI 的 `scan` / `reconcile` / `retention` / `run` 要求操作者持有 `rule.definition.manage`（design 只说这些由 `service:signals-worker` 执行；CLI 入口加一道运维闸，执行本身仍是固定服务身份）；② `segment purge` 不可恢复且没有预览，要求显式 `--apply`；③ `tasks list` 需要新增 Module 函数（CLI 不直接读库），要求 `rule.definition.manage`，默认 `--limit 50`、上限 500；④ 所有 CLI 命令现在都要求完整数值配置（fail closed），连 `catalog` 也一样；⑤ 清理固定每 24 小时，没有配置项。**未证明**：真实 OSS / 能力服务上的 `segment put-image` 与 `run`（桶未创建，任务 13 的 `[环境]` 项）；`run` 在多进程并发运行时的行为只证明了任务领取互斥，扫描器多进程重复扫描靠 `ingest` 幂等，没有专门的并发测试；compose 服务与资源上限（本 spec 不交付）。
 
 - [ ] 13. 全量离线验收、规模演练、测试 ECS 运行与文档收尾
   - **Requirements:** 全部

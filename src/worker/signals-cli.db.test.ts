@@ -4,19 +4,23 @@ import { FakeClock } from "../../tests/harness/fake-clock";
 import { useTestDb } from "../../tests/harness/db";
 import { insertAccount } from "../../tests/harness/factories";
 import { QueryCounter, SIGNALS_T0 as T0, seedContent } from "../../tests/harness/signals";
-import { CAP_ACCOUNT_READ, CAP_CONTENT_READ, DEFAULT_ENABLED_CAPABILITIES, createReader, scanContents, type SignalActor } from "../modules/signals";
+import { FakeObjectStore } from "../../tests/harness/fake-oss";
+import { FakeMatcher } from "../../tests/harness/signals";
+import { config, converter } from "../../tests/harness/signals-world";
+import { CAP_ACCOUNT_READ, CAP_CONTENT_READ, DEFAULT_ENABLED_CAPABILITIES, createSignals, scanContents, type SignalActor } from "../modules/signals";
 import { runSignalsCli } from "./signals-cli";
 
 const t = useTestDb();
 const clock = new FakeClock(new Date("2026-11-12T03:00:00.000Z"));
-const enabled = new Set(DEFAULT_ENABLED_CAPABILITIES);
 const actorOf = (caps: string[]): SignalActor => ({ actor: "service:test", capabilities: new Set(caps), brandScope: "all" });
 
 async function run(argv: string[], actor = actorOf([CAP_CONTENT_READ, CAP_ACCOUNT_READ]), counter?: QueryCounter) {
   let out = "";
   let err = "";
   const db = counter ? createDb(t.pool, { logger: counter }) : t.db;
-  const code = await runSignalsCli(argv, { reader: createReader({ db, enabled }), actor, enabled, stdout: (s) => void (out += s), stderr: (s) => void (err += s) });
+  // 默认只启用文本类（与生产缺省一致）
+  const signals = createSignals({ db, clock, audit: () => undefined, config: config({ HBECHO_SIGNALS_ENABLED: [...DEFAULT_ENABLED_CAPABILITIES].join(",") }), mediaStore: new FakeObjectStore(clock), signalsStore: new FakeObjectStore(clock), signalsBucket: "b", converter, matcher: new FakeMatcher() });
+  const code = await runSignalsCli(argv, { signals, actor, readFile: () => new Uint8Array(), stdout: (s) => void (out += s), stderr: (s) => void (err += s) });
   return { code, json: out ? (JSON.parse(out.trim()) as Record<string, any>) : undefined, err };
 }
 

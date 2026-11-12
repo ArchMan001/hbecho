@@ -7,6 +7,7 @@ import type { SignalAuditSink } from "./audit";
 import type { SignalActor } from "./authz";
 import type { SignalsConfig } from "./config";
 import { createFacts } from "./facts";
+import { reconcileContents, scanComments, scanContents } from "./features/scan";
 import { createReader } from "./reader";
 import { createResultLookup } from "./scoring/lookup";
 import type { ImageMatcher } from "./scoring/ports";
@@ -15,6 +16,7 @@ import { createRequestScores } from "./scoring/request";
 import { createScoreRunner } from "./scoring/runner";
 import { purgeExpired, retainUntil } from "./retention";
 import { createSegments } from "./segments";
+import { listTasks } from "./tasks/list";
 import { reviveTask } from "./tasks/revive";
 import { DisabledAiGateway } from "./speech/disabled";
 import type { AiGatewayPort } from "./speech/ports";
@@ -52,6 +54,24 @@ export function createSignals(deps: SignalsDeps) {
     retainUntil: (actor: SignalActor, resultIds: readonly bigint[], until: Date) => retainUntil({ db }, actor, resultIds, until),
     purgeExpired: (opts?: Parameters<typeof purgeExpired>[1]) => purgeExpired({ db, clock }, opts),
   };
-  return { facts: createFacts(db), config, segments, reader, requestScores, scoreRunner, speechRunner, recompute, retention, tasks: { revive: (actor: SignalActor, taskId: bigint) => reviveTask({ db, clock }, actor, taskId) } };
+  // 扫描器：固定服务身份，不经用户范围；游标在 signal_cursors，进程重启后接着走。
+  const scanDeps = { db, clock, config };
+  const scanner = { contents: () => scanContents(scanDeps), comments: () => scanComments(scanDeps), reconcile: () => reconcileContents(scanDeps) };
+  return {
+    facts: createFacts(db),
+    config,
+    segments,
+    reader,
+    requestScores,
+    scoreRunner,
+    speechRunner,
+    recompute,
+    retention,
+    scanner,
+    tasks: {
+      revive: (actor: SignalActor, taskId: bigint) => reviveTask({ db, clock }, actor, taskId),
+      list: (actor: SignalActor, o: { status?: string; limit: number }) => listTasks({ db }, actor, o),
+    },
+  };
 }
 export type Signals = ReturnType<typeof createSignals>;

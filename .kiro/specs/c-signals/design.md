@@ -834,7 +834,7 @@ signals run                                                             # 常驻
 | 8 | `retainUntil` 的调用约定 | D 落地前只有契约测试；D 不调用时结果最长保留 1 年 | 同意；D 的 spec 写明保存证据时调用 | 刘学奎（与 D spec 同审）；**已采纳（刘学奎，2026-11-12）** |
 | 9 | `account.bg_*` / `account.avatar_*` 对小红书也是 `not_applicable` | PRD C 只点名快手；handoff 与 D PRD 说小红书没有这两项 | 同意 | 刘学奎；**已采纳（刘学奎，2026-11-12）** |
 | 10 | 瞬时 / 确定性失败的分界与重试用尽后的 `dead` 语义 | 影响运营能看到什么 | 同意（SG-D15） | 刘学奎；**已采纳（刘学奎，2026-11-12）** |
-| 11 | 监控段 / 读取口 / 补算请求的 API 形状 | D 的 spec 尚未写，现有 `rule-engine/design.md` 与 D PRD v1.1 不一致 | C 先实现并以契约测试固定；D 的 spec 开工时对齐，必要时回来修订，不在 D 里另造一份 | D spec |
+| 11 | 监控段 / 读取口 / 补算请求的 API 形状 | D 的 spec 尚未写，现有 `rule-engine/design.md` 与 D PRD v1.1 不一致 | C 先实现并以契约测试固定；D 的 spec 开工时对齐，必要时回来修订，不在 D 里另造一份。**2026-11-12：D 提出的增量 `only`（`requestScores` / `executability` 只处理、只检查指定信号，付费边界）已在 C 实现，由 `only.db.test.ts` 固定；D 提出的其余形状差异（`readMany` 的 `Map<bigint, …>` 键、`score` 为 number、`RequestResult.items` 的结构）由 D 的适配层处理，C 不改** | D spec |
 | 12 | 关键词归一化出口（SG-D17）要写进 D 的 spec | 否则 D 可能自己归一化 | D 的 spec 登记：保存关键词**原文**，执行时调用 `normalizeKeyword(raw, value.normalizerVersion)`（按文本写入时的版本归一化，升级后不错位） | D spec |
 | 13 | 标准图 ≤ 10 MiB、候选图上限沿用 `HBECHO_MEDIA_MAX_BYTES` | 影响可上传的图 | 同意 | 刘学奎；**已采纳（刘学奎，2026-11-12）** |
 | 14 | 数值起始值：扫描 tick 30 秒、批量 500、回看 10 分钟、对账每小时、评分并发 2、任务最多 3 次、租约 120 秒、签名 URL 600 秒、Python 请求超时 60 秒、判定 `deferred` 间隔 30 秒 / 上限 20 次 | 影响吞吐与成本 | 写入 `.env.example`，**不写进代码默认值**；测试机实测后调整。任务 8 增加两个必填项：重试退避基数 `HBECHO_SIGNALS_RETRY_BACKOFF_MS`（第 n 次失败后等 基数 × 2^(n−1)）与候选图上限 `HBECHO_MEDIA_MAX_BYTES`（沿用 A 的变量，第 13 项）；并要求租约大于匹配超时（runner 在一次能力服务调用期间不续租约） | 运维 + 实测 |

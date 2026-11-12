@@ -11,6 +11,7 @@ import { SignalError } from "../errors";
 import { createFacts, type Material } from "../facts";
 import { MAX_READ_SUBJECTS, type Subject } from "../reader";
 import type { Executability, SegmentItem } from "../segments";
+import { parseOnly } from "../segments/items";
 import type { AiGatewayPort } from "../speech/ports";
 import { enqueueMany, idempotencyKeyOf, type NewTask } from "../tasks/queue";
 import { loadSegmentRow, reuseKeyOf, resolveParam, taskKindOf, type SegmentRef } from "./params";
@@ -38,6 +39,8 @@ export interface RequestResult {
 export interface RequestContext {
   caller?: string;
   scopeFingerprint?: string;
+  /** 本次只补算这些信号键(缺省 = 监控段全部);`not_executable` 也只看这些信号。见 parseOnly。 */
+  only?: readonly string[];
 }
 
 export interface RequestDeps {
@@ -47,7 +50,7 @@ export interface RequestDeps {
   config: Pick<SignalsConfig, "taskMaxAttempts">;
   enabled: ReadonlySet<string>;
   gateway?: Pick<AiGatewayPort, "activeModel">;
-  executability(k: SegmentRef): Promise<Executability>;
+  executability(k: SegmentRef, only?: ReadonlySet<string>): Promise<Executability>;
 }
 
 const GATED_BY_MODEL = new Set(["speech.asr", "speech.judge"]);
@@ -63,21 +66,21 @@ export function createRequestScores(deps: RequestDeps) {
   }
   async function requestScores(actor: SignalActor, segment: SegmentRef, subjects: readonly Subject[], ctx: RequestContext = {}): Promise<RequestResult> {
     assert(actor, CAP_SCORE_REQUEST); // 先于任何读库
-    return plan(actor.actor, segment, subjects, ctx, {});
+    return plan(actor.actor, segment, subjects, ctx, { only: parseOnly(ctx.only) });
   }
 
   /**
    * 内部入口（显式重算的分块用，授权已在 recompute.apply 做过）：includeStale 把「旧版本的有效值」也当缺失（重算会覆盖 stale，补算不会）；
-   * only 只处理监控段里的这个信号（重算按信号执行，不顺带算监控段里的其它信号）。
+   * only 只处理监控段里的这个信号（重算按信号执行，不顺带算监控段里的其它信号;可执行性也只看它)。
    */
   async function requestAsService(segment: SegmentRef, subjects: readonly Subject[], opts: { includeStale?: boolean; only?: string } = {}): Promise<RequestResult> {
-    return plan(SERVICE_ACTOR, segment, subjects, {}, opts);
+    return plan(SERVICE_ACTOR, segment, subjects, {}, { ...(opts.includeStale === undefined ? {} : { includeStale: opts.includeStale }), ...(opts.only === undefined ? {} : { only: new Set([opts.only]) }) });
   }
 
-  async function plan(requestedBy: string, segment: SegmentRef, subjects: readonly Subject[], ctx: RequestContext, opts: { includeStale?: boolean; only?: string }): Promise<RequestResult> {
+  async function plan(requestedBy: string, segment: SegmentRef, subjects: readonly Subject[], ctx: RequestContext, opts: { includeStale?: boolean; only?: ReadonlySet<string> | undefined }): Promise<RequestResult> {
     if (subjects.length > MAX_READ_SUBJECTS) throw new SignalError("limit", "too_many_subjects", `一次最多 ${MAX_READ_SUBJECTS} 个主体，超过请分批`);
     const seg = await loadSegmentRow(deps.db, segment);
-    const ex = await deps.executability(segment);
+    const ex = await deps.executability(segment, opts.only);
     if (!ex.executable) throw new SignalError("conflict", "not_executable", "监控段当前不可执行，不能补算", ex.blockers);
 
     const result: RequestResult = { items: [], needMedia: [], tasks: { created: 0, revived: 0, requeued: 0, reused: 0 } };
@@ -85,7 +88,7 @@ export function createRequestScores(deps: RequestDeps) {
     for (const item of seg.items as SegmentItem[]) {
       const entry = requireSignal(item.signal);
       if (entry.storage !== "result") continue; // 文本类随 current 指针自动就位，不走补算
-      if (opts.only !== undefined && item.signal !== opts.only) continue;
+      if (opts.only !== undefined && !opts.only.has(item.signal)) continue;
       const ids = [...new Set(subjects.filter((s) => s.kind === entry.object).map((s) => s.id))];
       const out: ItemResult = { signal: entry.key, ...(item.element_key ? { elementKey: item.element_key } : {}), subjects: [] };
       result.items.push(out);

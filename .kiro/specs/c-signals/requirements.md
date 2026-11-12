@@ -417,15 +417,17 @@ type Param = { segment: SegmentRef; elementKey?: string };     // 参数化信�
 
 SignalReader.read(subject, signalKey, { param?, stalePolicy }): SignalValue
 SignalReader.readMany(subjects, signalKey, { param?, stalePolicy }): Map<subject, SignalValue>
-requestScores(segmentRef, subjects, ctx?: { caller?: string; scopeFingerprint?: string }): RequestResult
+requestScores(segmentRef, subjects, ctx?: { caller?: string; scopeFingerprint?: string; only?: string[] }): RequestResult
                                        // 补缺失；模板 / 元素匹配免费，ASR 与判定经 AiGatewayPort 计费
-executability(segmentRef): Executability
+executability(segmentRef, opts?: { only?: string[] }): Executability
 retainUntil(resultIds, until): void
 ```
 
 - `SignalValue` 含：`state`、`usable`、`normalizerVersion`（仅文本类信号：写入该值时所用的 `text.normalize` 版本）、`value`（`usable` 时）、`score`、`evidence`、`capability: {id, version}`、`producedAt`、`reason`（`missing` / `failed` / `not_applicable`）、`pending`、`resultId`（派生信号）；
 - `param` 对参数化信号必填：模板 / 元素 = 监控段中的图片引用；判定 = 监控段中的判定项。缺参数拒绝 `param_required`；
+- **`only`(2026-11-12 增补,D 的请求)**:`requestScores` 与 `executability` 都可带 `only`,本次只补算 / 只检查这些信号键,`not_executable` 也只看它们。缺省 = 监控段全部信号(行为不变)。目的是付费边界:D 的第 2 层只要封面分时,不能顺带为第 1 层通过的全部内容建 ASR / 判定(付费)任务,也不能让判定模型的丢失连带阻塞免费的封面比对。空数组被拒(`only_empty`);目录外的键 `signal_unregistered`;目录里有但监控段没配的键不报错、不建任务;授权仍先于读库;
 - 读取口 **SHALL NOT** 创建任务、**SHALL NOT** 调用能力服务或网关；补算只经 `requestScores`；
+- **`only`（2026-11-12 增补，D 的请求）**：`requestScores` 与 `executability` 可带 `only`，本次只补算 / 只检查这些信号键，`not_executable` 也只看它们。缺省 = 监控段全部信号（行为不变）。目的是付费边界：D 的第 2 层只要封面分时，不能顺带为第 1 层通过的全部内容建 ASR / 判定（付费）任务，也不能让判定模型的丢失连带阻塞免费的封面比对。空数组被拒（`only_empty`）；目录外的键 `signal_unregistered`；目录里有但监控段没配的键不报错、不建任务；授权仍先于读库；
 - 读取 `readMany` 一次最多 5,000 个主体，单次查询解决，不逐个往返；
 - 1.0 完成通知用**轮询**（PRD C §13.6）：D 反复调用 `readMany`，`pending` 提示区分「排队 / 运行中 / 已死亡 / 无任务」；
 - 读取的返回里**不含内容原文**；证据下钻时的字段可见性随调用方对象的读取权限，由调用方（D）负责（PRD C §9）。

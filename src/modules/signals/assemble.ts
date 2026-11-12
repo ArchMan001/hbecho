@@ -46,7 +46,7 @@ export function createSignals(deps: SignalsDeps) {
   const gateway = { gateway: aiGateway };
   const segments = createSegments({ db, clock, audit, store: deps.signalsStore, bucket: deps.signalsBucket, converter: deps.converter, enabled: config.enabled, ...gateway });
   const reader = createReader({ db, enabled: config.enabled, ...gateway, results: createResultLookup({ db, ...gateway }) });
-  const { requestScores, requestAsService } = createRequestScores({ db, clock, audit, config, enabled: config.enabled, ...gateway, executability: (k) => segments.computeExecutability(k) });
+  const { requestScores, requestAsService } = createRequestScores({ db, clock, audit, config, enabled: config.enabled, ...gateway, executability: (k, only) => segments.computeExecutability(k, only) });
   const scoreRunner = createScoreRunner({ db, clock, audit, config, mediaStore: deps.mediaStore, signalsStore: deps.signalsStore, matcher: deps.matcher });
   const speechRunner = createSpeechRunner({ db, clock, audit, config, mediaStore: deps.mediaStore, gateway: aiGateway });
   const recompute = createRecompute({ db, clock, audit, config, requestAsService, ...(deps.recomputeChunkSize ? { chunkSize: deps.recomputeChunkSize } : {}) });

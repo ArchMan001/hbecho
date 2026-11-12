@@ -13,7 +13,7 @@ import { CAP_SEGMENT_MANAGE, CAP_SEGMENT_READ, assert, type SignalActor } from "
 import { capabilityOf, requireSignal, type Platform } from "../catalog";
 import { SignalError } from "../errors";
 import type { AiGatewayPort } from "../speech/ports";
-import { ELEMENT_KEY, imageSlotOf, validateItems, type ImageSlot, type SegmentItem } from "./items";
+import { ELEMENT_KEY, imageSlotOf, parseOnly, validateItems, type ImageSlot, type SegmentItem } from "./items";
 
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export type SegmentKey = { planId: bigint; version: number };
@@ -210,13 +210,13 @@ export function createSegments(deps: SegmentsDeps) {
   }
 
   /** 按**当前目录与当前启用配置**即时计算；不存储，也不改监控段（C-D10）。 */
-  async function computeExecutability(k: SegmentKey): Promise<Executability> {
+  async function computeExecutability(k: SegmentKey, only?: ReadonlySet<string>): Promise<Executability> {
     const seg = await loadSegment(db, k);
     const images = await db.select({ kind: segmentImages.kind, target: segmentImages.target, elementKey: segmentImages.elementKey }).from(segmentImages).where(and(eq(segmentImages.planId, k.planId), eq(segmentImages.version, k.version)));
     const have = new Set(images.map((i) => `${i.kind}/${i.target}/${i.elementKey}`));
     const blockers: Blocker[] = [];
     const models = { asr: deps.gateway ? await deps.gateway.activeModel("asr") : null, judge: deps.gateway ? await deps.gateway.activeModel("judge") : null };
-    const items = seg.items as SegmentItem[];
+    const items = (seg.items as SegmentItem[]).filter((i) => only === undefined || only.has(i.signal)); // only：只检查这些信号，其它信号的缺口不算
     if (items.filter((i) => i.signal === "content.asr_judgement").length > 1) blockers.push({ code: "too_many_judgements", signal: "content.asr_judgement" });
     for (const it of items) {
       let entry;
@@ -239,9 +239,9 @@ export function createSegments(deps: SegmentsDeps) {
     }
     return { executable: blockers.length === 0, blockers };
   }
-  async function executability(actor: SignalActor, k: SegmentKey): Promise<Executability> {
+  async function executability(actor: SignalActor, k: SegmentKey, o: { only?: readonly string[] } = {}): Promise<Executability> {
     assert(actor, CAP_SEGMENT_READ);
-    return computeExecutability(k);
+    return computeExecutability(k, parseOnly(o.only));
   }
 
   async function publish(actor: SignalActor, k: SegmentKey): Promise<void> {

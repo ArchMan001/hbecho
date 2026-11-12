@@ -1,12 +1,13 @@
 // 只读查询（requirements AP-13）。全部按操作者范围过滤，越范围对象表现为稳定的「未找到」（不返回空列表冒充成功）；
 // 查询不触发任何业务写入（回流文件 / 预检报告的下载只写审计）。所有 BIGINT 以十进制字符串输出，手机号明文（D-42）。
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, sql, type SQLWrapper } from "drizzle-orm";
 import type { Db } from "../../db/client";
 import {
   activityPlanBranches,
   activityPlanChanges,
   activityPlanOwners,
   activityPlanRoster,
+  activityPlanSectors,
   activityPlans,
   branches,
   importBatches,
@@ -51,6 +52,40 @@ export function createPlanQuery(deps: { db: Db; clock: Clock; resolver: Monitori
   async function listPlans(actor: PlanActor, f: { status?: string; platform?: string; brand?: string } = {}): Promise<Array<ReturnType<typeof planItem>>> {
     assertCanQuery(actor);
     return (await visiblePlans(db, actor)).filter((p) => (!f.status || p.status === f.status) && (!f.platform || p.platformCode === f.platform) && (!f.brand || p.brandCode === f.brand)).map(planItem);
+  }
+
+  /**
+   * 列表页用：计划 + 板块 + 规模计数（账号、参与分公司、已占负责人槽位、待处理行）。
+   * 计数按操作者的分公司范围收窄（分公司人员只数自己的）；一次查询一个计数，不逐计划查询。
+   * ponytail: 计划数不大（个位到几十）所以不分页；计划超过几百个时在这里加分页并把计数下推到同一个 where。
+   */
+  async function overview(actor: PlanActor, f: { status?: string; platform?: string; brand?: string } = {}) {
+    const list = await listPlans(actor, f);
+    if (list.length === 0) return [];
+    const ids = list.map((p) => BigInt(p.planId));
+    const byBranch = (col: SQLWrapper) => (actor.branchScope === "all" ? [] : [actor.branchScope.size === 0 ? sql`1=0` : inArray(col, [...actor.branchScope])]);
+    const toMap = (rows: Array<{ planId: bigint; n: number | string }>) => new Map(rows.map((r) => [r.planId.toString(), Number(r.n)]));
+    const [accounts, joined, owners, pending, sectorRows] = await Promise.all([
+      db.select({ planId: activityPlanRoster.planId, n: count() }).from(activityPlanRoster).where(and(inArray(activityPlanRoster.planId, ids), eq(activityPlanRoster.entryState, "in_roster"), ...scopeCond(actor))).groupBy(activityPlanRoster.planId),
+      db.select({ planId: activityPlanBranches.planId, n: count() }).from(activityPlanBranches).where(and(inArray(activityPlanBranches.planId, ids), eq(activityPlanBranches.status, "joined"), ...byBranch(activityPlanBranches.branchId))).groupBy(activityPlanBranches.planId),
+      db.select({ planId: activityPlanOwners.planId, n: count() }).from(activityPlanOwners).where(and(inArray(activityPlanOwners.planId, ids), ...byBranch(activityPlanOwners.branchId))).groupBy(activityPlanOwners.planId),
+      db
+        .select({ planId: importBatches.planId, n: count() })
+        .from(importRowResults)
+        .innerJoin(importBatches, eq(importBatches.importBatchId, importRowResults.importBatchId))
+        .where(and(inArray(importBatches.planId, ids), inArray(importRowResults.outcome, ["pending_account", "suspected_empty"]), ...byBranch(importBatches.submitterBranchId)))
+        .groupBy(importBatches.planId),
+      db.select({ planId: activityPlanSectors.planId, key: activityPlanSectors.sectorKey }).from(activityPlanSectors).where(inArray(activityPlanSectors.planId, ids)),
+    ]);
+    const a = toMap(accounts);
+    const j = toMap(joined);
+    const o = toMap(owners);
+    const p = toMap(pending.flatMap((r) => (r.planId === null ? [] : [{ planId: r.planId, n: r.n }])));
+    return list.map((x) => ({
+      ...x,
+      sectors: sectorRows.filter((s) => s.planId.toString() === x.planId).map((s) => s.key).sort(),
+      counts: { accounts: a.get(x.planId) ?? 0, branches: j.get(x.planId) ?? 0, owners: o.get(x.planId) ?? 0, pending: p.get(x.planId) ?? 0 },
+    }));
   }
 
   /** 计划详情：基本信息、规模计数（只计数、不做比率）、参与分公司与负责人槽位、需要的监控判定计划、变更记录。 */
@@ -238,6 +273,6 @@ export function createPlanQuery(deps: { db: Db; clock: Clock; resolver: Monitori
     audit({ event_type: "roster_report_downloaded", actor: actor.actor, occurred_at: clock.now().toISOString(), target_type: "import_batch", target_id: b.importBatchId.toString(), batch_id: b.importBatchId.toString(), counts: { rows: f.rows } });
     return f;
   }
-  return { listPlans, planDetail, roster, batches, batch, rows, returnFile };
+  return { listPlans, overview, planDetail, roster, batches, batch, rows, returnFile };
 }
 export type PlanQuery = ReturnType<typeof createPlanQuery>;

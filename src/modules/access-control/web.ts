@@ -48,6 +48,8 @@ const SERVICE_NAMES: Record<string, string> = {
   "service:sync-worker": "同步任务",
   "service:plan-worker": "活动计划任务",
   "cli:bootstrap": "运维引导",
+  "service:plan-cli": "活动计划命令行",
+  "service:master-data-cli": "主数据命令行",
 };
 
 export function createWebServices(d: { db: Db; clock: Clock; auth: AccessAuth; logger?: Logger }) {
@@ -80,6 +82,17 @@ export function createWebServices(d: { db: Db; clock: Clock; auth: AccessAuth; l
       const ids = [...ctx.scope.brands];
       const rows = ids.length ? await db.select({ name: brands.brandName }).from(brands).where(inArray(brands.brandId, ids)).orderBy(brands.brandId) : [];
       return { name: u?.name ?? "", brandNames: rows.map((r) => r.name) };
+    },
+
+    /**
+     * 主体字符串 → 显示名：`user:<id>` 查姓名（查不到 = 用户已不可见），服务身份用固定名称，其余原样回退。
+     * 页面用它把计划创建者、负责人、批次上传者、变更记录的操作者显示成人名（审计字段里存的是主体字符串）。
+     */
+    async actorNames(actors: readonly string[]): Promise<Map<string, string>> {
+      const uniq = [...new Set(actors)];
+      const ids = uniq.flatMap((a) => (/^user:\d{1,19}$/.test(a) ? [BigInt(a.slice(5))] : []));
+      const names = await userNames(ids);
+      return new Map(uniq.map((a) => [a, /^user:\d{1,19}$/.test(a) ? (names.get(a.slice(5)) ?? "（用户已不可见）") : (SERVICE_NAMES[a] ?? a)]));
     },
 
     async directory(): Promise<OrgDirectoryView> {

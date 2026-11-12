@@ -4,6 +4,7 @@ import type { MonitoringResolver } from "../monitoring";
 import type { Clock } from "../raw-capture";
 import type { TracerConfig, TracerCommands } from "../tracer-command";
 import type { PlanAuditSink } from "./audit";
+import { createAccountQuery } from "./accounts";
 import { noDownstream, type PlanDownstream } from "./downstream";
 import { createPlanMaintenance } from "./maintenance";
 import { createOwners } from "./owners";
@@ -47,6 +48,7 @@ export function createActivityPlan(deps: ActivityPlanDeps) {
       resolver: deps.runRoot && finalize ? createRosterResolver({ ...base, monitoring: deps.monitoring, runRoot: deps.runRoot, finalize, ...(deps.tracerConfig ? { tracerConfig: deps.tracerConfig } : {}) }) : undefined,
     },
     query: createPlanQuery({ ...base, resolver: deps.monitoring }),
+    accounts: createAccountQuery({ db }),
     reader: createPlanReader({ db, resolver: deps.monitoring }),
     maintenance: createPlanMaintenance({ ...base, downstream }),
   };

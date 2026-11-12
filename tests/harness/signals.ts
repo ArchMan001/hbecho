@@ -2,8 +2,8 @@
 // 只填 NOT NULL 字段，其余由各测试按需覆盖。FakeObjectStore / FakeClock 沿用 fake-oss.ts / fake-clock.ts。
 import type { Db, QueryLogger } from "../../src/db/client";
 import { eq } from "drizzle-orm";
-import { comments, contentFeatures, contentSnapshots, contents, mediaReferences, monitoringSegments } from "../../src/db/schema";
-import { insertBatch, insertContent, insertContentSnapshot, sha } from "./factories";
+import { comments, contentFeatures, ossObjects, contentSnapshots, contents, mediaReferences, monitoringSegments } from "../../src/db/schema";
+import { insertBatch, insertContent, insertContentSnapshot, insertMediaAsset, sha } from "./factories";
 import type { ImageMatcher, MatchRequest, MatchResult } from "../../src/modules/signals/scoring/ports";
 import { MatcherError } from "../../src/modules/signals/scoring/ports";
 import type { AiGatewayPort, JudgeRequest, JudgeResult, ModelPurpose, TranscribeRequest, TranscribeResult } from "../../src/modules/signals/speech/ports";
@@ -182,4 +182,12 @@ export async function insertComment(db: Db, c: { contentId: bigint; pcid: string
     updatedAt: at,
   });
   return BigInt(r.insertId);
+}
+
+/** 一个对象可用（available）的正式媒资：mediaObjectOf 只返回 available 的对象。 */
+export async function insertAvailableAsset(db: Db, a: { key: string; hex: string; now?: Date }): Promise<bigint> {
+  const now = a.now ?? SIGNALS_T0;
+  const assetId = await insertMediaAsset(db, { key: a.key, now, hex: a.hex });
+  await db.update(ossObjects).set({ status: "available", byteLength: 10n, sha256: sha(a.hex), verifiedAt: now }).where(eq(ossObjects.objectKey, a.key));
+  return assetId;
 }

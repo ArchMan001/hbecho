@@ -9,16 +9,15 @@ import { composeState, type PendingHint, type SignalValue, type StalePolicy, typ
 import type { Envelope } from "./features/compute";
 import { SignalError } from "./errors";
 import { createFacts, type Material } from "./facts";
+import type { Param, SegmentRef } from "./scoring/params";
 import type { AiGatewayPort } from "./speech/ports";
 import { PLATFORM_TEXT_FIELDS } from "./text/fields";
 import { currentNormalizerVersion } from "./text/normalize";
 
 export const MAX_READ_SUBJECTS = 5000;
 
-export type SegmentRef = { planId: bigint; version: number };
 export type Subject = { kind: SignalObject; id: bigint };
-/** 参数化信号必填：模板 / 元素 = 监控段中的图片引用；判定 = 监控段中的判定项。 */
-export type Param = { segment: SegmentRef; elementKey?: string };
+export type { Param, SegmentRef };
 export interface ReadOptions {
   param?: Param;
   /** 缺省 use_stale（PRD C-D05：默认使用旧值并标 stale）。 */

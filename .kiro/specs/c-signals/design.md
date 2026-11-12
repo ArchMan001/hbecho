@@ -813,7 +813,7 @@ signals run                                                             # 常驻
 | 11 | 监控段 / 读取口 / 补算请求的 API 形状 | D 的 spec 尚未写，现有 `rule-engine/design.md` 与 D PRD v1.1 不一致 | C 先实现并以契约测试固定；D 的 spec 开工时对齐，必要时回来修订，不在 D 里另造一份 | D spec |
 | 12 | 关键词归一化出口（SG-D17）要写进 D 的 spec | 否则 D 可能自己归一化 | D 的 spec 登记：保存关键词**原文**，执行时调用 `normalizeKeyword(raw, value.normalizerVersion)`（按文本写入时的版本归一化，升级后不错位） | D spec |
 | 13 | 标准图 ≤ 10 MiB、候选图上限沿用 `HBECHO_MEDIA_MAX_BYTES` | 影响可上传的图 | 同意 | 刘学奎；**已采纳（刘学奎，2026-11-12）** |
-| 14 | 数值起始值：扫描 tick 30 秒、批量 500、回看 10 分钟、对账每小时、评分并发 2、任务最多 3 次、租约 120 秒、签名 URL 600 秒、Python 请求超时 60 秒、判定 `deferred` 间隔 30 秒 / 上限 20 次 | 影响吞吐与成本 | 写入 `.env.example`，**不写进代码默认值**；测试机实测后调整 | 运维 + 实测 |
+| 14 | 数值起始值：扫描 tick 30 秒、批量 500、回看 10 分钟、对账每小时、评分并发 2、任务最多 3 次、租约 120 秒、签名 URL 600 秒、Python 请求超时 60 秒、判定 `deferred` 间隔 30 秒 / 上限 20 次 | 影响吞吐与成本 | 写入 `.env.example`，**不写进代码默认值**；测试机实测后调整。任务 8 增加两个必填项：重试退避基数 `HBECHO_SIGNALS_RETRY_BACKOFF_MS`（第 n 次失败后等 基数 × 2^(n−1)）与候选图上限 `HBECHO_MEDIA_MAX_BYTES`（沿用 A 的变量，第 13 项）；并要求租约大于匹配超时（runner 在一次能力服务调用期间不续租约） | 运维 + 实测 |
 | 15 | 重算范围种类：`contentIds` / `accountIds` / `brandId` / `publishedFrom–To` | PRD C §7.2 写「时间 / 品牌 / 活动 / 账号 / 内容」，其中「活动」需要 D 提供主体清单 | 「活动」由 D 把名单展开成 `accountIds` 传入，C 不认识活动；`segmentRef` 为可选附加键 | 刘学奎；**已采纳（刘学奎，2026-11-12）** |
 | 16 | 判定调用需要的 `scope_fingerprint`（H PRD §3.5）从何而来 | H1 对范围指纹的格式未定 | `requestScores` 的 `ctx.scopeFingerprint` 由 D 传入并透传；格式由 `h-ai-min` 定 | `h-ai-min` |
 | 17 | 话题上限：单个话题 ≤ 64 字符、每内容 ≤ 50 个 | PRD 没有这两个数；超出的话题会被丢弃 | 同意，或给出业务依据 | 刘学奎；**已采纳（刘学奎，2026-11-12）** |

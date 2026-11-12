@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–7 已完成（任务 7 的标定报告待业务样本，见其完成记录）；任务 8 起未开始。进度以下方勾选为准
+> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–8 已完成（任务 7 的标定报告待业务样本，见其完成记录）；任务 9 起未开始。进度以下方勾选为准
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -28,7 +28,7 @@
 - [x] 任务 5 · 读取口 `SignalReader` 与五态合成；CLI `show` / `catalog`（**第一条可演示的纵向**）
 - [x] 任务 6 · 监控段与标准图（含 OSS 专用桶、可执行性、清除）
 - [x] 任务 7 · Python 匹配端点、Node 客户端、真实样本标定
-- [ ] 任务 8 · 任务表与租约、`requestScores`、评分 runner、结果行、派生信号读取
+- [x] 任务 8 · 任务表与租约、`requestScores`、评分 runner、结果行、派生信号读取
 - [ ] 任务 9 · 音频理解：`AiGatewayPort`、ASR 与判定 runner、提示词
 - [ ] 任务 10 · 能力升级、`stale` 与显式重算
 - [ ] 任务 11 · 保留期、`retainUntil` 与清理器
@@ -154,13 +154,15 @@
 
   - **完成记录（2026-11-12）**：Python：新增 `services/capability/capability/match.py`（下载 → 540 宽灰度 → SIFT ≤1500 → kNN 比率 0.75 → RANSAC 5px → 模板按内点比率 / 元素按内点数映射为 0.00–10.00；元素匹配检查单应矩阵凸性与面积比；低特征图 `low_features` 且 0 分）与 `POST /v1/image/match`（错误体带 `side`，只接受 http/https，来源 404 → `source_missing`，字节不是图片 → 415），`pyproject.toml` 增加 `opencv-python-headless>=4.10`（本机 .venv 装到 5.0.0.93 + numpy 2.5.4），README 端点表与错误码表更新，`calibrate.py`（标定工具）。`tests/test_match.py` 18 例（pytest 全套 36 通过）：合成纹理图（固定种子、程序生成）——同图 ≥ 9.5、缩放旋转亮度变化 ≥ 7、JPEG q35 重压缩加模糊 ≥ 7、无关图 < 2、排序单调、嵌入元素 ≥ 6、不含元素 < 2、低特征图；HTTP 契约——响应形状、六类错误码带 side、超限、连接拒绝、非法请求（含 `file://`）。Node：`scoring/matcher-client.ts`（`HttpImageMatcher`，signals 里唯一发网络请求的文件；超时 → `timeout`，连接失败 / 无法解析的响应 / 未知错误码 / 不符合契约的成功体 → `unavailable`；错误消息经 `redact.ts` 把 URL 替换为 `<url>`），`matcher-client.test.ts` 12 例（fake `fetch`）与 `redact.test.ts`。**标定**：业务样本（约 20 对脱敏样本）尚未提供，**标定报告没有产出**——已备好 `calibrate.py` 与 [`calibration-report.md`](calibration-report.md)（状态 `未标定`、参数初值、样本要求、步骤、签字栏）。**`image.template` / `image.element` 不进生产启用集，直到报告填完并由刘学奎签字**（`HBECHO_SIGNALS_ENABLED` 缺省不含它们）。**偏差**：版本一致性校验放在任务 8 的 runner（客户端只传输与分类）；`calibrate.py` 与报告模板是为“可复现地标定”多做的两个文件。**未证明**：真实封面 / 背景 / 头像上的分数分布（初值只在合成图上成立）；真实 HEIC 在 `/v1/image/match` 里的路径（复用 `image.to_normalized_jpeg`，本机有 ffmpeg 8.1 但本任务测试用的是 PNG）；CI 的 verify 不安装 Python 依赖，Python 步骤在 CI 里按既有逻辑会打印“未验证”，Python 侧通过只在本机（及后续测试机）有证据。
 
-- [ ] 8. 任务表、`requestScores` 与评分
+- [x] 8. 任务表、`requestScores` 与评分
   - **Requirements:** SG-6、SG-8、SG-12、SG-13
   - **Design:** §5.3、§7.7、§7.8、§7.5
   - `tasks/`（入队幂等——含「任务 `succeeded` 但结果行已被清理」时置回 `pending`、`SELECT … FOR UPDATE SKIP LOCKED` 领取、心跳、fenced 写入、重试与退避、`dead`、revive；`revive` 拒绝 `run_cancelled` 任务）；`requestScores`；评分 runner；结果行写入；`SignalReader` 补齐结果行类（含 `pending` 提示）；`needMedia`。
   - `requestScores` 同时处理 `content.asr_text`（`activeModel('asr')` 为空时读作 `capability_disabled`，任务数 0）。
   - **验证**：requirements SG-8 验收第一条（100 主体：80 建任务 / 20 按映射返回，`carried_forward` 无任务）；二次请求与任务完成后再请求都不新增任务；换标准图后对同批主体新建任务；两个 worker 抢同一任务只有一个拿到，租约过期后接手，旧 worker 写入被拒绝且零写入；任务在调用返回后、事务提交前崩溃（fake 注入），重启后结果行恰好一行；版本不一致 → 瞬时失败不写结果；重试用尽 `dead` 且无结果行，`requestScores` 把它置回 `pending`；`succeeded` 但结果行已被清理时再次 `requestScores` 置回 `pending`；`dead(run_cancelled)` 的 chunk 任务 `revive` 被拒；候选图解码失败写 `failed(image_unreadable)`，标准图侧失败任务 `dead`；runner 调用能力服务期间连接池无未提交事务；同一标准图字节被两个段引用，同封面只算一次。
   - **未证明**：真实 Python 服务上的吞吐（任务 13）。
+
+  - **完成记录（2026-11-12）**：新增 `tasks/queue.ts`（幂等入队 `enqueueMany`：created / reused / revived（dead 置回 pending 并清零计数）/ requeued（succeeded 但结果行已被清理）；`claim`：`FOR UPDATE SKIP LOCKED`、租约、fencing 令牌 +1、每次领取算一次尝试（崩溃接手同样计数，用完直接 dead）；`fenced` / `succeed` / `failTransient`（指数退避）/ `failDead`；`pendingHints`）、`scoring/params.ts`（参数指纹与监控段解析，请求与读取共用；判定先取模型版本再算指纹）、`scoring/results.ts`（同键最高版本一行）、`scoring/lookup.ts`（读取口的结果行取数 + pending 提示）、`scoring/request.ts`（`requestScores`：素材状态映射、只补缺失、同素材同参数只建一个任务、`needMedia`）、`scoring/runner.ts`（评分 runner：事务外调用能力服务、能力版本校验、候选图确定性失败写 `failed(image_unreadable)`、标准图侧失败 dead、瞬时失败重试、证据与错误详情脱敏）、`assemble.ts` 装配（`createSignals` 现在返回 `segments`、`reader`、`requestScores`、`scoreRunner`）。`scoring.db.test.ts` 20 例：100 主体（10 无引用 / 5 pending / 5 carried_forward / 80 已归档）→ 80 任务、20 按映射返回、carried_forward 无任务且在 needMedia；二次请求与完成后再请求都不新增任务；同封面只算一次、两个监控段引用同字节标准图共享结果（血缘记第一次的计划，不进复用键）；换标准图新建任务且旧结果保留；账号主体与平台不符；缺 Capability 零查询、超 5,000、监控段不存在、不可执行；完成后读取口读到 valid（分数、证据、能力版本、`resultId`），排队时 `pending: queued`，升级版本后 `stale` 且不重算；版本不一致重试（退避 1×、2×）→ dead → 再请求置回 pending；瞬时错误分类；候选图四类确定性失败写 failed 且不重试、证据无 URL；标准图侧失败与被清除的标准图 → dead(reference_unreadable)；A 的对象不可用 → failed；**调用能力服务期间无未提交事务**（`innodb_trx` 断言）；两 worker 抢任务只有一个拿到、租约过期接手、旧 worker 写入被拒且零写入；调用返回后崩溃 → 恰好一行；反复崩溃最终 dead；同键并发写命中；结果行被清理后置回 pending。变异检查四处（去掉 fencing、去掉版本校验、去掉 requeue、去掉接手时的次数检查，各使对应用例失败）。**偏差 / 补充**：① 配置新增两个必填项 `HBECHO_SIGNALS_RETRY_BACKOFF_MS`、`HBECHO_MEDIA_MAX_BYTES`，并要求租约大于匹配超时（已写入 design §14 第 14 项）；② 判定的读取在网关 `activeModel('judge')` 为空时算不出参数指纹，读作 `capability_disabled`（已存的旧模型结果要在有模型后按其版本重新请求）；③ `requestScores` 对 ASR 文本也会建任务（运行在任务 9）；④ 返回的 `items[].subjects` 用数组而不是 Map。**未证明**：真实 Python 服务上的吞吐（任务 13）；真实 OSS 签名 URL 下 Python 能否读到两个桶（任务 13 的端到端档，桶未创建）；评分并发在多个 worker 进程下的吞吐（只证明了 SKIP LOCKED 的互斥）。
 
 - [ ] 9. 音频理解
   - **Requirements:** SG-9

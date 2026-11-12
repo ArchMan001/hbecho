@@ -3,10 +3,10 @@
 //   HBECHO_SIGNALS_DRILL=full ./scripts/with-test-mysql.sh pnpm exec vitest --run --project db src/modules/signals/scale.perf.db.test.ts
 // 数字写到 stdout（[signals-scale] 开头的 JSON 行），回填 design §12.1；用的是本机一次性 MySQL，不代表测试 ECS。
 import { count, sql } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { createDb } from "../../db/client";
 import { contentFeatures, signalResults, signalTasks } from "../../db/schema";
-import { useTestDb } from "../../../tests/harness/db";
+import { resetData, useTestDb } from "../../../tests/harness/db";
 import { insertAccount, insertBatch } from "../../../tests/harness/factories";
 import { platformIdOf } from "../../../tests/harness/seed";
 import { QueryCounter, SIGNALS_T0 as T0, seedContent } from "../../../tests/harness/signals";
@@ -22,6 +22,10 @@ const FULL = process.env.HBECHO_SIGNALS_DRILL === "full";
 const SIZE = FULL ? { contents: 200_000, readMany: 5_000, claims: 10_000, runs: 1_000 } : { contents: 3_000, readMany: 2_000, claims: 1_000, runs: 100 };
 const report = (o: Record<string, unknown>) => process.stdout.write(`\n[signals-scale] ${JSON.stringify({ full: FULL, ...o })}\n`);
 const WHOLE_TEST_MS = 3_600_000;
+// 完整规模留下 20 万内容与特征行：清库放在这里并给足超时，否则下一个用例的 beforeEach（10 秒）会在慢机器上超时
+afterEach(async () => {
+  await resetData(t.pool);
+}, WHOLE_TEST_MS);
 
 /** 用一个模板内容 + 一个模板快照，经 INSERT … SELECT 批量造 n 个带 current 快照的内容（不逐行走工厂）。 */
 async function bulkContents(n: number): Promise<void> {

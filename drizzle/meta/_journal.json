@@ -78,6 +78,13 @@
       "when": 1794391365410,
       "tag": "0010_learning_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1794455362595,
+      "tag": "0011_c_signals_schema",
+      "breakpoints": true
     }
   ]
 }

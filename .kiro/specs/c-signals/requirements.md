@@ -4,7 +4,7 @@
 >
 > **模式**：Design-First
 >
-> **实现状态**：未开始（2026-11-11 初建；任务 0 的待确认闸门未通过前不写迁移与代码）
+> **实现状态**：未开始。任务 0 的待确认闸门已于 2026-11-12 通过（刘学奎确认 design §14 的 13 项；第 6、11、12、14、16 项仍未决）；任务 1 是否开始由刘学奎决定
 >
 > **所属域**：C 识别能力 · **目录命名**：`c-signals`，符合 `<代号>-<切片>`；路线图第 6 位（[`INDEX.md`](../../../HBECHO设计方案/INDEX.md) §7）
 >
@@ -18,7 +18,7 @@
 >
 > **最近核对**：2026-11-11（核对对象：`src/db/schema/{content,media,accounts,sync}.ts`、`src/modules/{projection,media-archive,sync-runner,demand,orchestrator,cost-guard,provider-adapter}`、`services/capability/`）
 >
-> **更新日期**：2026-11-11
+> **更新日期**：2026-11-12
 >
 > **语言约定**：正文中文；验收标准中的规范性关键词 `SHALL` / `SHALL NOT` / `MAY` 与技术标识保留英文（对齐 `a-activity-plan` 的写法）。
 
@@ -60,34 +60,38 @@
 |---:|---|---|---|
 | R1 | v2 `contents` / `src/db/schema/content.ts` | `current_snapshot_selected_at` 无索引。C 的增量扫描按它排序，不加索引会全表扫描 | 增加 `idx_contents_current_selected (current_snapshot_selected_at, content_id)`。**只增索引**，不改列、不改语义、不改 `selectCurrentContentSnapshot` |
 | R2 | [`ADR-0001`](../../../HBECHO设计方案/architecture/adr/0001-oss-bucket-topology.md) | 五个桶。`hbecho-media` 的 RAM 策略刻意没有 `DeleteObject` | 标准图 / 元素图随监控判定计划物理删除（PRD C §5.5、D PRD §2.0），不能放进 media 桶。增补第六个桶 `hbecho-signals`，做法同 `hbecho-course`（私有、无过期规则、应用角色额外授予 `DeleteObject`、不写 A 域的 `media_assets` / `oss_objects`）。**创建桶与改 RAM 需要刘学奎批准**（`server-access.md`） |
-| R3 | [`ADR-0012`](../../../HBECHO设计方案/architecture/adr/0012-python-capability-service.md) | 契约只列了归一化与音频抽取；OpenCV 已登记，numpy 未提 | 补记：① 新增 `POST /v1/image/match`，请求是 JSON（两个短期签名 URL），响应是 JSON；沿用「Python 不持有 OSS 凭证」；② numpy 是 `opencv-python-headless` 的传递依赖，随它一起采用，不单独选型；③ 匹配的 0–10 分映射在 Python 内，能力版本由它回报 |
+| R3 | [`ADR-0012`](../../../HBECHO设计方案/architecture/adr/0012-python-capability-service.md) | 契约只列了归一化与音频抽取；OpenCV 已登记，numpy 未提 | 补记：① 新增 `POST /v1/image/match`，请求是 JSON（两个短期签名 URL），响应是 JSON；沿用「Python 不持有 OSS 凭证」；② numpy 是 `opencv-python-headless` 的传递依赖，随它一起采用，不单独选型；③ 匹配的 0–10 分映射在 Python 内，能力版本由它回报（JSON 里的 `capability.version`；响应头 `X-Capability-Version` 仍是服务版本，Node 只校验 JSON 里的）；④ ADR-0012 背景里「pHash 预筛 + SIFT / ORB」改写为「1.0 不做预筛」（见 R5） |
 | R4 | [`domain-a-handoff-to-c.md`](../../../HBECHO设计方案/domain-a-handoff-to-c.md) | ① §一.4 写评论有 `parent_id`；② §二写信号状态为 `ready` / `waiting` / `unavailable` | ① 代码里评论**没有** `parent_id` 与回复树（`comments` 表，`content.ts`），以代码为准；② 以 C PRD §3.3 的五态为准。该文档按 `structure.md` 的做法在文首补「已知过时内容」，不改正文 |
-| R5 | C PRD v1.2 §5.1 / §5.2 | pHash 在档 1 里「内部预筛」 | 本 spec 的 `image.template@1` **不实现 pHash 预筛**（理由与上限见 design SG-D07）。PRD 在确认后升 v1.3 订正；确认前 PRD 原文不动 |
-| R6 | C PRD v1.2 §4.2 | 「中文标点与英文标点统一为中文标点」 | 本 spec 以 NFKC 的方向统一（结果是 ASCII 标点），并只补两个 CJK 字符的映射（design §7.1）。匹配是对称的（规则关键词走同一函数），方向不影响命中。待确认后 PRD 订正措辞 |
+| R5 | C PRD v1.2 §5.1 / §5.2 | pHash 在档 1 里「内部预筛」 | 本 spec 的 `image.template@1` **不实现 pHash 预筛**（理由与上限见 design SG-D07）。PRD 已于 2026-11-12 升 v1.3 订正（C-D16）；ADR-0012 背景同步改写 |
+| R6 | C PRD v1.2 §4.2 | 「中文标点与英文标点统一为中文标点」 | 本 spec 以 NFKC 的方向统一（结果是 ASCII 标点），并只补两个 CJK 字符的映射（design §7.1）。关键词与库内文本走同一函数，**对子串匹配**方向不影响命中；**对 `text.regex`**，正则里写的中文标点匹配不到归一化后的 ASCII 标点，所以 D 的正则规则必须按归一化后的形态书写（design §14 第 4 项）。PRD 已于 2026-11-12 升 v1.3 订正（C-D17） |
 | R7 | `CONTEXT.md` 跨域消费词汇 | 没有 Signal、MonitoringSegment | 增加两条词汇，只写语义（任务 0） |
 | R8 | `INDEX.md` §5 / §7.1 | 路线图第 6 位已预占 `c-signals`，无 spec 条目 | 登记本 spec 的四件套与状态（本次初建已完成） |
+| R9 | C PRD v1.2 §4.3 | 「内容快照 finalized 之后立即抽」 | 本 spec 的触发点是内容 **current 指针推进**（§1.4 第 1 项）：特征主表一对象一行只存当前值（C-D13），旧批次迟到的 finalized 快照不是 current，不抽取。PRD 已于 2026-11-12 升 v1.3 订正（C-D15，并按 `structure.md` 对 C-D09 做删除线修订） |
+| R10 | `server-operations-runbook.md` 桶清单、`services/capability/README.md` 端点表 | 没有第六个桶与 `/v1/image/match` | 随 R2、R3 同步（任务 0、任务 7） |
+| R11 | C PRD v1.2 §8.1 | 「技术失败（图片损坏、算法异常、超时、依赖未就绪）一律记 `failed`」 | 失败分两类：**瞬时失败**（能力服务不可用、超时、来源 5xx、依赖未就绪、能力版本不一致）重试，用尽后任务 `dead`，**不写结果行**，信号读作 `missing` 并带原因；**确定性失败**（图片损坏、解码失败、模型拒绝、输出非法）写 `failed`（3 个月）。一次宕机不应在结果表里固化 3 个月的「失败」。PRD 已于 2026-11-12 升 v1.3 订正（C-D19）；D 的 spec 要按「两类都是 unknown」映射 |
 
+| R12 | A 已合并代码 `projection/content-list.ts` 的 `hasArchivedCover`（`sync-runner/list-walker.ts` 传入）；本 spec 原 §1.4 第 7 项、SG-8、design §7.6 | A 的封面首次规则（FS-D09、v2 R3）：内容已有 `archived` / `carried_forward` 的封面后，新快照**不再建 `cover` 引用**；`cover` 引用只由列表投影创建。内容第二次及以后成为 current 后，current 快照上没有封面引用，原写法会把绝大多数有封面的内容读成 `not_applicable` | 内容封面素材取该内容全部快照上 role=`cover`、slot 0 的引用：**优先批次最新的 `archived` 引用**（同步进行中可能有更新批次的 `pending` 引用，不能因此把已有可用封面读成 `media_pending`）；没有 `archived` 则取批次最新的引用（任意状态）按 §1.4 第 7 项映射；一条都没有 → `not_applicable`。批次序用 `(logical_at, batch_id)`，与 A 选 current 一致。不改 A；PRD C 从未写「current 快照」，§5.5 / §5.8 不变（2026-11-12，刘学奎要求审查后以 AI 意见为准） |
 > R1 是对 A 域表的唯一修改。C 的其余表全部新增，不改 A 的任何列、状态或约束。
 
 ### 1.4 PRD 真空与本 spec 的解释
 
-PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 PRD 或已合并 spec 已有结论；「本 spec 建议」表示这是本 spec 的解释，**待刘学奎评审时确认**（design §14 逐项列出）。
+PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 PRD 或已合并 spec 已有结论；「本 spec 建议」表示这是本 spec 的解释。**2026-11-12 刘学奎已确认 design §14 的 13 项**（第 1–5、7–10、13、15、17、18 项），下表中对应条目现为「已定」；第 6、11、12、14、16 项仍未决，见 design §14。
 
 | # | 问题 | 结论 | 性质 |
 |---:|---|---|---|
 | 1 | 什么事件触发文本信号抽取 | 内容的 **current 指针推进**（`current_snapshot_selected_at` 之后的内容），不是「某个快照 finalized」。旧批次迟到的 finalized 快照不是 current，不抽取。理由：特征主表一对象一行只存当前值（C-D13） | 本 spec 建议 |
 | 2 | 为什么不用事件 | A 没有 finalized 事件，改 A 的 seal 路径风险大、且 A 的另一个会话可能正在改。C 用 `(selected_at, content_id)` 游标 + 回看窗口 + 每小时对账（design §7.3） | 本 spec 建议 |
 | 3 | 文本字段为 NULL 的语义 | A 的 `title` / `body` / `tag_text` 没有值状态列，NULL 无法区分「平台没有这个字段」「字段缺失」「真的为空」。C 按平台字段表（`PLATFORM_TEXT_FIELDS`，任务 2 用 fixture 核对）判定：平台没有该字段 → `not_applicable`；平台有该字段但值为 NULL → `valid` 的空值（PRD C §4.4「正文为空 → valid 的空值」） | 本 spec 建议；字段表待实测 |
-| 4 | 话题从哪抽 | 标题、正文与 A 的 `tag_text` 三处的并集，去重，保持首次出现顺序。fixture 里同时出现 `#日立中央空调 #全效Ⅱ三管制`、`#a#b`（无空格相连）、`#来拍照了[话题]#`（小红书）三种写法 | 本 spec 建议（依据 `tests/fixtures` 与 `aimaster接口文档` 的样本） |
-| 5 | 关键词用什么归一化 | C 导出 `normalizeKeyword()`，与特征落库用**同一个函数**；D 保存规则时用它归一化关键词。D 若自己写一份，大小写与全半角必然漂移 | 本 spec 建议（需写进 D spec） |
+| 4 | 话题从哪抽 | 标题、正文与 A 的 `tag_text` 三处的并集，去重，保持首次出现顺序。fixture 里同时出现三种写法：空格分隔（`#日立中央空调 #全效Ⅱ三管制`）、无空格相连（`#一键节能更省心#金秋焕新首选`）、小红书的 `#来拍照了[话题]#` | 本 spec 建议（依据 `tests/fixtures` 与 `aimaster接口文档` 的样本） |
+| 5 | 关键词用什么归一化 | C 导出 `normalizeKeyword(raw, version?)`，与特征落库用**同一套实现**；D 若自己写一份，大小写与全半角必然漂移。**D 保存关键词原文，执行时归一化**，不保存归一化结果。归一化升级后，D 默认仍会读到 `stale` 的旧文本，所以关键词必须按**文本写入时的归一化版本**归一化：文本类信号的 `SignalValue` 带 `normalizerVersion`，D 调用 `normalizeKeyword(raw, value.normalizerVersion)`；C 保留全部历史版本的归一化实现（design §7.1，§14 第 12 项） | 本 spec 建议（需写进 D spec） |
 | 6 | 账号头像 / 背景的平台范围 | `account.bg_*` / `account.avatar_*` 只对抖音有输入。快手（PRD C §2.4）与小红书（handoff §五.1、D PRD §2.3）一律 `not_applicable` | 本 spec 建议（PRD C 只点名了快手） |
-| 7 | 素材状态到信号状态的映射 | 引用行不存在 → `not_applicable`；`pending` → `missing`（`media_pending`）；`failed` → `missing`（`media_failed`）；`carried_forward` → `missing`（`media_carried_forward`，PRD C §5.5 禁止当作当前图）；`archived` 但字节读不到或解码失败 → `failed` | 已定（PRD C §5.8）；原因码为本 spec 的 |
+| 7 | 素材状态到信号状态的映射 | 账号主体尚无当前主页快照 → `missing`（`no_profile_snapshot`），**不是** `not_applicable`；有快照但没有对应引用行 → `not_applicable`；~~内容主体按其 current 快照取引用，无引用行 → `not_applicable`~~（由 R12 于 2026-11-12 修订：A 的封面首次规则使 current 快照常无 `cover` 引用）；内容主体的封面取该内容**全部快照**上的 `cover` 引用：优先批次最新的 `archived` 引用，没有则取批次最新的引用（任意状态）并按其状态映射，一条引用都没有 → `not_applicable`；`pending` → `missing`（`media_pending`）；`failed` → `missing`（`media_failed`）；`carried_forward` → `missing`（`media_carried_forward`，PRD C §5.5 禁止当作当前图）；`archived` 但字节读不到或解码失败 → `failed` | 已定（PRD C §5.8）；原因码为本 spec 的 |
 | 8 | 音频从哪来 | 读 A 已归档的 `audio` 媒资（该内容任一快照下的 `archived` 引用均可：音频字节不随快照变化）。没有 → `missing`（`audio_not_archived`）。C 不提采集需求、不写同步任务 | 已定（PRD C §8.2）；读取范围为本 spec 的 |
 | 9 | 第 3 层在 H1 落地之前怎么办 | C 定义 `AiGatewayPort`，默认实现 `DisabledAiGateway`（`activeModel()` 返回 `null`）。信号 `missing`（`capability_disabled`），不创建任务，不发调用。第 3 层的编排、参数化、缓存、失败语义全部用 fake 网关在离线测试里证明 | 本 spec 建议（**待确认**，design §14 第 2 项） |
 | 10 | 补算「缺失」的定义 | 在 `requestScores` 中，「缺失」= 该（素材 × 参数）在**当前能力版本下**没有结果行，且最高版本的行不是 `valid`。已有旧版本的有效值（`stale`）**不**补算——那是显式重算的事（PRD C §7.2） | 已定（PRD C §5.6 第 3 条、C-D05）；边界为本 spec 的 |
 | 11 | 瞬时失败与确定性失败 | 能力服务不可用、超时、读不到来源是**瞬时**失败：任务重试，用尽后任务 `dead`，**不写结果行**（信号保持 `missing`，原因 `compute_dead`）。图片损坏、解码失败是**确定性**失败：写 `failed` 结果行（保留 3 个月）。避免把一次宕机固化成「失败」 | 本 spec 建议 |
-| 12 | 保留期里「被判定引用」怎么知道 | C 看不到 D 的判定。C 给 D 一个 `retainUntil(resultIds, date)`：D 在保存判定证据时调用，把结果行的 `expires_at` 延长；C 的清理器只看 `expires_at` | 本 spec 建议（**待确认**，design §14 第 8 项）；D 落地前该端口只有契约测试 |
-| 13 | 重算的「范围」 | 至少给出以下之一，否则拒绝：监控判定计划（经 D 提供的主体清单）、品牌、账号集合、内容集合、发布时间窗；可以组合（取交集）。**没有「全部」选项** | 已定（PRD C §7.2）；范围种类为本 spec 的 |
+| 12 | 保留期里「被判定引用」怎么知道 | C 看不到 D 的判定。C 给 D 一个 `retainUntil(resultIds, until)`：D 在保存判定证据时调用，把**结果行**的 `expires_at` 延长；C 的清理器只看 `expires_at`。特征行类信号的旧值进历史表后默认保留到取代时刻起 1 年，已经覆盖申诉期，不需要 D 调用 | 本 spec 建议（**待确认**，design §14 第 8 项）；D 落地前该端口只有契约测试 |
+| 13 | 重算的「范围」 | 至少给出以下之一，否则拒绝：品牌、账号集合、内容集合、发布时间窗；可以组合（取交集）。「活动 / 监控判定计划」由 D 把名单展开成账号集合传入，C 不认识活动。`segmentRef` 是可选的附加键（限定结果类信号只重算该监控段的参数），不能单独作为范围。**没有「全部」选项** | 已定（PRD C §7.2）；范围种类为本 spec 的 |
 | 14 | 标准图的上限 | 单张 ≤ 10 MiB，必须能被 `ImageConverter` 解码；格式不限制，由 ffmpeg 能解的为准 | 本 spec 建议 |
 | 15 | 页面 | C 没有独立界面（PRD C §9）。证据下钻在 D 的判定页里；本 spec **没有页面** | 已定 |
 
@@ -127,11 +131,11 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 | 能力 | 产出信号的一段算法，由「能力标识 + 整数版本」标识，如 `image.template@1` | PRD C §3.4 |
 | 素材指纹 | 被抽取对象的内容指纹：文本 = 规范化 JSON 的 SHA-256；图片 / 音频 = 完整字节的 SHA-256 | PRD C §3.6、C-D12 |
 | 参数指纹 | 同一素材可有多份结果的参数：标准图 / 元素图字节的 SHA-256；判定 = 标准文本 + 提示词版本 + 模型版本 | PRD C §3.7 |
-| 复用键 | 信号标识 + 素材指纹 + 参数指纹 + 能力版本 | PRD C §3.6 |
+| 复用键 | 信号键 + 能力标识 + 素材指纹 + 参数指纹 + 能力版本（信号键与能力标识在目录中一一对应，永不变更） | PRD C §3.6 |
 | 特征行 | 一个内容（或评论）在特征主表里的一行：当前快照的 0 档结构化信号 | PRD C §6.1、C-D13 |
 | 结果行 | 派生信号（匹配分、ASR、判定）按复用键存的不可变一行 | 本 spec |
 | 监控段 | 监控判定计划中归 C 的一半：信号集合、标准图 / 元素图；与 D 的判定段 1:1，共用计划 ID 与版本 | PRD C §11.1、C-D10 |
-| 补算 | `requestScores`：只对「缺失」的（素材 × 参数）建任务；免费 | PRD C §5.6、C-D09 |
+| 补算 | `requestScores`：只对「缺失」的（素材 × 参数）建任务；模板 / 元素匹配免费，ASR 与判定经 `AiGatewayPort` 计费 | PRD C §5.6、C-D09 |
 | 重算 | 显式、带范围、带记录的重新计算，会覆盖 `stale` | PRD C §7.2 |
 
 ## 2. 需求
@@ -174,9 +178,9 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 
 | 态 | 怎么得出 |
 |---|---|
-| `valid` | 存在当前能力版本的有效结果 |
-| `stale` | 存在有效结果，但其能力版本低于目录当前版本 |
-| `failed` | 当前能力版本下的确定性失败结果行 |
+| `valid` | 存在当前能力版本的有效结果（文本类信号还要求写入时的归一化版本 `nv` 为当前 `text.normalize` 版本） |
+| `stale` | 存在有效结果，但其能力版本低于目录当前版本；文本类信号还包括 `nv` 低于当前 `text.normalize` 版本（话题解析器版本没变也成立） |
+| `failed` | 当前能力版本下的确定性失败结果行（文本类还要求 `nv` 为当前 `text.normalize` 版本） |
 | `not_applicable` | 输入本来就不存在（平台没有该字段 / 该对象、内容没有封面、账号没有自定义背景）；**不存储**，读取时由输入事实推出 |
 | `missing` | 该有但还没有：没有结果行、输入素材尚未归档、最高版本的行是旧版本的失败、能力未启用、任务还在排队 |
 
@@ -187,8 +191,8 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 
 **验收标准**
 
-- 同一内容的封面信号在「无封面引用 / 引用 `pending` / 引用 `failed` / 引用 `carried_forward` / 已归档但字节读不到 / 已计算」六种输入下，依次得到 `not_applicable` / `missing` / `missing` / `missing` / `failed` / `valid`，原因码各不相同；
-- 提升目录中某信号的版本号后，该信号的旧结果读作 `stale`，不会变成 `missing`，也不会被重算；
+- 同一内容的封面信号在「无封面引用 / 引用 `pending` / 引用 `failed` / 引用 `carried_forward` / 已归档且补算任务因字节读不到而失败 / 已计算」六种情形下，依次得到 `not_applicable` / `missing` / `missing` / `missing` / `failed` / `valid`，原因码各不相同；
+- 提升目录中某信号的版本号后，该信号的旧结果读作 `stale`，不会变成 `missing`，也不会被重算；只把 `text.normalize` 的版本升一级、话题解析器版本不变时，话题信号也读作 `stale`（`normalizerVersion` 为旧值）；
 - 数据库里不存在 `status='missing'`、`'stale'` 或 `'not_applicable'` 的存储行（CHECK）；
 - 失败结果行的 `score` 与 `value` 为空（CHECK），读取时不会得到 `0`。
 
@@ -201,6 +205,7 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 - **归一化**（`text.normalize@1`）：Unicode NFKC；英文转小写；去掉不可见字符；连续空白折叠为一个空格并去首尾；补两个 CJK 标点映射。**原文永远保留在 A 的快照里**，C 只存归一化副本（PRD C §4.2）；
 - **话题**（`text.hashtags@1` 的平台变体）：从标题、正文、`tag_text` 抽 `#话题`；`#a#b`、`#a #b`、`#a[话题]#` 三种写法都要正确；归一化、去重、保持首次出现顺序；
 - **平台版本化**：解析器按平台分变体，能力标识含平台（C-D12：「平台解析差异进能力标识」），如 `text.hashtags.xiaohongshu@1`；
+- **话题上限**：每个内容最多保留 50 个话题，单个话题超过 64 个字符丢弃。这两个数 PRD 没有，是本 spec 的建议值，列入 design §14 第 17 项，确认前不当作合同；
 - **幂等**：素材指纹（标题、正文、`tag_text` 的规范化 JSON 的 SHA-256）与各信号能力版本都没变时，不写入、不产生历史；
 - **失败隔离**：某信号抽取抛错时，该信号记 `failed`（带失败码与原始片段摘要），其余信号照常写入，内容事实不受影响（PRD C §4.4）；
 - **1.0 不抽取**：@ 提及、POI、外链、账号昵称 / 签名（C-D06）。
@@ -218,7 +223,7 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 
 **陈述**：系统 SHALL 为 `active` 状态的评论抽取 `comment.text_normalized`，写入评论特征行。评论正文在评论入库后尽快抽取（PRD C §4.3）。
 
-- 评论是最新态，没有快照版本。素材指纹 = `content_text` 的 SHA-256；正文变了就重算，旧值进历史表；
+- 评论是最新态，没有快照版本。素材指纹 = 含值状态的规范化 JSON（`NULL` 与空串指纹不同，与内容文本同一做法）的 SHA-256；`content_text` 为 `NULL` 与空串在信号上都读作 `valid` 的空值（平台有评论正文字段，PRD C §4.4「正文为空 → valid 空值」），但指纹区分二者，满足「缺失 / 空值不互转」的纪律；正文变了就重算，旧值进历史表；
 - 触发：扫描 `comments.last_seen_at` 之后的评论（该列已有索引 `idx_comments_last_seen`），不新增索引；
 - `suspected_deleted` 与 `deleted` 的评论 SHALL NOT 新抽取；已有特征行保留（评论删除不是特征的删除理由，保留期按 SG-10）；
 - 快手没有评论，目录里不含快手；
@@ -235,19 +240,20 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 
 **陈述**：系统 SHALL 用「特征行」存 0 档结构化信号的**当前值**，用「历史表」存被取代的旧值（C-D13）。
 
-- 内容特征行一个内容一行，记录它所基于的 `content_snapshot_id`；值写在可下推的列里（`title_normalized`、`body_normalized`、`hashtags`），每个信号自己的状态、能力标识、能力版本、产出时间写在 `signals` 信封里（PRD C §6.2）；
+- 内容特征行一个内容一行，记录它所基于的 `content_snapshot_id`；值写在可下推的列里（`title_normalized`、`body_normalized`、`hashtags`），每个信号自己的状态、能力标识、能力版本、产出时间写在 `signals` 信封里（文本类还包括归一化版本 `nv`；PRD C §6.2）；
 - **不倒退**：特征行只接受比当前所持快照「更新」的快照，比较规则与 `selectCurrentContentSnapshot` 相同——`(batch.logical_at, batch_id)` 严格更大。旧批次迟到不得覆盖（`data-discipline.md` 纪律 5）；
 - **只有素材变了或显式重算才写**：快照推进但素材指纹不变时，只更新所持 `content_snapshot_id`，不写值、不写历史；
-- 值被取代（素材变了、显式重算升到新能力版本）时，旧值 SHALL 在同一事务内写入历史表，带取代原因与保留期；
+- 值被取代（素材变了、显式重算升到新能力版本）时，旧值 SHALL 在同一事务内写入历史表，带取代原因、保留期与产出时的能力标识 / 能力版本 / 归一化版本（文本类）；
 - **版本精确到单个信号**：`signals` 信封里每个信号独立记能力标识与版本；升级话题解析不改变标题归一化信号的版本，也不让匹配分变成 `stale`；
 - 特征读取 SHALL NOT 依赖 ODS 是否仍在。
 
 **验收标准**
 
-- 一个内容在数据库里只有一行特征行（主键 `content_id`）；信封里每个信号都有 `state`、`cap`、`ver`、`at`；
+- 一个内容在数据库里只有一行特征行（主键 `content_id`）；信封里存在的每个信号都有 `state`、`cap`、`ver`、`at`（文本类还有 `nv`），且 `state` 只能是 `valid` / `failed`；
 - 先写入批次 5 的快照特征，再迟到处理批次 3 的快照：特征行不变，仍指向批次 5；
 - 标题改了：特征行更新为新值，历史表新增一行（取代原因 `material_changed`），其中是旧标题的归一化值；
 - 只把 `text.hashtags` 的版本从 1 升到 2：标题与正文信号读作 `valid`，话题读作 `stale`，`content.cover_template_score` 不受影响；
+- 只把 `text.normalize` 从 1 升到 2、话题解析器版本不变：标题、正文、话题、评论都读作 `stale`，`SignalValue.normalizerVersion` 为 1，信封里的 `nv` 为 1；
 - 删除 ODS 对象后读取特征不受影响（读取路径不引用 ODS 表）。
 
 ### SG-6 · 复用键与派生结果
@@ -255,10 +261,10 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 **陈述**：派生信号（匹配分、ASR 文本、判定）SHALL 存为不可变的结果行，复用键为：
 
 ```text
-信号键 + 素材指纹（SHA-256） + 参数指纹（SHA-256） + 能力版本
+信号键 + 能力标识 + 素材指纹（SHA-256） + 参数指纹（SHA-256） + 能力版本
 ```
 
-- 同一复用键只有一行（唯一键）。再次请求直接命中，**不产生第二次计算**；
+- 同一复用键只有一行（唯一键，**含能力标识**，与 PRD C §3.6 的四元组一致；信号键与能力标识在目录中一一对应、永不变更，由目录测试守护）。再次请求直接命中，**不产生第二次计算**；
 - 参数指纹：模板 / 元素匹配 = 标准图 / 元素图**字节**的 SHA-256；`content.asr_text` 与其他全局信号 = 32 个零字节；`content.asr_judgement` = 标准文本、提示词版本、模型版本三者规范化 JSON 的 SHA-256；
 - 标准图换了就是新的参数指纹，必须重算，不读旧结果；同一张标准图被多个监控判定计划引用时共享结果；
 - 监控判定计划 ID 与版本只作血缘，写入结果行的 `lineage`，**不进入复用键**；
@@ -302,7 +308,7 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 
 **陈述**：系统 SHALL 提供 `requestScores`，对给定监控段与主体清单，补算**缺失**的匹配分（PRD C §5.6 第 3 条）。
 
-- **主体与素材**：内容主体 → 其 current 快照的 `cover` 引用；账号主体 → `external_accounts.current_profile_snapshot_id` 对应主页快照的 `background` / `avatar` 引用。素材指纹 = 原图 `media_assets.sha256`；
+- **主体与素材**：内容主体 → 该内容全部快照上的 `cover` 引用（~~其 current 快照的 `cover` 引用~~，由 R12 于 2026-11-12 修订；选择规则见 §1.4 第 7 项）；账号主体 → `external_accounts.current_profile_snapshot_id` 对应主页快照的 `background` / `avatar` 引用。素材指纹 = 原图 `media_assets.sha256`；
 - **素材状态映射**：按 §1.4 第 7 项。`carried_forward` 的引用 SHALL NOT 参与匹配（PRD C §5.5）；缺素材的主体返回 `missing` 与原因，并在返回里列出「需要素材」的主体，供 D 向 A 提需求（C 自己不提）；
 - **补算**：只对「缺失」建任务（§1.4 第 10 项）；已有分数（含 `stale`）不重算；任务按复用键幂等，重复请求不产生重复任务；
 - **计算**：C 的任务 runner 为两张图各生成短期签名 URL，调用 Python `POST /v1/image/match`；Python 返回 0.0–10.0 分与证据，并回报能力标识与版本；C 校验回报的版本与目录一致，不一致按瞬时失败处理（防部署错位）；
@@ -328,7 +334,8 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 - **ASR**：素材 = 音频媒资字节 SHA-256；全局信号，所有监控判定计划共享一份；输出转写文本、语言、时长；
 - **判定**：参数 = 标准文本 + 提示词版本 + 模型版本；模型版本来自 `activeModel()`，**先取模型版本再算参数指纹**；输出结构化结论 `{verdict: 'meets' | 'not_meets', reason}`，带模型版本与提示词版本；模型拒绝或输出不符合 schema → 确定性失败（`model_refused` / `invalid_output`），**不写成不达标**；
 - **提示词**：1.0 的判定提示词与输出 schema 由 C 保管，随代码版本化（`prompt_version` 整数）；H2 落地后再迁移存放，迁移不改变已有结果；
-- ASR 转写不存在时，判定任务 SHALL 先依赖 ASR 结果（同一请求内两步顺序执行，ASR 未完成时判定读作 `missing`、`pending: queued`）；
+- **`content.asr_text` 可单独请求**：监控段里只配了 ASR 文本（如只消费转写的规则）时，`requestScores` 为它建 ASR 任务；`executability` 对 `content.asr_text` 检查 `activeModel('asr')`，对 `content.asr_judgement` 同时检查 `activeModel('asr')` 与 `activeModel('judge')`；
+- 判定任务依赖 ASR 结果：ASR 结果不存在时，判定任务 `deferred`（确保 ASR 任务存在、稍后重试、不计重试次数），判定在此期间读作 `missing` + `pending: queued`；
 - 每个监控段至多一个判定项（SG-7）；
 - 音频不在库（A 未归档）：`missing`（`audio_not_archived`），不建任务。
 
@@ -355,8 +362,8 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 |---|---|---|
 | 未被判定引用的结果行 | 1 年 | `expires_at = produced_at + 1 年` |
 | 失败结果行 | 3 个月 | `expires_at = produced_at + 3 个月` |
-| 被判定引用的结果行与历史行 | 3 个月（申诉期），自引用时起算 | D 调用 `retainUntil` 延长 `expires_at`（取较大值，只增不减） |
-| 历史表里的旧值 | 同上；无判定引用后清理 | `expires_at` |
+| 被判定引用的结果行 | 3 个月（申诉期），自引用时起算（引用时刻 = D **读取该值**的时刻） | D 调用 `retainUntil(resultIds, until)` 延长 `expires_at`（取较大值，只增不减） |
+| 历史表里的旧值 | 取代时刻起 1 年 | `expires_at`；因取代必然晚于被引用，1 年已覆盖 3 个月申诉期，D 无需调用 |
 | 特征行（当前值） | 随内容存在，不清理 | — |
 
 - 清理器 SHALL 分块删除 `expires_at` 已过的结果行与历史行，幂等，可重复运行；
@@ -367,7 +374,7 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 - 升级某信号版本后，历史结果读作 `stale`，没有新任务产生，没有新的监控段版本；
 - `stalePolicy: 'as_unknown'` 时，`stale` 行返回 `usable: false` 且不带值；`use_stale` 时返回旧值与 `stale` 标记；
 - 用 `FakeClock` 推进 13 个月：未引用的结果行被清理；推进 4 个月：失败行被清理；
-- `retainUntil` 把一行的 `expires_at` 延后后，到原时间点仍保留；传入较早时间不会缩短；
+- `retainUntil` 把一行结果的 `expires_at` 延后后，到原时间点仍保留；传入较早时间不会缩短；
 - 结果行被清理后，读取得到 `missing`，任务表中没有新任务；
 - 特征行不被清理器删除。
 
@@ -375,23 +382,28 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 
 **陈述**：系统 SHALL 提供受控重算，且 SHALL NOT 提供「重算全部」。
 
-- **范围必填**：至少给出一种范围（§1.4 第 13 项）；没有范围或范围展开后为空，拒绝；
+- **范围必填**：至少给出一种范围（§1.4 第 13 项）；没有范围或范围展开后为空，拒绝；`segmentRef` 只能作为附加键；
 - **先预览后执行**：`preview` 返回将处理的对象条数与涉及的信号；`apply` 才写入。1.0 只展示条数；档 1 免费，不展示费用（PRD C §7.2 第 2 条）；
 - **授权**：`rule.definition.manage`，且范围受操作者品牌范围约束（C 不扩大权限）；
-- **记录**：每次执行写一行重算记录，含操作者、信号、范围、预览条数、起止能力版本、起止时间、状态；同时写审计事件；
+- **记录**：每次执行写一行重算记录，含操作者、信号、范围、范围条数（`apply` 时展开的对象数）、起止能力版本（`from_version` 取 `apply` 时范围内对象所持的最低版本，范围内全无旧值时为 NULL；`to_version` 为目录当前版本）、起止时间、状态；同时写审计事件；
 - **效果**：重算只处理范围内的对象，把该信号升到当前能力版本；旧值进历史表（特征行）或保留为旧版本行（结果行）；**不升计划版本**；
+- **强制重算**：特征类信号在重算时即使素材指纹未变也按当前能力版本重算（正常扫描的「素材未变只前移快照」不适用）；允许当前批次（与特征行所持快照相同的 batch order）重算，只拒绝严格更旧的批次；素材未变时历史原因记 `capability_upgraded`；评论类信号按内容范围展开到其评论；
 - 重算与补算的区别：补算只填缺失，重算会覆盖 `stale`；
 - 重算期间 D 继续读旧值并标 `stale`（PRD C §7.3）；
-- 范围展开分块执行，崩溃后可续跑，不重复处理。
+- 范围展开分块执行，崩溃后可续跑，不重复处理；`running` 或 `failed` 的同范围 run 再次 `apply` 时续跑原 run；`completed` 之后再次 `apply` 新建一个 run，只处理仍低于目标版本的对象（因此范围内新进入的对象也能补上）；
+- **取消**：`recompute cancel --run <id>` 只对 `running` / `failed` 的 run 有效，置 `cancelled`、清空 `active_key`、写 `finished_at` 与审计事件；该 run 尚未执行的 chunk 任务置终态（`dead`，原因 `run_cancelled`），`tasks revive` 不再复活它们；正在执行的 chunk 在下一个分块边界看到 `cancelled` 后停止，不建新 chunk、不产生新的历史或结果行；已 `completed` / `cancelled` 的 run 调用 cancel 被拒绝（`run_not_cancellable`）。取消后同范围可新建 run；
 
 **验收标准**
 
 - 不带范围调用 `apply`，拒绝 `scope_required`；
-- `preview` 与随后 `apply` 的条数一致；`preview` 不写任何表；
+- 数据不变时，`preview` 与随后 `apply` 的条数一致；`preview` 不写任何表；
 - 无 `rule.definition.manage` 的操作者被拒绝；品牌范围外的对象不在展开结果里；
 - 重算后，范围内对象读作 `valid`，范围外的同信号仍读 `stale`；
 - 重算记录与审计事件各有一条，含操作者与范围；
 - 重算中途杀进程，重启后续跑并最终完成，每个对象只被处理一次（历史表无重复）；
+- 取消一个 `running` 的 run 后，其未执行的 chunk 不再运行、不产生新的历史或结果行；`tasks revive` 拒绝 `run_cancelled` 任务；同范围再次 `apply` 新建 run；对 `completed` / 已 `cancelled` 的 run 调用 cancel 被拒绝；
+- 素材未变的 `stale` 特征信号重算后读作 `valid`，`normalizerVersion` 更新；历史原因 `capability_upgraded`；
+- 评论类信号按内容范围重算，范围外不变；
 - 重算不改变任何监控段的版本。
 
 ### SG-12 · 读取口与补算请求（给 D 的契约）
@@ -399,14 +411,19 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 **陈述**：系统 SHALL 提供三个面向 D 的函数，D 不直接读 C 的表（PRD C §11「C 不写 A 的表，D 不写 C 的表」）：
 
 ```ts
+type SegmentRef = { planId: bigint; version: number };
+type Subject = { kind: 'content' | 'account' | 'comment'; id: bigint };
+type Param = { segment: SegmentRef; elementKey?: string };     // 参数化信号必填；C 由它解出图片 / 判定项
+
 SignalReader.read(subject, signalKey, { param?, stalePolicy }): SignalValue
 SignalReader.readMany(subjects, signalKey, { param?, stalePolicy }): Map<subject, SignalValue>
-requestScores(segmentRef, subjects): RequestResult        // 补缺失，免费
+requestScores(segmentRef, subjects, ctx?: { caller?: string; scopeFingerprint?: string }): RequestResult
+                                       // 补缺失；模板 / 元素匹配免费，ASR 与判定经 AiGatewayPort 计费
 executability(segmentRef): Executability
 retainUntil(resultIds, until): void
 ```
 
-- `SignalValue` 含：`state`、`usable`、`value`（`usable` 时）、`score`、`evidence`、`capability: {id, version}`、`producedAt`、`reason`（`missing` / `failed` / `not_applicable`）、`pending`、`resultId`（派生信号）；
+- `SignalValue` 含：`state`、`usable`、`normalizerVersion`（仅文本类信号：写入该值时所用的 `text.normalize` 版本）、`value`（`usable` 时）、`score`、`evidence`、`capability: {id, version}`、`producedAt`、`reason`（`missing` / `failed` / `not_applicable`）、`pending`、`resultId`（派生信号）；
 - `param` 对参数化信号必填：模板 / 元素 = 监控段中的图片引用；判定 = 监控段中的判定项。缺参数拒绝 `param_required`；
 - 读取口 **SHALL NOT** 创建任务、**SHALL NOT** 调用能力服务或网关；补算只经 `requestScores`；
 - 读取 `readMany` 一次最多 5,000 个主体，单次查询解决，不逐个往返；
@@ -419,7 +436,7 @@ retainUntil(resultIds, until): void
 - `readMany` 对 5,000 个主体的数据库查询次数为常数（不随主体数增长）；
 - 参数化信号缺 `param` 被拒绝；
 - 排队中的任务让对应主体返回 `missing` + `pending: queued`；任务 `dead` 时返回 `pending: dead` 与原因；
-- `requestScores` 对草稿与已发布的监控段都可用（业务进入第 2 层时就要试跑，不等发布，PRD C §5.6）；监控段不存在、`executability` 为不可执行、或主体清单超过 5,000 时拒绝。
+- `requestScores` 对**可执行的**草稿与已发布的监控段都可用（业务进入第 2 层时就要试跑，不等发布，PRD C §5.6）；监控段不存在、`executability` 为不可执行、或主体清单超过 5,000 时拒绝。
 
 ### SG-13 · 任务执行：租约、fencing、幂等
 
@@ -445,9 +462,9 @@ retainUntil(resultIds, until): void
 **陈述**：
 
 - C 的函数 SHALL 经 `assert(actor, capability, resource)` 入口授权，先 Capability、再 actor 自带的品牌范围，两步都先于任何数据库读取（沿用 `a-activity-plan` 的写法）；
-- Capability 对应：监控段写入、上传标准图、重算 = `rule.definition.manage`；`requestScores` = `rule.run.execute`；读取口与证据读取 = `rule.definition.read`（D 以服务身份调用）；CLI 的 `show` = `data.content.read` / `data.account.read`；
+- Capability 对应：监控段写入、上传标准图、重算 = `rule.definition.manage`；`requestScores`、`retainUntil` = `rule.run.execute`（D 以服务身份 `service:judgement` 调用，该身份持有 `rule.*` 三项）；读取口与证据读取 = `rule.definition.read`（D 以服务身份调用）；CLI 的 `show` = `data.content.read` / `data.account.read`；
 - 能力版本升级、`retainUntil`、清理器、扫描器使用固定服务身份 `service:signals-worker`，不经用户范围；
-- 审计事件（结构化日志，沿用 `AuditSink` 端口）至少覆盖：监控段创建 / 发布 / 清除、标准图上传 / 删除、重算预览 / 执行、任务 `dead`；事件不含图片字节、文本原文、签名 URL、模型 Key；
+- 审计事件（结构化日志，沿用 `AuditSink` 端口）至少覆盖：监控段创建 / 发布 / 清除、标准图上传 / 删除、重算预览 / 执行 / 取消、任务 `dead`；事件不含图片字节、文本原文、签名 URL、模型 Key；`signal_tasks.last_error_detail` 与结果行证据同样不得含签名 URL（写入前统一脱敏：URL 一律替换为 `<url>`）；
 - CLI 身份来自环境变量，缺任一项启动失败（不退化成全部范围）。
 
 **验收标准**
@@ -462,7 +479,7 @@ retainUntil(resultIds, until): void
 **陈述**：
 
 - **启用开关**：每个能力有启用状态，由环境变量 `HBECHO_SIGNALS_ENABLED`（能力标识逗号分隔）显式给出，**缺省只启用文本类能力**（免费、纯函数）。`image.template`、`image.element` 在真实样本标定完成并由刘学奎签字之前**不得**加入生产启用集；`speech.asr`、`speech.judge` 另需网关 `activeModel()` 非空；
-- 未启用的能力：信号读作 `missing`（`capability_disabled`），不建任务；
+- 未启用的能力：**不建任务**；读取时，已存储的值照常返回（`valid` / `stale` / `failed`），没有已存储的值才读作 `missing`（`capability_disabled`）；
 - 成本与并发类数值（评分任务并发、重试次数、租约时长、签名 URL 有效期）**没有代码默认值**，必须在配置里显式给出；起始值写在 design §14 的建议里，不当作合同；
 - **默认测试离线**：fake 能力服务、fake 网关、fake OSS、`FakeClock`；`network-deny` 沿用；CI 不发起任何真实调用；
 - **真实 smoke**：ASR / 大模型的真实调用不在本 spec 内；属于 `h-ai-min`，需要人工批准、显式开关、固定预算与审计摘要；
@@ -509,4 +526,4 @@ PRD 里的 `[手工]` 项「运营能在一个对象下看到用了哪版能力�
 
 - 完成全部 SG 需求**不自动代表** C 域对业务可用：D 未落地，没有消费方；H1 未落地，第 3 层默认 disabled；图像匹配的分数映射需要真实样本标定后才能进生产启用集；标准图专用桶未创建；
 - 本 spec 的「完成」指：文本信号随 current 指针自动产出并可读；监控段与标准图可建、可发布、可清除；模板 / 元素匹配在离线与测试机上可算；ASR 与判定在 fake 网关上完整可证；`stale`、重算、保留期、五态有离线测试；读取口与补算请求有契约测试；
-- 本 spec 不关闭 design §14 中标「待确认」的各项；它们的结论由刘学奎在评审时给出，给出前相应条目保持 `draft`。
+- 本 spec 不关闭 design §14 中仍未决的第 6、11、12、14、16 项：第 6 项在任务 3 以 fixture 核对，第 11、12 项在 D 的 spec 里关闭，第 14 项在任务 13 实测后定，第 16 项的格式由 `h-ai-min` 定；它们关闭前相应条目保持 `draft`。

@@ -1,6 +1,6 @@
 # ADR-0001 · OSS 按保留期分四桶
 
-- **状态**：accepted（2026-10-29 修订：新增第五个桶 `hbecho-course`）
+- **状态**：accepted（2026-10-29 修订：新增第五个桶 `hbecho-course`；2026-11-12 修订：新增第六个桶 `hbecho-signals`，**同日已创建**）
 - **日期**：2026-09-03
 - **决策人**：刘学奎
 - **替代**：runbook §7.2 中「建议（待确认）」的单桶 + 前缀方案
@@ -49,9 +49,27 @@
 
 原「四个桶」的决定与理由不变；本修订只增加一个用途独立、删除语义与 media 相反的桶。
 
+## 2026-11-12 修订：新增第六个桶 `hbecho-signals`
+
+- **决策人**：刘学奎（2026-11-12，[`c-signals` design §14](../../../.kiro/specs/c-signals/design.md) 第 1 项）
+- **关闭**：`c-signals` 监控段的标准图 / 元素图存放位置
+
+域 C 的标准图与元素图随监控判定计划存放，计划删除期满后要**物理删除**对象（PRD C §5.5、D PRD §2.0）。`hbecho-media` 的 RAM 策略刻意没有 `DeleteObject`，把它们放进去会让「media 桶永不删除」的物理保证去承担一个「必须删除」的场景——与第五个桶 `hbecho-course` 的理由相同。
+
+新增 `hbecho-signals`，做法同 `hbecho-course`：
+
+- 地域 `cn-beijing`、ACL 私有、开启「阻止公共访问」；
+- **无过期规则** + 碎片 7 天（保留期由应用按监控判定计划的生命周期删除）；
+- 应用角色 `hbecho-ecs-role` 在该桶额外授予 `DeleteObject`；
+- 只放标准图与元素图，不放采集媒资，不与 `media` 桶互相引用；
+- 标准图对象**不**写入 A 域的 `media_assets` / `oss_objects`；C 的 `segment_images` 自带 `bucket` / `object_key`；
+- 对象键含「监控判定计划 ID + 版本 + 图像对象 + 图片 SHA-256」。
+
+**创建记录（2026-11-12，同日）**：刘学奎事先书面同意创建桶与修改 RAM。已建 `hbecho-signals`（cn-beijing、私有、Standard、LRS、「阻止公共访问」开启、生命周期只清 7 天碎片）；`hbecho-oss-rw` 新增 v3（只追加 `SignalsStdImageReadWriteDelete`，Resource 精确到该桶；v2 保留，可 `SetDefaultPolicyVersion` 回退）。测试 ECS 的实例角色实测放行读写删，`hbecho-media` 的删除仍被拒。本条之前，该桶标「未创建」，`c-signals` 的离线测试用 fake OSS，不受影响。
+
 ## 后果
 
-- 四套 RAM 策略、四份配置；跨桶去重不可行（`media_assets` 本来就只在 media 桶内去重，不受影响）。
+- 四套 RAM 策略、四份配置（`course`、`signals` 另计）；跨桶去重不可行（`media_assets` 本来就只在 media 桶内去重，不受影响）。
 - 「media 桶永不自动删除」成为一条可验证的物理事实，而不是纪律。
 - 桶名进入 `oss_objects.bucket/object_key` 后成为历史事实；再改拓扑要同时搬对象与改历史行。
 

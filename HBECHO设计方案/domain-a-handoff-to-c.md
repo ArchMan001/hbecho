@@ -1,5 +1,12 @@
 # 域 A → 域 C 供数说明
 
+> **已知过时内容（2026-11-12 标注，正文不改；以已合并代码和 [`c-signals` requirements](../.kiro/specs/c-signals/requirements.md) 为准）**
+>
+> 1. §一.4 写评论「用 `parent_id` 区分」：已合并代码里 `comments` **没有** `parent_id`，也没有回复树，只有一级评论的最新态，没有按批次的版本；
+> 2. §二写信号状态为 `ready` / `waiting` / `unavailable`：以 [C PRD](prd-domain-c-signals.md) §3.3 的五态（`valid` / `missing` / `not_applicable` / `failed` / `stale`）为准；
+> 3. §二写 C 的信号键「以 `content_snapshot_id` 为键」：C 的特征行按 `content_id` 存**当前值**，所基于的快照作为属性记录（C-D13、C-D15）；
+> 4. §五.1 只说小红书主页没有头像与背景：现已确认 `account.bg_*` / `account.avatar_*` 对快手与小红书一律 `not_applicable`（C-D18）。
+
 > **日期**：2026-10-28
 > **给谁看**：域 C（识别与派生信号）的设计与实现。
 > **状态**：A 域的表结构与读取接口尚未冻结；本文只说明**A 能提供什么、以什么粒度**。C 不应据此假设字段名或表名。

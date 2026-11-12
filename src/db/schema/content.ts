@@ -37,6 +37,8 @@ export const contents = mysqlTable(
     index("idx_contents_platform_content").on(t.platformId, t.platformContentIdSha256),
     index("idx_contents_platform_status").on(t.platformId, t.status, t.lastSeenAt),
     index("idx_contents_current_snapshot").on(t.currentSnapshotId),
+    // c-signals 的增量扫描按它排序（requirements R1）；只增索引，不改列与语义
+    index("idx_contents_current_selected").on(t.currentSnapshotSelectedAt, t.contentId),
     check("ck_contents_kind", inList(t.contentKind, ["unknown", "video", "image", "text"])),
     check("ck_contents_status", inList(t.status, ["active", "unavailable", "deleted"])),
     foreignKey({

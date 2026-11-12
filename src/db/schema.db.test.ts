@@ -53,6 +53,9 @@ describe("迁移与参考数据", () => {
       "access_sms_sends", "access_bootstrap_tokens", "audit_events",
       // 域 G 自有的 6 张表（g-learning-min design §3），同样不属于 v2
       "courses", "course_brand_scopes", "tags", "course_tags", "learning_progress", "course_media_deletions",
+      // 域 C 自有的 9 张表（c-signals design §6.1），同样不属于 v2
+      "content_features", "comment_features", "signal_history", "signal_results", "monitoring_segments",
+      "segment_images", "signal_tasks", "signal_cursors", "signal_recompute_runs",
     ];
     const names = (tables as Array<{ n: string }>).map((r) => r.n);
     expect(B_TABLES.filter((n) => !names.includes(n))).toEqual([]);
@@ -65,7 +68,7 @@ describe("迁移与参考数据", () => {
     const byRule = Object.fromEntries((rules as Array<{ r: string; c: number | string }>).map((x) => [x.r, Number(x.c)]));
     expect(byRule.CASCADE).toBeUndefined();
     // 只有「指向一年期调用/任务的长期引用」使用 SET NULL（v2 §5.3）
-    expect(byRule["SET NULL"]).toBe(11); // 含 comments.last_provider_call_id、import_row_results.resolve_task_id
+    expect(byRule["SET NULL"]).toBe(12); // 含 comments.last_provider_call_id、import_row_results.resolve_task_id，以及 signal_tasks.result_id（c-signals：结果行按保留期清理，任务行可能活得更久；唯一一处不指向调用 / 任务的 SET NULL）
   });
 
   it("迁移种入四个平台和 aimaster 供应商；不种 sync_settings（取值未定，不静默冻结）", async () => {

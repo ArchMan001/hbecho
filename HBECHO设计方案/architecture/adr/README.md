@@ -16,7 +16,7 @@
 
 | 编号 | 决定 | 状态 | 日期 | 决策人 |
 |---|---|---|---|---|
-| [0001](0001-oss-bucket-topology.md) | OSS 按保留期分四桶（ods / media / temp / backup） | accepted | 2026-09-03 | 刘学奎 |
+| [0001](0001-oss-bucket-topology.md) | OSS 按保留期分四桶（ods / media / temp / backup）；2026-10-29 增 `course`，2026-11-12 增 `signals`（待创建） | accepted | 2026-09-03 | 刘学奎 |
 | [0002](0002-self-hosted-mysql-first-version.md) | 首版自建 MySQL，不用 RDS；版本基线 8.4 LTS（2026-11-04 修订） | accepted | 2026-09-04 | 刘学奎 |
 | [0003](0003-github-authoritative-remote.md) | GitHub 作为权威远端，Codeup 降级为可选镜像 | accepted | 2026-09-03 | 刘学奎 |
 | [0004](0004-defer-application-stack.md) | 暂不冻结应用框架、ORM/迁移工具与队列 | superseded（被 0005、0013 全部关闭） | 2026-09-02 | 刘学奎 |

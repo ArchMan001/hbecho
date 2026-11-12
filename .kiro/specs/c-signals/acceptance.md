@@ -14,13 +14,14 @@
 >
 > **最近核对**：2026-11-11
 >
-> **更新日期**：2026-11-11（初建；尚未实施，所有条目未执行）
+> **更新日期**：2026-11-12（初建于 11-11，经三轮审查修订；尚未实施，所有条目未执行）
 
 ## 怎么用
 
 - `[自动]`：可在离线测试或本机命令中判定；命令与断言写在条目里。
-- `[手工]`：需要人在 CLI 输出或样本图上看，写明谁看、看什么、检查什么。
-- `[环境]`：依赖测试机、真实桶或后续 spec，不能在本机离线判定；标明当前状态。
+- `[手工]`：需要人在 CLI 输出或样本图上看，写明谁看、看什么、检查什么；编号 `MAN-n`。
+- `[环境]`：依赖测试机、真实桶或后续 spec，不能在本机离线判定；标明当前状态；编号 `ENV-n`。
+- 自动项按字母分组编号（A–P），与 `MAN-n`、`ENV-n` 不会重号。
 - 每条对应 requirements 的 `SG-n`；没有「看一眼就行」的条目。
 - 需要 MySQL 的自动项写成 `*.db.test.ts`（`pnpm test:db`），其余是 `unit` project（`pnpm test`）；Python 侧是 `services/capability` 的 pytest；入口是 `./scripts/verify.sh`。
 - 本 spec **没有页面**（design §15），不出现页面条目。
@@ -48,7 +49,7 @@
 
 | # | 需求 | 命令 / 断言 | 预期 |
 |---|---|---|---|
-| B1 | SG-2 | 同一内容的封面信号，依次在「无封面引用 / 引用 `pending` / 引用 `failed` / 引用 `carried_forward` / 已归档但字节读不到 / 已计算」下读取 | `not_applicable` / `missing` / `missing` / `missing` / `failed` / `valid`；原因码各不相同（`no_reference`、`media_pending`、`media_failed`、`media_carried_forward`、`image_unreadable`、无） |
+| B1 | SG-2 | 同一内容的封面信号，依次在「无封面引用 / 引用 `pending` / 引用 `failed` / 引用 `carried_forward` / 已归档且补算任务因 OSS 对象缺失而失败 / 已计算」六种情形下读取（第 5 种需先 `requestScores` 并让任务跑一次） | `not_applicable` / `missing` / `missing` / `missing` / `failed` / `valid`；原因码各不相同（`no_reference`、`media_pending`、`media_failed`、`media_carried_forward`、`image_unreadable`、无） |
 | B2 | SG-2 | 提升目录中某信号版本号后读取旧结果 | `stale`，带旧值与旧版本；不是 `missing`；任务表无新行 |
 | B3 | SG-2 | 数据库插入 `state='missing'`、`'stale'`、`'not_applicable'` 的结果行 | CHECK 拒绝 |
 | B4 | SG-2 | `failed` 结果行带 `score` 或 `value` | CHECK 拒绝 |
@@ -57,6 +58,7 @@
 | B7 | SG-2 | 有一条排队中的任务 / 一条 `dead` 的任务 | `missing` + `pending: queued` / `missing` + `pending: dead` + `compute_dead` |
 | B8 | SG-2 | 能力被关闭后读取已存储的有效值 | 仍返回 `valid`；关闭只阻止新计算 |
 | B9 | SG-2 | 能力被关闭且无已存储值 | `missing`，`capability_disabled` |
+| B10 | SG-2 | 抖音账号：尚无 current 主页快照 / 有快照但无背景引用 | `missing(no_profile_snapshot)` / `not_applicable(no_reference)` |
 
 ### C. 文本信号（SG-3）
 
@@ -75,32 +77,37 @@
 | C11 | SG-3 | `normalizeKeyword` 与库内归一化使用同一函数 | 同一函数引用（静态断言导出相同） |
 | C12 | SG-3 | `building` 状态的快照、非 current 的 finalized 快照 | 不产生特征行 |
 | C13 | SG-3 | 快手内容 | 文本三信号为 `valid`（或按平台字段表 `not_applicable`）；`account.*` 为 `not_applicable` |
+| C14 | SG-3 | 话题长度 65 字符的令牌；一个内容含 60 个不同话题 | 超长令牌被丢弃；保留前 50 个且顺序为首次出现顺序（常量待确认，见 design §14 第 17 项） |
 
 ### D. 评论文本信号（SG-4）
 
 | # | 需求 | 命令 / 断言 | 预期 |
 |---|---|---|---|
-| D1 | SG-4 | 评论入库后跑一轮评论扫描 | `comment_features` 有一行，`comment.text_normalized` 为 `valid` |
+| D1 | SG-4 | 评论入库后跑一轮评论扫描 | `comment_features` 有一行，`comment.text_normalized` 为 `valid`，信封带 `nv` |
 | D2 | SG-4 | 同一评论正文再次出现（`last_seen_at` 前移） | 不写入 |
 | D3 | SG-4 | 评论正文被平台修改 | 特征行更新；历史表新增一行（`material_changed`） |
 | D4 | SG-4 | `suspected_deleted` / `deleted` 的评论 | 不被新抽取；已有特征行保留 |
 | D5 | SG-4 | 检查 C 的全部表的列 | 无评论作者 ID、昵称、点赞数 |
 | D6 | SG-4 | 快手内容的评论信号 | `not_applicable`（`platform_unsupported`） |
+| D7 | SG-4 | 评论 `content_text` 为 `NULL` 与空串 | 两者信号都读 `valid` 空值；素材指纹不同；从 `NULL` 变空串会触发一次重算并写历史 |
 
 ### E. 特征存储与版本（SG-5）
 
 | # | 需求 | 命令 / 断言 | 预期 |
 |---|---|---|---|
-| E1 | SG-5 | 一个内容反复推进 current | `content_features` 中仍只有一行（主键 `content_id`）；信封每个信号都有 `state` / `cap` / `ver` / `at` |
+| E1 | SG-5 | 一个内容反复推进 current | `content_features` 中仍只有一行（主键 `content_id`）；信封里存在的每个信号都有 `state`（只能是 `valid` / `failed`）/ `cap` / `ver` / `at`，文本类信号还有 `nv` |
 | E2 | SG-5 | 先写批次 5 的快照特征，再迟到处理批次 3 | 特征行不变，仍指向批次 5（`skipped_older`） |
-| E3 | SG-5 | 标题改了 | 特征行为新值；历史表新增一行，内容为旧标题的归一化值，原因 `material_changed` |
+| E3 | SG-5 | 标题改了 | 特征行为新值；历史表新增一行，内容为旧标题的归一化值，原因 `material_changed`；历史行的 `normalizer_version` 为写入时的 `nv` |
 | E4 | SG-5 | 只把 `text.hashtags` 版本 1 → 2 | 标题、正文读作 `valid`；话题读作 `stale`；`content.cover_template_score` 不受影响 |
 | E5 | SG-5 | 删除 ODS 相关对象与表数据后读取特征 | 读取不受影响（读取路径不引用 ODS） |
 | E6 | SG-5 | 检查 `content_features` / `comment_features` / `signal_results` 的列 | 不含 `published_at`、互动数、作者 ID 等 A 的事实字段 |
-| E7 | SG-5 | 值与信封不一致（`title_normalized` 非空而信封 `failed`） | CHECK 拒绝 |
+| E7 | SG-5 | 值与信封不一致：`title_normalized` 非空而信封 `failed`；`title_normalized` 非空而信封**缺条目**；`title_normalized` 为空而信封 `valid`（评论特征行同样三种） | 均被 CHECK 拒绝（含信封缺条目这一格，空安全比较保证不被 NULL 放行） |
 | E8 | SG-5 | 复合外键：特征行指向别的内容的快照 | 数据库拒绝 |
 | E9 | SG-5 | 扫描中途杀进程后重做同一批 | 特征行恰好一行，历史无重复 |
 | E10 | SG-5 | 游标已越过、但提交更晚的内容（回看窗口内 / 窗口外） | 窗口内由「迟到」查询补上；窗口外由对账补上 |
+| E11 | SG-5 | 信封里写入 `state='missing'` 或 `'stale'`（特征行与评论特征行） | CHECK 拒绝（只允许 `valid` / `failed`） |
+| E12 | SG-5 | `text.title_normalized` 用旧归一化版本写入（`nv=1`）；目录升到 `nv=2` 后 D 读到 `stale` 值 | `SignalValue.normalizerVersion` 为 1；`normalizeKeyword(raw, 1)` 与该值同口径；`NORMALIZERS` 含 1 与 2 |
+| E13 | SG-5 | `text.hashtags.douyin` 解析器版本仍为 1、`nv=1`；只把 `text.normalize` 升到 2 | 话题读作 `stale`；`capability.version` 仍为 1；`normalizerVersion` 为 1；`normalizeKeyword(raw, 1)` 与旧话题同口径 |
 
 ### F. 复用键与结果行（SG-6）
 
@@ -114,6 +121,7 @@
 | F6 | SG-6 | 判定结果行缺结论 / 理由 / 模型版本 / 提示词版本任一项 | 写入前 zod 拒绝，库中无行 |
 | F7 | SG-6 | 升级能力版本后再次计算同一（素材、参数） | 新增一行（版本更高）；旧行未被修改 |
 | F8 | SG-6 | 素材指纹稳定性：同样的标题 / 正文 / `tag_text` 字符串，`NULL` 与空串 | 同值得到同指纹；`NULL` 与空串指纹不同 |
+| F9 | SG-6 | 同一（信号键、素材、参数、版本）、能力标识不同的两行 | 可并存；目录测试断言信号键与能力标识一一对应、不可变更 |
 
 ### G. 监控段与标准图（SG-7）
 
@@ -133,6 +141,7 @@
 | G12 | SG-7 | D 建计划 → `create`；D 改信号集合 → `setItems`；D 改图 → `putImage`（同版本草稿） | 同一 `(plan_id, version)` 行被更新，不产生新版本；`version` 只在 `newDraft` 时增加 |
 | G13 | SG-7 | 上传前 `putImage` 的 OSS `put` 失败 | 数据库无行，旧图保持 |
 | G14 | SG-7 | `putImage` 事务失败（注入） | 刚上传的对象被尽力删除；旧图保持 |
+| G15 | SG-7 | `element_key` 为 `a/b`、`..`、空串（元素图）、65 字符 | 均被 zod 拒绝；合法值 `logo-1_A.v2` 通过 |
 
 ### H. 素材比对（SG-8）
 
@@ -154,6 +163,7 @@
 | H14 | SG-8 | runner 调用能力服务期间 | 连接池内无未提交事务（测试钩子在调用点检查） |
 | H15 | SG-8 | 账号主体（抖音）背景 / 头像 | 经 `current_profile_snapshot_id` 找引用；无引用 → `not_applicable` |
 | H16 | SG-8 | 超过 5,000 主体 | 拒绝 |
+| H17 | SG-8 | Python 取候选图返回 404 / 取候选图连接超时 | 前者 422 `source_missing`（`side=candidate`）→ 写 `failed(image_unreadable)`、不重试；后者 502 `source_unavailable` → 瞬时重试 |
 
 ### I. 音频理解（SG-9）
 
@@ -172,6 +182,8 @@
 | I11 | SG-9 | 判定的参数指纹 | 先取 `activeModel()` 再计算；`activeModel()` 为 `null` 时不计算、不建任务 |
 | I12 | SG-9 | 每监控段至多一个判定项 | 第二个被拒绝（执行路径与保存路径各断言一次） |
 | I13 | SG-9 | 静态检查 | `signals` 模块不 import 任何模型 SDK / `fetch` 到模型域名；AI 调用只出现在 `AiGatewayPort` 的实现处 |
+| I14 | SG-9 | 监控段只配 `content.asr_text`：fake 网关启用 / 默认禁用 | 启用时 `requestScores` 建 ASR 任务并最终读到转写；禁用时 `executability` 列出阻塞项、任务数 0、读作 `capability_disabled` |
+| I15 | SG-9 | `activeModel('asr')` 非空而 `activeModel('judge')` 为空 | `content.asr_text` 可请求并计算；`content.asr_judgement` 读作 `capability_disabled`、不建任务；ASR 文本的参数指纹为零，不含任何模型版本 |
 
 ### J. 能力版本、`stale` 与保留期（SG-10）
 
@@ -186,23 +198,31 @@
 | J7 | SG-10 | 清理器 | 不删除特征行；分块删除中途退出后可重跑 |
 | J8 | SG-10 | 写入时 `expires_at` | 成功 = 产出 + 1 年；失败 = 产出 + 3 个月；历史行 = 取代 + 1 年 |
 | J9 | SG-10 | 升级后补算（`requestScores`） | 不对 `stale` 的（素材、参数）建任务 |
+| J10 | SG-10 | 失败结果行被清理而其任务行仍为 `succeeded`，再次 `requestScores` | 任务被置回 `pending` 并重新补算，不会永久 `missing` |
 
 ### K. 显式重算（SG-11）
 
 | # | 需求 | 命令 / 断言 | 预期 |
 |---|---|---|---|
 | K1 | SG-11 | `apply` 不带范围 | `scope_required` |
-| K2 | SG-11 | `preview` 与随后 `apply` | 条数一致；`preview` 不写任何表 |
+| K2 | SG-11 | 数据不变时 `preview` 与随后 `apply` | 条数一致；`preview` 不写任何表；两者之间数据变化时以 `apply` 时的 `scope_count` 为准 |
 | K3 | SG-11 | 无 `rule.definition.manage` 的操作者 | 拒绝（读库之前） |
 | K4 | SG-11 | 品牌范围受限的操作者，范围含范围外对象 | 范围外对象不在展开结果里 |
 | K5 | SG-11 | 重算后 | 范围内读作 `valid`，范围外同信号仍 `stale` |
-| K6 | SG-11 | 重算记录与审计事件 | 各一条，含操作者、信号、范围、预览条数、起止版本 |
+| K6 | SG-11 | 重算记录与审计事件 | 各一条，含操作者、信号、范围、`scope_count`、`from_version`（范围内最低版本；全无旧值时为 NULL）与 `to_version` |
 | K7 | SG-11 | 中途杀进程后重启 | 续跑完成；每个对象只被处理一次（历史表无重复） |
 | K8 | SG-11 | 重算前后监控段的版本 | 不变 |
 | K9 | SG-11 | `brandId` 范围，账号在重算前换过店 | 用**当前**归属展开 |
-| K10 | SG-11 | 同一 `(信号, 目标版本, 范围)` 再次 `apply` | 返回既有 run（幂等），不重复处理 |
+| K10 | SG-11 | 同范围 `running` 的 run 再次 `apply` | 返回并续跑既有 run，不重复处理 |
 | K11 | SG-11 | CLI 不提供 `--all` / 全量重算入口 | `parseArgs` strict 拒绝 |
 | K12 | SG-11 | 重算期间读取 | 仍读到旧值并标 `stale`，不阻塞 |
+| K13 | SG-11 | 同范围 `failed` 的 run 再次 `apply` | 置回 `running`，在 `cursor_id` 处复活/新建 chunk 并续跑 |
+| K14 | SG-11 | 同范围 `completed` 后范围内新进入对象，再次 `apply` | 新建 run，只处理仍低于目标版本的对象；旧对象不重复处理、历史无重复 |
+| K15 | SG-11 | 范围内全无旧值（对象从未计算过该信号）时 `apply` | `from_version` 为 `NULL`；对象按补算同样落到目标版本；不报错 |
+| K16 | SG-11 | `recompute cancel` 放弃一个 `running` 的 run（队列里还有 chunk）；之后同范围再次 `apply` | run 置 `cancelled` 且 `active_key` 清空；未开始的 chunk 置 `dead(run_cancelled)` 不再执行；已领取的 chunk 在下一个分块边界停止，不建新 chunk、不产生新的历史/结果行；新建 run，不续跑已放弃的 |
+| K17 | SG-11 | 对 `completed` / 已 `cancelled` 的 run 调用 `recompute cancel` | 拒绝 `run_not_cancellable`；状态不变 |
+| K18 | SG-11 | 素材未变、批次与特征行相同的文本信号已 `stale`；`apply` 重算 | 该信号读作 `valid`、`normalizerVersion` 更新为当前；历史行 `superseded_reason='capability_upgraded'`；不因素材指纹相同或批次相同而跳过 |
+| K19 | SG-11 | `comment.text_normalized` 按内容范围重算 | 范围内内容的评论特征行更新；范围外不变；评论数不影响内容信号 |
 
 ### L. 读取口与补算请求（SG-12）
 
@@ -212,7 +232,7 @@
 | L2 | SG-12 | `readMany` 5,000 个主体 | 数据库查询次数为常数（计数器） |
 | L3 | SG-12 | 参数化信号缺 `param` | `param_required` |
 | L4 | SG-12 | 排队中 / `dead` 的任务 | `pending: queued` / `pending: dead` |
-| L5 | SG-12 | `requestScores` 对草稿与已发布监控段 | 均可用 |
+| L5 | SG-12 | `requestScores` 对**可执行的**草稿与已发布监控段 | 均可用；不可执行的草稿被拒绝（`not_executable`） |
 | L6 | SG-12 | `requestScores` 对不存在的监控段、不可执行的监控段、超 5,000 主体 | 拒绝 |
 | L7 | SG-12 | 返回值 | 不含内容原文 |
 | L8 | SG-12 | fake D 契约：`create → putImage → setItems → requestScores → readMany 轮询 → publish → newDraft → purge` | 序列通过，轮询最终无 `pending` |
@@ -228,6 +248,7 @@
 | M5 | SG-13 | 静态检查 | `signals` 模块不 import `orchestrator/claim`，不写 `sync_tasks` |
 | M6 | SG-13 | 重复入队同一复用键 | 返回既有任务 |
 | M7 | SG-13 | 任务保留期 | `expires_at` = 创建 + 1 年；过期任务被清理器删除 |
+| M8 | SG-13 | `signals tasks revive` 一个 `dead(run_cancelled)` 的 chunk 任务 | 拒绝；不复活已取消 run 的分块 |
 
 ### N. 授权与审计（SG-14）
 
@@ -235,9 +256,9 @@
 |---|---|---|---|
 | N1 | SG-14 | 缺 Capability 的调用 | 读库之前被拒绝（查询计数器为 0） |
 | N2 | SG-14 | 越品牌范围的重算对象 | 表现为「未找到」 |
-| N3 | SG-14 | 审计事件字段 | 无签名 URL、无文本原文、无图片字节、无模型 Key |
+| N3 | SG-14 | 审计事件字段；`signal_tasks.last_error_detail`；结果行 `evidence` | 无签名 URL（统一替换为 `<url>`）、无文本原文、无图片字节、无模型 Key；对含签名 URL 的 Python 错误消息做断言 |
 | N4 | SG-14 | 缺 `HBECHO_SIG_ACTOR` / `_CAPABILITIES` / `_BRAND_SCOPE` 任一项 | CLI 启动失败，退出码非零；`_BRAND_SCOPE` 缺省不退化为全部 |
-| N5 | SG-14 | 审计事件覆盖 | 监控段创建 / 发布 / 清除、标准图上传 / 删除、重算预览 / 执行、任务 `dead` 各有事件 |
+| N5 | SG-14 | 审计事件覆盖 | 监控段创建 / 发布 / 清除、标准图上传 / 删除、重算预览 / 执行 / 取消、任务 `dead` 各有事件 |
 
 ### O. 配置、门控与离线（SG-15）
 
@@ -284,7 +305,7 @@ C PRD §十二的每一条都有对应：
 | C2：`carried_forward` 不参与 | H1 |
 | C2：返回得分与版本，不返回匹配 / 不匹配 | H13 |
 | C2：图片不可读 → `failed`，不是 0 | B5、H11 |
-| C2：`[手工]` 运营看到版本、时间、匹配点数 | 手工 M1 |
+| C2：`[手工]` 运营看到版本、时间、匹配点数 | MAN-1 |
 | C3：ASR 转写，`asr_text` 全局共享 | I2 |
 | C3：结构化判定含结论 / 理由 / 模型版本 / 提示词版本 | I10 |
 | C3：不同标准 / 提示词 / 模型不复用 | I3、I4 |
@@ -312,28 +333,28 @@ C PRD §十二的每一条都有对应：
 
 | # | 需求 | 谁看 | 在哪看 | 检查什么 |
 |---|---|---|---|---|
-| M1 | SG-8 | 评审人 | 测试 ECS，CLI `signals show --content <id>` | 一个已计算的内容下能看到：用了哪版能力、什么时候算的、匹配点数量与内点率；输出里没有内容原文 |
-| M2 | SG-8 | 业务 + 刘学奎 | 标定报告 | 约 20 对脱敏样本的分数分布合理（同图高、轻度改动居中、无关图低）；每个整数档配有一张样例图；`R_FULL` / `I_FULL` 的取值有依据；刘学奎签字后才可把 `image.*` 加入生产启用集 |
-| M3 | SG-8 | 业务 | 样本图 | 纯色 logo、文字类元素在元素模式下得分很低且 `low_features` 为真——确认这符合 PRD C §5.1 对元素图适用边界的描述 |
-| M4 | SG-3 | 评审人 | 测试 ECS，用 `a-full-sync` 已有的真实同步数据 | 抽查 10 个内容：话题与原文标题 / 正文 / `tag_text` 对得上，无漏抽 / 错抽；抖音、小红书、快手各至少 3 个 |
-| M5 | SG-7 | 评审人 | 测试 ECS | 标准图上传后，CLI `segment show` 列出的对象键含计划 ID、版本、图像对象与 SHA-256；`segment purge` 后桶内无残留（需先有真实桶，见 E1） |
+| MAN-1 | SG-8 | 评审人 | 测试 ECS，CLI `signals show --content <id>` | 一个已计算的内容下能看到：用了哪版能力、什么时候算的、匹配点数量与内点率；输出里没有内容原文 |
+| MAN-2 | SG-8 | 业务 + 刘学奎 | 标定报告 | 约 20 对脱敏样本的分数分布合理（同图高、轻度改动居中、无关图低）；每个整数档配有一张样例图；`R_FULL` / `I_FULL` 的取值有依据；刘学奎签字后才可把 `image.*` 加入生产启用集 |
+| MAN-3 | SG-8 | 业务 | 样本图 | 纯色 logo、文字类元素在元素模式下得分很低且 `low_features` 为真——确认这符合 PRD C §5.1 对元素图适用边界的描述 |
+| MAN-4 | SG-3 | 评审人 | 测试 ECS，用 `a-full-sync` 已有的真实同步数据 | 抽查 10 个内容：话题与原文标题 / 正文 / `tag_text` 对得上，无漏抽 / 错抽；抖音、小红书、快手各至少 3 个 |
+| MAN-5 | SG-7 | 评审人 | 测试 ECS | 标准图上传后，CLI `segment show` 列出的对象键含计划 ID、版本、图像对象与 SHA-256；`segment purge` 后桶内无残留（需先有真实桶，见 ENV-1） |
 
 ## 环境依赖项（不能离线验证）
 
 | # | 依赖 | 当前状态 | 何时可验 |
 |---|---|---|---|
-| E1 | 真实 `hbecho-signals` 桶与 RAM（读写删） | **未创建**；需刘学奎同意并走 `server-access.md` 的逐步确认 | 桶创建后，任务 13 在测试 ECS 上验 M5 |
-| E2 | Python 服务上的 OpenCV 匹配（真实 ffmpeg ≥ 7.1 + HEIC 封面） | 能力服务已存在，无匹配端点 | 任务 7 之后；测试 ECS 上用合成图 + 一张 HEIC 样例跑一次 |
-| E3 | 匹配分标定 | 未开始，等业务提供样本 | 任务 7；M2 通过前 `image.*` 不进生产启用集 |
-| E4 | 真实 ASR / 大模型 | **`h-ai-min` 未开始**；本 spec 的网关默认 disabled | `h-ai-min` 落地并通过其 smoke 后，另行验证 C 的第 3 层端到端 |
-| E5 | D 的消费 | **`d-rule-engine` 未开始** | D 的 spec 对齐端口形状后（design §14 第 11 项） |
-| E6 | 扫描回看窗口在真实同步写入并发下是否足够 | 未验证 | 任务 13：测试 ECS 上跑一轮 `a-full-sync` 的 smoke 数据并观察「迟到」查询的补回数量 |
-| E7 | 规模与吞吐 | 未实测 | 任务 13 回填 design §12.1 |
+| ENV-1 | 真实 `hbecho-signals` 桶与 RAM（读写删） | **未创建**；需刘学奎同意并走 `server-access.md` 的逐步确认 | 桶创建后，任务 13 在测试 ECS 上验 MAN-5 |
+| ENV-2 | Python 服务上的 OpenCV 匹配（真实 ffmpeg ≥ 7.1 + HEIC 封面） | 能力服务已存在，无匹配端点 | 任务 7 之后；测试 ECS 上用合成图 + 一张 HEIC 样例跑一次 |
+| ENV-3 | 匹配分标定 | 未开始，等业务提供样本 | 任务 7；MAN-2 通过前 `image.*` 不进生产启用集 |
+| ENV-4 | 真实 ASR / 大模型 | **`h-ai-min` 未开始**；本 spec 的网关默认 disabled | `h-ai-min` 落地并通过其 smoke 后，另行验证 C 的第 3 层端到端 |
+| ENV-5 | D 的消费 | **`d-rule-engine` 未开始** | D 的 spec 对齐端口形状后（design §14 第 11 项） |
+| ENV-6 | 扫描回看窗口在真实同步写入并发下是否足够 | 未验证 | 任务 13：测试 ECS 上跑一轮 `a-full-sync` 的 smoke 数据并观察「迟到」查询的补回数量 |
+| ENV-7 | 规模与吞吐 | 未实测 | 任务 13 回填 design §12.1 |
 
 ## 覆盖不了的
 
 - 真实模型的转写与判定质量、成本与延迟：属于 `h-ai-min`，本 spec 只证明编排、参数化、缓存、失败语义；
-- 匹配分对真实业务图的区分度：只由人工标定（M2）证明，合成图只证明排序；
+- 匹配分对真实业务图的区分度：只由人工标定（MAN-2）证明，合成图只证明排序；
 - 页面上的信号展示：本 spec 无页面，D 的页面验收另立；
 - 多进程并行扫描的性能：游标只有一份，并行不提速；正确性靠租约与幂等，性能不声称；
 - 生产部署形态与资源上限：不在本 spec。

@@ -7,7 +7,7 @@
 
 ## 背景
 
-C2 档 1 的模板匹配与元素匹配需要本地图像计算（pHash 预筛 + SIFT / ORB）；音频轨抽取需要 ffmpeg。旧系统用 `spawn python3` + 正则解析 stderr，契约脆弱（总 PRD §2.2 教训 8）。D-35 定为常驻小服务（单 worker，空闲近 0 CPU）；ADR-0005 规定 Python 不承载业务状态、不直连业务库、不实现权限。
+C2 档 1 的模板匹配与元素匹配需要本地图像计算（SIFT / ORB；~~pHash 预筛~~ —— 2026-11-12 由刘学奎修订，见下方补记：1.0 不做预筛）；音频轨抽取需要 ffmpeg。旧系统用 `spawn python3` + 正则解析 stderr，契约脆弱（总 PRD §2.2 教训 8）。D-35 定为常驻小服务（单 worker，空闲近 0 CPU）；ADR-0005 规定 Python 不承载业务状态、不直连业务库、不实现权限。
 
 ## 决定
 
@@ -45,6 +45,20 @@ C2 档 1 的模板匹配与元素匹配需要本地图像计算（pHash 预筛 +
    不用它做什么：不对外暴露端口（只在 compose 内网），不经 Nginx；不承载业务状态；不用来做进程管理（重启靠 compose 的 `restart: unless-stopped`）
 
    Python 侧除 FastAPI、uvicorn、OpenCV、pytest 外，新依赖仍须先登记。
+
+## 补记（2026-11-12，`c-signals` 任务 0；决策人：刘学奎）
+
+1. **新增 `POST /v1/image/match`**：请求为 JSON `{reference_url, candidate_url, mode: "template" | "element", max_bytes}`，两个 URL 都是 Node 签发的短期 GET 签名 URL，沿用本 ADR「Python 不持有任何 OSS 凭证」；响应为 JSON `{score, capability: {id, version}, evidence}`，`score` 为 0.00–10.00。错误体仍是 JSON `{code, message, side?}`：`side` 为 `candidate` / `reference`，区分是哪张图的问题；来源返回 404 为 422 `source_missing`（确定性），连接失败、超时、来源 5xx 为 502 `source_unavailable`（瞬时）。这是「契约：JSON 请求 / 响应」的常规情形，不是二进制例外。
+2. **分数映射在 Python 内**：0–10 分的映射随算法一起升版，能力版本由响应里的 `capability.{id,version}` 回报；Node 校验与自己目录里的版本一致，不一致按瞬时失败处理。响应头 `X-Capability-Version` **仍是服务版本**（现状 `0.1.0`），Node 不用它做校验。
+3. **1.0 不做 pHash 预筛**：`image.template@1` / `image.element@1` 直接 SIFT / ORB。日调用量估算小于 1,000 次，预筛多一个需要标定的阈值和一条出错路径；日调用量上到十万量级时再加预筛并升能力版本。
+4. **登记 numpy**：
+
+   采用：numpy（⭐ 25k+，BSD-3-Clause；安装前复核；`opencv-python-headless` 的必需传递依赖）
+   用途：OpenCV 的数组类型；随 OpenCV 一起安装
+   不用它做什么：不单独选型，不在 `capability` 代码里用它做业务计算以外的事；不单独升版本，版本由 OpenCV 的依赖约束决定
+
+   Python 侧除 FastAPI、uvicorn、OpenCV（含其传递依赖 numpy）、pytest 外，新依赖仍须先登记。
+5. **签名 URL 沿用**：本补记第 1 条与 2026-11-05 补记第 1 条一致，`c-signals` 沿用，不另行修订「OSS 访问方式」。
 
 ## 后果
 

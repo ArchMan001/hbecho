@@ -21,7 +21,7 @@
 ## 进度
 
 - [x] 任务 0 · 文档前置（ADR 增补、CONTEXT 词汇、handoff 订正、INDEX、待确认闸门）
-- [ ] 任务 1 · schema 与迁移（**完成后推第一次**）
+- [x] 任务 1 · schema 与迁移（2026-11-12 完成并推第一次）
 - [ ] 任务 2 · 骨架：目录、错误、配置、授权审计、A 事实读取口、测试挂具、静态护栏
 - [ ] 任务 3 · 文本纯函数：归一化、话题解析、平台字段表
 - [ ] 任务 4 · 特征行写入与扫描驱动（内容与评论）、历史表、对账
@@ -87,12 +87,14 @@
   - **未证明**：创建 `hbecho-signals` 桶与 RAM 变更本任务**不做**（需要单独说明并得到同意，见「必须停下来问的条件」）。
   - **完成记录（2026-11-12）**：闸门——刘学奎确认第 1–5、7–10、13、15、17、18 项（13 项）按建议采纳；第 7 项采纳的是标定的方法与门槛，不是分数；第 6、11、12、14、16 项仍未决。文档动作——ADR-0001 增补（第六个桶，未创建）、ADR-0012 补记（`/v1/image/match`、numpy、不做预筛、header 语义）、`CONTEXT.md` 增 Signal / MonitoringSegment、`domain-a-handoff-to-c.md` 文首标注过时内容、`server-operations-runbook.md` 桶清单登记（标「未创建」）、`INDEX.md` 状态更新、C PRD 升 v1.3（C-D15～C-D20；C-D09 前半句按 `structure.md` 加删除线并注明修订；D PRD §2.3 的 pHash 同步标注）、requirements 补 R11、design §14 标注已采纳。文档检查（链接、登记、密钥）通过。
 
-- [ ] 1. schema 与迁移
+- [x] 1. schema 与迁移
   - **Requirements:** SG-5、SG-6、SG-7、SG-13、SG-16
   - **Design:** §6
   - 新增 `src/db/schema/signals.ts`（九张表，含全部 CHECK、唯一键、复合外键、`ON DELETE SET NULL` 的任务→结果引用）；`contents` 增加 `idx_contents_current_selected`；`src/db/schema/index.ts` 导出；`drizzle-kit generate` 生成迁移；`pnpm db:migrate` 在干净库上通过。
   - **验证**（`signals-schema.db.test.ts`）：干净库连续迁移两次幂等；`drizzle-kit generate` 无新文件；`content_features` 的三态一致 CHECK（`title_normalized` 非空而信封说 `failed` → 数据库拒绝）；`signal_results` 的形状 CHECK（`failed` 带 `score` → 拒绝；`valid` 同时有 `score` 与 `value` → 拒绝；`score = 10.01` → 拒绝）；唯一键 `uq_signal_results_key` 拒绝重复；`segment_images` 同对象第二张模板图被唯一键拒绝、模板图带 `element_key` 被 CHECK 拒绝；复合外键拒绝指向别的内容的快照；删除被引用的 `monitoring_segments` 行被 RESTRICT 拒绝；`signal_tasks` 的租约 CHECK。
   - **完成后推第一次**（迁移在干净库跑通；异地备份）。
+  - **完成记录（2026-11-12）**：分支 `c-signals`（从 `main@718a8a4` 起）。新增 `src/db/schema/signals.ts`（九张表）、迁移 `drizzle/0011_c_signals_schema.sql`（`drizzle-kit generate` 生成）、`contents` 上的 `idx_contents_current_selected`；新增 `src/db/signals-schema.db.test.ts`（26 个用例，逐条覆盖上面的验证项，另含"九张表存在且无级联""contents 索引列序"）。两处既有的表数 / `SET NULL` 计数断言随之更新：`schema.db.test.ts` 与 `bootstrap.db.test.ts` 把 C 的九张表并入"非 v2 表"排除清单（与 B、G 同一做法），全库 `SET NULL` 计数 11 → 12（`signal_tasks.result_id`，注释说明理由）。本机 `./scripts/verify.sh` 通过：数据库测试 1265 通过 / 1 个既有 skip，迁移一致，文档与密钥，Python 18 通过。
+  - **观察到的偶发失败（与本任务无关，但如实记录）**：第一次完整 verify 中，`activity-plan/scale.perf.db.test.ts` 的"并发解析"用例失败过一次（`sync_batches` 更新处的事务错误，完整错误被截断，未取到锁类型）；随后单独重跑，本分支 1/2 次失败、之后 4/4 通过，干净的 `main` 工作树上 4/4 通过，第二次完整 verify 全绿。它不碰 C 的任何表；但无法证明与新增的 `contents` 索引无关，所以留一条给 a-activity-plan 的维护者核对（并发解析的死锁重试）。
 
 - [ ] 2. 骨架、事实读取口、测试挂具与静态护栏
   - **Requirements:** SG-1、SG-14、SG-15、SG-16

@@ -8,4 +8,5 @@ export * from "./learning";
 export * from "./media";
 export * from "./org";
 export * from "./reference";
+export * from "./signals";
 export * from "./sync";

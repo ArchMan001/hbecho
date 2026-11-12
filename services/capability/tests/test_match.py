@@ -137,12 +137,13 @@ def files(tmp_path_factory):
 
 
 def post(base: str, body: object):
+    """响应头名统一转小写：uvicorn 只装 h11 时头名是小写，装了 httptools 时保留原样，断言不能依赖大小写。"""
     req = urllib.request.Request(base + "/v1/image/match", json.dumps(body).encode(), {"Content-Type": "application/json"}, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=120) as r:
-            return r.status, dict(r.headers), json.loads(r.read())
+            return r.status, {k.lower(): v for k, v in r.headers.items()}, json.loads(r.read())
     except urllib.error.HTTPError as e:
-        return e.code, dict(e.headers), json.loads(e.read())
+        return e.code, {k.lower(): v for k, v in e.headers.items()}, json.loads(e.read())
 
 
 def req(files: str, ref: str, cand: str, mode: str = "template", max_bytes: int = 20 * 1024 * 1024) -> dict:
@@ -152,7 +153,7 @@ def req(files: str, ref: str, cand: str, mode: str = "template", max_bytes: int 
 def test_success_response_shape(base, files):
     status, headers, body = post(base, req(files, "a.png", "a_warp.png"))
     assert status == 200
-    assert headers["X-Capability-Version"] == VERSION  # 服务版本；能力版本在 JSON 里
+    assert headers["x-capability-version"] == VERSION  # 服务版本；能力版本在 JSON 里
     assert body["capability"] == {"id": "image.template", "version": 1}
     assert 7 <= body["score"] <= 10
     assert body["evidence"]["inliers"] > 0
@@ -174,7 +175,7 @@ def test_success_response_shape(base, files):
 def test_error_codes_carry_side(base, files, ref, cand, status, code, side):
     s, headers, body = post(base, req(files, ref, cand))
     assert (s, body["code"], body["side"]) == (status, code, side)
-    assert headers["X-Capability-Version"] == VERSION
+    assert headers["x-capability-version"] == VERSION
 
 
 def test_input_too_large_names_the_side(base, files):

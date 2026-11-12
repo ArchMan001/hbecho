@@ -22,7 +22,10 @@
 - **已知上限**：不处理上传中途临时凭证过期（`RefreshUploadVideo` 未接）；2 GB 视频在慢上行下可能超过凭证有效期。
 - `next.config.ts` 把 `ali-oss`、两个阿里云 SDK 放进 `serverExternalPackages`（它们是 CommonJS 且有运行期 `require`，被打包器内联会构建失败）。
 
-### 3. 播放器用阿里云 Aliplayer Web SDK 2.25.1，**CDN 脚本加载，不进 npm**
+
+> **2026-11-12 版本订正**：播放器 SDK 从 2.25.1 升到 **2.29.1**。阿里云控制台的「播放器 Web端标准版」License 明确要求 Web 播放器 SDK **2.29.1 及以上**；CDN 的 2.29.1 JS/CSS 已核验返回 200。这是版本订正，不改变本 ADR 的其他决定。
+
+### 3. 播放器用阿里云 Aliplayer Web SDK 2.29.1，**CDN 脚本加载，不进 npm**
 - **用途**：`vid` + `playauth` 播放；页面里点击后才加载脚本。
 - **不用它做什么**：不自研 HLS；不做自动播放（G-D38）。
 - **License**：该 SDK 要求在控制台申请与**播放页面域名**绑定的 License（key + domain）；没有 License 只能本地调试。域名与备案（ADR-0007 §4、G-D47）未就绪前，**生产播放不能验收**。页面从 `HBECHO_PLAYER_LICENSE_DOMAIN` / `HBECHO_PLAYER_LICENSE_KEY` 读取，缺省不传。
@@ -50,7 +53,7 @@
 
 ## 真实浏览器端到端（2026-11-11，Chrome 157 headless，本机 `next dev` + 真实 MySQL + 真实 `hbecho-course` 桶 + 真实 VOD）
 - 超管：资料课（封面 + PDF）浏览器直传 `hbecho-course`（预检 OPTIONS 200 + PUT 200）→ 保存成功；视频课（封面 + MP4）浏览器分片上传 VOD 存储桶（OPTIONS 200 + PUT 200，**VOD 存储桶的跨域放行不需要额外配置**）→ 保存成功；标签新建。
-- 门店专员：列表出现资料课与（转码完成后的）视频课；私有桶封面在 `<img>` 里显示；资料详情 `<iframe>` 内联预览（`Content-Disposition: inline`）；打开即上报；「下载原件」得到 OSS 附件链接（`attachment; filename=…`）；微信 UA 下下载按钮变成「复制链接，在浏览器打开」；视频点击后加载 Aliplayer 2.25.1（CDN）并播放到片尾，进度心跳 / 补报 POST 200。
+- 门店专员：列表出现资料课与（转码完成后的）视频课；私有桶封面在 `<img>` 里显示；资料详情 `<iframe>` 内联预览（`Content-Disposition: inline`）；打开即上报；「下载原件」得到 OSS 附件链接（`attachment; filename=…`）；微信 UA 下下载按钮变成「复制链接，在浏览器打开」；视频点击后加载 Aliplayer 2.29.1（CDN）并播放到片尾，进度心跳 / 补报 POST 200。
 - **未覆盖**：真实手机 / 微信内的渲染（PDF 在手机浏览器 iframe 里的表现、微信 WebView 的视频）；Aliplayer License（见下）。
 
 ## 运行期身份（生产路径）
@@ -71,7 +74,7 @@
 | 方案 | 不选原因 |
 |---|---|
 | 阿里云官方 `aliyun-upload-sdk`（浏览器） | 再引一个上传库；底层就是 ali-oss 分片上传 |
-| npm 安装 `aliyun-aliplayer` | 2.25.1 官方文档同时给了 CDN 与 npm；包体较大且要进客户端打包。CDN 按需加载更轻，缺点是无 SRI |
+| npm 安装 `aliyun-aliplayer` | 2.29.1 官方文档同时给了 CDN 与 npm；包体较大且要进客户端打包。CDN 按需加载更轻，缺点是无 SRI |
 | 预览用签名链接 + 自有域名 | 依赖尚未完成的备案，且视频已经卡在同一个前置 |
 | 预览改成「只提供下载」 | 违背 G-5（浏览器内预览） |
 

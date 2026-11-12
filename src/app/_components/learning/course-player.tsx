@@ -6,7 +6,7 @@ import { getPlaybackAction } from "../../_actions/learning";
 import { clock } from "../../_lib/learning-labels";
 import { Icon } from "../icon";
 
-const PLAYER_VERSION = "2.25.1";
+const PLAYER_VERSION = "2.29.1";
 const CDN = `https://g.alicdn.com/apsara-media-box/imp-web-player/${PLAYER_VERSION}`;
 const HEARTBEAT_MS = 15_000;
 

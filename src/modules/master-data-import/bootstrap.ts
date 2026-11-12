@@ -1,6 +1,7 @@
 // bootstrap（design §7.7）：3 品牌、4 大区、42 分公司、84 板块。一个事务；自然键幂等；只新增，字段不同记 conflict 不覆盖。
 // 新增分公司 = 在种子 CSV 补一行后重跑。
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
 import type { Db } from "../../db/client";
 import { branches, brands, regions, sectors } from "../../db/schema";
@@ -10,7 +11,9 @@ import { assertStructure, type ActorContext } from "./authorization";
 import { MasterDataError } from "./errors";
 import { BRANDS, SECTOR_NAMES, sectorCodeOf, type SectorKey } from "./mappings.v1";
 
-export const DEFAULT_SEED = new URL("../../../HBECHO设计方案/domains/data-foundation/seed/分公司-大区对照.csv", import.meta.url);
+// 相对仓库根（CLI 与测试都从仓库根运行）。不用 new URL(…, import.meta.url)：Next 打包页面时会把它当静态资源去解析，
+// 而应用镜像的构建上下文里没有设计文档目录（.dockerignore），构建会失败（2026-11-12 CI image job 实测）。
+export const DEFAULT_SEED = join(process.cwd(), "HBECHO设计方案/domains/data-foundation/seed/分公司-大区对照.csv");
 
 export interface SeedRow {
   regionCode: string;

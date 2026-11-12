@@ -51,3 +51,14 @@ describe("页面：每个页面先 requireUser，再按 Capability 决定显示�
     });
   }
 });
+
+describe("应用镜像的构建上下文（.dockerignore）只有 src 与 drizzle", () => {
+  it("src 下非测试代码没有 new URL(相对路径, import.meta.url)（打包会把它当静态资源去解析；指向 src 之外的文件在镜像里不存在，next build 失败）", () => {
+    const SRC = join(APP, "..");
+    const offenders = walk(SRC)
+      .filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\.ts$/.test(f))
+      .filter((f) => /new URL\([^)]*import\.meta\.url/.test(readFileSync(f, "utf8").replace(/\/\/.*$/gm, "")))
+      .map((f) => f.slice(SRC.length + 1));
+    expect(offenders).toEqual([]);
+  });
+});

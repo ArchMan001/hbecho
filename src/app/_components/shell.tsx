@@ -56,6 +56,9 @@ export function MobileTabs({ items }: { items: NavItem[] }) {
 }
 
 const CRUMBS: Array<[RegExp, string[]]> = [
+  [/^\/master-data\/batches\/[^/]+$/, ["主数据", "导入记录", "批次详情"]],
+  [/^\/master-data\/batches$/, ["主数据", "导入记录"]],
+  [/^\/master-data\/import$/, ["主数据", "导入"]],
   [/^\/plans\/new$/, ["活动计划", "新建计划"]],
   [/^\/plans\/trash$/, ["活动计划", "回收站"]],
   [/^\/plans\/[^/]+\/import$/, ["活动计划", "名单导入"]],

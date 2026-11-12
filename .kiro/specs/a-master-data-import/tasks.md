@@ -383,9 +383,15 @@
 
 **小的判断自己做**：reason code 命名、fixture 具体值、索引名、分块大小（100–1,000 之间）、日志字段顺序、CLI 帮助文案。
 
-## 页面任务（待补）
+## 页面任务
 
-F5 路径 1 的页面归属见 design §15。**2026-11-12 已起草界面设计（design §15.3–15.7），等待刘学奎确认；design §15.8 未填写，页面任务与页面代码不得开工。** 确认后在这里按确认范围拆页面任务（预计：导入页、导入记录与批次详情两个切片，复用活动计划已建好的向导与批次组件）。任务 0～8 只交付 CLI 与 Module。
+> **进入条件已满足**：design §15.8 记录了刘学奎 2026-11-12 的确认（范围：主数据导入页、导入记录、批次详情）。**确认范围之外一律不做**（组织与门店浏览、结构变更页面另立 spec）。实现形态与 `a-activity-plan` 的页面一致：服务端页面 + 服务端动作，只调用 Module，`src/app` 不写 SQL，复用已确认原型的 CSS。
+
+- [x] **P1 · 主数据导入页面（2026-11-12）**：
+  - `/master-data/import`：选择模式 → 上传 → 预检报告（五类计数、疑似导出不完整提示、待确认撤店勾选表、可筛选的行明细）→ 确认弹窗（核对后才写入）→ 跳到批次详情；
+  - `/master-data/batches`、`/master-data/batches/[id]`：导入记录、行结果统计、已关闭门店数、仍待确认的撤店提示、回流文件；
+  - 代码：`src/app/(app)/master-data/`、`src/app/_actions/master-data.ts`、`src/app/_components/master/`、`src/app/_lib/master-data.ts`（进程内装配，`toMasterDataActor` 适配）、`master-labels.ts`；`run()` 增加 `MasterDataError` 的映射；Module 小改动：`query.rows` 增加 `precheckClass` 过滤（`query.db.test.ts` 补用例）；
+  - 验证：`plan-actions.guard.test.ts` 覆盖本页面的动作与页面守卫；本机真实环境走查（`next dev` + 一次性 MySQL 8.4 + 真实登录会话 + 无头 Chrome）：超管上传 16 行 CSV → 预检（新增 1 / 更新 1 / 未变 8 / 错误 5 / 需超管处理 1，待确认撤店 2 家）→ 勾选 1 家 → 确认弹窗数字 → 批次完成（已关闭门店 1）→ 回流文件 → 导入记录；总部人员结构模式按钮禁用；分公司人员得到「无权访问」。
 
 ## 完成定义
 

@@ -38,6 +38,8 @@ async function loadVisible(db: Db, actor: ActorContext, batchId: string): Promis
 export interface Page {
   offset?: number;
   limit?: number;
+  /** 只看某一预检分类（new / update / unchanged / error / needs_superadmin）。 */
+  precheckClass?: string;
 }
 const clampLimit = (n: number | undefined, dflt: number): number => Math.min(Math.max(n ?? dflt, 1), 1000);
 
@@ -83,7 +85,7 @@ export function createQuery(db: Db) {
       const rows = await db
         .select()
         .from(importRowResults)
-        .where(eq(importRowResults.importBatchId, b.importBatchId))
+        .where(page.precheckClass ? and(eq(importRowResults.importBatchId, b.importBatchId), eq(importRowResults.precheckClass, page.precheckClass)) : eq(importRowResults.importBatchId, b.importBatchId))
         .orderBy(asc(importRowResults.rowNo))
         .limit(clampLimit(page.limit, 100))
         .offset(Math.max(page.offset ?? 0, 0));

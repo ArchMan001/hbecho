@@ -14,3 +14,5 @@ export * from "./text/normalize";
 export * from "./features/ingest";
 export * from "./features/scan";
 export * from "./ttl";
+export * from "./compose";
+export * from "./reader";

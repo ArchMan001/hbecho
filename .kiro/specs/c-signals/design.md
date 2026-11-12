@@ -508,7 +508,7 @@ ingestContent(f, mode='normal'):
 
 ```text
 1. 目录：key 未注册 → 抛 signal_unregistered
-2. 平台：对象平台不在 entry.platforms → not_applicable(platform_unsupported)
+2. 平台：平台的列表 / 详情没有该文本字段（PLATFORM_TEXT_FIELDS，如快手正文）→ not_applicable(field_absent_on_platform)；对象平台不在 entry.platforms → not_applicable(platform_unsupported)。前者先判：目录里该信号的可得平台已排除这个平台，后判会把它误报成 platform_unsupported（任务 5 订正）
 3. 输入适用性：
      文本：PLATFORM_TEXT_FIELDS 无该字段 → not_applicable(field_absent_on_platform)
      图片：内容主体取该内容全部快照上的 cover 引用（requirements R12，2026-11-12 修订，原为「取其 current 快照的引用」）：

@@ -272,6 +272,27 @@ export function createFacts(db: Q) {
     return rows.map((r) => r.id);
   }
 
+  /** 主体所在平台（读取口用；不读文本）。缺失的主体不在结果里。 */
+  async function platformsOf(kind: "content" | "account" | "comment", ids: readonly bigint[]): Promise<Map<bigint, string>> {
+    if (ids.length === 0) return new Map();
+    const list = [...ids];
+    if (kind === "account") {
+      const rows = await db.select({ id: externalAccounts.accountId, platform: platforms.platformCode }).from(externalAccounts).innerJoin(platforms, eq(platforms.platformId, externalAccounts.platformId)).where(inArray(externalAccounts.accountId, list));
+      return new Map(rows.map((r) => [r.id, r.platform]));
+    }
+    if (kind === "content") {
+      const rows = await db.select({ id: contents.contentId, platform: platforms.platformCode }).from(contents).innerJoin(platforms, eq(platforms.platformId, contents.platformId)).where(inArray(contents.contentId, list));
+      return new Map(rows.map((r) => [r.id, r.platform]));
+    }
+    const rows = await db
+      .select({ id: comments.commentId, platform: platforms.platformCode })
+      .from(comments)
+      .innerJoin(contents, eq(contents.contentId, comments.contentId))
+      .innerJoin(platforms, eq(platforms.platformId, contents.platformId))
+      .where(inArray(comments.commentId, list));
+    return new Map(rows.map((r) => [r.id, r.platform]));
+  }
+
   // ───────────── 扫描驱动用的读取（design §7.3）；扫描器本身不碰 A 域表，全部经这里 ─────────────
   // 游标里的时间来自 JS Date（毫秒精度），而列是 DATETIME(6)：截断只会让游标略早于真实值，
   // 于是同一行可能被再读一次，不会漏行；ingest 是幂等的，重读无害。
@@ -346,6 +367,6 @@ export function createFacts(db: Q) {
     return rows.map((r) => r.id);
   }
 
-  return { contentFacts, commentFacts, batchOrders, contentsAfter, contentsLate, contentPage, commentsAfter, commentsInWindow, coverMaterial, profileMaterial, audioMaterial, mediaObjectOf, scopeSubjects };
+  return { contentFacts, commentFacts, platformsOf, batchOrders, contentsAfter, contentsLate, contentPage, commentsAfter, commentsInWindow, coverMaterial, profileMaterial, audioMaterial, mediaObjectOf, scopeSubjects };
 }
 export type Facts = ReturnType<typeof createFacts>;

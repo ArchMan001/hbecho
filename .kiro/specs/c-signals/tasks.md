@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–4 已完成（2026-11-12）；任务 5 起未开始。进度以下方勾选为准
+> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–5 已完成（2026-11-12）；任务 6 起未开始。进度以下方勾选为准
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -25,7 +25,7 @@
 - [x] 任务 2 · 骨架：目录、错误、配置、授权审计、A 事实读取口、测试挂具、静态护栏
 - [x] 任务 3 · 文本纯函数：归一化、话题解析、平台字段表
 - [x] 任务 4 · 特征行写入与扫描驱动（内容与评论）、历史表、对账
-- [ ] 任务 5 · 读取口 `SignalReader` 与五态合成；CLI `show` / `catalog`（**第一条可演示的纵向**）
+- [x] 任务 5 · 读取口 `SignalReader` 与五态合成；CLI `show` / `catalog`（**第一条可演示的纵向**）
 - [ ] 任务 6 · 监控段与标准图（含 OSS 专用桶、可执行性、清除）
 - [ ] 任务 7 · Python 匹配端点、Node 客户端、真实样本标定
 - [ ] 任务 8 · 任务表与租约、`requestScores`、评分 runner、结果行、派生信号读取
@@ -127,12 +127,14 @@
 
   - **完成记录（2026-11-12）**：新增 `features/compute.ts`（纯计算：素材指纹、三个文本信号、评论信号、信封）、`features/ingest.ts`（`ingestContent` / `ingestComment`，`normal` 与 `recompute` 两种模式，事务内只做锁行、排序检查、写历史、更新，死锁重试）、`features/scan.ts`（`scanContents`、`scanComments`、`reconcileContents` 及三个游标）、`ttl.ts`（保留期）；`facts.ts` 增加扫描读取函数（`batchOrders`、`contentsAfter`、`contentsLate`、`contentPage`、`commentsAfter`、`commentsInWindow`），护栏要求的“A 域表只经 facts”由此保持。`features.db.test.ts` 20 例：新内容三信号 valid；NULL 与空串素材指纹不同；快手无正文条目；重复处理无写入；新批次素材未变只前移快照；标题变化写 3 行历史（material_changed、nv、一年保留）；批次 5 后迟到批次 3 → skipped_older；话题解析器抛错 → hashtags failed、标题正文照常、失败详情不含原文；recompute 在批次相同时仍重算（capability_upgraded），且已是目标版本则不再写；**真实的 text.normalize 1→2 版本升级**（测试内临时改版本表并注册 v2 实现，历史保留 nv=1）；评论 NULL/空串/改正文/suspected_deleted/快手；游标与空转；回看窗口迟到；窗口外由对账补；对账分页与归零；游标未推进时重做恰好一行。做过三处变异检查（去掉排序检查、去掉迟到查询、去掉“素材未变只前移”，对应用例失败）。**偏差**：`recompute` 在素材未变且信封已是当前版本时返回 `unchanged`（不写空历史）；对账多读一行才判断一圈是否结束（刚好满页不误判）；评论的“迟到”查询按“特征行缺失或 `comments.updated_at` 晚于特征行”判断（评论没有快照，无法在 SQL 里比指纹）。**未证明**：真实 A 同步并发写入下回看窗口是否足够（任务 13 在测试机用 `a-full-sync` 的 smoke 数据复核）；评论 runner 每次看到是否 bump `updated_at` 未核对（只影响重复比较的开销，不影响正确性）。
 
-- [ ] 5. 读取口与五态合成（第一条纵向）
+- [x] 5. 读取口与五态合成（第一条纵向）
   - **Requirements:** SG-2、SG-12
   - **Design:** §7.6
   - `composeState` 纯函数与 `SignalReader.read` / `readMany`（先实现特征行类信号；结果行类的取数留桩，任务 8 补齐）；`stalePolicy`；`pending` 字段；文本类信号的 `nv` / `stale` 分支；CLI `signals catalog` / `signals show --content|--comment`。
   - **验证**：`composeState` 表驱动覆盖 design §7.6 每个分支，含「平台不支持」「平台无该字段」「最高版本的 failed 读作 missing」「只升 text.normalize、话题解析器版本不变时话题读作 stale 且 normalizerVersion 为旧值」；`readMany` 对 5,000 内容的查询次数为常数（计数器）；`read` / `readMany` 不使任务表行数变化；`stalePolicy: 'as_unknown'` 时 `usable` 为 false 且不带值；目录外信号 `signal_unregistered`；缺 Capability 的 `read` / `readMany` 在读库之前被拒绝（`QueryCounter` 断言零查询）；**演示**：造一个内容 → 推进 current 指针 → 跑一轮扫描 → `signals show --content` 看到话题与归一化标题，版本与时间齐全。
   - **未证明**：派生信号（匹配分、ASR）的读取，任务 8、9 补齐。
+
+  - **完成记录（2026-11-12）**：新增 `compose.ts`（`composeState` 纯函数、`SignalValue` 与原因码）、`reader.ts`（`createReader` → `read` / `readMany`，`ResultLookup` 接口留给任务 8，`stalePolicy` 缺省 `use_stale`，`requires` 让 CLI 用 `data.*.read`）、`facts.platformsOf`、`src/worker/signals-cli.ts`（`catalog`、`show`，退出码与 plan-cli 一致）、`signals-main.ts`、`package.json` 的 `signals` 脚本。测试：`compose.test.ts` 16 例表驱动覆盖 §7.6 每个分支（含平台不支持、平台无字段、最高版本 failed 读作 missing、只升 text.normalize 时话题 stale 且 normalizerVersion 为旧值、已存储的值不受启用开关影响、素材缺口优先于开关）；`reader.db.test.ts` 15 例（纵向：造内容→推进 current→扫描→读到并再推进读到新值；真实的版本表临时升级得到 stale / failed_under_old_version；`readMany` 查询次数与主体数无关；读取不改任务表；缺 Capability / 目录外信号 / 缺 param / 主体种类不符 / 超 5,000 都在读库之前被拒绝——**任务 2 遗留的“读库前拒绝”用 `QueryCounter` 在这里首次落地**；封面五种素材情形的原因码互不相同；语音类要网关 activeModel 非空，只有 ASR 模型时转写可用、判定 capability_disabled）；`signals-cli.db.test.ts` 6 例（演示：`signals show --content` 看到归一化标题与话题、版本与时间；BIGINT 输出十进制字符串；缺 Capability 退出码 2 且零查询；不存在 4）。**偏差**：design §7.6 第 2 步“字段缺失”先于“平台不支持”判断（已回写）；读取返回按主体 ID 为键（同一信号的主体种类一致），不是 `Map<subject,…>`；`show` 输出归一化后的值（C 自己的派生值），不含 A 的原文。**未证明**：派生信号（匹配分、ASR、判定）的取数，任务 8、9 补齐；5,000 主体的实际耗时（任务 13 规模演练，目前只证明了查询次数为常数）。
 
 - [ ] 6. 监控段与标准图
   - **Requirements:** SG-7

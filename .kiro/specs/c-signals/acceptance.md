@@ -14,7 +14,7 @@
 >
 > **最近核对**：2026-11-11
 >
-> **更新日期**：2026-11-12（初建于 11-11，经三轮审查修订；尚未实施，所有条目未执行）
+> **更新日期**：2026-11-12（初建于 11-11，经三轮审查修订；任务 13 回填了逐条结果、手工项与环境项的状态）
 
 ## 怎么用
 
@@ -30,7 +30,277 @@
 
 ## 逐条结果
 
-（任务 13 回填：每组通过 / 未通过、对应测试文件、本机 `verify.sh` 的测试数、测试 ECS 的通过数与耗时。）
+> 回填于 2026-11-12（任务 13）。图例：✅ 已被离线测试证明（写明测试）；◐ 部分证明（写明缺什么）；⏳ 依赖环境或他人，未证明。测试文件名省略目录：`src/modules/signals/` 下的 `catalog.test.ts`、`compose.test.ts`、`reader.db.test.ts`、`facts.db.test.ts`、`features/features.db.test.ts`、`scoring/scoring.db.test.ts`、`speech/speech.db.test.ts`、`segments/segments.db.test.ts`、`recompute/recompute.db.test.ts`、`retention.db.test.ts`、`acceptance.db.test.ts`、`text/*.test.ts`；`src/db/signals-schema.db.test.ts`（简称 schema）；`src/worker/signals-*.test.ts`（简称 cli / cli.commands / loop / main）；`src/acceptance-boundaries.test.ts`（简称 boundaries）；Python 是 `services/capability/tests/test_match.py`（简称 pytest）。引号里是用例名片段。
+>
+> **验证数字**见本节末尾；任务 13 不靠印象打勾，原先没有覆盖的 D4 / D7、E5、E6、G6、G11、G12、H13、I12（执行路径）、K12、L5、L8、M7、N5、O5 由 `acceptance.db.test.ts`、`boundaries`、`text/hashtags.test.ts` 新增用例补上。
+
+### A. 信号目录（SG-1）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| A1 | ✅ | catalog「键集合与 requirements 逐项相等」（独立转写的 12 项） |
+| A2 | ✅ | catalog「目录外的信号键一律 signal_unregistered」；读取 reader.db「目录外信号」；保存 segments.db「setItems 校验」；重算 recompute.db「signal_unregistered」。补算请求的信号键只来自监控段条目，所以由保存路径覆盖 |
+| A3 | ✅ | A1 的 12 项相等即无多余项；catalog「没有 OCR、vision_*、ai_judgement 与聚合比率」 |
+| A4 | ✅（按实现订正） | catalog「platformSignals」：快手不含 `account.*`、`comment.*`，含标题与话题、封面两项、ASR 两项；**不含 `text.body_normalized`**（快手列表从不返回正文，任务 3 用 fixture 核对），验收原文“含文本三项”以此为准 |
+| A5 | ✅ | 同上，小红书不含 `account.*`、含 `comment.text_normalized` |
+| A6 | ✅ | 同上，抖音 12 项 |
+
+### B. 五态（SG-2）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| B1 | ✅ | 六种情形由三个用例合起来证明（不是同一内容上的顺序演示）：reader.db「封面：无引用 / pending / failed / carried_forward / 已归档」；scoring.db「A 的媒资行说已归档、但对象不可用：写 failed(image_unreadable)」「完成后读取口读到 valid」；原因码互不相同 |
+| B1a | ✅ | facts.db「coverMaterial：封面素材（requirements R12）」全部用例 |
+| B2 | ✅ | recompute.db「升版本后读作 stale」；scoring.db「升级能力版本后旧结果读作 stale」；compose |
+| B3 | ✅ | schema「存储态只有 valid / failed；能力版本为正」 |
+| B4 | ✅ | schema「形状：valid 恰好有 score 或 value 之一；failed 必带失败码且不带值」 |
+| B5 | ✅ | compose「当前版本的 failed → failed」；scoring.db「候选图的确定性失败」（`failed`、`usable: false`、无分数） |
+| B6 | ✅ | compose「最高版本的 failed 是旧版本的」；reader.db「旧版本留下的 failed 读作 missing」 |
+| B7 | ✅ | compose「排队 / 运行中 → not_computed + pending；dead → compute_dead」；scoring.db「版本不一致……dead」 |
+| B8 | ✅ | compose「已存储的值不受启用开关影响」；reader.db「已存储的值不受开关影响」 |
+| B9 | ✅ | reader.db「能力未启用 → capability_disabled」 |
+| B10 | ✅ | facts.db「profileMaterial」；compose「账号尚无当前主页快照」；cli「账号没有当前主页快照 → missing」 |
+
+### C. 文本信号（SG-3）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| C1 | ✅ | reader.db「推进 current → 扫描 → 读到」；cli「show 看到话题与归一化标题」 |
+| C2 | ✅ | text/hashtags「＃６１８、#618 、#618[话题]# 抽出同一个值」 |
+| C3 | ✅ | text/hashtags「无空格连写」「# 相连的两个话题」「#xxx[话题]# 写法」 |
+| C4 | ✅ | text/normalize「全角转半角……」；原文不变由 boundaries 护栏 ①（signals 不写 A 域表）保证 |
+| C5 | ✅ | features「NULL 标题 / 正文在有字段的平台读作 valid 的空串」；reader.db |
+| C6 | ✅ | compose「平台没有该字段 → not_applicable」；reader.db「快手：正文 not_applicable」。三个平台都有标题字段，机制由“快手无正文”演示 |
+| C7 | ✅ | features「话题解析器抛错」；text/hashtags「解析器抛错」（片段哈希前缀与长度，不含原文）；reader.db |
+| C8 | ✅ | features「同一快照重复处理」「新批次、素材未变」 |
+| C9 | ✅ | catalog「话题的能力标识含平台」 |
+| C10 | ✅ | text/normalize「幂等」（固定种子随机串） |
+| C11 | ✅ | text/normalize「normalizeKeyword 与 normalizeText 是同一个函数」 |
+| C12 | ✅ | facts.db「current 不是 finalized 的内容不在结果里」；features「没有 current 指针的内容不扫」 |
+| C13 | ✅ | reader.db「快手」；compose（快手 `account.*` → `platform_unsupported`） |
+| C14 | ✅ | text/hashtags「超过 64 字符的令牌丢弃」「每个内容至多 50 个」（实现上限 64，验收原文 65 字符的例子在内） |
+
+### D. 评论文本信号（SG-4）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| D1 | ✅ | features「评论扫描：新评论产生特征行」；reader.db「评论文本：valid」 |
+| D2 | ✅ | features「正文 NULL 与空串……」中的重复处理为 `unchanged` |
+| D3 | ✅ | features「正文改了更新并写历史」 |
+| D4 | ✅ | features「suspected_deleted / deleted 的评论不新抽取」；acceptance.db「D4 / D7」（已有特征行保留） |
+| D5 | ✅ | features（列）；acceptance.db「E6」 |
+| D6 | ✅ | features「快手没有评论」；reader.db「评论信号对快手 platform_unsupported」 |
+| D7 | ✅ | features「NULL 与空串都读 valid 但指纹不同」；acceptance.db「D4 / D7」（NULL → 空串触发一次重算并写历史） |
+
+### E. 特征存储与版本（SG-5）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| E1 | ✅ | features「新内容：……信封带 cap / ver / nv / at」；schema「一个内容只有一行」 |
+| E2 | ✅ | features「批次 5 之后迟到批次 3」 |
+| E3 | ✅ | features「标题改了……历史新增三行」（每个信号一行，共三行；验收原文“一行”指标题那行） |
+| E4 | ◐ | reader.db「只升话题解析器版本」：标题、正文 valid，话题 stale。封面信号不受影响由特征行与结果行分表保证，没有单独断言 |
+| E5 | ✅ | boundaries「E5：读取路径不引用 ODS 表」（静态）。没有做“删 ODS 数据后再读”的动态用例：读取路径不引用 ODS 表，动态用例不会比静态检查多证明什么 |
+| E6 | ✅ | acceptance.db「E6」（四张表的列里没有发布时间、互动数、作者、昵称） |
+| E7 | ✅ | schema「值列与信封必须一致」（含信封缺条目）；评论特征行同 |
+| E8 | ✅ | schema「所基于的快照必须属于同一个内容（复合外键）」 |
+| E9 | ✅ | features「扫描中途杀进程后重做」 |
+| E10 | ✅ | features「回看窗口」「窗口之外的迟到由对账补上」 |
+| E11 | ✅ | schema「信封里的状态只能是 valid / failed」（内容与评论） |
+| E12 | ✅ | compose「只升 text.normalize ……」；text/normalize「按版本保留实现」 |
+| E13 | ✅ | reader.db「只升 text.normalize、话题解析器版本不变」；compose |
+
+### F. 复用键与结果行（SG-6）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| F1 | ✅ | scoring.db「同一结果行并发写入两次」；schema「复用键唯一」 |
+| F2 | ✅ | scoring.db「换标准图后再请求」 |
+| F3 | ✅ | scoring.db「同一张封面被两个内容引用……两个监控段引用同一张标准图字节」 |
+| F4 | ✅ | 同上（`lineage` 记第一次计算的计划）；schema（唯一键列不含血缘） |
+| F5 | ✅ | schema「分数范围 0.00–10.00」 |
+| F6 | ◐ | speech.db「模型输出缺 reason / verdict 非法 / 模型拒绝 → failed」：模型输出经 zod 校验，不合规写 `failed(invalid_output)`，不会成为 valid 行；模型版本与提示词版本由 C 自己写入，不经模型，所以不会缺。验收原文“写入前 zod 拒绝、库中无行”对应的是模型输出这一侧 |
+| F7 | ✅ | scoring.db「升级能力版本后……」；recompute.db「image.template 升到 2……旧行保留」 |
+| F8 | ✅ | features「NULL 与空串的素材指纹不同」「同一快照重复处理：无写入」 |
+| F9 | ◐ | schema「换能力标识都是新行」；catalog「版本表里没有目录用不到的能力」「话题的能力标识含平台」。“信号键与能力标识一一对应、不可变更”没有写成一条断言 |
+
+### G. 监控段与标准图（SG-7）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| G1 | ✅ | segments.db「同一对象第二张模板图替换前一张」 |
+| G2 | ✅ | segments.db「元素图按 element_key 可有多张；背景 / 头像对象各自独立」 |
+| G3 | ✅ | segments.db（对象键 `segments/12/1/cover/template/<sha256>`）；真实桶：本机 CLI 对 `hbecho-signals` 实测同形（见 MAN-5） |
+| G4 | ✅ | segments.db「已发布后……segment_immutable」 |
+| G5 | ✅ | segments.db「setItems 校验」（两个判定项） |
+| G6 | ✅ | segments.db「setItems 校验」（快手）；acceptance.db「G6」（小红书） |
+| G7 | ✅ | segments.db「超过 10 MiB、无法解码、不是图片：被拒绝，数据库与 OSS 都没有残留」 |
+| G8 | ✅ | segments.db「关掉某能力的启用开关」「目录里删掉的信号」 |
+| G9 | ✅ | segments.db「新草稿：版本 +1……」 |
+| G10 | ✅ | segments.db「purge：删除全部版本……」「purge 删除对象失败：数据库行保留，重试后清除」 |
+| G11 | ✅ | acceptance.db「G11」 |
+| G12 | ✅ | acceptance.db「fake D 的调用序列」（同版本草稿改图，只有 version 1） |
+| G13 | ✅ | segments.db「put 失败：不留行」「事务失败……不伤旧图」 |
+| G14 | ✅ | segments.db「事务失败：刚上传的对象被清理」 |
+| G15 | ✅ | segments.db「setItems 校验」（`a/b`、`..`、`.`、空串、65 字符被拒，`logo` 通过；`logo-1_A.v2` 同属允许的字符集） |
+
+### H. 素材比对（SG-8）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| H1 | ✅ | scoring.db「100 个内容主体……」 |
+| H2 | ✅ | scoring.db「第二次请求：不新增任务；任务全部完成后再请求」 |
+| H3 | ✅ | scoring.db「换标准图后再请求」 |
+| H4 | ✅ | scoring.db「能力服务回报的版本与目录不一致」 |
+| H5 | ✅ | pytest「test_same_image_scores_near_full」；真实桶端到端 smoke 得 10 |
+| H6 | ✅ | pytest「test_scaled_rotated_brighter_still_matches」；另有「test_recompressed_and_blurred」 |
+| H7 | ✅ | pytest「test_unrelated_image_scores_low」；真实桶端到端 smoke 得 0.22 |
+| H8 | ✅ | pytest「test_element_embedded_in_scene_scores_high_and_absent_scores_low」 |
+| H9 | ✅ | pytest「test_low_feature_image_scores_zero_and_is_flagged」 |
+| H10 | ✅ | pytest「test_error_codes_carry_side」（`side` 为 `candidate` / `reference`） |
+| H11 | ✅ | scoring.db「候选图的确定性失败写 failed(image_unreadable)」 |
+| H12 | ✅ | scoring.db「标准图（reference）侧失败是配置错误」 |
+| H13 | ✅ | scoring.db「完成后读取口读到 valid」；acceptance.db「fake D 的调用序列」（返回值与证据里没有匹配 / 不匹配字段） |
+| H14 | ✅ | scoring.db「runner 调用能力服务期间，连接池里没有未提交的事务」（`innodb_trx`） |
+| H15 | ✅ | scoring.db「账号主体（抖音头像）」；facts.db「profileMaterial」 |
+| H16 | ✅ | scoring.db「拒绝：……超过 5,000」 |
+| H17 | ✅ | pytest「test_error_codes_carry_side」（404 → `source_missing`）「test_connection_refused_is_source_unavailable」；scoring.db「能力服务不可用 / 超时 / 来源 5xx 都是瞬时失败」；matcher-client.test |
+
+### I. 音频理解（SG-9）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| I1 | ✅ | speech.db「默认装配（DisabledAiGateway）：不建任务、不发调用」 |
+| I2 | ✅ | speech.db「同一音频两次请求，ASR 只调用一次」 |
+| I3 | ✅ | speech.db「不同标准文本互不复用；相同标准文本 + 提示词版本 + 模型版本复用」 |
+| I4 | ✅ | speech.db「模型版本 m1 → m2」 |
+| I5 | ✅ | speech.db「同一 callKey 只计费一次：调用成功后、写结果前崩溃」 |
+| I6 | ✅ | speech.db「输出不合法 → failed(invalid_output)；模型拒绝 → failed(model_refused)」「模型输出缺 reason / verdict 非法 / 模型拒绝 → failed，不是 not_meets」 |
+| I7 | ✅ | speech.db「网关瞬时错误：重试，用尽后 dead，没有结果行」 |
+| I8 | ✅ | speech.db「ASR 缺失时判定 deferred」「延后累计超过上限 → dead(dependency_timeout)」 |
+| I9 | ✅ | speech.db「音频未归档：missing(audio_not_archived)，无任务」 |
+| I10 | ✅ | speech.db「ASR 完成后判定完成，结果行含结论、理由、模型与提示词版本」 |
+| I11 | ✅ | speech.db「默认装配」（模型为空不建任务）「请求之后、运行之前模型换了」 |
+| I12 | ✅ | 保存路径 segments.db「setItems 校验」；执行路径 acceptance.db「I12（执行路径）」 |
+| I13 | ✅ | boundaries 护栏 ④（及反向用例） |
+| I14 | ✅ | speech.db「ASR 文本」（启用）；「默认装配」（禁用，`executability` 阻塞） |
+| I15 | ✅ | speech.db「只有 ASR 模型、判定模型为空」 |
+
+### J. 能力版本、`stale` 与保留期（SG-10）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| J1 | ✅ | recompute.db「升版本后读作 stale ……没有新任务、没有新的监控段版本」 |
+| J2 | ✅ | 同上（两种 `stalePolicy`）；compose |
+| J3 | ✅ | retention.db「推进 4 个月……推进 13 个月」 |
+| J4 | ✅ | 同上 |
+| J5 | ✅ | retention.db「延后后到原时间点仍在；传较早时间不缩短」 |
+| J6 | ✅ | retention.db「清理后读取 missing(not_computed)，任务表无新行」 |
+| J7 | ✅ | retention.db「特征行不被清理……分块删除中途退出后可重跑」 |
+| J8 | ✅ | retention.db（成功 +1 年）；scoring.db「候选图的确定性失败」（失败 +3 个月）；features「标题改了」（历史 +1 年） |
+| J9 | ✅ | scoring.db「升级能力版本后旧结果读作 stale，不会被 requestScores 重算」 |
+| J10 | ✅ | scoring.db「任务 succeeded 但结果行已被保留期清理」 |
+
+### K. 显式重算（SG-11）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| K1 | ✅ | recompute.db「没有范围或只有 segmentRef：scope_required」 |
+| K2 | ◐ | recompute.db「preview 与随后 apply 的条数一致；preview 不写任何表」：apply 在执行时重新展开范围（以 apply 时的条数为准）；两次调用之间数据变化的情形没有单独断言 |
+| K3 | ✅ | recompute.db「无 rule.definition.manage：先于任何读库被拒绝」 |
+| K4 | ✅ | recompute.db「品牌范围外的对象不在展开结果里」 |
+| K5 | ✅ | recompute.db「重算后范围内读作 valid……范围外仍 stale」 |
+| K6 | ✅ | recompute.db「preview ……apply 写一行记录和审计事件」 |
+| K7 | ✅ | recompute.db「多块 + 中途杀进程续跑」 |
+| K8 | ✅ | recompute.db「不改监控段」 |
+| K9 | ✅ | recompute.db「brandId 经当前归属展开」；facts.db「品牌经账号的当前归属展开」 |
+| K10 | ✅ | recompute.db「同范围 running 的 run 再次 apply 续跑原 run」 |
+| K11 | ✅ | cli.commands「没有范围 / 未知键被拒（没有 --all）」 |
+| K12 | ✅ | acceptance.db「K12」 |
+| K13 | ✅ | recompute.db「failed 的 run 再次 apply 续跑」 |
+| K14 | ✅ | recompute.db「completed 之后再 apply 新建 run」 |
+| K15 | ◐ | recompute.db「范围内全无旧值时 from_version 为 NULL」：断言了 `from_version` 与不报错；“对象按补算落到目标版本”没有单独断言 |
+| K16 | ✅ | recompute.db「取消 running 的 run」「正在执行的 chunk 在提交前看到 cancelled」 |
+| K17 | ✅ | recompute.db「对 completed / cancelled 再取消被拒」；cli.commands（`run_not_cancellable`） |
+| K18 | ✅ | recompute.db「重算后范围内读作 valid ……素材未变批次相同也重算」；features「mode=recompute」 |
+| K19 | ✅ | recompute.db「评论类信号按内容范围重算」 |
+
+### L. 读取口与补算请求（SG-12）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| L1 | ✅ | reader.db「read / readMany 不创建任务」；读取口没有能力服务与网关依赖（类型上无法调用） |
+| L2 | ✅ | reader.db「readMany 的查询次数与主体数无关」；规模演练 5,000 主体 2 次查询 |
+| L3 | ✅ | reader.db「缺 param」 |
+| L4 | ✅ | compose；scoring.db |
+| L5 | ✅ | acceptance.db「fake D 的调用序列」（可执行的草稿与已发布都可请求）；scoring.db「不可执行（默认启用集不含图像类）」被拒 |
+| L6 | ✅ | scoring.db「拒绝：缺 Capability、超过 5,000、监控段不存在、不可执行」 |
+| L7 | ✅ | cli.commands「score」（输出只有分布与 `needMedia`）；返回类型不含文本字段 |
+| L8 | ✅ | acceptance.db「fake D 的调用序列」 |
+
+### M. 任务执行（SG-13）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| M1 | ✅ | scoring.db「两个 worker 抢同一个任务：只有一个拿到」（顺序闸门） |
+| M2 | ✅ | 同上（租约过期接手，旧 worker 的写入被拒且零写入） |
+| M3 | ✅ | scoring.db「任务在调用返回之后、事务提交之前崩溃」 |
+| M4 | ✅ | scoring.db「版本不一致……用尽后 dead」「反复崩溃的任务最终 dead」 |
+| M5 | ✅ | boundaries 护栏 ①（`syncTasks` 在 A 域表清单里）与 ② |
+| M6 | ✅ | scoring.db「第二次请求：不新增任务」；schema「幂等键唯一」 |
+| M7 | ✅ | acceptance.db（创建时 `expires_at` = +1 年）；retention.db「只删终态任务」 |
+| M8 | ✅ | recompute.db「取消……revive 被拒」「tasks revive」 |
+
+### N. 授权与审计（SG-14）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| N1 | ✅ | reader.db / recompute.db / scoring.db / cli「零查询」；retention.db（以“碰库即抛错”的代理断言） |
+| N2 | ◐ | recompute.db「品牌范围外的对象不在展开结果里」（等同于未找到）；authz.test「hide 表现为未找到」。`brandCode` 这个**参数**越权返回 `brand_out_of_scope`（拒绝），不是“未找到”：它是调用方传入的范围，不是已有对象 |
+| N3 | ✅ | redact.test；matcher-client.test「错误消息里的签名 URL 被脱敏」；scoring.db（证据无 URL）；speech.db（错误详情无签名 URL）；acceptance.db（审计事件无 URL） |
+| N4 | ✅ | authz.test「缺 … 启动失败，不退化成全部范围」；main「缺任一身份变量……退出码 1」 |
+| N5 | ✅ | 创建 / 发布 / 清除 / 上传 / 删除：acceptance.db「fake D 的调用序列」与 segments.db；预览 / 执行 / 取消：recompute.db；`task_dead`：scoring.db |
+
+### O. 配置、门控与离线（SG-15）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| O1 | ✅ | catalog「启用集：缺省或空白只有文本类」；reader.db「默认配置下图像类读作 capability_disabled」 |
+| O2 | ✅ | catalog「含目录外的能力标识：启动失败并点名」；config.test；main |
+| O3 | ✅ | config.test「缺 … 启动失败并指出缺哪一项」；main |
+| O4 | ✅ | `tests/harness/harness.test.ts`（network-deny）；`tests/harness/setup.ts` 对每个测试进程生效 |
+| O5 | ✅ | text/hashtags「O5：同一组样本连续运行 3 次」；`verify.sh` 在任务 2–13 的每个边界重复运行结果一致 |
+| O6 | ✅ | 见下方验证数字 |
+| O7 | ✅ | `scripts/check-secrets.sh`（verify 第 6 步，含 git 历史）；`.env.example` 的新变量全部无值 |
+
+### P. 一致性与护栏（SG-16）
+
+| # | 结果 | 覆盖 |
+|---|---|---|
+| P1 | ✅ | verify 第 4 步（`drizzle-kit generate` 不产生新文件） |
+| P2 | ✅ | schema「可重复执行：第二次迁移不改变任何东西」 |
+| P3 | ✅ | boundaries「① ……」「① 反向用例」 |
+| P4 | ✅ | boundaries「② ……」「② 反向用例」 |
+| P5 | ✅ | boundaries「③ ……」「③ 反向用例」；任务 13 起扫描范围含 `src/worker/signals-*.db.test.ts` |
+| P6 | ✅ | boundaries「④ ……」「④ 反向用例」 |
+| P7 | ✅ | verify 第 3、5 步全量通过 |
+| P8 | ✅ | `git diff 718a8a4 -- src/db/schema/content.ts`：一行注释加一行索引；schema「contents 上多了且只多了一条索引」 |
+
+### PRD 验收清单
+
+PRD 清单每一条对应上表的条目（映射见下方“PRD 验收清单对照”）。其中 `C2：[手工] 运营看到版本、时间、匹配点数` 对应 MAN-1。
+
+### 手工项与环境项
+
+见文末“手工项”“环境依赖项”两节，状态已更新。
+
+### 验证数字
+
+- **本机 `./scripts/verify.sh`**（2026-11-12，提交 `b04b308` 之后）：类型检查通过；离线单元 **996** 通过；迁移与 schema 一致；数据库测试 **1429** 通过、1 个既有 skip；密钥扫描、链接、文档登记通过；Python **36** 通过；`verify: OK`。同一天更早的一次本机运行撞上 `activity-plan/scale.perf.db.test.ts` 的偶发失败（A 的并发解析，更新 `sync_batches` 处的事务错误，与 C 无关；机器上有别的会话在跑测试时更容易出现，单独重跑 3 次里 1 次通过），重跑后全绿。
+- **测试 ECS**（`i-2zef8qpi1d2mldntjgrv`，只经 Workbench；一次性 MySQL 8.4 与 `node:24-slim` 容器，独立网络、不映射宿主端口、库名 `hbecho_test`，用完即删；容器内存峰值 Node 866 MiB、MySQL 713 MiB）：`scripts/ecs-test.sh start`（`SUITE=full SIGNALS_DRILL=full`），提交 `b04b308` 的归档——类型检查通过；离线单元 **996** 通过（9 秒）；数据库测试 **1429** 通过、1 个既有 skip（**547 秒**，含 20 万内容的完整规模演练）。首次运行（提交 `346da58`）数据库测试 1427 通过、2 失败：一个是上述偶发失败，另一个是规模演练的 `beforeEach` 清库在 ECS 上超过 10 秒（上一用例留下 20 万行），已改为在本文件的 `afterEach` 里清库并给足超时。
+- **测试 ECS 上的 Python**（宿主机 Python 3.11.6、`opencv-python-headless` 5.0.0.93、numpy 2.4.6；宿主机没有 ffmpeg，ffmpeg 9.0.2 由 venv 里的 `imageio-ffmpeg` 提供，没有改系统）：`services/capability/tests/test_match.py` **18** 通过。这次运行暴露了测试对响应头大小写的依赖（uvicorn 只装 h11 时头名是小写），已修（`b04b308`）。**没有在 ECS 上跑** `test_image.py` / `test_app.py`（HEIC、音频抽取），所以“HEIC 封面经 ffmpeg ≥ 7.1 解码再匹配”没有在 ECS 上证明。
+- **真实桶 + 真实能力服务的端到端 smoke**（`pnpm signals-smoke`，不发付费调用，用完即删）：在测试 ECS 上用**实例角色**（`hbecho-ecs-role`，内网 endpoint）对 `hbecho-signals` 桶写 3 个对象、签名 GET URL、经 `HttpImageMatcher` 调 ECS 上的 Python 服务——同图 **10.00**、无关图 **0.22**（能力 `image.template@1`，内点比率 0.895），桶内无残留；在本机用 `hbecho-setup` 身份重复一次，结果同形（同图 10.00、无关图 0.22）。
+- **规模演练**（design §12.1 有数字与说明）：20 万内容扫描、`readMany` 5,000 主体、1 万任务领取、1,000 个评分任务端到端，本机与测试 ECS 各一次，均通过。
 
 ## 自动项
 
@@ -332,25 +602,25 @@ C PRD §十二的每一条都有对应：
 
 ## 手工项
 
-| # | 需求 | 谁看 | 在哪看 | 检查什么 |
-|---|---|---|---|---|
-| MAN-1 | SG-8 | 评审人 | 测试 ECS，CLI `signals show --content <id>` | 一个已计算的内容下能看到：用了哪版能力、什么时候算的、匹配点数量与内点率；输出里没有内容原文 |
-| MAN-2 | SG-8 | 业务 + 刘学奎 | 标定报告 | 约 20 对脱敏样本的分数分布合理（同图高、轻度改动居中、无关图低）；每个整数档配有一张样例图；`R_FULL` / `I_FULL` 的取值有依据；刘学奎签字后才可把 `image.*` 加入生产启用集 |
-| MAN-3 | SG-8 | 业务 | 样本图 | 纯色 logo、文字类元素在元素模式下得分很低且 `low_features` 为真——确认这符合 PRD C §5.1 对元素图适用边界的描述 |
-| MAN-4 | SG-3 | 评审人 | 测试 ECS，用 `a-full-sync` 已有的真实同步数据 | 抽查 10 个内容：话题与原文标题 / 正文 / `tag_text` 对得上，无漏抽 / 错抽；抖音、小红书、快手各至少 3 个 |
-| MAN-5 | SG-7 | 评审人 | 测试 ECS | 标准图上传后，CLI `segment show` 列出的对象键含计划 ID、版本、图像对象与 SHA-256；`segment purge` 后桶内无残留（需先有真实桶，见 ENV-1） |
+| # | 需求 | 谁看 | 在哪看 | 检查什么 | 状态（2026-11-12） |
+|---|---|---|---|---|---|
+| MAN-1 | SG-8 | 评审人 | 测试 ECS，CLI `signals show --content <id> --plan <id> --version <n>` | 一个已计算的内容下能看到：用了哪版能力、什么时候算的、匹配点数量与内点率；输出里没有内容原文 | ◐ CLI 路径已由 `signals-cli.commands.db.test.ts`「show --plan --version」证明（分数、能力版本、时间、匹配点证据，不含原文）。**评审人在测试 ECS 的真实数据上抽查未做**：测试 ECS 的 `hbecho` 库没有迁移 C 的表（对现有库做 DDL 需另行同意） |
+| MAN-2 | SG-8 | 业务 + 刘学奎 | 标定报告 | 约 20 对脱敏样本的分数分布合理（同图高、轻度改动居中、无关图低）；每个整数档配有一张样例图；`R_FULL` / `I_FULL` 的取值有依据；刘学奎签字后才可把 `image.*` 加入生产启用集 | ⏳ 缺业务样本，[`calibration-report.md`](calibration-report.md) 状态“未标定” |
+| MAN-3 | SG-8 | 业务 | 样本图 | 纯色 logo、文字类元素在元素模式下得分很低且 `low_features` 为真——确认这符合 PRD C §5.1 对元素图适用边界的描述 | ⏳ 同上 |
+| MAN-4 | SG-3 | 评审人 | 测试 ECS，用 `a-full-sync` 已有的真实同步数据 | 抽查 10 个内容：话题与原文标题 / 正文 / `tag_text` 对得上，无漏抽 / 错抽；抖音、小红书、快手各至少 3 个 | ⏳ 同 MAN-1：需要有 C 的表的库与真实同步数据 |
+| MAN-5 | SG-7 | 评审人 | 测试 ECS | 标准图上传后，CLI `segment show` 列出的对象键含计划 ID、版本、图像对象与 SHA-256；`segment purge` 后桶内无残留（需先有真实桶，见 ENV-1） | ✅（在本机而不是测试 ECS 上做的）：用 CLI 对真实 `hbecho-signals` 桶 `put-image`，`show` 列出键 `segments/901/1/cover/template/<sha256>`，`purge --apply` 后桶内 0 个对象。没在 ECS 上做是因为 `signals-main` 目前只支持 AccessKey 环境变量，ECS 上没有 AccessKey（实例角色凭证未接入，见 tasks 任务 13 记录） |
 
 ## 环境依赖项（不能离线验证）
 
-| # | 依赖 | 当前状态 | 何时可验 |
+| # | 依赖 | 状态（2026-11-12） | 说明 |
 |---|---|---|---|
-| ENV-1 | 真实 `hbecho-signals` 桶与 RAM（读写删） | **未创建**；需刘学奎同意并走 `server-access.md` 的逐步确认 | 桶创建后，任务 13 在测试 ECS 上验 MAN-5 |
-| ENV-2 | Python 服务上的 OpenCV 匹配（真实 ffmpeg ≥ 7.1 + HEIC 封面） | 能力服务已存在，无匹配端点 | 任务 7 之后；测试 ECS 上用合成图 + 一张 HEIC 样例跑一次 |
-| ENV-3 | 匹配分标定 | 未开始，等业务提供样本 | 任务 7；MAN-2 通过前 `image.*` 不进生产启用集 |
-| ENV-4 | 真实 ASR / 大模型 | **`h-ai-min` 未开始**；本 spec 的网关默认 disabled | `h-ai-min` 落地并通过其 smoke 后，另行验证 C 的第 3 层端到端 |
-| ENV-5 | D 的消费 | **`d-rule-engine` 未开始** | D 的 spec 对齐端口形状后（design §14 第 11 项） |
-| ENV-6 | 扫描回看窗口在真实同步写入并发下是否足够 | 未验证 | 任务 13：测试 ECS 上跑一轮 `a-full-sync` 的 smoke 数据并观察「迟到」查询的补回数量 |
-| ENV-7 | 规模与吞吐 | 未实测 | 任务 13 回填 design §12.1 |
+| ENV-1 | 真实 `hbecho-signals` 桶与 RAM（读写删） | ✅ | 刘学奎事先书面同意后创建：cn-beijing、私有、Standard、LRS、阻止公共访问、碎片 7 天；`hbecho-oss-rw` v3 新增 `SignalsStdImageReadWriteDelete`（仅该桶）。测试 ECS 实例角色实测：写 / 列 / 读 / 删通过，`hbecho-media` 删除仍被拒。记录在运维手册 §1.6、§17 与 ADR-0001 |
+| ENV-2 | Python 服务上的 OpenCV 匹配（真实 ffmpeg ≥ 7.1 + HEIC 封面） | ◐ | ECS 上 `test_match.py` 18 通过（OpenCV 5.0.0.93、ffmpeg 9.0.2 由 venv 提供）；端到端 smoke 通过（同图 10.00、无关图 0.22）。**HEIC 封面未在 ECS 上验证**（宿主机没有 ffmpeg，`test_image.py` / `test_app.py` 未跑） |
+| ENV-3 | 匹配分标定 | ⏳ | 等业务提供样本；MAN-2 通过前 `image.*` 不进生产启用集 |
+| ENV-4 | 真实 ASR / 大模型 | ⏳ | `h-ai-min` 未开始；本 spec 的网关默认 disabled，没有发过任何付费调用 |
+| ENV-5 | D 的消费 | ⏳ | `d-rule-engine` 未实施；`retainUntil`、读取口、监控段由契约测试固定 |
+| ENV-6 | 扫描回看窗口在真实同步写入并发下是否足够 | ⏳ | 未验证：需要在带 C 的表的库上跑真实同步数据（见 MAN-1） |
+| ENV-7 | 规模与吞吐 | ✅ | 数字已回填 [design §12.1](design.md)（本机与测试 ECS） |
 
 ## 覆盖不了的
 

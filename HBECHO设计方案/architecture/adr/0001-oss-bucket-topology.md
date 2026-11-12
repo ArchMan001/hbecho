@@ -1,6 +1,6 @@
 # ADR-0001 · OSS 按保留期分四桶
 
-- **状态**：accepted（2026-10-29 修订：新增第五个桶 `hbecho-course`；2026-11-12 修订：新增第六个桶 `hbecho-signals`，**尚未创建**）
+- **状态**：accepted（2026-10-29 修订：新增第五个桶 `hbecho-course`；2026-11-12 修订：新增第六个桶 `hbecho-signals`，**同日已创建**）
 - **日期**：2026-09-03
 - **决策人**：刘学奎
 - **替代**：runbook §7.2 中「建议（待确认）」的单桶 + 前缀方案
@@ -65,7 +65,7 @@
 - 标准图对象**不**写入 A 域的 `media_assets` / `oss_objects`；C 的 `segment_images` 自带 `bucket` / `object_key`；
 - 对象键含「监控判定计划 ID + 版本 + 图像对象 + 图片 SHA-256」。
 
-**本修订只是登记决定，不含创建动作。** 创建桶、增加 RAM 授权需要单独说明并逐步得到同意（`server-access.md`）；创建前运维手册里该桶标「未创建」，`c-signals` 的离线测试用 fake OSS，不受影响。
+**创建记录（2026-11-12，同日）**：刘学奎事先书面同意创建桶与修改 RAM。已建 `hbecho-signals`（cn-beijing、私有、Standard、LRS、「阻止公共访问」开启、生命周期只清 7 天碎片）；`hbecho-oss-rw` 新增 v3（只追加 `SignalsStdImageReadWriteDelete`，Resource 精确到该桶；v2 保留，可 `SetDefaultPolicyVersion` 回退）。测试 ECS 的实例角色实测放行读写删，`hbecho-media` 的删除仍被拒。本条之前，该桶标「未创建」，`c-signals` 的离线测试用 fake OSS，不受影响。
 
 ## 后果
 

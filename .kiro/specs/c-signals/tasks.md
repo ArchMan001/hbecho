@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–12 已完成（任务 7 的标定报告待业务样本，见其完成记录）；任务 13 未开始。进度以下方勾选为准。**新会话先读 [`handoff-2026-11-12-b.md`](handoff-2026-11-12-b.md)**
+> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–13 已完成（任务 7 的标定报告待业务样本，见其完成记录；任务 13 的 push 与合并见其完成记录）。进度以下方勾选为准。**新会话先读 [`handoff-2026-11-12-b.md`](handoff-2026-11-12-b.md)**
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -33,7 +33,7 @@
 - [x] 任务 10 · 能力升级、`stale` 与显式重算
 - [x] 任务 11 · 保留期、`retainUntil` 与清理器
 - [x] 任务 12 · CLI 全集与 `signals run` 装配
-- [ ] 任务 13 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾（**完成后推第二次**）
+- [x] 任务 13 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾（**完成后推第二次**）
 - [ ] 页面任务：**无**。本 spec 没有页面（design §15）
 
 ## Planning rules
@@ -197,12 +197,22 @@
   - **未证明**：compose 服务与资源上限（本 spec 不交付部署形态）。
   - **完成记录（2026-11-12）**：`src/worker/signals-cli.ts` 重写为全集：`catalog`、`show`（原有）、`segment create | set-items | put-image | remove-image | show | check | publish | new-draft | purge`、`score`（`--contents` / `--accounts`，值是 ID 清单或文件）、`recompute preview | apply | cancel`、`scan | reconcile | retention --once`、`tasks list | revive`、`run`；`parseArgs` strict，输出 JSON、BIGINT 为十进制字符串，退出码沿用 plan-cli；`score` 只输出每个信号的处置与原因分布和 `needMedia`，不逐主体展开；没有 `--force` / `--skip-auth` / `recompute --all`，`--scope` 只认六个已知键。新增 `src/worker/signals-loop.ts`（`runSignalsLoop`：每 `scanIntervalMs` 扫描内容与评论，每 `reconcileIntervalMs` 对账，启动时与此后每 24 小时清理，再各跑一轮评分 / 语音 / 重算 runner；没领到任务才睡 `scanIntervalMs`；某一步抛错只记日志；停止信号打断睡眠并让清理在块间退出）；`signals-main.ts` 装配真实依赖（连接池、pino、两个 `OssObjectStore`、`HttpCapabilityClient` 当转换器、`HttpImageMatcher`、缺省 `DisabledAiGateway`），数值配置走 `parseSignalsConfig`；`signals run` 缺 OSS / 能力服务变量直接失败并点名，其余命令缺这些时只在真正用到时报“未配置”；`assemble.ts` 增 `scanner.{contents,comments,reconcile}`；新增 `tasks/list.ts`（`tasks.list`，不返回 params）；`.env.example` 增全部变量名（无值，起始值写在上方注释并声明不是合同）。测试：`signals-cli.commands.db.test.ts` 8 例（segment 全流程含发布后写入被拒、`purge` 无 `--apply` 不删；`score` 清单 / 文件输入与分布输出；`tasks list` / `revive` 的成功与拒绝；`recompute` 的范围拒绝、apply、cancel 与重复 cancel 的 `run_not_cancellable`；`scan` / `reconcile` / `retention` 的 `--once` 与授权；输出不含标题原文；`run` 与严格解析）、`signals-loop.db.test.ts` 4 例（入库 → 扫描 → 读到、任务被执行、首轮清理、空闲睡眠后停止；间隔门控；步骤抛错不退出；已停止时不执行）、`signals-main.db.test.ts` 2 例（真实入口以子进程启动：缺库地址 / 缺身份 / 缺数值配置 / 启用集写目录外标识都退出码 1 并点名；`catalog`、`tasks list`、`segment check` 不需要 OSS，`run` 缺 OSS 变量失败）；原 `signals-cli.db.test.ts` 改用 `createSignals` 装配。变异检查三处（步骤不捕获异常、`purge` 不要求 `--apply`、空闲不睡眠，各使对应用例失败 / 挂起）。**偏差 / 取舍**：① CLI 的 `scan` / `reconcile` / `retention` / `run` 要求操作者持有 `rule.definition.manage`（design 只说这些由 `service:signals-worker` 执行；CLI 入口加一道运维闸，执行本身仍是固定服务身份）；② `segment purge` 不可恢复且没有预览，要求显式 `--apply`；③ `tasks list` 需要新增 Module 函数（CLI 不直接读库），要求 `rule.definition.manage`，默认 `--limit 50`、上限 500；④ 所有 CLI 命令现在都要求完整数值配置（fail closed），连 `catalog` 也一样；⑤ 清理固定每 24 小时，没有配置项。**未证明**：真实 OSS / 能力服务上的 `segment put-image` 与 `run`（桶未创建，任务 13 的 `[环境]` 项）；`run` 在多进程并发运行时的行为只证明了任务领取互斥，扫描器多进程重复扫描靠 `ingest` 幂等，没有专门的并发测试；compose 服务与资源上限（本 spec 不交付）。
 
-- [ ] 13. 全量离线验收、规模演练、测试 ECS 运行与文档收尾
+- [x] 13. 全量离线验收、规模演练、测试 ECS 运行与文档收尾
   - **Requirements:** 全部
   - **Design:** §11、§12.1
   - 逐条完成 [`acceptance.md`](acceptance.md) 的 `[自动]` 项并回填结果；规模演练：20 万内容的扫描吞吐、`readMany` 5,000 主体耗时与查询次数、1 万个评分任务（fake 匹配器）的领取吞吐，数字回填 design §12.1；在测试 ECS 上（按 `server-access.md` 第 5 条的条件）跑一次全量 `verify.sh` 与一次真实 Python 匹配 smoke（无付费调用），记录通过数与耗时。smoke 分两档：**Python 自带的本地文件档**（pytest 读本地合成图，不依赖桶）必做；**Node → 签名 URL → Python 的端到端档**需要先创建 `hbecho-signals` 桶（ENV-1），桶未创建时只做前一档并如实记录；`INDEX.md` 更新状态；`server-operations-runbook.md` 桶清单回填实际状态；C PRD 版本记录补一行实现状态。
   - **验证**：`./scripts/verify.sh` 通过；Python 侧未验证时明确写出；acceptance 逐项勾选并写明尚未证明的部分。
   - **完成后推第二次**；CI 绿后按 `dev-ci-cadence` 合并（`--no-ff`）。
+  - **完成记录（2026-11-12）**：
+    - **验收**：[`acceptance.md`](acceptance.md)「逐条结果」逐条回填了 A–P 全部 `[自动]` 项（每条写明被哪个测试覆盖）。原先没有覆盖或只间接覆盖的补了测试：`acceptance.db.test.ts`（D4 / D7、E6、G6、G11、G12、I12 执行路径、K12、fake D 的调用序列 L8 兼 L5 / H13 / M7 / N5）、`acceptance-boundaries.test.ts`（E5；护栏 ③ 的扫描范围扩到 `src/worker/signals-*.db.test.ts`）、`text/hashtags.test.ts`（O5）。部分证明的条目（◐）：E4、F6、F9、K2、K15、N2，原因写在各条里。手工项与环境项的状态已更新。
+    - **规模演练**：新增 `scale.perf.db.test.ts`（默认缩小规模，`HBECHO_SIGNALS_DRILL=full` 为 20 万内容 / 5,000 主体 / 1 万任务 / 1,000 个端到端任务），数字与说明回填 [design §12.1](design.md)。
+    - **测试 ECS**（只经 Workbench；条件见 `server-access.md` 第 5 条）：`scripts/ecs-test.sh` 扩展出 `SUITE=full`（先跑类型检查与离线单元）、`SIGNALS_DRILL=full`、`PY=1`；提交 `b04b308` 的归档上，类型检查通过、单元 996 通过（9 秒）、数据库测试 1429 通过 + 1 个既有 skip（547 秒，含完整演练）。Python：`test_match.py` 18 通过（宿主机无 ffmpeg，venv 里的 imageio-ffmpeg 提供 ffmpeg 9.0.2，未改系统）。**HEIC 路径（`test_image.py` / `test_app.py`）没有在 ECS 上跑。**
+    - **`hbecho-signals` 桶与 RAM**（刘学奎事先书面同意）：创建桶（cn-beijing、私有、Standard、LRS、阻止公共访问、碎片 7 天）；`hbecho-oss-rw` v2 → v3 只追加 `SignalsStdImageReadWriteDelete`；测试 ECS 实例角色实测放行读写删，`hbecho-media` 删除仍被拒（实测时在 media 桶留下的一个探针对象已用 setup 身份删除，核对为 0）。运维手册 §1.6、§17、ADR-0001 已回填。
+    - **端到端 smoke**：新增 `src/worker/signals-smoke.ts`（`pnpm signals-smoke`，需 `HBECHO_SIGNALS_SMOKE=approved`、桶名必须是 `hbecho-signals`；3 个 ≤ 5 MiB 的对象、2 次匹配，用完即删，不发付费调用）。测试 ECS 上（实例角色 + 内网 endpoint + ECS 上的 Python）：同图 10.00、无关图 0.22、无残留；本机重复一次同形。MAN-5：本机用 CLI 对真实桶 `put-image` → `show` → `purge --apply`，键含计划 ID、版本、图像对象、SHA-256，清除后 0 个对象。
+    - **顺带的改动**：`signals show` 增加 `--plan --version`（MAN-1 要求在 CLI 看到匹配点数与能力版本，而 `show` 原先不读参数化信号）；`test_match.py` 的响应头断言改为大小写无关（ECS 上暴露）；`.env.example`、`INDEX.md`、运维手册、ADR-0001、C PRD 版本记录已更新。
+    - **本机 `./scripts/verify.sh` 全绿**：类型检查、单元 996、迁移一致、数据库测试 1429（+1 个既有 skip）、密钥、链接、登记、Python 36。更早的一次本机运行与第一次 ECS 运行撞上 `activity-plan/scale.perf.db.test.ts` 的偶发失败（与 C 无关），重跑通过。
+    - **与 design 的偏差 / 取舍**：① `signals-main` 只支持 AccessKey 环境变量，实例角色凭证没有接入（ECS 上没有 AccessKey，所以 CLI 的 `put-image` 没在 ECS 上做，由 `signals-smoke` 走实例角色代替；接入属于部署形态）；② 规模演练的评分用进程内 `FakeMatcher`，不含真实 Python 的吞吐；③ MAN-1、MAN-4、ENV-6 需要一个带 C 的表和真实同步数据的库，测试 ECS 的 `hbecho` 库没有迁移 C 的表，对现有库做 DDL 需另行同意，所以没有做。
+    - **未证明**：匹配分标定（缺业务样本，`image.template` / `image.element` 不进生产启用集）；HEIC 封面经 ffmpeg ≥ 7.1 的匹配；回看窗口在真实同步并发下是否足够；真实 Python 上的评分吞吐；D 对读取口 / 监控段 / `retainUntil` 的消费（`d-rule-engine` 未实施）；ASR 与判定的真实模型质量与计费（`h-ai-min`）。
 
 ## 对已有代码与测试的改动
 

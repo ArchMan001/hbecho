@@ -77,6 +77,7 @@
 | 33 | — | 满足最小访问控制闭环后才开放 80/443 | §10.6 |
 | 34 | ✅ 我 | VOD 已开通（2026-10-29，华北2 北京）：`hbecho-vod-manage` 策略已加，点播系统存储已启用，`hbecho-course` 模板组已建（`3ca24a90956dbbfa16f1f6cf2fe6ad3a`）。**剩余**：播放域名（等备案）、自动截图模板（`InternalError`，暂缓） | §1.7、§3.6 |
 | 35 | ✅ 我 | `hbecho-course` 桶已建（2026-10-30，cn-beijing、私有、无过期规则 + 碎片 7 天）；「阻止公共访问」已开启；`hbecho-oss-rw` 已更新为 v2，新增 `CourseDocReadWriteDelete`；上传/列举/删除实测通过 | §1.6、§7 |
+| 36 | ✅ Kiro | `hbecho-signals` 桶已建（2026-11-12，cn-beijing、私有、Standard、LRS、无过期规则 + 碎片 7 天、「阻止公共访问」已开启）；`hbecho-oss-rw` 更新为 v3，新增 `SignalsStdImageReadWriteDelete`（仅该桶，v2 保留可回退）；测试 ECS 用实例角色实测放行：写 / 列 / 读 / 删通过，`hbecho-media` 删除仍被拒 | §1.6、§7 |
 
 ### P5 · 容器镜像服务（ACR）
 
@@ -261,7 +262,7 @@ hbecho 与 hbdam 的差别：hbecho 首版是内部渐进开放的平台，媒�
 
 Bucket 拓扑是一个难以逆转的决定（改桶等于搬对象 + 改 `oss_objects.bucket/object_key`），**写入第一个对象之前必须先定**。规划、取舍和生命周期规则见 §7；这里只登记结果。
 
-**2026-09-03 已按三桶分离方案创建完成**，四个桶均在 `cn-beijing`、私有 ACL、Standard、LRS、「阻止公共访问」为 `true`。**2026-10-30 新增第五个桶 `hbecho-course`**（课程资料，私有 ACL，实例角色可删），详见 ADR-0001 修订。**2026-11-12 登记第六个桶 `hbecho-signals`**（识别能力的标准图 / 元素图，计划无过期规则、实例角色可删），**尚未创建**，见下表与 ADR-0001 修订。
+**2026-09-03 已按三桶分离方案创建完成**，四个桶均在 `cn-beijing`、私有 ACL、Standard、LRS、「阻止公共访问」为 `true`。**2026-10-30 新增第五个桶 `hbecho-course`**（课程资料，私有 ACL，实例角色可删），详见 ADR-0001 修订。**2026-11-12 新增第六个桶 `hbecho-signals`**（识别能力的标准图 / 元素图，私有 ACL、无过期规则、实例角色可删），**同日已创建**，见下表与 ADR-0001 修订。
 
 桶名以 `hbecho-` 开头是硬约束——`hbecho-setup-buildout` 策略把 OSS 权限限定在 `acs:oss:*:1241086349153033:hbecho-*`（§3.6）。要用别的命名必须同步改策略。
 
@@ -272,7 +273,7 @@ Bucket 拓扑是一个难以逆转的决定（改桶等于搬对象 + 改 `oss_o
 | 临时对象（`object_category='temp'`） | `hbecho-temp` | 2026-09-03 15:45:52 | 过期 3 天 + 碎片 1 天 |
 | 数据库备份 | `hbecho-backup` | 2026-09-03 15:45:53 | `mysql/` 前缀 30 天 + 碎片 7 天 |
 | 课程资料（PDF / JPG / PNG） | `hbecho-course` | 2026-10-30 09:34:23 | **无过期规则** + 碎片 7 天；实例角色可删（ADR-0001 修订） |
-| 识别能力的标准图 / 元素图（`c-signals`） | `hbecho-signals` | **未创建**（2026-11-12 登记决定，ADR-0001 修订） | 计划：**无过期规则** + 碎片 7 天；实例角色可删；创建桶与 RAM 变更需单独说明并逐步得到同意 |
+| 识别能力的标准图 / 元素图（`c-signals`） | `hbecho-signals` | 2026-11-12 17:25:17（北京时间） | **无过期规则** + 碎片 7 天；实例角色可删（ADR-0001 修订）；「阻止公共访问」为 `true` |
 
 Endpoint：
 
@@ -2786,6 +2787,7 @@ ssh hbecho 'growpart /dev/<设备> 1 && resize2fs /dev/<设备>p1 && df -h /data
 | 2026-11-10 | 新增 [ADR-0016](../architecture/adr/0016-container-registry.md)：镜像仓库自建 ACR 经济版、不复用 hbdam 实例；同步更新 ADR 索引与 `INDEX.md`（15→16 项） | 刘学奎 / Claude |
 | 2026-11-10 | 刘学奎确认 ACR 自动续费已生效（到期 2026-12-11），§P5 #39 关闭 | 刘学奎 |
 | 2026-11-11 | 测试 ECS 上线应用：`hbecho-mysql` 8.0.46 → 8.4.13（先备份）并加 `--log-bin-trust-function-creators=1`；建 `hbecho_web` 运行账号与迁移账号；`/data/app/web.env`、`migrate.env`（root 600，短信 AccessKey 由本机经 Workbench 上传，只在服务器落盘）；compose 增加 `web` 服务；迁移全部应用；nginx 反代到 `127.0.0.1:3000`；创建待激活的首个超管。镜像 `…/hbecho/app:cd8188516e13` | Kiro（刘学奎同意） |
+| 2026-11-12 | 建 `hbecho-signals` 桶（c-signals 标准图 / 元素图；cn-beijing、私有、LRS、碎片 7 天、阻止公共访问）；`hbecho-oss-rw` v2 → v3 新增 `SignalsStdImageReadWriteDelete`（只含该桶，Resource 精确到桶名）；测试 ECS 实例角色实测：该桶写 / 列 / 读 / 删通过，`hbecho-media` 删除仍被拒（实测时在 media 留下的探针对象已用 setup 身份删除）。刘学奎 2026-11-12 事先书面同意创建桶与改 RAM | Kiro |
 
 ### 17.1 当前进度
 

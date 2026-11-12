@@ -767,7 +767,30 @@ signals run                                                             # 常驻
 
 ### 12.1 规模演练与实施发现
 
-（任务 13 回填。）
+**怎么跑**：[`scale.perf.db.test.ts`](../../../src/modules/signals/scale.perf.db.test.ts)。默认（`verify.sh`）跑缩小规模；完整规模 `HBECHO_SIGNALS_DRILL=full ./scripts/with-test-mysql.sh pnpm exec vitest --run --project db src/modules/signals/scale.perf.db.test.ts`，或在测试 ECS 上 `SUITE=full SIGNALS_DRILL=full ./scripts/ecs-test.sh start`。造数据用 `INSERT … SELECT` 批量生成，不逐行走工厂；评分用 `FakeMatcher`（进程内），所以下面的吞吐是**编排与数据库的开销**，不含真实 Python 匹配的耗时。
+
+| 项 | 本机（Mac，Docker 里的一次性 MySQL 8.4） | 测试 ECS（8 核 / 31 GB，一次性 MySQL 8.4 容器） |
+|---|---|---|
+| 内容扫描：20 万内容（扫描批量 1000，201 个 tick） | 415.7 秒，约 **481 个/秒** | 248.5 秒，约 **805 个/秒**（另一次 256.1 秒，781 个/秒） |
+| 无事可做的 tick（20 万内容，全部落在同一 `current_snapshot_selected_at`） | 0.30 秒 | 1.1 秒 |
+| `readMany` 5,000 个主体（文本信号） | **82 毫秒，2 次查询**（10 个主体也是 2 次） | **93 毫秒，2 次查询** |
+| 任务领取：1 万个 pending 任务，每次领 50 个 | 4.7 秒，约 **2,129 个/秒** | 3.3 秒，约 **2,989 个/秒** |
+| 评分端到端：1,000 个任务（并发 4，`FakeMatcher`） | 请求建任务 0.11 秒；执行 2.46 秒，约 **407 个/秒** | 请求建任务 0.10 秒；执行 1.71 秒，约 **585 个/秒** |
+
+**读数**：
+
+- 起始值下（扫描每 30 秒一个批次 500）的扫描能力远大于任何现实的内容增量：一个 tick 处理 500 个内容约 0.6–1 秒；首次部署回填 20 万存量内容约 4–7 分钟（靠对账或把批量调大，期间读取口读到的是 `missing(not_computed)`）。
+- 20 万内容空转一个 tick 也要 0.3–1.1 秒，原因是演练里所有内容的指针时间相同，回看窗口把它们全圈进来再逐个比对；真实数据的指针时间是分散的，窗口里只有最近 10 分钟推进过的内容。**这是演练数据的特例，不是常态，但也说明回看窗口越大、窗口内内容越多，空转越贵**。
+- `readMany` 的查询次数不随主体数增长（2 次），5,000 个主体不到 0.1 秒，读取本身不是瓶颈。
+- 评分真正的瓶颈在 Python：单次匹配约 50–100 毫秒（smoke 里证据的 `elapsed_ms` 为 56–64），并发 2 时约 20–40 个/秒；日调用量估算 < 1,000 次（PRD C §2.3），绰绰有余。若 D 一次圈定几万个内容并要求补算，大约需要十几分钟到一小时，期间读取为 `pending: queued`。这一条**没有**在真实 Python 上做吞吐演练（只有端到端 smoke 的单次耗时）。
+
+**实施发现**（写给后来人）：
+
+1. 规模演练在测试 ECS 上第一次失败，不是被测代码的问题：上一个用例留下 20 万行，下一个用例的 `beforeEach` 清库超过 vitest 默认的 10 秒钩子超时。现在演练文件在 `afterEach` 里清库并给足超时。
+2. 测试 ECS 的宿主机没有 ffmpeg，而 Python 能力服务的图片归一化依赖 ffmpeg，所以 `test_match.py` 里 7 个 HTTP 契约用例在没有 ffmpeg 时失败；同一次运行还暴露了这些用例用大小写敏感的 `dict` 读响应头（uvicorn 只装 h11 时头名是小写，装了 httptools 时保留原样，本机恰好是后者）。已改成大小写无关。ECS 上的 ffmpeg 由 venv 里的 `imageio-ffmpeg` 提供，没有改系统。
+3. ECS 上 `pip install` 的踩坑：系统 pip 23.3 在 Python 3.11 上读大索引页会触发 `cachecontrol` 缺陷（`TypeError: '>=' not supported between 'int' and 'NoneType'`），加 `--no-cache-dir` 绕过；到阿里云 PyPI 镜像的下载只有约 150 KB/s，OpenCV（61 MB）约 7 分钟。
+4. `signals-main` 目前只支持 `OSS_ACCESS_KEY_*` 环境变量。ECS 上按 runbook 是实例角色、没有 AccessKey，所以 ECS 上没法直接跑 CLI 的 `segment put-image`（端到端 smoke 用的是单独的 `signals-smoke`，它走实例角色）。接入实例角色凭证（`ecsRoleCredentials`，会过期，需要每次操作前取）是部署形态的一部分，不在本 spec。
+5. `activity-plan/scale.perf.db.test.ts` 的“并发解析”用例在机器有负载时更容易失败（本机一次、ECS 一次），与 C 无关；留给 a-activity-plan 维护者。
 
 ## 13. Decision records
 

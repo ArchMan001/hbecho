@@ -104,6 +104,59 @@ describe("commentFacts", () => {
   });
 });
 
+describe("coverMaterial：封面素材（requirements R12）", () => {
+  /** 同一内容在第 0、1、2… 个批次各一个 finalized 快照（批次时间递增）。 */
+  async function snapshots(pcid: string, n: number): Promise<{ contentId: bigint; snaps: bigint[] }> {
+    const acct = await insertAccount(t.db, "douyin", T0);
+    const first = await mkContent(acct, pcid, { current: false });
+    const snaps = [first.snapshotId];
+    for (let i = 1; i < n; i++) {
+      const batchId = await insertBatch(t.db, new Date(T0.getTime() + i * 1000));
+      snaps.push(await insertContentSnapshot(t.db, { batchId, contentId: first.contentId, now: T0, status: "finalized" }));
+    }
+    await t.db.update(contents).set({ currentSnapshotId: snaps[n - 1]!, currentSnapshotSelectedAt: T0 }).where(eq(contents.contentId, first.contentId));
+    return { contentId: first.contentId, snaps };
+  }
+  const cover = async (contentId: bigint) => (await facts().coverMaterial([contentId])).get(contentId);
+
+  it("内容从没有过 cover 引用 → not_applicable", async () => {
+    const { contentId } = await snapshots("none", 2);
+    expect(await cover(contentId)).toEqual({ state: "not_applicable", reason: "no_reference" });
+  });
+  it("A 的封面首次规则：封面在第一个批次归档，current 是第三个批次且没有 cover 引用 → 仍是 ready", async () => {
+    const { contentId, snaps } = await snapshots("first-rule", 3);
+    const asset = await insertMediaAsset(t.db, { key: "media/cover1", now: T0, hex: "cover-bytes" });
+    await insertMediaReference(t.db, { contentSnapshotId: snaps[0]!, role: "cover", status: "archived", mediaAssetId: asset });
+    expect(await cover(contentId)).toEqual({ state: "ready", assetId: asset, sha256: sha("cover-bytes") });
+  });
+  it("更新批次的 pending 引用不盖住更早批次已归档的封面（同步进行中的瞬态）", async () => {
+    const { contentId, snaps } = await snapshots("pending-newer", 2);
+    const asset = await insertMediaAsset(t.db, { key: "media/cover2", now: T0, hex: "cover2" });
+    await insertMediaReference(t.db, { contentSnapshotId: snaps[0]!, role: "cover", status: "archived", mediaAssetId: asset });
+    await insertMediaReference(t.db, { contentSnapshotId: snaps[1]!, role: "cover", status: "pending" });
+    expect(await cover(contentId)).toMatchObject({ state: "ready", assetId: asset });
+  });
+  it("没有可用封面时取批次最新的一条按状态映射", async () => {
+    const asset = await insertMediaAsset(t.db, { key: "media/cover3", now: T0, hex: "cover3" });
+    const cases: Array<[Array<"pending" | "failed" | "carried_forward">, string]> = [
+      [["failed", "pending"], "media_pending"], // 最新的是 pending
+      [["pending", "failed"], "media_failed"], // 最新的是 failed
+      [["failed", "carried_forward"], "media_carried_forward"],
+    ];
+    for (const [i, [statuses, reason]] of cases.entries()) {
+      const { contentId, snaps } = await snapshots(`latest-${i}`, 2);
+      for (const [j, status] of statuses.entries()) await insertMediaReference(t.db, { contentSnapshotId: snaps[j]!, role: "cover", status, ...(status === "carried_forward" ? { mediaAssetId: asset } : {}) });
+      expect(await cover(contentId), statuses.join(">")).toEqual({ state: "missing", reason });
+    }
+  });
+  it("只看 role=cover：同内容的音频引用不会被当成封面", async () => {
+    const { contentId, snaps } = await snapshots("audio-only", 1);
+    const asset = await insertMediaAsset(t.db, { key: "media/au", now: T0, hex: "au" });
+    await insertMediaReference(t.db, { contentSnapshotId: snaps[0]!, role: "audio", status: "archived", mediaAssetId: asset });
+    expect(await cover(contentId)).toEqual({ state: "not_applicable", reason: "no_reference" });
+  });
+});
+
 describe("profileMaterial：账号头像 / 背景素材", () => {
   it("没有 current 主页快照 → missing(no_profile_snapshot)；有快照没引用 → not_applicable；四种归档状态各自映射；头像与背景互不串", async () => {
     const mk = async (withSnapshot: boolean) => {

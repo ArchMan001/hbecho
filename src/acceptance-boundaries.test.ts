@@ -229,7 +229,11 @@ describe("SG-16 护栏：signals 模块与 A 域、供应商、模型的边界",
 
   // ① 不写 A 域表；只有 facts.ts 可以（只读地）引用 A 域表
   const writesA = (files: Src[]): string[] => files.filter((f) => writeDrizzle.test(f.text) || writeSql.test(f.text)).map((f) => f.rel);
-  const readsAOutsideFacts = (files: Src[]): string[] => files.filter((f) => f.rel !== FACTS && importedNames(f.text).some((n) => aExportNames.includes(n))).map((f) => f.rel);
+  const namespaceImport = /import\s*\*\s*as\s+\w+\s+from\s*["'][^"']*\/db\/schema(?:\/[\w-]+)?["']/;
+  const readSql = new RegExp(`\\b(?:FROM|JOIN)\\s+\`?(?:${aSqlNames.join("|")})\`?\\b`, "i");
+  // 引用 A 域表的三种写法：具名 import、命名空间 import、裸 SQL 的 FROM / JOIN
+  const readsAOutsideFacts = (files: Src[]): string[] =>
+    files.filter((f) => f.rel !== FACTS && (importedNames(f.text).some((n) => aExportNames.includes(n)) || namespaceImport.test(f.text) || readSql.test(f.text))).map((f) => f.rel);
   // ② 不碰供应商调用与采集网关，不建同步任务
   const forbiddenImport = ({ spec, typeOnly }: { spec: string; typeOnly: boolean }): boolean =>
     /provider-adapter|\/orchestrator(\/|$)/.test(spec) || (/raw-capture/.test(spec) && !typeOnly && !/raw-capture\/(ports|oss-store)$/.test(spec));
@@ -269,12 +273,16 @@ describe("SG-16 护栏：signals 模块与 A 域、供应商、模型的边界",
     const ok: Src[] = [
       { rel: "modules/signals/zz-e.ts", text: 'import { signalResults } from "../../db/schema"; await tx.insert(signalResults).values(x); await tx.update(signalTasks).set(y);' },
       { rel: FACTS, text: 'import { contents, comments } from "../../db/schema"; await db.select().from(contents);' },
+      { rel: "modules/signals/zz-k.ts", text: "await db.execute(sql`SELECT * FROM signal_results WHERE 1`);" },
     ];
     expect(writesA(ok)).toEqual([]);
     expect(readsAOutsideFacts(ok)).toEqual([]);
     const reads: Src[] = [
       { rel: "modules/signals/zz-f.ts", text: 'import { contents, signalResults } from "../../db/schema";' },
       { rel: "modules/signals/zz-g.ts", text: 'import { type comments as c } from "../../db/schema/content";' },
+      { rel: "modules/signals/zz-h.ts", text: 'import * as schema from "../../db/schema";' },
+      { rel: "modules/signals/zz-i.ts", text: "await db.execute(sql`SELECT content_id FROM contents WHERE 1`);" },
+      { rel: "modules/signals/zz-j.ts", text: "await db.execute(sql`SELECT 1 FROM signal_results r JOIN `content_snapshots` s ON 1`);" },
     ];
     expect(readsAOutsideFacts(reads)).toEqual(reads.map((r) => r.rel));
   });

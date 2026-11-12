@@ -144,6 +144,39 @@ export function createFacts(db: Q) {
   }
 
   /**
+   * 内容的封面素材。A 的封面首次规则让内容已有成功封面后不再为新快照建 cover 引用（requirements R12），
+   * 所以不能只看 current 快照：取该内容**全部快照**上的 cover 引用，优先批次最新的 archived（可用）的那条；
+   * 没有可用的则取批次最新的一条（任意状态）按状态映射；一条都没有 → not_applicable。
+   * 为什么优先可用：同步进行中更新批次可能已有一条 pending 引用，不能因此把已有可用封面的内容读成 media_pending。
+   */
+  async function coverMaterial(contentIds: readonly bigint[]): Promise<Map<bigint, Material>> {
+    const out = new Map<bigint, Material>(contentIds.map((id) => [id, { state: "not_applicable", reason: "no_reference" }]));
+    if (contentIds.length === 0) return out;
+    const rows = await db
+      .select({
+        contentId: contentSnapshots.contentId,
+        archiveStatus: mediaReferences.archiveStatus,
+        mediaAssetId: mediaReferences.mediaAssetId,
+        assetSha256: mediaAssets.sha256,
+        assetVerification: mediaAssets.verificationStatus,
+      })
+      .from(mediaReferences)
+      .innerJoin(contentSnapshots, eq(contentSnapshots.contentSnapshotId, mediaReferences.contentSnapshotId))
+      .innerJoin(syncBatches, eq(syncBatches.batchId, contentSnapshots.batchId))
+      .leftJoin(mediaAssets, eq(mediaAssets.mediaAssetId, mediaReferences.mediaAssetId))
+      .where(and(inArray(contentSnapshots.contentId, [...contentIds]), eq(mediaReferences.role, "cover"), eq(mediaReferences.slotIndex, 0)))
+      .orderBy(desc(syncBatches.logicalAt), desc(syncBatches.batchId)); // 与 A 选 current 的 (logical_at, batch_id) 一致
+    const chosen = new Map<bigint, Material>();
+    for (const r of rows) {
+      const m = materialOf(r);
+      const prev = chosen.get(r.contentId);
+      if (prev === undefined || (prev.state !== "ready" && m.state === "ready")) chosen.set(r.contentId, m);
+    }
+    for (const [id, m] of chosen) out.set(id, m);
+    return out;
+  }
+
+  /**
    * 内容的音频素材：该内容**任一快照**下已归档的 audio 引用（音频字节不随快照变化），多条取最新批次。
    * 没有 → missing(audio_not_archived)；C 不提采集需求（PRD C §8.2）。
    */
@@ -239,6 +272,6 @@ export function createFacts(db: Q) {
     return rows.map((r) => r.id);
   }
 
-  return { contentFacts, commentFacts, profileMaterial, audioMaterial, mediaObjectOf, scopeSubjects };
+  return { contentFacts, commentFacts, coverMaterial, profileMaterial, audioMaterial, mediaObjectOf, scopeSubjects };
 }
 export type Facts = ReturnType<typeof createFacts>;

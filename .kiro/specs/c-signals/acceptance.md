@@ -50,6 +50,7 @@
 | # | 需求 | 命令 / 断言 | 预期 |
 |---|---|---|---|
 | B1 | SG-2 | 同一内容的封面信号，依次在「无封面引用 / 引用 `pending` / 引用 `failed` / 引用 `carried_forward` / 已归档且补算任务因 OSS 对象缺失而失败 / 已计算」六种情形下读取（第 5 种需先 `requestScores` 并让任务跑一次） | `not_applicable` / `missing` / `missing` / `missing` / `failed` / `valid`；原因码各不相同（`no_reference`、`media_pending`、`media_failed`、`media_carried_forward`、`image_unreadable`、无） |
+| B1a | SG-2、SG-8 | 内容的封面在第一个批次归档、之后两个批次的快照都没有 `cover` 引用（A 的封面首次规则）；另一内容更新批次有 `pending` 引用而更早批次已归档 | 两者都读作可用封面（`facts.coverMaterial` 为 ready），不是 `not_applicable`，也不是 `media_pending`（requirements R12） |
 | B2 | SG-2 | 提升目录中某信号版本号后读取旧结果 | `stale`，带旧值与旧版本；不是 `missing`；任务表无新行 |
 | B3 | SG-2 | 数据库插入 `state='missing'`、`'stale'`、`'not_applicable'` 的结果行 | CHECK 拒绝 |
 | B4 | SG-2 | `failed` 结果行带 `score` 或 `value` | CHECK 拒绝 |

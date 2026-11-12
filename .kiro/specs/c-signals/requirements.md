@@ -70,6 +70,7 @@
 | R10 | `server-operations-runbook.md` 桶清单、`services/capability/README.md` 端点表 | 没有第六个桶与 `/v1/image/match` | 随 R2、R3 同步（任务 0、任务 7） |
 | R11 | C PRD v1.2 §8.1 | 「技术失败（图片损坏、算法异常、超时、依赖未就绪）一律记 `failed`」 | 失败分两类：**瞬时失败**（能力服务不可用、超时、来源 5xx、依赖未就绪、能力版本不一致）重试，用尽后任务 `dead`，**不写结果行**，信号读作 `missing` 并带原因；**确定性失败**（图片损坏、解码失败、模型拒绝、输出非法）写 `failed`（3 个月）。一次宕机不应在结果表里固化 3 个月的「失败」。PRD 已于 2026-11-12 升 v1.3 订正（C-D19）；D 的 spec 要按「两类都是 unknown」映射 |
 
+| R12 | A 已合并代码 `projection/content-list.ts` 的 `hasArchivedCover`（`sync-runner/list-walker.ts` 传入）；本 spec 原 §1.4 第 7 项、SG-8、design §7.6 | A 的封面首次规则（FS-D09、v2 R3）：内容已有 `archived` / `carried_forward` 的封面后，新快照**不再建 `cover` 引用**；`cover` 引用只由列表投影创建。内容第二次及以后成为 current 后，current 快照上没有封面引用，原写法会把绝大多数有封面的内容读成 `not_applicable` | 内容封面素材取该内容全部快照上 role=`cover`、slot 0 的引用：**优先批次最新的 `archived` 引用**（同步进行中可能有更新批次的 `pending` 引用，不能因此把已有可用封面读成 `media_pending`）；没有 `archived` 则取批次最新的引用（任意状态）按 §1.4 第 7 项映射；一条都没有 → `not_applicable`。批次序用 `(logical_at, batch_id)`，与 A 选 current 一致。不改 A；PRD C 从未写「current 快照」，§5.5 / §5.8 不变（2026-11-12，刘学奎要求审查后以 AI 意见为准） |
 > R1 是对 A 域表的唯一修改。C 的其余表全部新增，不改 A 的任何列、状态或约束。
 
 ### 1.4 PRD 真空与本 spec 的解释
@@ -84,7 +85,7 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 | 4 | 话题从哪抽 | 标题、正文与 A 的 `tag_text` 三处的并集，去重，保持首次出现顺序。fixture 里同时出现三种写法：空格分隔（`#日立中央空调 #全效Ⅱ三管制`）、无空格相连（`#一键节能更省心#金秋焕新首选`）、小红书的 `#来拍照了[话题]#` | 本 spec 建议（依据 `tests/fixtures` 与 `aimaster接口文档` 的样本） |
 | 5 | 关键词用什么归一化 | C 导出 `normalizeKeyword(raw, version?)`，与特征落库用**同一套实现**；D 若自己写一份，大小写与全半角必然漂移。**D 保存关键词原文，执行时归一化**，不保存归一化结果。归一化升级后，D 默认仍会读到 `stale` 的旧文本，所以关键词必须按**文本写入时的归一化版本**归一化：文本类信号的 `SignalValue` 带 `normalizerVersion`，D 调用 `normalizeKeyword(raw, value.normalizerVersion)`；C 保留全部历史版本的归一化实现（design §7.1，§14 第 12 项） | 本 spec 建议（需写进 D spec） |
 | 6 | 账号头像 / 背景的平台范围 | `account.bg_*` / `account.avatar_*` 只对抖音有输入。快手（PRD C §2.4）与小红书（handoff §五.1、D PRD §2.3）一律 `not_applicable` | 本 spec 建议（PRD C 只点名了快手） |
-| 7 | 素材状态到信号状态的映射 | 账号主体尚无当前主页快照 → `missing`（`no_profile_snapshot`），**不是** `not_applicable`；有快照但没有对应引用行 → `not_applicable`；内容主体按其 current 快照取引用，无引用行 → `not_applicable`；`pending` → `missing`（`media_pending`）；`failed` → `missing`（`media_failed`）；`carried_forward` → `missing`（`media_carried_forward`，PRD C §5.5 禁止当作当前图）；`archived` 但字节读不到或解码失败 → `failed` | 已定（PRD C §5.8）；原因码为本 spec 的 |
+| 7 | 素材状态到信号状态的映射 | 账号主体尚无当前主页快照 → `missing`（`no_profile_snapshot`），**不是** `not_applicable`；有快照但没有对应引用行 → `not_applicable`；~~内容主体按其 current 快照取引用，无引用行 → `not_applicable`~~（由 R12 于 2026-11-12 修订：A 的封面首次规则使 current 快照常无 `cover` 引用）；内容主体的封面取该内容**全部快照**上的 `cover` 引用：优先批次最新的 `archived` 引用，没有则取批次最新的引用（任意状态）并按其状态映射，一条引用都没有 → `not_applicable`；`pending` → `missing`（`media_pending`）；`failed` → `missing`（`media_failed`）；`carried_forward` → `missing`（`media_carried_forward`，PRD C §5.5 禁止当作当前图）；`archived` 但字节读不到或解码失败 → `failed` | 已定（PRD C §5.8）；原因码为本 spec 的 |
 | 8 | 音频从哪来 | 读 A 已归档的 `audio` 媒资（该内容任一快照下的 `archived` 引用均可：音频字节不随快照变化）。没有 → `missing`（`audio_not_archived`）。C 不提采集需求、不写同步任务 | 已定（PRD C §8.2）；读取范围为本 spec 的 |
 | 9 | 第 3 层在 H1 落地之前怎么办 | C 定义 `AiGatewayPort`，默认实现 `DisabledAiGateway`（`activeModel()` 返回 `null`）。信号 `missing`（`capability_disabled`），不创建任务，不发调用。第 3 层的编排、参数化、缓存、失败语义全部用 fake 网关在离线测试里证明 | 本 spec 建议（**待确认**，design §14 第 2 项） |
 | 10 | 补算「缺失」的定义 | 在 `requestScores` 中，「缺失」= 该（素材 × 参数）在**当前能力版本下**没有结果行，且最高版本的行不是 `valid`。已有旧版本的有效值（`stale`）**不**补算——那是显式重算的事（PRD C §7.2） | 已定（PRD C §5.6 第 3 条、C-D05）；边界为本 spec 的 |
@@ -307,7 +308,7 @@ PRD 没有直接写死、但实现必须选一条的地方。「已定」表示 
 
 **陈述**：系统 SHALL 提供 `requestScores`，对给定监控段与主体清单，补算**缺失**的匹配分（PRD C §5.6 第 3 条）。
 
-- **主体与素材**：内容主体 → 其 current 快照的 `cover` 引用；账号主体 → `external_accounts.current_profile_snapshot_id` 对应主页快照的 `background` / `avatar` 引用。素材指纹 = 原图 `media_assets.sha256`；
+- **主体与素材**：内容主体 → 该内容全部快照上的 `cover` 引用（~~其 current 快照的 `cover` 引用~~，由 R12 于 2026-11-12 修订；选择规则见 §1.4 第 7 项）；账号主体 → `external_accounts.current_profile_snapshot_id` 对应主页快照的 `background` / `avatar` 引用。素材指纹 = 原图 `media_assets.sha256`；
 - **素材状态映射**：按 §1.4 第 7 项。`carried_forward` 的引用 SHALL NOT 参与匹配（PRD C §5.5）；缺素材的主体返回 `missing` 与原因，并在返回里列出「需要素材」的主体，供 D 向 A 提需求（C 自己不提）；
 - **补算**：只对「缺失」建任务（§1.4 第 10 项）；已有分数（含 `stale`）不重算；任务按复用键幂等，重复请求不产生重复任务；
 - **计算**：C 的任务 runner 为两张图各生成短期签名 URL，调用 Python `POST /v1/image/match`；Python 返回 0.0–10.0 分与证据，并回报能力标识与版本；C 校验回报的版本与目录一致，不一致按瞬时失败处理（防部署错位）；

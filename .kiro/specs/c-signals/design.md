@@ -509,7 +509,8 @@ ingestContent(f, mode='normal'):
 2. 平台：对象平台不在 entry.platforms → not_applicable(platform_unsupported)
 3. 输入适用性：
      文本：PLATFORM_TEXT_FIELDS 无该字段 → not_applicable(field_absent_on_platform)
-     图片：内容主体取其 current 快照的引用，无引用行 → not_applicable(no_reference)
+     图片：内容主体取该内容全部快照上的 cover 引用（requirements R12，2026-11-12 修订，原为「取其 current 快照的引用」）：
+           优先批次最新的 archived 引用；无 archived 则取批次最新的引用按状态映射；一条都没有 → not_applicable(no_reference)
            账号主体尚无 current_profile_snapshot_id → missing(no_profile_snapshot)；有快照但无对应引用行 → not_applicable(no_reference)
      评论：content_text 为 NULL 与空串都按「平台有该字段」读作 valid 的空值（指纹区分二者）
 4. 已存储的最高版本行 R（特征行信封条目 / 结果行）：
@@ -641,7 +642,7 @@ chunk 任务（params: {run_id, after_id, limit}）:
 
 - **范围**：`contentIds` / `accountIds` / `brandId` / `publishedFrom–To`，可组合取交集；至少一项（§1.4 第 13 项）；`segmentRef` 是可选附加键，写入 `scope` 与 `scope_sha256` 并参与校验，不能单独作为范围。`brandId` 经**当前**归属（`staff_account_assignments` → 门店 → 品牌）展开，必须在操作者品牌范围内；
 - 重算的参数集合：结果类信号重算需要知道「对哪些标准图」：run 的 `scope` 里可带 `segmentRef`；没带时，对范围内主体已有的所有（素材 × 参数）旧版本结果行各建一个新版本任务；
-- 评论类特征信号没有独立 scope 种类：按内容范围展开出的内容取其全部评论；scope 只影响展开，不改变信号；
+- 评论类特征信号没有独立 scope 种类：按内容范围展开出的内容取其 active 的全部评论；scope 只影响展开，不改变信号；`publishedFrom–To` 比较的是**内容 current 快照的 `published_at`**（区间 `[from, to)`），评论信号同样如此，不看评论自己的创建时间；账号类信号不支持 `publishedFrom–To` 与 `contentIds`（`scope_not_applicable`）；
 - 重算不改监控段、不升计划版本、不触发 D；分块使崩溃后续跑成立（任务有租约），`processed_count` 随分块事务推进。
 - **续跑 failed run**：`apply` 把 `cursor_id` 处的 chunk 任务（若 `dead`）置回 `pending` 并清零 `attempt_count`；分块键含 `run_id + after_id`，不会与其它 run 冲突。
 - **取消**：`cancel(actor, {runId})` 先 `assert rule.definition.manage`；只接受 `running` / `failed`，置 `cancelled`、`active_key = NULL`、写 `finished_at`，审计 `recompute.cancel`；把该 run 的 `pending` / `retry_wait` chunk 任务置 `dead`（`last_error_code='run_cancelled'`），`tasks revive` 拒绝复活这些任务。正在执行的 chunk 不强行中断，在提交前重读 run 状态，看到 `cancelled` 就不再建下一个 chunk，本块已写入的对象不回滚（幂等；新 run 会跳过已是目标版本的对象）。已 `completed` / `cancelled` 的 run 调用 cancel 被拒绝（`run_not_cancellable`）。

@@ -32,7 +32,7 @@ export const PageHead = ({ title, sub, actions }: { title: ReactNode; sub?: Reac
   </div>
 );
 
-export const Callout = ({ icon, tone, children, style }: { icon: IconName; tone?: "warn" | "danger"; children: ReactNode; style?: React.CSSProperties }) => (
+export const Callout = ({ icon, tone, children, style }: { icon: IconName; tone?: "warn" | "danger" | undefined; children: ReactNode; style?: React.CSSProperties }) => (
   <div className={`callout ${tone ?? ""}`.trim()} {...(style ? { style } : {})}>
     <Icon name={icon} />
     <span>{children}</span>

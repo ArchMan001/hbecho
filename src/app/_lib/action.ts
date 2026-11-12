@@ -30,6 +30,13 @@ function hintOf(code: string, detail: unknown): string | undefined {
   return undefined;
 }
 
+/** 活动计划拒绝的补充说明：只取文件级错误的失败项与样本（上传者本人的内容）和名额已满的现任负责人。 */
+function planHint(code: string, detail: Record<string, unknown> | undefined): string | undefined {
+  if (!detail) return undefined;
+  if (code === "owner_slots_full" && Array.isArray(detail.owners)) return `现任负责人：${detail.owners.map((x) => String(x).slice(0, 40)).join("、")}`;
+  return hintOf(code, detail);
+}
+
 export async function run<T>(fn: (ctx: AuthContext) => Promise<T>): Promise<ActionResult<T>> {
   const s = await currentSession();
   if (!s.ok) {
@@ -45,6 +52,11 @@ export async function run<T>(fn: (ctx: AuthContext) => Promise<T>): Promise<Acti
     if (e instanceof Error && e.name === "LearningError") {
       const le = e as Error & { code: string; detail?: { referenceCount?: number } };
       return fail(le.code, le.message, typeof le.detail?.referenceCount === "number" ? `共有 ${le.detail.referenceCount} 门课程在使用` : undefined);
+    }
+    // 活动计划、同步与采集命令（TracerError：capability 未放行、同步设置缺失等）的拒绝：message 本来就是面向业务的人话，code 是稳定码；detail 里的计数 / 名单只在需要时挑几个字段给 hint
+    if (e instanceof Error && (e.name === "PlanError" || e.name === "SyncError" || e.name === "TracerError")) {
+      const pe = e as Error & { code: string; detail?: Record<string, unknown> };
+      return fail(pe.code, pe.message, planHint(pe.code, pe.detail));
     }
     // 只记错误类型与数据库错误码：驱动的错误信息里会带 SQL 参数（手机号等），不进日志
     const cause = (e as { cause?: { code?: string } } | null)?.cause;

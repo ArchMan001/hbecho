@@ -10,13 +10,16 @@ export interface NavItem {
   href: string;
   label: string;
   icon: IconName;
+  /** 同一入口下的其他路径前缀（例如「活动计划」下的 /batches），在这些页面上也高亮。 */
+  also?: string[];
 }
 export interface NavGroup {
   label: string;
   items: NavItem[];
 }
 
-const active = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
+const on = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
+const active = (pathname: string, href: string, also: readonly string[] = []) => on(pathname, href) || also.some((a) => on(pathname, a));
 
 export function SidebarNav({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
@@ -26,7 +29,7 @@ export function SidebarNav({ groups }: { groups: NavGroup[] }) {
         <nav key={g.label} className="nav-group" aria-label={g.label}>
           <div className="nav-label">{g.label}</div>
           {g.items.map((i) => (
-            <Link key={i.href} className={`nav-item ${active(pathname, i.href) ? "active" : ""}`} href={i.href} aria-current={active(pathname, i.href) ? "page" : undefined}>
+            <Link key={i.href} className={`nav-item ${active(pathname, i.href, i.also) ? "active" : ""}`} href={i.href} aria-current={active(pathname, i.href, i.also) ? "page" : undefined}>
               <Icon name={i.icon} />
               <span>{i.label}</span>
             </Link>
@@ -43,7 +46,7 @@ export function MobileTabs({ items }: { items: NavItem[] }) {
   return (
     <nav className="mobile-tabs" aria-label="手机导航">
       {items.map((i) => (
-        <Link key={i.href} className={`mobile-tab ${active(pathname, i.href) ? "active" : ""}`} href={i.href}>
+        <Link key={i.href} className={`mobile-tab ${active(pathname, i.href, i.also) ? "active" : ""}`} href={i.href}>
           <Icon name={i.icon} />
           <span>{i.label}</span>
         </Link>
@@ -53,6 +56,14 @@ export function MobileTabs({ items }: { items: NavItem[] }) {
 }
 
 const CRUMBS: Array<[RegExp, string[]]> = [
+  [/^\/plans\/new$/, ["活动计划", "新建计划"]],
+  [/^\/plans\/trash$/, ["活动计划", "回收站"]],
+  [/^\/plans\/[^/]+\/import$/, ["活动计划", "名单导入"]],
+  [/^\/plans\/[^/]+$/, ["活动计划", "计划详情"]],
+  [/^\/plans$/, ["活动计划"]],
+  [/^\/batches\/[^/]+$/, ["活动计划", "导入批次", "批次详情"]],
+  [/^\/batches$/, ["活动计划", "导入批次"]],
+  [/^\/accounts$/, ["账号与监控"]],
   [/^\/learning\/manage\/new$/, ["学习", "课程管理", "新建课程"]],
   [/^\/learning\/manage\/[^/]+$/, ["学习", "课程管理", "编辑课程"]],
   [/^\/learning\/manage$/, ["学习", "课程管理"]],

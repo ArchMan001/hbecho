@@ -10,6 +10,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const ctx = await requireUser();
   const profile = await web().profile(ctx);
   const groups: NavGroup[] = [];
+  // 活动计划与账号监控（A）：入口按 Capability 显示；页面与动作各自再判断一次
+  if (ctx.capabilities.has("activity_plan.create") || ctx.capabilities.has("activity_plan.join")) groups.push({ label: "工作台", items: [{ href: "/plans", label: "活动计划", icon: "calendar", also: ["/batches"] }] });
+  if (ctx.capabilities.has("data.account.manage")) groups.push({ label: "数据", items: [{ href: "/accounts", label: "账号与监控", icon: "activity" }] });
   // 「学习」排在管理之前（ui-foundation §2）；按 Capability 裁剪，页面与动作各自再判断一次
   if (ctx.capabilities.has("learning.read")) groups.push({ label: "学习", items: [{ href: "/learning", label: "学习", icon: "book" }] });
   if (ctx.capabilities.has("user.manage")) groups.push({ label: "管理", items: [{ href: "/users", label: "用户与权限", icon: "users" }] });

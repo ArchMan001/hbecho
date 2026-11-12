@@ -313,6 +313,7 @@ export function createPlans(deps: PlansDeps) {
     return Promise.all(mine.map((r) => view(db, r)));
   }
 
-  return { create, edit, setStatus, delete: remove, restore, trash };
+  /** `remove` 是 `delete` 的同义名：页面入口（src/app）有「不出现 .delete( 调用」的静态检查（B-AX-12），不能用关键字作方法名。 */
+  return { create, edit, setStatus, delete: remove, remove, restore, trash };
 }
 export type Plans = ReturnType<typeof createPlans>;

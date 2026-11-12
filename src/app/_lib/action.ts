@@ -54,7 +54,7 @@ export async function run<T>(fn: (ctx: AuthContext) => Promise<T>): Promise<Acti
       return fail(le.code, le.message, typeof le.detail?.referenceCount === "number" ? `共有 ${le.detail.referenceCount} 门课程在使用` : undefined);
     }
     // 活动计划、同步与采集命令（TracerError：capability 未放行、同步设置缺失等）的拒绝：message 本来就是面向业务的人话，code 是稳定码；detail 里的计数 / 名单只在需要时挑几个字段给 hint
-    if (e instanceof Error && (e.name === "PlanError" || e.name === "SyncError" || e.name === "TracerError")) {
+    if (e instanceof Error && (e.name === "PlanError" || e.name === "SyncError" || e.name === "TracerError" || e.name === "MasterDataError")) {
       const pe = e as Error & { code: string; detail?: Record<string, unknown> };
       return fail(pe.code, pe.message, planHint(pe.code, pe.detail));
     }

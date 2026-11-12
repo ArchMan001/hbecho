@@ -131,4 +131,12 @@ describe("回流文件", () => {
     expect((await env.md.query.rows(p.batchId, {}, env.importer)).length).toBe(5);
     expect((await env.md.query.get(p.batchId, env.importer)).status).toBe("completed");
   });
+  it("rows 可按预检分类过滤（页面的分类筛选），过滤后分页仍按行号顺序", async () => {
+    const env = await bootstrapped(t);
+    const p = await mixedBatch(env);
+    const errors = await env.md.query.rows(p.batchId, { precheckClass: "error" }, env.importer);
+    expect(errors.map((r) => r.rowNo)).toEqual([3, 5]);
+    expect((await env.md.query.rows(p.batchId, { precheckClass: "error", offset: 1, limit: 1 }, env.importer)).map((r) => r.rowNo)).toEqual([5]);
+    expect(await env.md.query.rows(p.batchId, { precheckClass: "update" }, env.importer)).toEqual([]);
+  });
 });

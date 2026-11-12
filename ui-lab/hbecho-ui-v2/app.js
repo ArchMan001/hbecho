@@ -8,6 +8,7 @@ import {
   renderPlans, renderNewPlan, renderPlanDetail, renderTrash, renderImportWizard,
   renderBatchList, renderBatchDetail, renderAccounts, accountModalHtml,
 } from "./pages-a.js";
+import { renderMasterImport, renderMasterBatches, renderMasterBatchDetail } from "./pages-m.js";
 import {
   renderAuth, renderUsers, renderUserNew, renderUserDetail, renderUserImport,
   renderAudit, renderPlaceholder, renderStoreHome,
@@ -40,6 +41,10 @@ function parseRoute() {
     if (second === "new") return { name: "user-new" };
     if (second === "import") return { name: "user-import" };
     return { name: "user-detail", id: second };
+  }
+  if (head === "master") {
+    if (second === "batches") return third ? { name: "master-batch", id: third } : { name: "master-batches" };
+    return { name: "master" };
   }
   if (head === "batches") return second ? { name: "batch-detail", id: second } : { name: "batches" };
   return { name: head, id: second, sub: third };
@@ -82,9 +87,11 @@ function render() {
     case "user-import": html = renderUserImport(); break;
     case "audit": html = renderAudit(); break;
     case "store": html = renderStoreHome(); break;
+    case "master": html = renderMasterImport(); break;
+    case "master-batches": html = renderMasterBatches(); break;
+    case "master-batch": html = renderMasterBatchDetail(route.id); break;
     case "judgement":
     case "reports":
-    case "master":
     case "learning":
     case "system":
       html = renderPlaceholder(route.name);
@@ -388,6 +395,54 @@ function handleAction(el) {
       state.importStep = 5;
       render();
       toast("已确认写入；批次进入解析中（原型）");
+      break;
+    case "md-mode":
+      state.mdMode = el.dataset.mode;
+      render();
+      break;
+    case "md-next":
+      if (state.mdStep < 4) state.mdStep += 1;
+      render();
+      break;
+    case "md-prev":
+      if (state.mdStep > 1) state.mdStep -= 1;
+      render();
+      break;
+    case "md-upload":
+      state.mdUploaded = true;
+      state.mdStep = 3;
+      render();
+      toast("已读取文件并完成预检；预检只读，没有写入任何数据（原型）");
+      break;
+    case "md-reset":
+      state.mdUploaded = false;
+      state.mdClose = [];
+      state.mdStep = 2;
+      render();
+      break;
+    case "md-help":
+      openModal({ title: "怎么从 Excel 导出", body: `<ol class="hint" style="padding-left:18px;line-height:1.9"><li>打开权威信息 xlsx 的「门店信息数据」页签。</li><li>如果有「负责人」列，先整列删除。</li><li>文件 → 另存为 → CSV（UTF-8 或 GB18030 都可以）。</li><li>不要在 Excel 里重新排列列；门店编码列先设为文本格式。</li></ol>` });
+      break;
+    case "md-toggle-close": {
+      const i = state.mdClose.indexOf(id);
+      if (i >= 0) state.mdClose.splice(i, 1);
+      else state.mdClose.push(id);
+      render();
+      break;
+    }
+    case "md-close-all":
+      state.mdClose = state.mdClose.length === 6 ? [] : ["s1", "s2", "s3", "s4", "s5", "s6"];
+      render();
+      break;
+    case "md-download":
+      toast("原型：下载回流文件（错误行 + 原因，带 BOM 的 UTF-8）");
+      break;
+    case "md-confirm":
+      state.mdStep = 1;
+      state.mdUploaded = false;
+      state.mdClose = [];
+      go("#/master/batches/M1");
+      toast("已确认写入；批次详情显示分块进度（原型）");
       break;
     case "refresh-batch":
       toast("已刷新批次进度（原型）");

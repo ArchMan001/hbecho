@@ -31,6 +31,9 @@ COPY tsconfig.json next.config.ts drizzle.config.ts ./
 COPY drizzle ./drizzle
 COPY src ./src
 COPY --from=build /app/.next ./.next
+# 组织主档种子：`master-data bootstrap` 的默认路径是仓库根下的这个 CSV（见 bootstrap.ts）。
+# 镜像里只有这一个文件来自设计文档目录，其余仍按 .dockerignore 排除。
+COPY ["HBECHO设计方案/domains/data-foundation/seed/分公司-大区对照.csv", "./HBECHO设计方案/domains/data-foundation/seed/"]
 # 备案号等运行期配置全部来自环境变量，不烘焙进镜像
 ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000
 EXPOSE 3000

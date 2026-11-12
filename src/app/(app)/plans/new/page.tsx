@@ -1,5 +1,5 @@
 import { CreatePlanForm } from "../../../_components/plans/create-plan-form";
-import { BackLink, DeniedState, PageHead } from "../../../_components/ui";
+import { BackLink, Callout, DeniedState, PageHead } from "../../../_components/ui";
 import { PLAN_PLATFORMS, SECTOR_KEYS } from "../../../../modules/activity-plan/constants";
 import { PLATFORM_LABEL, SECTOR_LABEL } from "../../../_lib/plan-labels";
 import { bjtToday, directory } from "../../../_lib/plan-page";
@@ -10,6 +10,18 @@ export default async function NewPlanPage() {
   if (!ctx.capabilities.has("activity_plan.create")) return <DeniedState text="创建活动计划需要「创建计划」权限；分公司与门店没有该权限。" home="/plans" />;
   // 只列出授权范围内、仍在使用的品牌；服务端创建时还会再校验一次
   const brands = (await directory()).brands.filter((b) => b.active && (ctx.scope.brands === "all" || ctx.scope.brands.has(BigInt(b.id))));
+  // 计划必须绑定品牌：目录为空时直接说明，而不是给一个只有「请选择品牌」的空下拉
+  if (brands.length === 0) {
+    return (
+      <>
+        <BackLink href="/plans">返回活动计划</BackLink>
+        <PageHead title="新建活动计划" sub="创建即发布，没有草稿。品牌、平台、板块创建后不可修改。" />
+        <Callout icon="alert" tone="warn">
+          没有可用的品牌：组织主档还没有导入，而计划必须绑定品牌。请超管先完成组织主档引导（运维手册 §10.3），完成后刷新本页。
+        </Callout>
+      </>
+    );
+  }
   return (
     <>
       <BackLink href="/plans">返回活动计划</BackLink>

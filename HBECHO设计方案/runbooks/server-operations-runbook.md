@@ -87,7 +87,7 @@
 | 38 | 我 | 接 CI 前删除 ACR 公网白名单里的 `127.0.0.1/32`，否则 GitHub Actions 无法推送 | §1.7 |
 | 39 | ✅ 我 | 费用中心确认 ACR 自动续费已生效（2026-11-10，刘学奎） | §1.7 |
 
-### P6 · 应用上线到测试 ECS（2026-11-11）
+### P6 · 应用上线到线上实例（2026-11-11；该实例 2026-11-12 起按线上对待）
 
 | # | 谁 | 事项 | 详见 |
 |---|---|---|---|
@@ -145,7 +145,7 @@ hbecho 还多一条理由：v2 基线的正确性依赖若干**看不见的前�
 | 项 | 值 |
 |---|---|
 | 实例名 | `hbecho` |
-| 环境定位 | **测试环境（当前唯一实例）**；生产 ECS 未购买（2026-10-25 用户确认） |
+| 环境定位 | **当前唯一实例，承载 `echo.hbmarketer.com` 与线上库**。2026-11-12 刘学奎修订，推翻 2026-10-25 的「测试环境」定位：不再单独购买生产机，直接用这台；因此这台机器**不承担测试用途**（见 `.kiro/steering/server-access.md`） |
 | 实例 ID | `i-2zef8qpi1d2mldntjgrv` |
 | 地域 / 可用区 | 华北2（北京）· 可用区 F · `cn-beijing` |
 | 规格 | `ecs.g9i.2xlarge`，8 vCPU / 32 GiB |
@@ -305,7 +305,7 @@ Endpoint：
 | AI Master（FieldShortcut） | 数据底座内部 Provider Adapter | HTTP 头 `X-Api-Key` | 见 §8.1 |
 | Base URL | `https://openapi.fieldshortcut.com` | | |
 | 阿里云视频点播 VOD | 域 G 课程视频托管、转码与播放 | RAM 角色（待定，见 ADR-0007） | 未开通 |
-| 阿里云容器镜像服务 ACR（经济版） | 应用镜像仓库：CI 推送、测试 ECS 内网拉取 | RAM 子账号 + registry 固定密码 | 见 §3.7 |
+| 阿里云容器镜像服务 ACR（经济版） | 应用镜像仓库：CI 推送、唯一实例内网拉取 | RAM 子账号 + registry 固定密码 | 见 §3.7 |
 
 **VOD 状态（2026-10-29 实测完毕）**：域 G 已决定用 VOD 承载课程视频（`prd-domain-g-learning.md` 的 G-D09），接入细节见 ADR-0007。已确认：
 
@@ -327,7 +327,7 @@ AI Master 的正式 QPS、并发、SLA、计费与轮询失败合同仍是 P0 �
 - 容量：仓库 200、命名空间 5、并发拉取 30 QPS；**公开匿名拉取关闭**；
 - 域名规则是 `<实例名>-registry[-vpc].<地域>.cr.aliyuncs.com`。实例名本身以 `registry` 结尾，所以域名里出现两个 `registry`——以控制台为准，不要按"实例名 + -vpc"推断：
   - 公网 `hbecho-registry-registry.cn-beijing.cr.aliyuncs.com`（访问入口已开启；**白名单当前只有 `127.0.0.1/32`**，接 CI 前必须删掉，否则 GitHub runner 连不上）
-  - 内网 `hbecho-registry-registry-vpc.cn-beijing.cr.aliyuncs.com` → `172.25.70.147`（2026-11-10 在测试 ECS 实测，`/v2/` 返回 401、connect 7 ms）
+  - 内网 `hbecho-registry-registry-vpc.cn-beijing.cr.aliyuncs.com` → `172.25.70.147`（2026-11-10 在唯一实例实测，`/v2/` 返回 401、connect 7 ms）
 - VPC 访问控制：绑定 `vpc-2zevfnkvxxw6ae8gpj2f3` / `vsw-2ze1ymn3rrx0i2bivbufv`，额度 **1/1**——经济版只有 1 个配额，换绑必须先删；
 - 命名空间 `hbecho`（私有）；验证用的探测仓库 `hbecho/probe:probe-1`（523 B，控制台可删）；
 - **偏离记录**：`dev-test-deploy-workflow.md` 原要求"开通前单独决定并记 ADR"，实际先开通（2026-11-10）、当日补记 [ADR-0016](../architecture/adr/0016-container-registry.md)。顺序颠倒，决定内容无变化。
@@ -425,7 +425,7 @@ aliyun ossutil ls --profile hbecho-setup
 写入本机 `~/.ssh/config`。端口转发的作用是：**数据库端口和 Web 端口永远不在安全组开放**，本地客户端一律连 `127.0.0.1`。
 
 ```ssh-config
-# ── hbecho 测试环境（当前唯一实例）（华北2 北京 F · ecs.g9i.2xlarge）──
+# ── hbecho 唯一实例（线上站点，华北2 北京 F · ecs.g9i.2xlarge）──
 # 实例 i-2zef8qpi1d2mldntjgrv / 私网 172.25.70.146
 # 用法：ssh hbecho
 Host hbecho
@@ -2104,7 +2104,7 @@ vi /data/app/.env
 
 ## 10. 部署
 
-> **完整流程见 [`dev-test-deploy-workflow.md`](dev-test-deploy-workflow.md)**：verify → GitHub Actions → 测试 ECS → 生产 ECS，含当前状态、过渡期硬规则与验收方法。本章只保留部署契约、部署后必检与回滚约束。
+> **完整流程见 [`dev-test-deploy-workflow.md`](dev-test-deploy-workflow.md)**：verify → GitHub Actions → 唯一实例（线上站点），含当前状态、过渡期硬规则与验收方法。本章只保留部署契约、部署后必检与回滚约束。
 
 ### 10.1 现在还不能冻结什么
 
@@ -2116,16 +2116,16 @@ vi /data/app/.env
 
 | # | 约束 | 理由 |
 |---|---|---|
-| 1 | 应用只通过 CI 构建、推 ACR 的镜像部署（标签 = git 短 sha），服务器不构建、不用 tar/scp 覆盖代码 | 覆盖式部署会留下删除不掉的旧文件，且解包损坏无法察觉；同一个标签在测试机验证过才会上线（2026-11-11 起；此前这一条写的是 `git pull`） |
+| 1 | 应用只通过 CI 构建、推 ACR 的镜像部署（标签 = git 短 sha），服务器不构建、不用 tar/scp 覆盖代码 | 覆盖式部署会留下删除不掉的旧文件，且解包损坏无法察觉；同一个标签先在 CI 跑绿，再切到线上（2026-11-11 起；2026-11-12 修订：没有独立测试机做预演，所以备份与冒烟不能省） |
 | 2 | 每次部署记录 commit SHA，服务器可回答"当前跑的是哪个提交" | 没有这条，线上行为和代码对不上时无法排查 |
 | 3 | 所有配置从环境变量读，代码里不出现环境相关常量 | endpoint、桶名、开关都要能在不改代码的情况下切换 |
 | 4 | 所有业务端口绑 `127.0.0.1`，对外只经反代 | 减少暴露面 |
 | 5 | 数据库结构变更只走版本化迁移脚本，**禁止手工 `ALTER`** | v2 的语义大量落在 CHECK 与唯一键上，手改表会让线上结构与设计文档静默分叉 |
 | 6 | 迁移脚本必须可在空库上从头执行一遍得到相同结构 | 这是"结构以仓库为准"的验证方式 |
-| 7 | `/data/app/web.env`、`/data/app/migrate.env`（root 600）不在仓库里，也不随部署覆盖 | 密钥与代码分离（测试 ECS 的实际文件名；`/data/app/.env` 现在只放 `WEB_TAG`） |
+| 7 | `/data/app/web.env`、`/data/app/migrate.env`（root 600）不在仓库里，也不随部署覆盖 | 密钥与代码分离（线上实例的实际文件名；`/data/app/.env` 现在只放 `WEB_TAG`） |
 | 8 | 部署不触发任何真实付费供应商调用 | `AIMASTER_ENABLED` 默认 `false`（§8.4） |
 
-### 10.3 部署流程（测试 ECS，2026-11-11 实际跑通的步骤；一律经 Workbench，不用 SSH）
+### 10.3 部署流程（当前唯一实例即线上站点，2026-11-11 实际跑通的步骤；一律经 Workbench，不用 SSH）
 ```bash
 # 0. 本机：确认要发布的提交已推送、CI 的 image job 成功（run 里有「已推送 …:<sha>」）
 git rev-parse --short=12 HEAD
@@ -2138,9 +2138,16 @@ cd /data/app && echo WEB_TAG=<sha> > .env && docker compose up -d web
 # 4. 首个超管（只在空库做一次；运行账号即可）
 docker run --rm --network app_default --env-file /data/app/web.env <镜像> ./node_modules/.bin/tsx src/worker/access-main.ts token create
 docker run --rm --network app_default --env-file /data/app/web.env <镜像> ./node_modules/.bin/tsx src/worker/access-main.ts bootstrap-superadmin --token <t> --phone <p> --name <n>
+# 4b. 组织主档引导（3 品牌 / 4 大区 / 42 分公司 / 84 板块；幂等，可重跑。空库首次部署必做，否则新建用户只能建超管）
+docker run --rm --network app_default --env-file /data/app/web.env \
+  -e HBECHO_MD_ACTOR=service:master-data-import \
+  -e HBECHO_MD_CAPABILITIES=data.master_data.structure \
+  -e HBECHO_MD_BRAND_SCOPE=all \
+  <镜像> ./node_modules/.bin/tsx src/worker/master-data-main.ts bootstrap
 # 5. 清理悬空镜像
 docker image prune -f
 ```
+> 2026-11-12 及之前的镜像不含种子文件：那一次是把 CSV 经 Workbench 上传到服务器 `/tmp/`，给 4b 加 `-v "/tmp/分公司-大区对照.csv:/seed.csv:ro"` 与 `--seed /seed.csv` 执行。含种子的镜像发布后，4b 按上面原样执行即可。
 容器里**不经过 pnpm / corepack**（corepack 首次运行会去外网下载 pnpm）：直接调用 `./node_modules/.bin/…`。
 **镜像分发**：CI（GitHub Actions）经公网域名推送，服务器经内网域名拉取（几十秒，ADR-0016）。GitHub runner → 北京 ACR 的链路本身不慢（2026-11-11 探针：300 MB 不可压缩大文件 32 秒，约 9.4 MB/s，与 hbdam 的 12 MB/s 同量级）；慢的是 docker 对「大量小文件」的单层打包压缩（同样 100 MB 数据拆成 2 万个小文件，推送 54 秒，约 1.85 MB/s），所以 node_modules 这种层首次推送要数分钟；依赖不变时层已在 ACR，推送只要约 30 秒。稳态 CI：`verify` 约 5 分钟 + `image` 约 1.5 分钟。
 
@@ -2786,6 +2793,8 @@ ssh hbecho 'growpart /dev/<设备> 1 && resize2fs /dev/<设备>p1 && df -h /data
 | 2026-11-10 | 新增 [ADR-0016](../architecture/adr/0016-container-registry.md)：镜像仓库自建 ACR 经济版、不复用 hbdam 实例；同步更新 ADR 索引与 `INDEX.md`（15→16 项） | 刘学奎 / Claude |
 | 2026-11-10 | 刘学奎确认 ACR 自动续费已生效（到期 2026-12-11），§P5 #39 关闭 | 刘学奎 |
 | 2026-11-11 | 测试 ECS 上线应用：`hbecho-mysql` 8.0.46 → 8.4.13（先备份）并加 `--log-bin-trust-function-creators=1`；建 `hbecho_web` 运行账号与迁移账号；`/data/app/web.env`、`migrate.env`（root 600，短信 AccessKey 由本机经 Workbench 上传，只在服务器落盘）；compose 增加 `web` 服务；迁移全部应用；nginx 反代到 `127.0.0.1:3000`；创建待激活的首个超管。镜像 `…/hbecho/app:cd8188516e13` | Kiro（刘学奎同意） |
+| 2026-11-12 | **环境定位修订**：`i-2zef8qpi1d2mldntjgrv` 是唯一实例，承载 `echo.hbmarketer.com` 与线上库；不再单独购买生产机，这台机器不跑测试。同步改写 §1.1、§10.3 与 `.kiro/steering/server-access.md` | 刘学奎 |
+| 2026-11-12 | 线上库执行组织主档引导（`master-data bootstrap`）：3 品牌 / 4 大区 / 42 分公司 / 84 板块，0 冲突，审计事件 `bootstrap_completed`。当时镜像不含种子，经 Workbench 上传 `/tmp/分公司-大区对照.csv` 后以 `--seed` 执行；§10.3 补了 4b 步骤，镜像已改为随包携带该 CSV | Claude（刘学奎同意） |
 
 ### 17.1 当前进度
 

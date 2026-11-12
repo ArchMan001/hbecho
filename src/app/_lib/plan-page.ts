@@ -3,7 +3,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import { web } from "./session";
 
-export { bjtToday, hrefWith, PAGE_SIZE, pageOf } from "./plan-url";
+export { bjtToday, hrefWith, PAGE_SIZE, pageNumber, pageOf } from "./plan-url";
 
 /** 品牌 / 分公司目录（同一请求内只查一次）。 */
 export const directory = cache(() => web().directory());

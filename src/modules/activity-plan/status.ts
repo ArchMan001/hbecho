@@ -6,7 +6,7 @@ export type CompositeCode = "invalid_link" | "suspected_empty" | "upstream_close
 export interface CompositeStatus {
   code: CompositeCode;
   label: string;
-  /** 补充说明：哪一级被关闭、人工还是无引用 */
+  /** 补充说明：被停止监控时是人工还是无引用。「XX 被关闭」的级别已经在 label 里，不再重复。 */
   detail?: string;
 }
 export interface StatusFacts {
@@ -43,7 +43,7 @@ export function composeStatus(f: StatusFacts): CompositeStatus {
   if (f.rowOutcome === "invalid") return { code: "invalid_link", label: "链接无效" };
   if (f.intakeStatus === "suspected_empty" || f.exclusion === "suspected_empty") return { code: "suspected_empty", label: "疑似空账号" };
   // 上级（含账号已删除、没有归属）关闭：取最上级，也就是 firstExclusionReason 返回的那一个
-  if (f.exclusion !== null && f.exclusion !== "account_off") return { code: "upstream_closed", label: EXCLUSION_LABELS[f.exclusion], detail: f.exclusion };
+  if (f.exclusion !== null && f.exclusion !== "account_off") return { code: "upstream_closed", label: EXCLUSION_LABELS[f.exclusion] };
   if (f.exclusion === "account_off" || !f.assignmentEnabled) {
     return { code: "monitoring_stopped", label: "被停止监控", ...(f.closedReason ? { detail: CLOSED_REASON_LABELS[f.closedReason] ?? f.closedReason } : {}) };
   }

@@ -7,6 +7,7 @@ import { Icon } from "../../_components/icon";
 import { DeniedState, EmptyState, PageHead, RoleTag, UserStatusBadge } from "../../_components/ui";
 import { DisableButton, RestoreButton } from "../../_components/user-actions";
 import { fmtTime, ROLE_LABEL, ROLE_SCOPE } from "../../_lib/labels";
+import { pageNumber } from "../../_lib/plan-url";
 import { requireUser, web } from "../../_lib/session";
 
 const PAGE_SIZE = 20;
@@ -32,7 +33,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const inBranch = (u: (typeof all)[number]) => !branch || u.branchIds.includes(branch) || placed.get(u.userId)?.branchId === branch;
   const filtered = all.filter((u) => (!role || u.role === role) && (!status || u.status === status) && inBrand(u) && inBranch(u));
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const page = Math.min(pages, Math.max(1, Number(q.page) || 1));
+  const page = Math.min(pages, pageNumber(q.page));
   const rows = await w.decorateUsers(filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), org);
 
   const count = (s: string) => all.filter((u) => u.status === s).length;

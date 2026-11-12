@@ -10,6 +10,13 @@
 !drizzle/**
 !src
 !src/**
+# 组织主档种子：`master-data bootstrap` 在镜像里直接读这个路径（运行阶段 COPY，见 Dockerfile）。
+# Docker 要求父目录逐一放行，否则负向规则对子文件无效。
+!HBECHO设计方案
+!HBECHO设计方案/domains
+!HBECHO设计方案/domains/data-foundation
+!HBECHO设计方案/domains/data-foundation/seed
+!HBECHO设计方案/domains/data-foundation/seed/分公司-大区对照.csv
 # src 里与测试同目录的文件不进镜像
 **/*.test.ts
 **/*.db.test.ts

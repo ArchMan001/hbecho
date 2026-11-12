@@ -6,7 +6,7 @@ import { RosterReportActions, RosterUpload, Steps } from "../../../../_component
 import { BackLink, Callout, DeniedState, PageHead } from "../../../../_components/ui";
 import { ROSTER_HEADER } from "../../../../../modules/activity-plan/constants";
 import { n, PLAN_STATUS, PLATFORM_LABEL, sectorText } from "../../../../_lib/plan-labels";
-import { brandNameByCode, directory, hrefWith, orNotFound, pageOf } from "../../../../_lib/plan-page";
+import { brandNameByCode, directory, hrefWith, orNotFound, pageNumber, pageOf } from "../../../../_lib/plan-page";
 import { ap, planActorOf } from "../../../../_lib/plan";
 import { requireUser } from "../../../../_lib/session";
 
@@ -130,7 +130,7 @@ export default async function ImportPage({ params, searchParams }: { params: Pro
   let page = 1;
   let pages = 1;
   if (batch.rowsVisible) {
-    const wanted = Math.max(1, Number(q.page) || 1);
+    const wanted = pageNumber(q.page);
     const fetchRows = (pg: number) => ap().query.rows(actor, batch.batchId, { offset: (pg - 1) * ROWS_PER_PAGE, limit: ROWS_PER_PAGE, ...(cls ? { precheckClass: cls } : {}) });
     let r = await fetchRows(wanted);
     const pg = pageOf(q.page, r.total, ROWS_PER_PAGE);

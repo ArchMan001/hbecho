@@ -6,7 +6,7 @@ import { BatchActions } from "../../../_components/plans/roster-wizard";
 import { BackLink, Badge, Callout, DeniedState, EmptyState } from "../../../_components/ui";
 import { ROSTER_HEADER } from "../../../../modules/activity-plan/constants";
 import { bjt, BATCH_STATUS, n, OUTCOME_LABEL } from "../../../_lib/plan-labels";
-import { directory, hrefWith, orNotFound, pageOf } from "../../../_lib/plan-page";
+import { directory, hrefWith, orNotFound, pageNumber, pageOf } from "../../../_lib/plan-page";
 import { ap, planActorOf } from "../../../_lib/plan";
 import { requireUser, web } from "../../../_lib/session";
 
@@ -47,7 +47,7 @@ export default async function BatchDetailPage({ params, searchParams }: { params
   let page = 1;
   let pages = 1;
   if (b.rowsVisible && confirmed) {
-    const wanted = Math.max(1, Number(q.page) || 1);
+    const wanted = pageNumber(q.page);
     const fetchRows = (pg: number) => ap().query.rows(actor, id, { offset: (pg - 1) * ROWS_PER_PAGE, limit: ROWS_PER_PAGE, ...(outcome ? { outcome } : {}) });
     rows = await fetchRows(wanted);
     const pg = pageOf(q.page, rows.total, ROWS_PER_PAGE);

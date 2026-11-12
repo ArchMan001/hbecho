@@ -9,7 +9,7 @@ import { HEADER } from "../../../../modules/master-data-import";
 import { MD_CLASS, MD_CLASS_ORDER, MD_MODE } from "../../../_lib/master-labels";
 import { masterData, mdActorOf } from "../../../_lib/master-data";
 import { n } from "../../../_lib/plan-labels";
-import { brandNameByCode, hrefWith, orNotFound, pageOf } from "../../../_lib/plan-page";
+import { brandNameByCode, directory, hrefWith, orNotFound, pageOf } from "../../../_lib/plan-page";
 import { requireUser, web } from "../../../_lib/session";
 
 type Q = { batch?: string | undefined; cls?: string | undefined; page?: string | undefined };
@@ -30,8 +30,10 @@ export default async function MasterImportPage({ searchParams }: { searchParams:
   if (!ctx.capabilities.has("data.master_data.import") && !ctx.capabilities.has("data.master_data.structure")) return <DeniedState text="主数据导入只对超管与总部人员开放。" />;
   const q = await searchParams;
   const canStructure = ctx.capabilities.has("data.master_data.structure");
-  const [profile, brandName] = await Promise.all([web().profile(ctx), brandNameByCode()]);
+  const [profile, brandName, dir] = await Promise.all([web().profile(ctx), brandNameByCode(), directory()]);
   const scopeText = profile.brandNames === "all" ? "全部品牌" : profile.brandNames.join("、");
+  // 空目录时导入必然整批失败（品牌 / 分公司 / 板块都查不到），先说明原因，不让用户白上传一遍
+  const orgEmpty = dir.brands.length === 0 || dir.branches.length === 0;
 
   const rail = (mode: string) => (
     <aside className="wizard-rail" aria-label="导入上下文">
@@ -59,11 +61,18 @@ export default async function MasterImportPage({ searchParams }: { searchParams:
     </aside>
   );
   const head = (
-    <PageHead
-      title="主数据导入"
-      sub="导入权威主档导出（门店信息）；预检只读，确认后才写入业务表。"
-      actions={<Link className="btn" href="/master-data/batches">导入记录</Link>}
-    />
+    <>
+      <PageHead
+        title="主数据导入"
+        sub="导入权威主档导出（门店信息）；预检只读，确认后才写入业务表。"
+        actions={<Link className="btn" href="/master-data/batches">导入记录</Link>}
+      />
+      {orgEmpty ? (
+        <Callout icon="alert" tone="warn">
+          组织主档为空（品牌 {dir.brands.length} 个、分公司 {dir.branches.length} 个）：现在上传的门店行都会被判为「品牌不存在」或「不在授权范围」，无法写入。请超管先完成组织主档引导（运维手册 §10.3），再回来导入。
+        </Callout>
+      ) : null}
+    </>
   );
 
   if (!q.batch) {

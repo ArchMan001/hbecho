@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { IMPORT_STATUSES, PRECHECK_CLASSES, ROW_OUTCOMES } from "../../db/schema/import";
 import { ACCOUNT_STATUS_TONE, bjt, BATCH_STATUS, changeText, OUTCOME_LABEL, PLAN_STATUS, PRECHECK_LABEL, sectorText } from "./plan-labels";
-import { bjtToday, hrefWith, pageOf } from "./plan-url";
+import { bjtToday, hrefWith, pageNumber, pageOf } from "./plan-url";
 
 describe("用语覆盖", () => {
   it("批次状态、预检分类、行结果、综合状态、计划状态都有人话", () => {
@@ -43,6 +43,12 @@ describe("格式与 URL 状态", () => {
     expect(pageOf("9", 41)).toEqual({ page: 3, pages: 3, offset: 40 });
     expect(pageOf(undefined, 0)).toEqual({ page: 1, pages: 1, offset: 0 });
     expect(pageOf("abc", 5)).toEqual({ page: 1, pages: 1, offset: 0 });
+    // 非整数 / 负数 / 超范围：取整后夹在 [1, pages]，offset 一定是 size 的整数倍
+    expect(pageOf("2.5", 100)).toEqual({ page: 2, pages: 5, offset: 20 });
+    expect(pageOf("-3", 100)).toEqual({ page: 1, pages: 5, offset: 0 });
+    expect(pageNumber("2.9")).toBe(2);
+    expect(pageNumber("0")).toBe(1);
+    expect(pageNumber(undefined)).toBe(1);
     expect(bjtToday()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AuditFilters } from "../../_components/audit-filters";
 import { Badge, DeniedState, EmptyState, PageHead } from "../../_components/ui";
 import { AUDIT_EVENT_LABEL, AUDIT_RANGES, AUDIT_EVENT_OPTIONS, AUDIT_REASON_LABEL, fmtTime, ROLE_LABEL } from "../../_lib/labels";
+import { pageNumber } from "../../_lib/plan-url";
 import { requireUser, web } from "../../_lib/session";
 
 const PAGE_SIZE = 50;
@@ -27,7 +28,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   };
   const count = await w.auditReader.count(ctx, filter);
   const pages = Math.max(1, Math.ceil(count.total / PAGE_SIZE));
-  const page = Math.min(pages, Math.max(1, Number(q.page) || 1));
+  const page = Math.min(pages, pageNumber(q.page));
   const [raw, org] = await Promise.all([w.auditReader.read(ctx, { ...filter, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }), w.directory()]);
   const rows = await w.decorateAudit(raw);
   const names = (ids: string[], list: Array<{ id: string; name: string }>) => ids.map((i) => list.find((x) => x.id === i)?.name ?? "").filter(Boolean).join("、");

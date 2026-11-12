@@ -6,7 +6,7 @@ import { Pager } from "../../_components/plans/pager";
 import { Badge, DeniedState, EmptyState, PageHead } from "../../_components/ui";
 import { PLAN_PLATFORMS } from "../../../modules/activity-plan/constants";
 import { ACCOUNT_STATUS_TONE, bjt, n, PLATFORM_LABEL } from "../../_lib/plan-labels";
-import { hrefWith, pageOf, PAGE_SIZE } from "../../_lib/plan-page";
+import { hrefWith, pageNumber, pageOf, PAGE_SIZE } from "../../_lib/plan-page";
 import { ap, canSetOrgSwitches, planActorOf } from "../../_lib/plan";
 import { requireUser } from "../../_lib/session";
 
@@ -21,7 +21,7 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
   const status = STATUS_CHIPS.some(([v]) => v === q.status) && q.status !== "all" ? q.status : undefined;
   const platform = (PLAN_PLATFORMS as readonly string[]).includes(q.platform ?? "") ? q.platform : undefined;
 
-  const wanted = Math.max(1, Number(q.page) || 1);
+  const wanted = pageNumber(q.page);
   const fetchPage = (pg: number) => ap().accounts.list(actor, { ...(status ? { status } : {}), ...(platform ? { platform } : {}), offset: (pg - 1) * PAGE_SIZE, limit: PAGE_SIZE });
   let res = await fetchPage(wanted);
   const { page, pages } = pageOf(q.page, res.total);

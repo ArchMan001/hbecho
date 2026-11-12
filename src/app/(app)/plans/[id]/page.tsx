@@ -6,7 +6,7 @@ import { AssignOwnersButton, DeletePlanButton, EditPlanButton, ExitBranchButton,
 import { Pager } from "../../../_components/plans/pager";
 import { BackLink, Badge, Callout, DeniedState, EmptyState } from "../../../_components/ui";
 import { ACCOUNT_STATUS_TONE, bjt, n, PLAN_STATUS, PLATFORM_LABEL, SECTOR_LABEL, changeText, sectorText } from "../../../_lib/plan-labels";
-import { brandNameByCode, directory, hrefWith, orNotFound, pageOf, PAGE_SIZE } from "../../../_lib/plan-page";
+import { brandNameByCode, directory, hrefWith, orNotFound, pageNumber, pageOf, PAGE_SIZE } from "../../../_lib/plan-page";
 import { ap, planActorOf } from "../../../_lib/plan";
 import { requireUser, web } from "../../../_lib/session";
 
@@ -104,7 +104,7 @@ export default async function PlanDetailPage({ params, searchParams }: { params:
   } else if (tab === "roster") {
     const state = q.state === "removed" || q.state === "all" ? q.state : "in_roster";
     const fetchPage = (pg: number) => ap().query.roster(actor, BigInt(id), { offset: (pg - 1) * PAGE_SIZE, limit: PAGE_SIZE, ...(state === "all" ? {} : { state }) });
-    const wanted = Math.max(1, Number(q.page) || 1);
+    const wanted = pageNumber(q.page);
     let res = await fetchPage(wanted);
     const { page, pages } = pageOf(q.page, res.total);
     if (page !== wanted) res = await fetchPage(page); // 页码超出范围时落到最后一页

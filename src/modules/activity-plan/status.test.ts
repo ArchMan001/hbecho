@@ -9,7 +9,7 @@ describe("综合账号状态：六种取值", () => {
   it("正常采集", () => expect(st({})).toMatchObject({ code: "normal", label: "正常采集" }));
   it("链接无效（行结果 invalid）", () => expect(st({ rowOutcome: "invalid" })).toMatchObject({ code: "invalid_link" }));
   it("疑似空账号", () => expect(st({ intakeStatus: "suspected_empty", exclusion: "suspected_empty" })).toMatchObject({ code: "suspected_empty" }));
-  it("XX 被关闭：取最上级原因", () => expect(st({ exclusion: "branch_off" })).toMatchObject({ code: "upstream_closed", label: "分公司被关闭", detail: "branch_off" }));
+  it("XX 被关闭：取最上级原因，detail 不带内部码", () => expect(st({ exclusion: "branch_off" })).toEqual({ code: "upstream_closed", label: "分公司被关闭" }));
   it("被停止监控：区分人工与无引用", () => {
     expect(st({ exclusion: "account_off", assignmentEnabled: false, closedReason: "manual" })).toMatchObject({ code: "monitoring_stopped", detail: "人工停止" });
     expect(st({ exclusion: "account_off", assignmentEnabled: false, closedReason: "unreferenced_15d" })).toMatchObject({ code: "monitoring_stopped", detail: "无计划引用自动停采" });

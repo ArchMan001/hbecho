@@ -13,6 +13,7 @@ import { BRANDS, SECTOR_NAMES, sectorCodeOf, type SectorKey } from "./mappings.v
 
 // 相对仓库根（CLI 与测试都从仓库根运行）。不用 new URL(…, import.meta.url)：Next 打包页面时会把它当静态资源去解析，
 // 而应用镜像的构建上下文里没有设计文档目录（.dockerignore），构建会失败（2026-11-12 CI image job 实测）。
+// 应用镜像由 Dockerfile 单独 COPY 这一个 CSV 到相同路径，所以在镜像里跑 `master-data bootstrap` 不必传 --seed。
 export const DEFAULT_SEED = join(process.cwd(), "HBECHO设计方案/domains/data-foundation/seed/分公司-大区对照.csv");
 
 export interface SeedRow {

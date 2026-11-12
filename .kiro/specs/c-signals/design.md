@@ -642,8 +642,9 @@ chunk 任务（params: {run_id, after_id, limit}）:
       已 cancelled / failed 则只提交本块已处理的结果，不建下一个 chunk
 ```
 
-- **范围**：`contentIds` / `accountIds` / `brandId` / `publishedFrom–To`，可组合取交集；至少一项（§1.4 第 13 项）；`segmentRef` 是可选附加键，写入 `scope` 与 `scope_sha256` 并参与校验，不能单独作为范围。`brandId` 经**当前**归属（`staff_account_assignments` → 门店 → 品牌）展开，必须在操作者品牌范围内；
-- 重算的参数集合：结果类信号重算需要知道「对哪些标准图」：run 的 `scope` 里可带 `segmentRef`；没带时，对范围内主体已有的所有（素材 × 参数）旧版本结果行各建一个新版本任务；
+- **范围**：`contentIds` / `accountIds` / `brandCode`（任务 10：对外用品牌编码，C 解析为内部 ID 并校验操作者品牌范围）/ `publishedFrom–To`，可组合取交集；至少一项（§1.4 第 13 项）；`segmentRef` 是可选附加键，写入 `scope` 与 `scope_sha256` 并参与校验，不能单独作为范围。`brandId` 经**当前**归属（`staff_account_assignments` → 门店 → 品牌）展开，必须在操作者品牌范围内；
+- 重算的参数集合：结果类信号重算需要知道「对哪张标准图 / 哪个判定项」，所以**必须**带 `segmentRef`（缺失 → `segment_ref_required`）。~~没带时，对范围内主体已有的所有（素材 × 参数）旧版本结果行各建一个新版本任务~~（任务 10 订正：判定的标准文本无法从旧结果行的参数指纹还原，图片也要靠监控段取标准图对象；统一要求 segmentRef，较窄也较安全）。分块调用 `requestScores` 的内部入口，把旧版本的有效值也当缺失，且只处理 run 的那个信号；
+- 特征类信号共享一行（title / body / hashtags 同一个素材指纹）：对其中任一信号重算，会把这一行的三个文本信号一并升到当前版本（ingest 以行为单位）；
 - 评论类特征信号没有独立 scope 种类：按内容范围展开出的内容取其 active 的全部评论；scope 只影响展开，不改变信号；`publishedFrom–To` 比较的是**内容 current 快照的 `published_at`**（区间 `[from, to)`），评论信号同样如此，不看评论自己的创建时间；账号类信号不支持 `publishedFrom–To` 与 `contentIds`（`scope_not_applicable`）；
 - 重算不改监控段、不升计划版本、不触发 D；分块使崩溃后续跑成立（任务有租约），`processed_count` 随分块事务推进。
 - **续跑 failed run**：`apply` 把 `cursor_id` 处的 chunk 任务（若 `dead`）置回 `pending` 并清零 `attempt_count`；分块键含 `run_id + after_id`，不会与其它 run 冲突。

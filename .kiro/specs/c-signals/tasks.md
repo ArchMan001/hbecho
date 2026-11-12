@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–9 已完成（任务 7 的标定报告待业务样本，见其完成记录）；任务 10 起未开始。进度以下方勾选为准
+> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–10 已完成（任务 7 的标定报告待业务样本，见其完成记录）；任务 11 起未开始。进度以下方勾选为准。**新会话先读 [`handoff-2026-11-12-b.md`](handoff-2026-11-12-b.md)**
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -30,7 +30,7 @@
 - [x] 任务 7 · Python 匹配端点、Node 客户端、真实样本标定
 - [x] 任务 8 · 任务表与租约、`requestScores`、评分 runner、结果行、派生信号读取
 - [x] 任务 9 · 音频理解：`AiGatewayPort`、ASR 与判定 runner、提示词
-- [ ] 任务 10 · 能力升级、`stale` 与显式重算
+- [x] 任务 10 · 能力升级、`stale` 与显式重算
 - [ ] 任务 11 · 保留期、`retainUntil` 与清理器
 - [ ] 任务 12 · CLI 全集与 `signals run` 装配
 - [ ] 任务 13 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾（**完成后推第二次**）
@@ -173,12 +173,14 @@
 
   - **完成记录（2026-11-12）**：新增 `speech/disabled.ts`（`DisabledAiGateway`：`activeModel` 恒为 null，`createSignals` 缺省装配它）、`speech/prompt.ts`（判定提示词 `asr-judge` v1 的渲染与输出 zod：缺 `reason`、`verdict` 非法、多余字段都不通过）、`speech/runner.ts`（`createSpeechRunner`：ASR 与判定 runner、`callKey` = 任务幂等键十六进制、模型拒绝 → `failed(model_refused)`、输出非法 → `failed(invalid_output)`、网关瞬时错误重试后 dead 且不写结果行、判定在 ASR 缺失时 `defer`（撤销尝试计数，`HBECHO_SIGNALS_DEFER_*`，超限 `dead(dependency_timeout)`）、没有 ASR 模型时 runner 一个语音任务都不领）；`tasks/queue.ts` 增 `defer`；`scoring/result-row.ts` 抽出结果行构造，评分 runner 改用它；测试世界抽到 `tests/harness/signals-world.ts`（任务 8 的测试改用，仍 20 例通过）。`speech.db.test.ts` 16 例：默认装配下请求被拒（`model_unavailable`）、任务 0、读作 `capability_disabled`；同音频两次请求 ASR 只调一次，ASR 结果跨监控段共享；音频未归档 → `missing(audio_not_archived)` 无任务且列入 `needMedia`；**调用成功后写结果前崩溃，重启用同一 callKey，计费一次、结果一行**；输出非法 / 拒绝 → failed（不是 0 / 空文本 / not_meets）；网关瞬时错误 → dead 且错误详情无签名 URL；判定 deferred（`attemptCount` 0、`deferCount` 1、30 秒后再试）并按需建 ASR 任务；ASR 完成后判定结果行含结论、理由、模型、提示词 ID 与版本、标准文本哈希、转写结果 ID、`callKey`；不同标准文本互不复用，相同标准（规范化后）+ 提示词版本 + 模型版本跨监控段复用；模型 m1→m2 产生新行、m1 保留；请求后运行前换模型 → `dead(model_changed)`；转写失败 → 判定 failed 保留原失败码；ASR 任务已 dead → 判定自己 dead 且不复活 ASR；延后超限 → dead；只有 ASR 模型时判定被 `executability` 阻塞。变异检查三处（去掉 defer 的计数撤销、去掉模型变更检查、让非法输出不判失败，各使对应用例失败）。**偏差**：① `AiGatewayPort` 的 `judge` 改为 C 渲染提示词（`promptId`/`promptVersion`/`system`/`user`）、网关返回**原始结构化输出**由 C 校验（任务 2 的草案是 `transcript`/`standardText`，无法满足“输出不符合 schema → invalid_output”由 C 判定）；新增 `GatewayRefusedError` 表示模型拒绝；② 新增死亡原因 `model_changed`（已写入 design §6.4）；③ ASR 能力版本不含模型版本（design §12 已写明），换 ASR 模型靠人为升 `speech.asr` 版本。**未证明**：真实模型质量与计费（属 `h-ai-min` 的 smoke）；真实 OSS 签名 URL 能否被网关读取。
 
-- [ ] 10. 能力升级、`stale` 与显式重算
+- [x] 10. 能力升级、`stale` 与显式重算
   - **Requirements:** SG-10、SG-11
   - **Design:** §7.10
   - `ScopeResolver`；`recompute.preview` / `apply` / `cancel`；`recompute_chunk` runner（每块前后检查 run 状态）；`signal_recompute_runs`；审计事件（含 `recompute.cancel`）。
   - run 语义：`active_key` 唯一；同范围 `running` / `failed` 续跑原 run，`completed` 后再 `apply` 新建 run 且跳过已是目标版本的对象；`cancel` 只对 `running` / `failed` 有效，置 `cancelled`、清 `active_key`，未开始的 chunk 置 `dead(run_cancelled)`，已领取的 chunk 在分块边界停止；`tasks revive` 拒绝复活。
   - **验证**：requirements SG-10、SG-11 验收逐条——升版本后读作 `stale` 且无新任务、无新计划版本；`stalePolicy` 两种；无范围 `scope_required`；预览与执行条数一致且预览不写表；无 `rule.definition.manage` 被拒；品牌范围外的对象不在展开结果；重算后范围内 `valid`、范围外仍 `stale`；重算中途杀进程后续跑，历史表无重复；重算记录（含 `from_version` / `to_version` / `scope_count`）与审计事件各一条；failed run 可重启续跑（在 `cursor_id` 处复活/新建 chunk）；迟到 chunk 在非 `running` 的 run 上置 `dead(run_not_running)`；completed 后范围内新进入的对象再次 `apply` 能被补上且旧对象不重复；`from_version` 无旧值时为 NULL；素材未变、批次相同的 `stale` 文本信号重算后读作 `valid` 且 `normalizerVersion` 更新，历史原因 `capability_upgraded`；`comment.text_normalized` 按内容范围重算；`cancel` 后未执行的 chunk 不再运行、不产生新的历史/结果行，`revive` 拒绝，同范围可新建 run；对 `completed` / 已 `cancelled` 的 run 调用 cancel 被拒；重算不改监控段版本；`brandId` 范围经当前归属展开（造一个换店的账号验证用的是当前归属）。
+
+  - **完成记录（2026-11-12）**：新增 `recompute/scope.ts`（范围校验与规范化：至少一项、ID 为不带前导零的正整数、品牌编码解析并校验操作者品牌范围、把操作者的品牌范围固化进 run 的 `restrict_brand_ids`，chunk 无需操作者在场）、`recompute/index.ts`（`preview`、`apply`、`cancel`、`runBatch` / `runChunk`；run 记录含操作者、信号、范围、`scope_count`、`from_version`（apply 时范围内最低版本，无旧值为 NULL）、`to_version`；分块 500 个主体（可注入），推进游标 / 建下一块 / 任务 succeeded 同一事务，提交前重读 run 状态）、`tasks/revive.ts`（`tasks revive`：非 dead、`run_cancelled`、已完成 / 已取消 / failed run 的 chunk 一律拒绝）；`tasks/queue.ts` 增 `enqueueIn`（在调用方事务里入队）；`scoring/request.ts` 增内部入口 `requestAsService`（`includeStale` 把旧版本有效值也当缺失、`only` 限定信号）；`facts` 增 `brandIdsOf`、`materialForSignal`、`restrictBrandIds`；`assemble` 返回 `recompute` 与 `tasks.revive`。`recompute.db.test.ts` 15 例：升版本后读作 stale（两种 stalePolicy）且无新任务 / 无新监控段版本 / 扫描器不重算；`scope_required`（含只有 segmentRef）/ `scope_empty` / `signal_unregistered` / `scope_invalid`（前导零 ID）/ `segment_ref_required`；缺 Capability 零查询；preview 不写任何表且与 apply 条数一致，run 记录与审计事件齐全；范围内重算后 valid（nv=2、历史 `capability_upgraded` 且保留 nv=1、素材未变批次相同也重算）、范围外仍 stale、监控段不变；**5 对象 / 每块 2 个 + 两次中途杀进程（含“对象已处理、游标未提交”）续跑，历史表恰好 15 行**；同范围 running 续跑原 run、completed 后新建 run 并补上新进入的 stale 对象而不重复处理旧对象；failed run 再 apply 在 cursor 处复活 chunk 并完成，且不能直接 revive；取消（未执行 chunk → dead(run_cancelled)、revive 被拒、不再运行、同范围新建 run、对 completed / cancelled 再取消被拒、正在执行的 chunk 看到 cancelled 不建下一块）；品牌范围外的对象不在展开结果（含账号换到别的品牌门店后跟着走）、brandCode 越权被拒；评论类按内容范围重算；**派生信号**：image.template 升 2 后旧结果 stale、补算不覆盖、重算建 v2 任务、旧行保留、读到 v2。变异检查三处（去掉提交前的 run 状态重读、去掉品牌范围约束、让重算走 normal 模式，各使对应用例失败）。**偏差（已回写 design §7.10）**：① 派生信号重算必须带 `segmentRef`；② 重算特征信号以“行”为单位，三个文本信号一并升级；③ 对外范围用 `brandCode`；④ 增加 `chunkSize` 注入点便于测试多块续跑。**未证明**：200 万级对象的重算吞吐（规模演练只覆盖 20 万内容扫描等，见任务 13）；真实 failed 状态的触发路径只在测试里用直接改库模拟了“chunk 用尽重试”的结果（runner 观察到 dead 时置 failed 的代码路径由 `failTransient` 分支覆盖，没有专门的故障注入用例）。
 
 - [ ] 11. 保留期与清理
   - **Requirements:** SG-10

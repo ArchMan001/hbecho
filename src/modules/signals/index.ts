@@ -29,3 +29,6 @@ export * from "./tasks/queue";
 export * from "./scoring/result-row";
 export * from "./speech/disabled";
 export * from "./speech/runner";
+export * from "./recompute";
+export * from "./recompute/scope";
+export * from "./tasks/revive";

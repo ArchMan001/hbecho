@@ -94,7 +94,7 @@ export function createReader(deps: ReaderDeps) {
     }
 
     // 结果行类：先按素材状态分流，素材就绪的再去取结果行
-    const material = await materialFor(facts, entry, ids);
+    const material = await facts.materialForSignal(entry.key, ids);
     const ready = ids.flatMap((id) => {
       const m = material.get(id);
       return m?.state === "ready" ? [{ id, platform: platformOf.get(id)!, material: m }] : [];
@@ -144,11 +144,4 @@ function storedOf(e: Envelope[string], value: unknown): StoredSignal {
     failureCode: e.code,
     evidence: e.detail === undefined ? undefined : { detail: e.detail },
   };
-}
-
-function materialFor(facts: ReturnType<typeof createFacts>, entry: CatalogEntry, ids: bigint[]): Promise<Map<bigint, Material>> {
-  if (entry.key.startsWith("content.cover_")) return facts.coverMaterial(ids);
-  if (entry.key.startsWith("account.bg_")) return facts.profileMaterial(ids, "background");
-  if (entry.key.startsWith("account.avatar_")) return facts.profileMaterial(ids, "avatar");
-  return facts.audioMaterial(ids); // content.asr_text / content.asr_judgement
 }

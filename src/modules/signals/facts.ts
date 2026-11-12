@@ -2,7 +2,7 @@
 // 静态护栏（acceptance-boundaries）保证别的 signals 文件不 import A 的表，也不写 A 的表。
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, ne, or } from "drizzle-orm";
 import type { Db, DbTx } from "../../db/client";
-import { commentFeatures, comments, contentFeatures, contentSnapshots, contents, externalAccounts, mediaAssets, mediaReferences, ossObjects, platforms, staffAccountAssignments, stores, syncBatches, mediaStaff } from "../../db/schema";
+import { brands, commentFeatures, comments, contentFeatures, contentSnapshots, contents, externalAccounts, mediaAssets, mediaReferences, ossObjects, platforms, staffAccountAssignments, stores, syncBatches, mediaStaff } from "../../db/schema";
 import { requireSignal } from "./catalog";
 import { SignalError } from "./errors";
 
@@ -74,6 +74,8 @@ export interface SubjectScope {
   contentIds?: bigint[];
   accountIds?: bigint[];
   brandId?: bigint;
+  /** 操作者能看到的品牌（内部品牌 ID）；给出时，范围内的对象必须当前归属于这些品牌之一（外部型账号没有品牌，被排除）。不属于「至少一项」的范围项。 */
+  restrictBrandIds?: bigint[];
   /** 内容 current 快照的发布时间，[from, to)。只适用于内容 / 评论信号。 */
   publishedFrom?: Date;
   publishedTo?: Date;
@@ -223,21 +225,21 @@ export function createFacts(db: Q) {
     const timed = scope.publishedFrom !== undefined || scope.publishedTo !== undefined;
     if (object === "account" && (timed || scope.contentIds !== undefined)) throw new SignalError("input", "scope_not_applicable", "账号类信号的范围只支持 accountIds 与 brandId");
     // 账号的当前归属：staff_account_assignments（一账号一行）→ 专员 → 门店 → 品牌
-    const brandAccounts =
-      scope.brandId === undefined
-        ? undefined
-        : db
-            .select({ id: staffAccountAssignments.accountId })
-            .from(staffAccountAssignments)
-            .innerJoin(mediaStaff, eq(mediaStaff.staffId, staffAccountAssignments.staffId))
-            .innerJoin(stores, eq(stores.storeId, mediaStaff.storeId))
-            .where(eq(stores.brandId, scope.brandId));
+    const accountsOfBrands = (cond: ReturnType<typeof eq> | ReturnType<typeof inArray>) =>
+      db
+        .select({ id: staffAccountAssignments.accountId })
+        .from(staffAccountAssignments)
+        .innerJoin(mediaStaff, eq(mediaStaff.staffId, staffAccountAssignments.staffId))
+        .innerJoin(stores, eq(stores.storeId, mediaStaff.storeId))
+        .where(cond);
+    const brandAccounts = scope.brandId === undefined ? undefined : accountsOfBrands(eq(stores.brandId, scope.brandId));
+    const restrictedAccounts = scope.restrictBrandIds === undefined ? undefined : accountsOfBrands(inArray(stores.brandId, scope.restrictBrandIds.length > 0 ? scope.restrictBrandIds : [-1n]));
 
     if (object === "account") {
       const rows = await db
         .select({ id: externalAccounts.accountId })
         .from(externalAccounts)
-        .where(and(gt(externalAccounts.accountId, after), scope.accountIds && inArray(externalAccounts.accountId, scope.accountIds), brandAccounts && inArray(externalAccounts.accountId, brandAccounts)))
+        .where(and(gt(externalAccounts.accountId, after), scope.accountIds && inArray(externalAccounts.accountId, scope.accountIds), brandAccounts && inArray(externalAccounts.accountId, brandAccounts), restrictedAccounts && inArray(externalAccounts.accountId, restrictedAccounts)))
         .orderBy(asc(externalAccounts.accountId))
         .limit(limit);
       return rows.map((r) => r.id);
@@ -247,6 +249,8 @@ export function createFacts(db: Q) {
       scope.contentIds && inArray(contents.contentId, scope.contentIds),
       scope.accountIds && inArray(contents.accountId, scope.accountIds),
       brandAccounts && inArray(contents.accountId, brandAccounts),
+      restrictedAccounts && inArray(contents.accountId, restrictedAccounts),
+      
       scope.publishedFrom && gte(contentSnapshots.publishedAt, scope.publishedFrom),
       scope.publishedTo && lt(contentSnapshots.publishedAt, scope.publishedTo),
     );
@@ -270,6 +274,21 @@ export function createFacts(db: Q) {
       .orderBy(asc(comments.commentId))
       .limit(limit);
     return rows.map((r) => r.id);
+  }
+
+  /** 结果行类信号的输入素材（封面 / 头像 / 背景 / 音频），按信号键路由。 */
+  function materialForSignal(signalKey: string, ids: readonly bigint[]): Promise<Map<bigint, Material>> {
+    if (signalKey.startsWith("content.cover_")) return coverMaterial(ids);
+    if (signalKey.startsWith("account.bg_")) return profileMaterial(ids, "background");
+    if (signalKey.startsWith("account.avatar_")) return profileMaterial(ids, "avatar");
+    return audioMaterial(ids); // content.asr_text / content.asr_judgement
+  }
+
+  /** 品牌编码 → 内部品牌 ID；不存在的编码不在结果里。 */
+  async function brandIdsOf(codes: readonly string[]): Promise<Map<string, bigint>> {
+    if (codes.length === 0) return new Map();
+    const rows = await db.select({ code: brands.brandCode, id: brands.brandId }).from(brands).where(inArray(brands.brandCode, [...codes]));
+    return new Map(rows.map((r) => [r.code, r.id]));
   }
 
   /** 主体所在平台（读取口用；不读文本）。缺失的主体不在结果里。 */
@@ -367,6 +386,6 @@ export function createFacts(db: Q) {
     return rows.map((r) => r.id);
   }
 
-  return { contentFacts, commentFacts, platformsOf, batchOrders, contentsAfter, contentsLate, contentPage, commentsAfter, commentsInWindow, coverMaterial, profileMaterial, audioMaterial, mediaObjectOf, scopeSubjects };
+  return { contentFacts, commentFacts, materialForSignal, brandIdsOf, platformsOf, batchOrders, contentsAfter, contentsLate, contentPage, commentsAfter, commentsInWindow, coverMaterial, profileMaterial, audioMaterial, mediaObjectOf, scopeSubjects };
 }
 export type Facts = ReturnType<typeof createFacts>;

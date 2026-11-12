@@ -4,14 +4,17 @@ import type { Db } from "../../db/client";
 import type { ImageConverter } from "../media-archive";
 import type { Clock, MediaObjectStore } from "../raw-capture";
 import type { SignalAuditSink } from "./audit";
+import type { SignalActor } from "./authz";
 import type { SignalsConfig } from "./config";
 import { createFacts } from "./facts";
 import { createReader } from "./reader";
 import { createResultLookup } from "./scoring/lookup";
 import type { ImageMatcher } from "./scoring/ports";
+import { createRecompute } from "./recompute";
 import { createRequestScores } from "./scoring/request";
 import { createScoreRunner } from "./scoring/runner";
 import { createSegments } from "./segments";
+import { reviveTask } from "./tasks/revive";
 import { DisabledAiGateway } from "./speech/disabled";
 import type { AiGatewayPort } from "./speech/ports";
 import { createSpeechRunner } from "./speech/runner";
@@ -30,6 +33,8 @@ export interface SignalsDeps {
   matcher: ImageMatcher;
   /** 缺省 DisabledAiGateway：语音类能力读作 capability_disabled，不建任务、不发调用（默认离线、不花钱）。 */
   gateway?: AiGatewayPort;
+  /** 显式重算每块的主体数；缺省 500（测试里调小以覆盖多块续跑）。 */
+  recomputeChunkSize?: number;
 }
 
 export function createSignals(deps: SignalsDeps) {
@@ -38,9 +43,10 @@ export function createSignals(deps: SignalsDeps) {
   const gateway = { gateway: aiGateway };
   const segments = createSegments({ db, clock, audit, store: deps.signalsStore, bucket: deps.signalsBucket, converter: deps.converter, enabled: config.enabled, ...gateway });
   const reader = createReader({ db, enabled: config.enabled, ...gateway, results: createResultLookup({ db, ...gateway }) });
-  const { requestScores } = createRequestScores({ db, clock, audit, config, enabled: config.enabled, ...gateway, executability: (k) => segments.computeExecutability(k) });
+  const { requestScores, requestAsService } = createRequestScores({ db, clock, audit, config, enabled: config.enabled, ...gateway, executability: (k) => segments.computeExecutability(k) });
   const scoreRunner = createScoreRunner({ db, clock, audit, config, mediaStore: deps.mediaStore, signalsStore: deps.signalsStore, matcher: deps.matcher });
   const speechRunner = createSpeechRunner({ db, clock, audit, config, mediaStore: deps.mediaStore, gateway: aiGateway });
-  return { facts: createFacts(db), config, segments, reader, requestScores, scoreRunner, speechRunner };
+  const recompute = createRecompute({ db, clock, audit, config, requestAsService, ...(deps.recomputeChunkSize ? { chunkSize: deps.recomputeChunkSize } : {}) });
+  return { facts: createFacts(db), config, segments, reader, requestScores, scoreRunner, speechRunner, recompute, tasks: { revive: (actor: SignalActor, taskId: bigint) => reviveTask({ db, clock }, actor, taskId) } };
 }
 export type Signals = ReturnType<typeof createSignals>;

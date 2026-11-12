@@ -31,3 +31,18 @@ export async function latestResults(db: Db, entry: CatalogEntry, materialShas: B
   }
   return out;
 }
+
+/** 这些素材（任意参数）下该信号结果行所持的最高能力版本（每个素材×参数取最高；重算用它统计范围内的最低版本）。 */
+export async function latestResultVersions(db: Db, entry: CatalogEntry, materialShas: Buffer[]): Promise<number[]> {
+  if (materialShas.length === 0) return [];
+  const rows = await db
+    .select({ material: signalResults.materialSha256, param: signalResults.paramSha256, v: signalResults.capabilityVersion })
+    .from(signalResults)
+    .where(and(eq(signalResults.signalKey, entry.key), eq(signalResults.capabilityId, entry.capability), inArray(signalResults.materialSha256, materialShas)));
+  const best = new Map<string, number>();
+  for (const r of rows) {
+    const k = `${r.material.toString("hex")}/${r.param.toString("hex")}`;
+    best.set(k, Math.max(best.get(k) ?? 0, r.v));
+  }
+  return [...best.values()];
+}

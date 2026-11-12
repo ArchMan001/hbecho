@@ -4,7 +4,7 @@
 import type { Db } from "../../../db/client";
 import type { Clock } from "../../raw-capture";
 import type { SignalAuditSink } from "../audit";
-import { CAP_SCORE_REQUEST, assert, type SignalActor } from "../authz";
+import { CAP_SCORE_REQUEST, SERVICE_ACTOR, assert, type SignalActor } from "../authz";
 import { capabilityOf, requireSignal, versionOf, type CatalogEntry } from "../catalog";
 import type { SignalsConfig } from "../config";
 import { SignalError } from "../errors";
@@ -61,15 +61,20 @@ export function createRequestScores(deps: RequestDeps) {
     if ((await deps.gateway.activeModel("asr")) === null) return false;
     return entry.capability === "speech.asr" ? true : (await deps.gateway.activeModel("judge")) !== null;
   }
-  function materialFor(entry: CatalogEntry, ids: bigint[]): Promise<Map<bigint, Material>> {
-    if (entry.key.startsWith("content.cover_")) return facts.coverMaterial(ids);
-    if (entry.key.startsWith("account.bg_")) return facts.profileMaterial(ids, "background");
-    if (entry.key.startsWith("account.avatar_")) return facts.profileMaterial(ids, "avatar");
-    return facts.audioMaterial(ids);
-  }
-
   async function requestScores(actor: SignalActor, segment: SegmentRef, subjects: readonly Subject[], ctx: RequestContext = {}): Promise<RequestResult> {
     assert(actor, CAP_SCORE_REQUEST); // 先于任何读库
+    return plan(actor.actor, segment, subjects, ctx, {});
+  }
+
+  /**
+   * 内部入口（显式重算的分块用，授权已在 recompute.apply 做过）：includeStale 把「旧版本的有效值」也当缺失（重算会覆盖 stale，补算不会）；
+   * only 只处理监控段里的这个信号（重算按信号执行，不顺带算监控段里的其它信号）。
+   */
+  async function requestAsService(segment: SegmentRef, subjects: readonly Subject[], opts: { includeStale?: boolean; only?: string } = {}): Promise<RequestResult> {
+    return plan(SERVICE_ACTOR, segment, subjects, {}, opts);
+  }
+
+  async function plan(requestedBy: string, segment: SegmentRef, subjects: readonly Subject[], ctx: RequestContext, opts: { includeStale?: boolean; only?: string }): Promise<RequestResult> {
     if (subjects.length > MAX_READ_SUBJECTS) throw new SignalError("limit", "too_many_subjects", `一次最多 ${MAX_READ_SUBJECTS} 个主体，超过请分批`);
     const seg = await loadSegmentRow(deps.db, segment);
     const ex = await deps.executability(segment);
@@ -80,13 +85,14 @@ export function createRequestScores(deps: RequestDeps) {
     for (const item of seg.items as SegmentItem[]) {
       const entry = requireSignal(item.signal);
       if (entry.storage !== "result") continue; // 文本类随 current 指针自动就位，不走补算
+      if (opts.only !== undefined && item.signal !== opts.only) continue;
       const ids = [...new Set(subjects.filter((s) => s.kind === entry.object).map((s) => s.id))];
       const out: ItemResult = { signal: entry.key, ...(item.element_key ? { elementKey: item.element_key } : {}), subjects: [] };
       result.items.push(out);
       if (ids.length === 0) continue;
 
       const platforms = await facts.platformsOf(entry.object, ids);
-      const material = await materialFor(entry, ids);
+      const material = await facts.materialForSignal(entry.key, ids);
       const modelOk = await modelsOk(entry);
       // 先取模型版本再算参数指纹（SG-D18）：不可用时 resolveParam 返回 unavailable，不建任务
       const param = await resolveParam(deps.db, deps.gateway, entry, { segment, ...(item.element_key ? { elementKey: item.element_key } : {}) });
@@ -121,7 +127,7 @@ export function createRequestScores(deps: RequestDeps) {
       const taskOfSha = new Map<string, string>();
       for (const [hex, g] of shaToIds) {
         const r = have.get(hex);
-        if (r && !(r.version < cur && r.state === "failed")) {
+        if (r && !(r.version < cur && (r.state === "failed" || opts.includeStale))) {
           for (const id of g.ids) out.subjects.push({ id, disposition: "reused", reason: r.version < cur ? "stale" : r.state });
           continue;
         }
@@ -138,8 +144,8 @@ export function createRequestScores(deps: RequestDeps) {
             source: { media_asset_id: String(g.assetId) },
             ...(param.segmentImageId === undefined ? {} : { segment_image_id: String(param.segmentImageId) }),
             ...(param.standardText === undefined ? {} : { standard_text: param.standardText, prompt_version: JUDGE_PROMPT_VERSION, model_version: param.modelVersion }),
-            lineage: { plan_id: String(segment.planId), version: segment.version, requested_by: actor.actor },
-            caller: { actor: ctx.caller ?? actor.actor, ...(ctx.scopeFingerprint === undefined ? {} : { scope_fingerprint: ctx.scopeFingerprint }) },
+            lineage: { plan_id: String(segment.planId), version: segment.version, requested_by: requestedBy },
+            caller: { actor: ctx.caller ?? requestedBy, ...(ctx.scopeFingerprint === undefined ? {} : { scope_fingerprint: ctx.scopeFingerprint }) },
             requested_at: now.toISOString(),
           },
         });
@@ -157,6 +163,7 @@ export function createRequestScores(deps: RequestDeps) {
     }
     return result;
   }
-  return { requestScores };
+  return { requestScores, requestAsService };
 }
 export type RequestScores = ReturnType<typeof createRequestScores>["requestScores"];
+export type RequestAsService = ReturnType<typeof createRequestScores>["requestAsService"];

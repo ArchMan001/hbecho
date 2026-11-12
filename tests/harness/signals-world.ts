@@ -33,13 +33,13 @@ export const converter: ImageConverter = {
 };
 export const png = (seed: string): Uint8Array => Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from(seed)]);
 
-export async function createWorld(t: TestDb, o: { gateway?: AiGatewayPort; matcher?: FakeMatcher; cfg?: Record<string, string> } = {}) {
+export async function createWorld(t: TestDb, o: { gateway?: AiGatewayPort; matcher?: FakeMatcher; cfg?: Record<string, string>; chunkSize?: number } = {}) {
   const clock = new FakeClock(new Date("2026-11-12T03:00:00.000Z"));
   const signalsStore = new FakeObjectStore(clock);
   const mediaStore = new FakeObjectStore(clock);
   const matcher = o.matcher ?? new FakeMatcher(8);
   const events: SignalAuditEvent[] = [];
-  const signals = createSignals({ db: t.db, clock, audit: (e) => void events.push(e), config: config(o.cfg), mediaStore, signalsStore, signalsBucket: "hbecho-signals-test", converter, matcher, ...(o.gateway ? { gateway: o.gateway } : {}) });
+  const signals = createSignals({ db: t.db, clock, audit: (e) => void events.push(e), config: config(o.cfg), mediaStore, signalsStore, signalsBucket: "hbecho-signals-test", converter, matcher, ...(o.gateway ? { gateway: o.gateway } : {}), ...(o.chunkSize ? { recomputeChunkSize: o.chunkSize } : {}) });
   const plan = { planId: 1n, version: 1 };
   await signals.segments.create(actor, { planId: plan.planId, platform: "douyin" });
   await signals.segments.setItems(actor, plan, [{ signal: "content.cover_template_score" }]);

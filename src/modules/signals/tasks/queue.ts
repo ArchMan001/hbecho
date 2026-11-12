@@ -38,48 +38,50 @@ export type EnqueueOutcome = "created" | "reused" | "revived" | "requeued";
  * 并发的同键入队靠唯一键 + no-op 的 ON DUPLICATE KEY UPDATE 收敛。
  */
 export async function enqueueMany(deps: QueueDeps, tasks: NewTask[]): Promise<Map<string, EnqueueOutcome>> {
+  if (tasks.length === 0) return new Map();
+  return deps.db.transaction((tx) => enqueueIn(tx, deps.clock.now(), tasks));
+}
+
+/** 在调用方的事务里入队（重算分块在同一事务里推进游标并建下一块）。 */
+export async function enqueueIn(tx: DbTx, now: Date, tasks: NewTask[]): Promise<Map<string, EnqueueOutcome>> {
   const out = new Map<string, EnqueueOutcome>();
-  if (tasks.length === 0) return out;
-  const now = deps.clock.now();
-  await deps.db.transaction(async (tx) => {
-    const keys = tasks.map((t) => t.key);
-    const existing = await tx.select().from(signalTasks).where(inArray(signalTasks.idempotencyKey, keys));
-    const byKey = new Map(existing.map((e) => [e.idempotencyKey.toString("hex"), e]));
-    const fresh: NewTask[] = [];
-    for (const t of tasks) {
-      const hex = t.key.toString("hex");
-      const old = byKey.get(hex);
-      if (!old) {
-        fresh.push(t);
-        out.set(hex, "created");
-      } else if (old.status === "dead" || (old.status === "succeeded" && old.resultId === null)) {
-        await tx
-          .update(signalTasks)
-          .set({ status: "pending", attemptCount: 0, deferCount: 0, nextAttemptAt: null, leaseOwner: null, leaseExpiresAt: null, resultId: null, lastErrorCode: null, lastErrorDetail: null, finishedAt: null, expiresAt: successExpiry(now), updatedAt: now })
-          .where(eq(signalTasks.taskId, old.taskId));
-        out.set(hex, old.status === "dead" ? "revived" : "requeued");
-      } else out.set(hex, "reused");
-    }
-    if (fresh.length > 0) {
+  const keys = tasks.map((t) => t.key);
+  const existing = await tx.select().from(signalTasks).where(inArray(signalTasks.idempotencyKey, keys));
+  const byKey = new Map(existing.map((e) => [e.idempotencyKey.toString("hex"), e]));
+  const fresh: NewTask[] = [];
+  for (const t of tasks) {
+    const hex = t.key.toString("hex");
+    const old = byKey.get(hex);
+    if (!old) {
+      fresh.push(t);
+      out.set(hex, "created");
+    } else if (old.status === "dead" || (old.status === "succeeded" && old.resultId === null)) {
       await tx
-        .insert(signalTasks)
-        .values(
-          fresh.map((t) => ({
-            kind: t.kind,
-            idempotencyKey: t.key,
-            params: t.params,
-            status: "pending",
-            priority: t.priority ?? 0,
-            maxAttempts: t.maxAttempts,
-            runId: t.runId ?? null,
-            createdAt: now,
-            updatedAt: now,
-            expiresAt: successExpiry(now), // 任务保留一年（与 ODS 同寿命）
-          })),
-        )
-        .onDuplicateKeyUpdate({ set: { taskId: sql`task_id` } });
-    }
-  });
+        .update(signalTasks)
+        .set({ status: "pending", attemptCount: 0, deferCount: 0, nextAttemptAt: null, leaseOwner: null, leaseExpiresAt: null, resultId: null, lastErrorCode: null, lastErrorDetail: null, finishedAt: null, expiresAt: successExpiry(now), updatedAt: now })
+        .where(eq(signalTasks.taskId, old.taskId));
+      out.set(hex, old.status === "dead" ? "revived" : "requeued");
+    } else out.set(hex, "reused");
+  }
+  if (fresh.length > 0) {
+    await tx
+      .insert(signalTasks)
+      .values(
+        fresh.map((t) => ({
+          kind: t.kind,
+          idempotencyKey: t.key,
+          params: t.params,
+          status: "pending",
+          priority: t.priority ?? 0,
+          maxAttempts: t.maxAttempts,
+          runId: t.runId ?? null,
+          createdAt: now,
+          updatedAt: now,
+          expiresAt: successExpiry(now), // 任务保留一年（与 ODS 同寿命）
+        })),
+      )
+      .onDuplicateKeyUpdate({ set: { taskId: sql`task_id` } });
+  }
   return out;
 }
 

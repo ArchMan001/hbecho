@@ -50,3 +50,15 @@ export function validateItems(raw: unknown, platform: Platform): SegmentItem[] {
   }
   return items;
 }
+
+/**
+ * `only`：本次只补算 / 只检查这些信号键（D 按层请求：第 2 层只要封面分，不能顺带为第 1 层通过的全部内容建付费的 ASR 任务）。
+ * 缺省 = 监控段的全部信号（行为不变）；空数组不是“什么都不做”也不是“全部”，直接拒绝；目录外的键 `signal_unregistered`；
+ * 目录里有但监控段没配的键不报错（该信号没有可处理的条目）。
+ */
+export function parseOnly(only: readonly string[] | undefined): ReadonlySet<string> | undefined {
+  if (only === undefined) return undefined;
+  if (only.length === 0) return invalid("only_empty", "only 不能是空数组；要处理全部信号就不传 only");
+  for (const k of only) requireSignal(k);
+  return new Set(only);
+}

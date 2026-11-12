@@ -237,6 +237,9 @@
 | L6 | ✅ | scoring.db「拒绝：缺 Capability、超过 5,000、监控段不存在、不可执行」 |
 | L7 | ✅ | cli.commands「score」（输出只有分布与 `needMedia`）；返回类型不含文本字段 |
 | L8 | ✅ | acceptance.db「fake D 的调用序列」 |
+| L9 | ✅ | only.db「only=[封面]」：只建封面任务，判定（付费）一个都不建；不传 only 行为不变；再请求 only=[判定] 只多出判定任务 |
+| L10 | ✅ | only.db「判定模型中途丢失……」「封面标准图缺失……」：`executability` 与 `not_executable` 只看 only 里的信号 |
+| L11 | ✅ | only.db「参数检查」「executability 的 only 同样做参数检查，且仍先于读库做授权」 |
 
 ### M. 任务执行（SG-13）
 
@@ -507,6 +510,9 @@ PRD 清单每一条对应上表的条目（映射见下方“PRD 验收清单对
 | L6 | SG-12 | `requestScores` 对不存在的监控段、不可执行的监控段、超 5,000 主体 | 拒绝 |
 | L7 | SG-12 | 返回值 | 不含内容原文 |
 | L8 | SG-12 | fake D 契约：`create → putImage → setItems → requestScores → readMany 轮询 → publish → newDraft → purge` | 序列通过，轮询最终无 `pending` |
+| L9 | SG-12 | 监控段含封面比对与 ASR 判定，主体都有封面与音频；`requestScores(only=[封面])` | 只建封面任务，不建判定 / ASR 任务；不传 `only` 时两类都建；之后 `only=[判定]` 只多出判定任务 |
+| L10 | SG-12 | 判定模型丢失 / 封面标准图缺失时，`executability(only=…)` 与 `requestScores(only=…)` | 不传 only 时整段仍不可执行；only 不含出问题的信号时可执行；only 含它时阻塞项只有它自己的 |
+| L11 | SG-12 | `only=[]`、目录外键、监控段没配的键；无 Capability | `only_empty`、`signal_unregistered`、不报错且无任务；授权先于读库 |
 
 ### M. 任务执行（SG-13）
 

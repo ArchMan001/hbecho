@@ -117,6 +117,7 @@ describe("content_features", () => {
     const a = await newContent(t.db);
     await t.db.insert(contentFeatures).values(feature(a));
     await expectRejected(t.pool.query("DELETE FROM content_snapshots WHERE content_snapshot_id = ?", [a.snapshotId]), "fk_content_features_snapshot");
+    await expectRejected(t.pool.query("DELETE FROM contents WHERE content_id = ?", [a.contentId]), "content_features_content_id_contents_content_id_fk");
   });
 });
 
@@ -188,7 +189,11 @@ describe("signal_history", () => {
     await expectRejected(t.db.insert(signalHistory).values(h({ subjectKind: "account" })), "ck_signal_history_kind");
     await expectRejected(t.db.insert(signalHistory).values(h({ state: "stale" })), "ck_signal_history_state");
     await expectRejected(t.db.insert(signalHistory).values(h({ supersededReason: "deleted" })), "ck_signal_history_reason");
-    await expectRejected(t.db.insert(signalHistory).values(h({ capabilityVersion: 0 })), "ck_signal_history_version");
+    await expectRejected(t.db.insert(signalHistory).values(h({ capabilityVersion: 0 })), "ck_signal_history_cap_version");
+    // 归一化版本：非文本信号为空是合法的，0 或负数不合法
+    await t.db.insert(signalHistory).values(h({ normalizerVersion: null, signalKey: "content.cover_template_score" }));
+    await expectRejected(t.db.insert(signalHistory).values(h({ normalizerVersion: 0 })), "ck_signal_history_nv");
+    await expectRejected(t.db.insert(signalHistory).values(h({ normalizerVersion: -1 })), "ck_signal_history_nv");
   });
 });
 

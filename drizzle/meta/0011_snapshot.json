@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "a32a0250-7835-4167-83f9-86e52d1289b1",
+  "id": "09ab4d5c-4278-443d-a19d-63abc21fe1de",
   "prevId": "ca150256-0551-4693-8b85-9a063c15eaba",
   "tables": {
     "access_bootstrap_tokens": {
@@ -6966,15 +6966,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "idx_content_features_snapshot": {
-          "name": "idx_content_features_snapshot",
-          "columns": [
-            "content_snapshot_id"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "content_features_content_id_contents_content_id_fk": {
           "name": "content_features_content_id_contents_content_id_fk",
@@ -7507,9 +7499,13 @@
           "name": "ck_signal_history_reason",
           "value": "`signal_history`.`superseded_reason` IN ('material_changed','capability_upgraded')"
         },
-        "ck_signal_history_version": {
-          "name": "ck_signal_history_version",
+        "ck_signal_history_cap_version": {
+          "name": "ck_signal_history_cap_version",
           "value": "`signal_history`.`capability_version` > 0"
+        },
+        "ck_signal_history_nv": {
+          "name": "ck_signal_history_nv",
+          "value": "`signal_history`.`normalizer_version` IS NULL OR `signal_history`.`normalizer_version` > 0"
         }
       }
     },

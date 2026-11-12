@@ -99,7 +99,8 @@ CREATE TABLE `signal_history` (
 	CONSTRAINT `ck_signal_history_kind` CHECK(`signal_history`.`subject_kind` IN ('content','comment')),
 	CONSTRAINT `ck_signal_history_state` CHECK(`signal_history`.`state` IN ('valid','failed')),
 	CONSTRAINT `ck_signal_history_reason` CHECK(`signal_history`.`superseded_reason` IN ('material_changed','capability_upgraded')),
-	CONSTRAINT `ck_signal_history_version` CHECK(`signal_history`.`capability_version` > 0)
+	CONSTRAINT `ck_signal_history_cap_version` CHECK(`signal_history`.`capability_version` > 0),
+	CONSTRAINT `ck_signal_history_nv` CHECK(`signal_history`.`normalizer_version` IS NULL OR `signal_history`.`normalizer_version` > 0)
 );
 --> statement-breakpoint
 CREATE TABLE `signal_recompute_runs` (
@@ -188,7 +189,6 @@ ALTER TABLE `content_features` ADD CONSTRAINT `fk_content_features_snapshot` FOR
 ALTER TABLE `segment_images` ADD CONSTRAINT `fk_segment_images_segment` FOREIGN KEY (`plan_id`,`version`) REFERENCES `monitoring_segments`(`plan_id`,`version`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `signal_tasks` ADD CONSTRAINT `fk_signal_tasks_run` FOREIGN KEY (`run_id`) REFERENCES `signal_recompute_runs`(`run_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `signal_tasks` ADD CONSTRAINT `fk_signal_tasks_result` FOREIGN KEY (`result_id`) REFERENCES `signal_results`(`result_id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX `idx_content_features_snapshot` ON `content_features` (`content_snapshot_id`);--> statement-breakpoint
 CREATE INDEX `idx_segment_images_sha` ON `segment_images` (`sha256`);--> statement-breakpoint
 CREATE INDEX `idx_signal_history_subject` ON `signal_history` (`subject_kind`,`subject_id`,`signal_key`,`superseded_at`);--> statement-breakpoint
 CREATE INDEX `idx_signal_history_expires` ON `signal_history` (`expires_at`);--> statement-breakpoint

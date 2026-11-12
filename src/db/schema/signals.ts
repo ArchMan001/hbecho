@@ -52,7 +52,6 @@ export const contentFeatures = mysqlTable(
       columns: [t.contentId, t.contentSnapshotId],
       foreignColumns: [contentSnapshots.contentId, contentSnapshots.contentSnapshotId],
     }),
-    index("idx_content_features_snapshot").on(t.contentSnapshotId),
     check("ck_content_features_signals", sql`JSON_TYPE(${t.signals}) = 'OBJECT'`),
     check("ck_content_features_hashtags", sql`${t.hashtags} IS NULL OR JSON_TYPE(${t.hashtags}) = 'ARRAY'`),
     check("ck_content_features_title", valueMatchesEnvelope(t.titleNormalized, t.signals, "text.title_normalized")),
@@ -112,7 +111,8 @@ export const signalHistory = mysqlTable(
     check("ck_signal_history_kind", inList(t.subjectKind, HISTORY_SUBJECT_KINDS)),
     check("ck_signal_history_state", inList(t.state, SIGNAL_STORED_STATES)),
     check("ck_signal_history_reason", inList(t.supersededReason, HISTORY_SUPERSEDED_REASONS)),
-    check("ck_signal_history_version", sql`${t.capabilityVersion} > 0`),
+    check("ck_signal_history_cap_version", sql`${t.capabilityVersion} > 0`),
+    check("ck_signal_history_nv", sql`${t.normalizerVersion} IS NULL OR ${t.normalizerVersion} > 0`),
   ],
 );
 

@@ -462,7 +462,7 @@ retainUntil(resultIds, until): void
 **陈述**：
 
 - C 的函数 SHALL 经 `assert(actor, capability, resource)` 入口授权，先 Capability、再 actor 自带的品牌范围，两步都先于任何数据库读取（沿用 `a-activity-plan` 的写法）；
-- Capability 对应：监控段写入、上传标准图、重算 = `rule.definition.manage`；`requestScores` = `rule.run.execute`；读取口与证据读取 = `rule.definition.read`（D 以服务身份调用）；CLI 的 `show` = `data.content.read` / `data.account.read`；
+- Capability 对应：监控段写入、上传标准图、重算 = `rule.definition.manage`；`requestScores`、`retainUntil` = `rule.run.execute`（D 以服务身份 `service:judgement` 调用，该身份持有 `rule.*` 三项）；读取口与证据读取 = `rule.definition.read`（D 以服务身份调用）；CLI 的 `show` = `data.content.read` / `data.account.read`；
 - 能力版本升级、`retainUntil`、清理器、扫描器使用固定服务身份 `service:signals-worker`，不经用户范围；
 - 审计事件（结构化日志，沿用 `AuditSink` 端口）至少覆盖：监控段创建 / 发布 / 清除、标准图上传 / 删除、重算预览 / 执行 / 取消、任务 `dead`；事件不含图片字节、文本原文、签名 URL、模型 Key；`signal_tasks.last_error_detail` 与结果行证据同样不得含签名 URL（写入前统一脱敏：URL 一律替换为 `<url>`）；
 - CLI 身份来自环境变量，缺任一项启动失败（不退化成全部范围）。

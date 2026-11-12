@@ -13,6 +13,7 @@ import type { ImageMatcher } from "./scoring/ports";
 import { createRecompute } from "./recompute";
 import { createRequestScores } from "./scoring/request";
 import { createScoreRunner } from "./scoring/runner";
+import { purgeExpired, retainUntil } from "./retention";
 import { createSegments } from "./segments";
 import { reviveTask } from "./tasks/revive";
 import { DisabledAiGateway } from "./speech/disabled";
@@ -47,6 +48,10 @@ export function createSignals(deps: SignalsDeps) {
   const scoreRunner = createScoreRunner({ db, clock, audit, config, mediaStore: deps.mediaStore, signalsStore: deps.signalsStore, matcher: deps.matcher });
   const speechRunner = createSpeechRunner({ db, clock, audit, config, mediaStore: deps.mediaStore, gateway: aiGateway });
   const recompute = createRecompute({ db, clock, audit, config, requestAsService, ...(deps.recomputeChunkSize ? { chunkSize: deps.recomputeChunkSize } : {}) });
-  return { facts: createFacts(db), config, segments, reader, requestScores, scoreRunner, speechRunner, recompute, tasks: { revive: (actor: SignalActor, taskId: bigint) => reviveTask({ db, clock }, actor, taskId) } };
+  const retention = {
+    retainUntil: (actor: SignalActor, resultIds: readonly bigint[], until: Date) => retainUntil({ db }, actor, resultIds, until),
+    purgeExpired: (opts?: Parameters<typeof purgeExpired>[1]) => purgeExpired({ db, clock }, opts),
+  };
+  return { facts: createFacts(db), config, segments, reader, requestScores, scoreRunner, speechRunner, recompute, retention, tasks: { revive: (actor: SignalActor, taskId: bigint) => reviveTask({ db, clock }, actor, taskId) } };
 }
 export type Signals = ReturnType<typeof createSignals>;

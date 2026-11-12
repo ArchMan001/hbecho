@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–10 已完成（任务 7 的标定报告待业务样本，见其完成记录）；任务 11 起未开始。进度以下方勾选为准。**新会话先读 [`handoff-2026-11-12-b.md`](handoff-2026-11-12-b.md)**
+> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–11 已完成（任务 7 的标定报告待业务样本，见其完成记录）；任务 12 起未开始。进度以下方勾选为准。**新会话先读 [`handoff-2026-11-12-b.md`](handoff-2026-11-12-b.md)**
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -31,7 +31,7 @@
 - [x] 任务 8 · 任务表与租约、`requestScores`、评分 runner、结果行、派生信号读取
 - [x] 任务 9 · 音频理解：`AiGatewayPort`、ASR 与判定 runner、提示词
 - [x] 任务 10 · 能力升级、`stale` 与显式重算
-- [ ] 任务 11 · 保留期、`retainUntil` 与清理器
+- [x] 任务 11 · 保留期、`retainUntil` 与清理器
 - [ ] 任务 12 · CLI 全集与 `signals run` 装配
 - [ ] 任务 13 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾（**完成后推第二次**）
 - [ ] 页面任务：**无**。本 spec 没有页面（design §15）
@@ -182,11 +182,12 @@
 
   - **完成记录（2026-11-12）**：新增 `recompute/scope.ts`（范围校验与规范化：至少一项、ID 为不带前导零的正整数、品牌编码解析并校验操作者品牌范围、把操作者的品牌范围固化进 run 的 `restrict_brand_ids`，chunk 无需操作者在场）、`recompute/index.ts`（`preview`、`apply`、`cancel`、`runBatch` / `runChunk`；run 记录含操作者、信号、范围、`scope_count`、`from_version`（apply 时范围内最低版本，无旧值为 NULL）、`to_version`；分块 500 个主体（可注入），推进游标 / 建下一块 / 任务 succeeded 同一事务，提交前重读 run 状态）、`tasks/revive.ts`（`tasks revive`：非 dead、`run_cancelled`、已完成 / 已取消 / failed run 的 chunk 一律拒绝）；`tasks/queue.ts` 增 `enqueueIn`（在调用方事务里入队）；`scoring/request.ts` 增内部入口 `requestAsService`（`includeStale` 把旧版本有效值也当缺失、`only` 限定信号）；`facts` 增 `brandIdsOf`、`materialForSignal`、`restrictBrandIds`；`assemble` 返回 `recompute` 与 `tasks.revive`。`recompute.db.test.ts` 15 例：升版本后读作 stale（两种 stalePolicy）且无新任务 / 无新监控段版本 / 扫描器不重算；`scope_required`（含只有 segmentRef）/ `scope_empty` / `signal_unregistered` / `scope_invalid`（前导零 ID）/ `segment_ref_required`；缺 Capability 零查询；preview 不写任何表且与 apply 条数一致，run 记录与审计事件齐全；范围内重算后 valid（nv=2、历史 `capability_upgraded` 且保留 nv=1、素材未变批次相同也重算）、范围外仍 stale、监控段不变；**5 对象 / 每块 2 个 + 两次中途杀进程（含“对象已处理、游标未提交”）续跑，历史表恰好 15 行**；同范围 running 续跑原 run、completed 后新建 run 并补上新进入的 stale 对象而不重复处理旧对象；failed run 再 apply 在 cursor 处复活 chunk 并完成，且不能直接 revive；取消（未执行 chunk → dead(run_cancelled)、revive 被拒、不再运行、同范围新建 run、对 completed / cancelled 再取消被拒、正在执行的 chunk 看到 cancelled 不建下一块）；品牌范围外的对象不在展开结果（含账号换到别的品牌门店后跟着走）、brandCode 越权被拒；评论类按内容范围重算；**派生信号**：image.template 升 2 后旧结果 stale、补算不覆盖、重算建 v2 任务、旧行保留、读到 v2。变异检查三处（去掉提交前的 run 状态重读、去掉品牌范围约束、让重算走 normal 模式，各使对应用例失败）。**偏差（已回写 design §7.10）**：① 派生信号重算必须带 `segmentRef`；② 重算特征信号以“行”为单位，三个文本信号一并升级；③ 对外范围用 `brandCode`；④ 增加 `chunkSize` 注入点便于测试多块续跑。**未证明**：200 万级对象的重算吞吐（规模演练只覆盖 20 万内容扫描等，见任务 13）；真实 failed 状态的触发路径只在测试里用直接改库模拟了“chunk 用尽重试”的结果（runner 观察到 dead 时置 failed 的代码路径由 `failTransient` 分支覆盖，没有专门的故障注入用例）。
 
-- [ ] 11. 保留期与清理
+- [x] 11. 保留期与清理
   - **Requirements:** SG-10
   - **Design:** §7.11
   - 写入时的 `expires_at`；`retainUntil`；清理器（结果行、历史行、过期任务）；每日调度点。
   - **验证**（`FakeClock`）：推进 13 个月，未引用成功结果被清理；推进 4 个月，失败行被清理；`retainUntil` 延后后到原时间点仍在、传较早时间不缩短；清理后读取 `missing` 且任务表无新行；特征行不被清理；分块删除中途退出可重跑；`retainUntil` 的契约测试（fake D 的调用序列）。
+  - **完成记录（2026-11-12）**：新增 `retention.ts`：`retainUntil(actor, resultIds, until)`（`UPDATE … SET expires_at = GREATEST(expires_at, :until)`，只接受结果行 ID、去重、每 1000 个一批；授权 `rule.run.execute`，先于读库；`until` 非法 → `invalid_until`）与 `purgeExpired({chunkSize?, shouldStop?})`（按 `expires_at` 升序分块删除结果行、历史行、**终态**任务 `succeeded` / `dead`，每块 1000，循环到该表无过期行；`shouldStop` 在每块之后检查，返回 `completed: false`，重跑从剩下的继续；不入队、不调能力服务）；`assemble` 返回 `retention.{retainUntil, purgeExpired}`；`index.ts` 导出。写入时的 `expires_at`（结果 +1 年 / 失败 +3 个月 / 历史 +1 年 / 任务 +1 年）在任务 4、8 已落地，本任务不改。`retention.db.test.ts` 6 例：推进 4 个月只清失败行、13 个月清成功行与任务，清理后读取 `missing(not_computed)`、任务表无新行、没有再调用能力服务；运行中的过期任务不删、重复运行幂等；特征行不被清理，历史行按取代时刻 +1 年清理，`chunkSize=2` 删完第一块就停，再跑清完；`retainUntil` 延后后到原时间点仍在、较早时间不缩短、过新时间点才被清；fake D 的调用序列（读取 → 对 `resultId` 去重 → `retainUntil(读取时刻 + 3 个月)`，已清理的 ID 不报错，不碰历史与别的结果行）；缺 Capability 与非法 `until` 在读库前被拒（以“碰库即抛错”的代理断言）。变异检查两处（`GREATEST` 改为直接赋值、任务清理不限终态，各使对应用例失败）。**偏差**：① `retainUntil` 返回 `{ matched }`（命中的行数）而不是“实际延长的行数”：连接按命中行计数，值未变的行也算，要精确区分需要多一次查询，D 用不到；② `retainUntil` 的 Capability 定为 `rule.run.execute`，已写入 requirements SG-14；③ 清理器的每日调度点不在本任务，放在任务 12 的 `signals run`（`signals retention --once` 调 `purgeExpired`）；④ `chunkSize` 与 `shouldStop` 是为测试和优雅退出加的注入点，`chunkSize` 缺省是 design 写死的 1000。**未证明**：真实数据量下清理的耗时与锁等待（任务 13 规模演练里补一次大批量过期行的删除耗时）；`retainUntil` 与清理器并发（同一行被同时延长与删除）只靠单语句的原子性保证，没有并发测试。
 
 - [ ] 12. CLI 全集与常驻装配
   - **Requirements:** SG-14、SG-15

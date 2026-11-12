@@ -62,3 +62,5 @@ python3 -m http.server 4174 --directory ui-lab/hbecho-ui-v2
 - 判定计划、报表、主数据、学习、系统等页面仍只有外壳；
 - 管理端按桌面优先，手机端只保留基础响应式与底部 Tab；
 - 页面实现仍待各 spec 另行排期；实现时按 `ui-foundation.md` 的 token 在 `src/app/` 重建，**不复制本目录代码**。
+## 2026-11-12 增补：主数据导入页（待确认）
+`#/master`（导入向导）、`#/master/batches`（导入记录）、`#/master/batches/M1`（批次详情）。属于 a-master-data-import 的界面提案（[design §15](../../.kiro/specs/a-master-data-import/design.md)），**未经刘学奎确认，不是实现依据**；A / B 已确认的页面未改动。演示数据为虚构。

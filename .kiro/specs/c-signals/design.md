@@ -391,12 +391,14 @@ type Item =
 
 ```text
 normalizeText(s):
-  1. s = s.normalize('NFKC')                         // 全角→半角，兼容字符折叠
-  2. s = s.toLowerCase()
-  3. 删除：U+200B–U+200F、U+202A–U+202E、U+2060–U+206F、U+FEFF，以及除 \t \n \r 外的 C0/C1 控制字符
+  1. 删除：U+200B–U+200F、U+202A–U+202E、U+2060–U+206F、U+FEFF，以及除 \t \n \r 外的 C0/C1 控制字符
+  2. s = s.normalize('NFKC')                         // 全角→半角，兼容字符折叠
+  3. s = s.toLowerCase()
   4. 。→ .   、→ ,                                    // NFKC 不处理的两个 CJK 标点；其余 CJK 标点保持原样
   5. 连续空白（含换行、制表）折叠为一个空格，去首尾
 ```
+
+> **2026-11-12 任务 3 订正步骤顺序**：原稿把「删除不可见字符」放在 NFKC 与小写之后。固定种子的随机串幂等测试给出反例：零宽字符把字符与组合符号隔开时，删除后二者才相邻，第二次归一化才组合（`I\u200B\u0308` 第一次得 `i` + U+0308，第二次得 `ï`），`f(f(x)) ≠ f(x)`。先删再 NFKC 后幂等成立。v1 尚无任何已存储数据，所以直接订正 v1，不升版本。
 
 - emoji 保留（PRD C §4.2）；
 - `normalizeKeyword(s)` 与 `normalizeText(s)` **是同一个函数**。D **保存关键词原文、执行时归一化**（§1.4 第 5 项）。
@@ -411,7 +413,7 @@ normalizeText(s):
 
 ```text
 先按 normalizeText 处理（全角＃→#）
-令牌 = 正则 /#([^#\s\[\]]+)(?:\[话题\])?#?/g 的捕获组
+令牌 = 正则 /#([^#\s\[\]]+)(?:\[话题\]#?)?/g 的捕获组（收尾的 # 只属于 [话题]；原稿的 `#?` 会吃掉 `#a#b` 里第二个话题的 #，与下面样本表矛盾，任务 3 订正）
 对每个令牌：去首尾空白与首尾标点，空串丢弃，长度 > 64 字符丢弃
 合并三段结果，按首次出现顺序去重，最多保留 50 个（50 与 64 是本 spec 的建议值，待确认，§14 第 17 项）
 ```
@@ -427,7 +429,7 @@ normalizeText(s):
 
 - 抖音与小红书各一个解析变体（`text.hashtags.douyin@1`、`text.hashtags.xiaohongshu@1`、`text.hashtags.kuaishou@1`），1.0 三者初始实现相同，**分开是为了让将来的平台差异不必升全平台版本**（C-D12）；能力标识含平台；
 - 解析器抛错 → 该信号 `failed`，`detail` 保存出错片段的前 200 字符的 SHA-256 前缀与长度，不保存原文；
-- `PLATFORM_TEXT_FIELDS`：`{ douyin: {title, body}, xiaohongshu: {title, body}, kuaishou: {title, body} }` 是**初值**，任务 3 用 `tests/fixtures/aimaster` 逐平台核对「该平台的列表 / 详情是否返回 title / text 字段」，核对结果以 fixture 为证写回本表（§14 第 6 项）。
+- `PLATFORM_TEXT_FIELDS`（任务 3 以 `tests/fixtures/aimaster` 的列表响应逐平台核对，结论写在 `text/fields.ts`，由 `fields.test.ts` 守护）：标题三个平台都返回（抖音 40/40、小红书 42/42、快手 63/63，快手 15 条为空串）；正文 `text.content`：抖音 1/40（字段存在，多数条目没有）、小红书 37/42、**快手 0/63（键从未出现）**。所以 `kuaishou: {title: true, body: false}`，`text.body_normalized` 对快手读作 `not_applicable(field_absent_on_platform)`，目录里该信号的可得平台不含快手。`ponytail:` 依据是 3 份快手列表 fixture 共 63 条；若真实环境出现快手正文，改 `fields.ts` 并升 `text.normalize` 版本（§14 第 6 项已关闭）。
 
 ### 7.3 扫描驱动与对账
 
@@ -803,7 +805,7 @@ signals run                                                             # 常驻
 | 3 | 不做 pHash 预筛（requirements R5） | 与 PRD C §5.1 / §5.2 字面不同 | 同意；PRD 已于 2026-11-12 升 v1.3 订正（C-D16） | 刘学奎；**已采纳（刘学奎，2026-11-12）** |
 | 4 | 标点统一方向（requirements R6） | 与 PRD C §4.2 字面不同；子串匹配不受影响，`text.regex` 需按归一化形态书写 | 同意，PRD 已于 2026-11-12 升 v1.3 订正（C-D17）；**`text.regex` 例外**：正则必须按归一化后的 ASCII 标点书写，D 的 spec 要在规则配置里提示（对子串匹配不受影响） | 刘学奎；**已采纳（刘学奎，2026-11-12）** |
 | 5 | 触发点 = current 指针推进，非 current 的 finalized 快照不抽；`contents` 加索引 | 影响特征行语义与 A 域一处索引 | 同意；PRD C §4.3「finalized 之后立即抽」已订正为「current 推进后」（C-D15，并对 C-D09 做删除线修订；requirements R9） | 刘学奎；**已采纳（刘学奎，2026-11-12）** |
-| 6 | `PLATFORM_TEXT_FIELDS` 与 NULL 语义 | 决定 `not_applicable` 与 `valid` 空值的分界 | 任务 3 以 fixture 核对后回填；核对前三个平台都按「有 title / body」处理 | 实测 |
+| 6 | `PLATFORM_TEXT_FIELDS` 与 NULL 语义 | 决定 `not_applicable` 与 `valid` 空值的分界 | ~~核对前三个平台都按「有 title / body」处理~~ 任务 3 已以 fixture 核对并回填（§7.2）：快手无正文字段，其余有；**已关闭（2026-11-12）** | 实测 |
 | 7 | `image.template@1` / `image.element@1` 的 `R_FULL`、`I_FULL`、特征点上限、比率阈值 | 决定业务看到的分数分布；标定前不得进生产启用集 | 业务提供约 20 对脱敏样本（同图、轻度改动、无关图，封面 / 背景 / 头像各若干）；任务 7 标定并出报告，刘学奎签字后启用 | 业务 + 刘学奎；**已采纳方法与门槛（刘学奎，2026-11-12）；分数待标定报告并由刘学奎签字** |
 | 8 | `retainUntil` 的调用约定 | D 落地前只有契约测试；D 不调用时结果最长保留 1 年 | 同意；D 的 spec 写明保存证据时调用 | 刘学奎（与 D spec 同审）；**已采纳（刘学奎，2026-11-12）** |
 | 9 | `account.bg_*` / `account.avatar_*` 对小红书也是 `not_applicable` | PRD C 只点名快手；handoff 与 D PRD 说小红书没有这两项 | 同意 | 刘学奎；**已采纳（刘学奎，2026-11-12）** |

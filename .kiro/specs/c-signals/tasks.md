@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2 已完成（2026-11-12）；任务 3 起未开始。进度以下方勾选为准
+> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2、3 已完成（2026-11-12）；任务 4 起未开始。进度以下方勾选为准
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -23,7 +23,7 @@
 - [x] 任务 0 · 文档前置（ADR 增补、CONTEXT 词汇、handoff 订正、INDEX、待确认闸门）
 - [x] 任务 1 · schema 与迁移（2026-11-12 完成并推第一次）
 - [x] 任务 2 · 骨架：目录、错误、配置、授权审计、A 事实读取口、测试挂具、静态护栏
-- [ ] 任务 3 · 文本纯函数：归一化、话题解析、平台字段表
+- [x] 任务 3 · 文本纯函数：归一化、话题解析、平台字段表
 - [ ] 任务 4 · 特征行写入与扫描驱动（内容与评论）、历史表、对账
 - [ ] 任务 5 · 读取口 `SignalReader` 与五态合成；CLI `show` / `catalog`（**第一条可演示的纵向**）
 - [ ] 任务 6 · 监控段与标准图（含 OSS 专用桶、可执行性、清除）
@@ -108,12 +108,15 @@
   - **与 design 的偏差（已回写文档）**：① **封面素材（requirements R12）**：A 的封面首次规则使 current 快照常无 `cover` 引用，原写法会把多数有封面的内容读成 `not_applicable`；改为取该内容全部快照上的 `cover` 引用，优先批次最新的 `archived`，无则取批次最新的引用按状态映射，一条都没有才是 `not_applicable`（requirements §1.4 第 7 项、SG-8、design §7.6 已按 `structure.md` 加删除线修订，acceptance 增 B1a；PRD C 不需改）。该问题由 AI 发现、独立审查复核证据后采纳。② `AiGatewayPort.activeModel` 返回 `Promise<string | null>`。③ 静态护栏比 SG-16 ① 更严（对齐 design §4）：除 `facts.ts` 外的 signals 文件不得以具名 import、命名空间 import 或裸 SQL 的 FROM / JOIN 引用 A 域表，所以任务 4 的扫描查询（`contents` 游标、特征行所基于快照的批次序）要加成 `facts` 的读取函数，不放宽护栏；对 `projection`、`media-archive` 等 A 域**代码模块**的 import 不设限（任务 4 要复用 `isNewer`，任务 6 要复用 `sniffImage` / `ImageConverter`）。④ `scopeSubjects`：范围一项都没给 → `scope_required`；账号类信号带 `publishedFrom/To` 或 `contentIds` → `scope_not_applicable`；发布时间 `[from, to)`，比较的是内容 current 快照的 `published_at`（评论信号同样，已写入 design §7.10）；`brandId` 是内部品牌 ID（编码到 ID 与品牌范围校验归任务 10）。⑤ 素材 `archived` 但资产 `quarantined` 读作 `missing(media_failed)`。
   - **未证明**：「缺 Capability 的调用在读库之前被拒绝」（见上，移到任务 5、6、8、10 的第一个对外入口）；`.env.example` 的新变量名按计划随任务 12 添加。
 
-- [ ] 3. 文本纯函数
+- [x] 3. 文本纯函数
   - **Requirements:** SG-3
   - **Design:** §7.1、§7.2
   - `normalizeText`（= `normalizeKeyword`，按版本保留实现：`NORMALIZERS`）；三个平台变体的话题解析；`PLATFORM_TEXT_FIELDS`；用 `tests/fixtures/aimaster` 里的真实样本核对每个平台的列表 / 详情是否返回标题与正文字段，把结论写回 design §7.2 与 §14 第 6 项。
   - **验证**（纯函数，`unit`）：design §7.2 样本表逐行；`＃６１８`、`#618 `、`#618[话题]#` 同值；`ＨＩＴＡＣＨＩ　空调` → `hitachi 空调`；零宽字符与控制字符被删、emoji 保留；三种连写方式；超长令牌与空令牌被丢弃；上限 50；解析器抛错时调用方拿到结构化失败（含片段哈希前缀与长度，不含原文）；`normalizeText` 幂等（`f(f(x)) === f(x)`，属性测试用固定种子）；每个已存储的 `nv` 都在 `NORMALIZERS` 里；`normalizeKeyword(raw, 旧版本)` 与旧版本写入的文本同口径。
   - **未证明**：真实平台上线后新出现的话题写法；发现后升版本。
+
+  - **完成记录（2026-11-12）**：新增 `text/normalize.ts`（`NORMALIZERS`、`normalizeKeyword(raw, version?)`、`normalizeText`）、`text/hashtags.ts`（三平台解析器表、`extractHashtags`，解析器可注入）、`text/fields.ts`（`PLATFORM_TEXT_FIELDS`）；测试 68 例全过（unit）。**两处订正 design**：① 幂等性的固定种子属性测试（5000 个串）找到反例，删不可见字符改到 NFKC 之前（v1 尚无存储数据，直接订正 v1）；② 话题正则原稿的 `#?` 会吃掉 `#a#b` 的第二个 `#`，改为 `(?:\[话题\]#?)?`。**§14 第 6 项关闭**：fixture 核对结果——快手列表 63 条从未返回正文，`text.body_normalized` 对快手读作 `not_applicable`，目录里该信号的可得平台随之不含快手（`catalog` 由 `PLATFORM_TEXT_FIELDS` 派生）；依据由 `fields.test.ts` 逐平台重算守护。
+  - **未证明**：真实平台上线后新出现的话题写法；快手正文结论仅来自 3 份快手列表 fixture（63 条）。
 
 - [ ] 4. 特征行写入与扫描驱动
   - **Requirements:** SG-3、SG-4、SG-5

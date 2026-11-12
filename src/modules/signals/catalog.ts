@@ -2,6 +2,7 @@
 // 能力版本只在这里改；改版本号就是「能力升级」（SG-10）：旧值读作 stale，什么都不自动重算。
 import { SEGMENT_PLATFORMS } from "../../db/schema/signals";
 import { SignalError } from "./errors";
+import { PLATFORM_TEXT_FIELDS } from "./text/fields";
 
 export type Platform = (typeof SEGMENT_PLATFORMS)[number];
 export type SignalObject = "content" | "account" | "comment";
@@ -26,12 +27,14 @@ const ALL: readonly Platform[] = SEGMENT_PLATFORMS;
 const DOUYIN_XHS: readonly Platform[] = ["douyin", "xiaohongshu"];
 const DOUYIN: readonly Platform[] = ["douyin"];
 
+// 标题 / 正文的可得平台由 PLATFORM_TEXT_FIELDS 决定（平台没有该字段 → 不在目录的可得平台里，读作 not_applicable）
+const withField = (f: "title" | "body"): readonly Platform[] => ALL.filter((p) => PLATFORM_TEXT_FIELDS[p]?.[f]);
+
 const entry = (e: CatalogEntry): CatalogEntry => e;
 
 export const CATALOG: readonly CatalogEntry[] = [
-  // 文本类：title / body 的平台可得性按 PLATFORM_TEXT_FIELDS（任务 3 以 fixture 核对，design §14 第 6 项）；核对前三平台都按「有」处理
-  entry({ key: "text.title_normalized", object: "content", capability: "text.normalize", costTier: 0, scope: "global", platforms: ALL, storage: "feature_row" }),
-  entry({ key: "text.body_normalized", object: "content", capability: "text.normalize", costTier: 0, scope: "global", platforms: ALL, storage: "feature_row" }),
+  entry({ key: "text.title_normalized", object: "content", capability: "text.normalize", costTier: 0, scope: "global", platforms: withField("title"), storage: "feature_row" }),
+  entry({ key: "text.body_normalized", object: "content", capability: "text.normalize", costTier: 0, scope: "global", platforms: withField("body"), storage: "feature_row" }),
   // 话题解析按平台分变体：将来的平台差异不必升全平台版本（C-D12）
   entry({ key: "text.hashtags", object: "content", capability: "text.hashtags", perPlatform: true, costTier: 0, scope: "global", platforms: ALL, storage: "feature_row" }),
   entry({ key: "content.cover_template_score", object: "content", capability: "image.template", costTier: 1, scope: "parameterized", platforms: ALL, storage: "result" }),

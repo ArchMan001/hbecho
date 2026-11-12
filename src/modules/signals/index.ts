@@ -8,3 +8,6 @@ export * from "./errors";
 export type { CommentFact, ContentFact, Facts, Material, SubjectScope } from "./facts";
 export * from "./scoring/ports";
 export * from "./speech/ports";
+export * from "./text/fields";
+export * from "./text/hashtags";
+export * from "./text/normalize";

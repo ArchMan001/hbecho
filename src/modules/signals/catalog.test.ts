@@ -32,10 +32,14 @@ describe("信号目录（SG-1）", () => {
     const ks = platformSignals("kuaishou");
     expect(ks.filter((k) => k.startsWith("account.") || k.startsWith("comment."))).toEqual([]);
     expect(ks).toContain("content.cover_template_score");
+    // 快手列表从不返回正文（text/fields.ts 的 fixture 依据）：正文信号对快手不可得，标题与话题可得
+    expect(ks).not.toContain("text.body_normalized");
+    expect(ks).toEqual(expect.arrayContaining(["text.title_normalized", "text.hashtags"]));
     const xhs = platformSignals("xiaohongshu");
     expect(xhs.filter((k) => k.startsWith("account."))).toEqual([]);
     expect(xhs).toContain("comment.text_normalized");
     expect(platformSignals("douyin")).toHaveLength(12);
+    expect(platformSignals("xiaohongshu")).toContain("text.body_normalized");
     expect(platformSignals("weibo")).toEqual([]);
   });
   it("目录外的信号键一律 signal_unregistered，包括原型链上的名字", () => {

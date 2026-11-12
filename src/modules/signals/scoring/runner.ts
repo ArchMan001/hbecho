@@ -13,8 +13,8 @@ import type { SignalsConfig } from "../config";
 import { createFacts } from "../facts";
 import { redactUrls } from "../redact";
 import { failDead, failTransient, claim, succeed, type Claimed, type QueueDeps } from "../tasks/queue";
-import { failureExpiry, successExpiry } from "../ttl";
 import { MatcherError, type ImageMatcher, type MatchResult } from "./ports";
+import { buildResultRow, type ResultBody, type TaskParamsBase } from "./result-row";
 
 export interface ScoreRunnerDeps {
   db: Db;
@@ -32,40 +32,14 @@ export interface ScoreRunnerDeps {
 /** 递归脱敏：证据里任何字符串都不得含签名 URL。 */
 const scrub = <T>(v: T): T => JSON.parse(redactUrls(JSON.stringify(v))) as T;
 
-type TaskParams = {
-  signal_key: string;
-  material_sha256: string;
-  param_sha256: string;
-  source: { media_asset_id: string };
-  segment_image_id?: string;
-  lineage: { plan_id: string; version: number; requested_by: string };
-};
+type TaskParams = TaskParamsBase;
 
 export function createScoreRunner(deps: ScoreRunnerDeps) {
   const q: QueueDeps = { db: deps.db, clock: deps.clock, audit: deps.audit };
   const facts = createFacts(deps.db);
   const workerId = deps.workerId ?? SERVICE_ACTOR;
 
-  function resultRow(p: TaskParams, extra: { state: "valid"; score: number; evidence: unknown } | { state: "failed"; code: string; evidence: unknown }) {
-    const entry = requireSignal(p.signal_key);
-    const now = deps.clock.now();
-    return {
-      signalKey: p.signal_key,
-      materialSha256: Buffer.from(p.material_sha256, "hex"),
-      paramSha256: Buffer.from(p.param_sha256, "hex"),
-      capabilityId: entry.capability,
-      capabilityVersion: versionOf(entry.capability),
-      state: extra.state,
-      score: extra.state === "valid" ? extra.score.toFixed(2) : null,
-      value: null,
-      evidence: extra.evidence,
-      failureCode: extra.state === "failed" ? extra.code : null,
-      lineage: { plan_id: p.lineage.plan_id, version: p.lineage.version, requested_by: p.lineage.requested_by },
-      producedAt: now,
-      expiresAt: extra.state === "valid" ? successExpiry(now) : failureExpiry(now),
-      createdAt: now,
-    };
-  }
+  const resultRow = (p: TaskParams, body: ResultBody) => buildResultRow(p, deps.clock.now(), body);
 
   async function runOne(c: Claimed): Promise<"succeeded" | "retry_wait" | "dead" | "stale"> {
     const p = c.task.params as TaskParams;

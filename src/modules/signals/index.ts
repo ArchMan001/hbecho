@@ -26,3 +26,6 @@ export * from "./scoring/results";
 export * from "./scoring/runner";
 export * from "./speech/prompt";
 export * from "./tasks/queue";
+export * from "./scoring/result-row";
+export * from "./speech/disabled";
+export * from "./speech/runner";

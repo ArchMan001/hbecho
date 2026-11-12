@@ -12,7 +12,9 @@ import type { ImageMatcher } from "./scoring/ports";
 import { createRequestScores } from "./scoring/request";
 import { createScoreRunner } from "./scoring/runner";
 import { createSegments } from "./segments";
+import { DisabledAiGateway } from "./speech/disabled";
 import type { AiGatewayPort } from "./speech/ports";
+import { createSpeechRunner } from "./speech/runner";
 
 export interface SignalsDeps {
   db: Db;
@@ -26,17 +28,19 @@ export interface SignalsDeps {
   signalsBucket: string;
   converter: ImageConverter;
   matcher: ImageMatcher;
-  /** 缺省没有网关：语音类能力读作 capability_disabled，不建任务（默认离线、不花钱）。 */
+  /** 缺省 DisabledAiGateway：语音类能力读作 capability_disabled，不建任务、不发调用（默认离线、不花钱）。 */
   gateway?: AiGatewayPort;
 }
 
 export function createSignals(deps: SignalsDeps) {
   const { db, clock, audit, config } = deps;
-  const gateway = deps.gateway ? { gateway: deps.gateway } : {};
+  const aiGateway = deps.gateway ?? new DisabledAiGateway();
+  const gateway = { gateway: aiGateway };
   const segments = createSegments({ db, clock, audit, store: deps.signalsStore, bucket: deps.signalsBucket, converter: deps.converter, enabled: config.enabled, ...gateway });
   const reader = createReader({ db, enabled: config.enabled, ...gateway, results: createResultLookup({ db, ...gateway }) });
   const { requestScores } = createRequestScores({ db, clock, audit, config, enabled: config.enabled, ...gateway, executability: (k) => segments.computeExecutability(k) });
   const scoreRunner = createScoreRunner({ db, clock, audit, config, mediaStore: deps.mediaStore, signalsStore: deps.signalsStore, matcher: deps.matcher });
-  return { facts: createFacts(db), config, segments, reader, requestScores, scoreRunner };
+  const speechRunner = createSpeechRunner({ db, clock, audit, config, mediaStore: deps.mediaStore, gateway: aiGateway });
+  return { facts: createFacts(db), config, segments, reader, requestScores, scoreRunner, speechRunner };
 }
 export type Signals = ReturnType<typeof createSignals>;

@@ -6,7 +6,7 @@ import { comments, contentFeatures, ossObjects, contentSnapshots, contents, medi
 import { insertBatch, insertContent, insertContentSnapshot, insertMediaAsset, sha } from "./factories";
 import type { ImageMatcher, MatchRequest, MatchResult } from "../../src/modules/signals/scoring/ports";
 import { MatcherError } from "../../src/modules/signals/scoring/ports";
-import type { AiGatewayPort, JudgeRequest, JudgeResult, ModelPurpose, TranscribeRequest, TranscribeResult } from "../../src/modules/signals/speech/ports";
+import { GatewayRefusedError, type AiGatewayPort, type JudgeRequest, type JudgeResult, type ModelPurpose, type TranscribeRequest, type TranscribeResult } from "../../src/modules/signals/speech/ports";
 
 export const SIGNALS_T0 = new Date("2026-11-12T02:00:00.000000Z");
 
@@ -85,7 +85,10 @@ export class QueryCounter implements QueryLogger {
 export class FakeAiGateway implements AiGatewayPort {
   models: Record<ModelPurpose, string | null> = { asr: "asr-m1", judge: "judge-m1" };
   transcript: Omit<TranscribeResult, "model"> = { text: "转写文本", language: "zh", durationMs: 1000 };
-  judgement: Omit<JudgeResult, "model"> = { verdict: "meets", reason: "符合" };
+  /** 判定的原始输出；设成缺字段 / 非法取值的值可模拟 invalid_output。 */
+  judgement: unknown = { verdict: "meets", reason: "符合" };
+  /** 下一次调用抛出模型拒绝（调用后清空）。 */
+  refuseNext = false;
   /** 下一次调用抛出（调用后清空）；用来模拟瞬时错误。 */
   failNext: Error | null = null;
   billed = 0;
@@ -101,11 +104,15 @@ export class FakeAiGateway implements AiGatewayPort {
   }
   async judge(req: JudgeRequest): Promise<JudgeResult> {
     this.calls.push({ kind: "judge", callKey: req.callKey });
-    return this.once(req.callKey, () => ({ ...this.judgement, model: this.models.judge ?? "judge-unset" }));
+    return this.once(req.callKey, () => ({ output: this.judgement, model: this.models.judge ?? "judge-unset" }));
   }
   private once<T extends TranscribeResult | JudgeResult>(callKey: string, make: () => T): T {
     const hit = this.done.get(callKey);
     if (hit) return hit as T;
+    if (this.refuseNext) {
+      this.refuseNext = false;
+      throw new GatewayRefusedError("模型拒绝回答");
+    }
     if (this.failNext) {
       const e = this.failNext;
       this.failNext = null;

@@ -11,7 +11,7 @@ import { successExpiry } from "../ttl";
 
 export type TaskKind = (typeof signalTasks.$inferSelect)["kind"];
 export type TaskRow = typeof signalTasks.$inferSelect;
-export type DeadReason = "retries_exhausted" | "reference_unreadable" | "dependency_timeout" | "invalid_request" | "run_cancelled" | "run_not_running";
+export type DeadReason = "retries_exhausted" | "reference_unreadable" | "dependency_timeout" | "invalid_request" | "run_cancelled" | "run_not_running" | "model_changed";
 
 export interface QueueDeps {
   db: Db;
@@ -183,6 +183,34 @@ export async function failDead(deps: QueueDeps, c: Claimed, o: { reason: DeadRea
     return "dead" as const;
   });
   if (r.ok) emitDead(deps, c.task, o.reason);
+  return r;
+}
+
+/**
+ * 依赖未就绪（判定在等 ASR 结果）：不计重试次数——撤销这次领取的尝试计数，defer_count + 1，过 intervalMs 再试；
+ * 累计超过 maxDefer 次仍无结果 → dead(dependency_timeout)。
+ */
+export async function defer(deps: QueueDeps, c: Claimed, o: { intervalMs: number; maxDefer: number; detail: string }): Promise<Fenced<"retry_wait" | "dead">> {
+  const r = await fenced(deps, c, async (tx, now) => {
+    const timedOut = c.task.deferCount + 1 > o.maxDefer;
+    await tx
+      .update(signalTasks)
+      .set({
+        status: timedOut ? "dead" : "retry_wait",
+        attemptCount: c.task.attemptCount - 1,
+        deferCount: c.task.deferCount + 1,
+        nextAttemptAt: timedOut ? null : new Date(now.getTime() + o.intervalMs),
+        leaseOwner: null,
+        leaseExpiresAt: null,
+        lastErrorCode: timedOut ? "dependency_timeout" : "deferred",
+        lastErrorDetail: { code: timedOut ? "dependency_timeout" : "deferred", detail: o.detail },
+        finishedAt: timedOut ? now : null,
+        updatedAt: now,
+      })
+      .where(eq(signalTasks.taskId, c.task.taskId));
+    return timedOut ? ("dead" as const) : ("retry_wait" as const);
+  });
+  if (r.ok && r.value === "dead") emitDead(deps, c.task, "dependency_timeout");
   return r;
 }
 

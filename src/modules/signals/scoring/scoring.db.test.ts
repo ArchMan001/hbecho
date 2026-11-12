@@ -2,70 +2,24 @@
 import { count, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { signalResults, signalTasks } from "../../../db/schema";
-import { FakeClock } from "../../../../tests/harness/fake-clock";
-import { FakeObjectStore } from "../../../../tests/harness/fake-oss";
 import { resetData, useTestDb } from "../../../../tests/harness/db";
 import { insertAccount } from "../../../../tests/harness/factories";
 import { QueryCounter, FakeAiGateway, FakeMatcher, SIGNALS_T0 as T0, insertAvailableAsset, insertMediaReference, seedContent } from "../../../../tests/harness/signals";
+import { actor, config, content, converter, createWorld, drain as drainWorld, makeSubject, png, resultCount as resultCountOf, subjectCount, taskCount as taskCountOf, type World } from "../../../../tests/harness/signals-world";
 import { createDb } from "../../../db/client";
-import { ConverterError, type ImageConverter } from "../../media-archive";
 import { createSignals } from "../assemble";
-import type { SignalAuditEvent } from "../audit";
-import { CAP_SCORE_REQUEST, CAP_SEGMENT_MANAGE, CAP_SEGMENT_READ, type SignalActor } from "../authz";
-import { CAPABILITY_VERSIONS, DEFAULT_ENABLED_CAPABILITIES } from "../catalog";
-import { parseSignalsConfig } from "../config";
+import { CAPABILITY_VERSIONS } from "../catalog";
 import { claim } from "../tasks/queue";
 import { MatcherError } from "./ports";
 
 const t = useTestDb();
-const actor: SignalActor = { actor: "service:d", capabilities: new Set([CAP_SEGMENT_MANAGE, CAP_SEGMENT_READ, CAP_SCORE_REQUEST]), brandScope: "all" };
-const ENABLED = [...DEFAULT_ENABLED_CAPABILITIES, "image.template", "image.element", "speech.asr", "speech.judge"];
-const config = (over: Record<string, string> = {}) =>
-  parseSignalsConfig({
-    HBECHO_SIGNALS_SCAN_INTERVAL_MS: "1000", HBECHO_SIGNALS_SCAN_BATCH: "100", HBECHO_SIGNALS_LOOKBACK_MS: "60000", HBECHO_SIGNALS_RECONCILE_INTERVAL_MS: "1000",
-    HBECHO_SIGNALS_SCORE_CONCURRENCY: "4", HBECHO_SIGNALS_TASK_MAX_ATTEMPTS: "3", HBECHO_SIGNALS_RETRY_BACKOFF_MS: "1000", HBECHO_SIGNALS_LEASE_MS: "60000",
-    HBECHO_SIGNALS_SIGNED_URL_TTL_S: "600", HBECHO_SIGNALS_MATCH_TIMEOUT_MS: "5000", HBECHO_SIGNALS_DEFER_INTERVAL_MS: "30000", HBECHO_SIGNALS_DEFER_MAX: "20",
-    HBECHO_MEDIA_MAX_BYTES: "20971520", HBECHO_SIGNALS_ENABLED: ENABLED.join(","), ...over,
-  });
-const converter: ImageConverter = {
-  async toNormalizedJpeg({ bytes }) {
-    if (Buffer.from(bytes).includes("UNDECODABLE")) throw new ConverterError("unsupported", "x");
-    return { bytes: new Uint8Array([1]), width: 540, height: 360 };
-  },
-};
-const png = (seed: string): Uint8Array => Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from(seed)]);
-
-async function world(o: { gateway?: FakeAiGateway; matcher?: FakeMatcher; cfg?: Record<string, string> } = {}) {
-  const clock = new FakeClock(new Date("2026-11-12T03:00:00.000Z"));
-  const signalsStore = new FakeObjectStore(clock);
-  const mediaStore = new FakeObjectStore(clock);
-  const matcher = o.matcher ?? new FakeMatcher(8);
-  const events: SignalAuditEvent[] = [];
-  const signals = createSignals({ db: t.db, clock, audit: (e) => void events.push(e), config: config(o.cfg), mediaStore, signalsStore, signalsBucket: "hbecho-signals-test", converter, matcher, ...(o.gateway ? { gateway: o.gateway } : {}) });
-  const plan = { planId: 1n, version: 1 };
-  await signals.segments.create(actor, { planId: plan.planId, platform: "douyin" });
-  await signals.segments.setItems(actor, plan, [{ signal: "content.cover_template_score" }]);
-  await signals.segments.putImage(actor, { ...plan, kind: "template", target: "cover" }, png("standard"));
-  return { clock, signals, signalsStore, mediaStore, matcher, events, plan };
-}
-type World = Awaited<ReturnType<typeof world>>;
-
-let n = 0;
-/** 一个内容主体；status 决定封面引用：none = 没有引用，其余 = 对应归档状态（archived 时有可用对象）。 */
-async function subject(status: "none" | "pending" | "failed" | "carried_forward" | "archived", opts: { hex?: string; platform?: string } = {}) {
-  const i = ++n;
-  const acct = await insertAccount(t.db, opts.platform ?? "douyin", T0);
-  const c = await seedContent(t.db, { accountId: acct, pcid: `s${i}`, platform: opts.platform ?? "douyin" });
-  const asset = await insertAvailableAsset(t.db, { key: `media/c${i}`, hex: opts.hex ?? `cover-${i}` });
-  if (status !== "none") await insertMediaReference(t.db, { contentSnapshotId: c.snapshotId, role: "cover", status, mediaAssetId: asset });
-  return { id: c.contentId, asset };
-}
-const kind = (id: bigint) => ({ kind: "content", id }) as const;
-const taskCount = async () => (await t.db.select({ n: count() }).from(signalTasks))[0]!.n;
-const resultCount = async () => (await t.db.select({ n: count() }).from(signalResults))[0]!.n;
-async function drain(w: World, rounds = 50): Promise<void> {
-  for (let i = 0; i < rounds; i++) if ((await w.signals.scoreRunner.runBatch()) === 0) return;
-}
+const world = (o: Parameters<typeof createWorld>[1] = {}) => createWorld(t, o);
+const subject = (status: Parameters<typeof makeSubject>[1], opts: Parameters<typeof makeSubject>[2] = {}) => makeSubject(t, status, opts);
+const kind = content;
+const taskCount = () => taskCountOf(t);
+const resultCount = () => resultCountOf(t);
+const drain = (w: World, rounds?: number) => drainWorld(w, rounds);
+const n = () => subjectCount();
 
 describe("requestScores：补缺失、按映射返回、不重复建任务", () => {
   it("100 个内容主体：10 无引用 / 5 pending / 5 carried_forward / 80 已归档 → 80 个任务，其余 20 个按映射返回，carried_forward 没有任务且在 needMedia", async () => {
@@ -182,7 +136,7 @@ describe("评分 runner：结果行、读取口、失败分类", () => {
     expect(w.matcher.requests).toHaveLength(1);
     expect(w.matcher.requests[0]).toMatchObject({ mode: "template", maxBytes: 20971520 });
     expect(JSON.stringify(row!.evidence)).not.toContain("fake-oss.test");
-    expect(w.mediaStore.signed[0]).toMatchObject({ key: "media/c" + n, ttlSeconds: 600 });
+    expect(w.mediaStore.signed[0]).toMatchObject({ key: `media/c${n()}`, ttlSeconds: 600 });
   });
   it("升级能力版本后旧结果读作 stale，不会被 requestScores 重算", async () => {
     const w = await world();
@@ -283,7 +237,7 @@ describe("评分 runner：结果行、读取口、失败分类", () => {
     const w = await world();
     const s = await subject("archived");
     const { ossObjects } = await import("../../../db/schema");
-    await t.db.update(ossObjects).set({ status: "deleted", deletedAt: T0 }).where(eq(ossObjects.objectKey, `media/c${n}`));
+    await t.db.update(ossObjects).set({ status: "deleted", deletedAt: T0 }).where(eq(ossObjects.objectKey, `media/c${n()}`));
     await w.signals.requestScores(actor, w.plan, [kind(s.id)]);
     await w.signals.scoreRunner.runBatch();
     expect((await t.db.select().from(signalResults))[0]).toMatchObject({ state: "failed", failureCode: "image_unreadable" });

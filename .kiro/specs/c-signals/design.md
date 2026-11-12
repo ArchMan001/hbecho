@@ -175,9 +175,9 @@ requestScores(…asr_judgement…):
   否则：参数指纹 = jcsSha256({standard_text(规范化), prompt_version, model_version(= activeModel('judge'))})
         结果行已有 → reused；否则建判定任务
 
-judgement 任务：
+judgement 任务（请求时只建判定任务，ASR 由判定在运行时按需确保；ASR 任务已 dead 时判定不替它复活，自己 dead(dependency_timeout)，避免每个延后周期再付一轮 ASR）：
   取 ASR 结果行 → 没有：确保 ASR 任务存在，本任务 deferred（不计重试次数）
-  → gateway.judge({callKey, transcript, standardText, promptVersion}) → zod 校验输出 → 写结果行
+  → gateway.judge({callKey, promptId, promptVersion, system, user})（C 渲染提示词，网关返回原始结构化输出）→ C 用 zod 校验输出 → 写结果行
 asr_text 任务：
   signedGetUrl(audio) → gateway.transcribe({callKey, audioUrl}) → 写结果行
 ```
@@ -381,7 +381,7 @@ type Item =
 | 任务状态 | `pending` / `running` / `retry_wait` / `succeeded` / `dead` | CHECK |
 | 任务种类 | 见 `signal_tasks.kind` | CHECK |
 | 失败码（写入 `failed` 行或信封的确定性失败） | `image_unreadable`、`audio_unreadable`、`model_refused`、`invalid_output`、`text_parse_error` | 代码常量 |
-| 任务终态原因（`dead`，不写结果行） | `retries_exhausted`、`reference_unreadable`、`dependency_timeout`、`invalid_request`、`run_cancelled`、`run_not_running` | 代码常量 |
+| 任务终态原因（`dead`，不写结果行） | `retries_exhausted`、`reference_unreadable`、`dependency_timeout`、`invalid_request`、`run_cancelled`、`run_not_running`、`model_changed`（任务 9：请求之后、运行之前判定模型版本变了，参数指纹已不对应当前模型，放弃而不是写到旧键下） | 代码常量 |
 | `missing` 原因 | `not_computed`、`no_profile_snapshot`、`media_pending`、`media_failed`、`media_carried_forward`、`audio_not_archived`、`capability_disabled`、`compute_dead`、`failed_under_old_version` | 代码常量 |
 | `not_applicable` 原因 | `platform_unsupported`、`field_absent_on_platform`、`no_reference` | 代码常量 |
 

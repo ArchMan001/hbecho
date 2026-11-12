@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–8 已完成（任务 7 的标定报告待业务样本，见其完成记录）；任务 9 起未开始。进度以下方勾选为准
+> **执行状态**：任务 0、1 已完成（闸门 2026-11-12 通过：刘学奎确认 design §14 的 13 项；任务 1 于同日完成并推第一次）；任务 2–9 已完成（任务 7 的标定报告待业务样本，见其完成记录）；任务 10 起未开始。进度以下方勾选为准
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -29,7 +29,7 @@
 - [x] 任务 6 · 监控段与标准图（含 OSS 专用桶、可执行性、清除）
 - [x] 任务 7 · Python 匹配端点、Node 客户端、真实样本标定
 - [x] 任务 8 · 任务表与租约、`requestScores`、评分 runner、结果行、派生信号读取
-- [ ] 任务 9 · 音频理解：`AiGatewayPort`、ASR 与判定 runner、提示词
+- [x] 任务 9 · 音频理解：`AiGatewayPort`、ASR 与判定 runner、提示词
 - [ ] 任务 10 · 能力升级、`stale` 与显式重算
 - [ ] 任务 11 · 保留期、`retainUntil` 与清理器
 - [ ] 任务 12 · CLI 全集与 `signals run` 装配
@@ -164,12 +164,14 @@
 
   - **完成记录（2026-11-12）**：新增 `tasks/queue.ts`（幂等入队 `enqueueMany`：created / reused / revived（dead 置回 pending 并清零计数）/ requeued（succeeded 但结果行已被清理）；`claim`：`FOR UPDATE SKIP LOCKED`、租约、fencing 令牌 +1、每次领取算一次尝试（崩溃接手同样计数，用完直接 dead）；`fenced` / `succeed` / `failTransient`（指数退避）/ `failDead`；`pendingHints`）、`scoring/params.ts`（参数指纹与监控段解析，请求与读取共用；判定先取模型版本再算指纹）、`scoring/results.ts`（同键最高版本一行）、`scoring/lookup.ts`（读取口的结果行取数 + pending 提示）、`scoring/request.ts`（`requestScores`：素材状态映射、只补缺失、同素材同参数只建一个任务、`needMedia`）、`scoring/runner.ts`（评分 runner：事务外调用能力服务、能力版本校验、候选图确定性失败写 `failed(image_unreadable)`、标准图侧失败 dead、瞬时失败重试、证据与错误详情脱敏）、`assemble.ts` 装配（`createSignals` 现在返回 `segments`、`reader`、`requestScores`、`scoreRunner`）。`scoring.db.test.ts` 20 例：100 主体（10 无引用 / 5 pending / 5 carried_forward / 80 已归档）→ 80 任务、20 按映射返回、carried_forward 无任务且在 needMedia；二次请求与完成后再请求都不新增任务；同封面只算一次、两个监控段引用同字节标准图共享结果（血缘记第一次的计划，不进复用键）；换标准图新建任务且旧结果保留；账号主体与平台不符；缺 Capability 零查询、超 5,000、监控段不存在、不可执行；完成后读取口读到 valid（分数、证据、能力版本、`resultId`），排队时 `pending: queued`，升级版本后 `stale` 且不重算；版本不一致重试（退避 1×、2×）→ dead → 再请求置回 pending；瞬时错误分类；候选图四类确定性失败写 failed 且不重试、证据无 URL；标准图侧失败与被清除的标准图 → dead(reference_unreadable)；A 的对象不可用 → failed；**调用能力服务期间无未提交事务**（`innodb_trx` 断言）；两 worker 抢任务只有一个拿到、租约过期接手、旧 worker 写入被拒且零写入；调用返回后崩溃 → 恰好一行；反复崩溃最终 dead；同键并发写命中；结果行被清理后置回 pending。变异检查四处（去掉 fencing、去掉版本校验、去掉 requeue、去掉接手时的次数检查，各使对应用例失败）。**偏差 / 补充**：① 配置新增两个必填项 `HBECHO_SIGNALS_RETRY_BACKOFF_MS`、`HBECHO_MEDIA_MAX_BYTES`，并要求租约大于匹配超时（已写入 design §14 第 14 项）；② 判定的读取在网关 `activeModel('judge')` 为空时算不出参数指纹，读作 `capability_disabled`（已存的旧模型结果要在有模型后按其版本重新请求）；③ `requestScores` 对 ASR 文本也会建任务（运行在任务 9）；④ 返回的 `items[].subjects` 用数组而不是 Map。**未证明**：真实 Python 服务上的吞吐（任务 13）；真实 OSS 签名 URL 下 Python 能否读到两个桶（任务 13 的端到端档，桶未创建）；评分并发在多个 worker 进程下的吞吐（只证明了 SKIP LOCKED 的互斥）。
 
-- [ ] 9. 音频理解
+- [x] 9. 音频理解
   - **Requirements:** SG-9
   - **Design:** §5.4、§7.5、§13（SG-D09、SG-D18）
   - `AiGatewayPort` 与 `DisabledAiGateway`；ASR runner；判定 runner（含 `deferred`）；提示词模板 `asr-judge`（版本 1）与输出 zod；`requestScores` 对音频类的规划；`SignalReader` 补齐。
   - **验证**：默认装配下请求 → 任务数 0、网关调用数 0、读作 `missing` / `capability_disabled`；fake 网关：同音频两次请求 ASR 只调一次；不同标准文本互不复用，相同标准 + 提示词版本 + 模型版本复用；模型版本 `m1 → m2` 产生新行、旧行保留；同一 `callKey` 只计费一次，崩溃重试用同一 `callKey` 结果行仍一行；输出缺 `reason` 或 `verdict` 非法 → `failed(invalid_output)`，不是 `not_meets`；网关瞬时错误重试、用尽 `dead`；ASR 缺失时判定 `deferred` 不计重试，20 次后 `dead(dependency_timeout)`；音频未归档 `missing(audio_not_archived)` 且无任务；判定行含结论、理由、模型与提示词版本；每段至多一个判定项（任务 6 已守，这里再断言一次执行路径）。
   - **未证明**：真实模型质量与计费（属于 `h-ai-min` 的 smoke）。
+
+  - **完成记录（2026-11-12）**：新增 `speech/disabled.ts`（`DisabledAiGateway`：`activeModel` 恒为 null，`createSignals` 缺省装配它）、`speech/prompt.ts`（判定提示词 `asr-judge` v1 的渲染与输出 zod：缺 `reason`、`verdict` 非法、多余字段都不通过）、`speech/runner.ts`（`createSpeechRunner`：ASR 与判定 runner、`callKey` = 任务幂等键十六进制、模型拒绝 → `failed(model_refused)`、输出非法 → `failed(invalid_output)`、网关瞬时错误重试后 dead 且不写结果行、判定在 ASR 缺失时 `defer`（撤销尝试计数，`HBECHO_SIGNALS_DEFER_*`，超限 `dead(dependency_timeout)`）、没有 ASR 模型时 runner 一个语音任务都不领）；`tasks/queue.ts` 增 `defer`；`scoring/result-row.ts` 抽出结果行构造，评分 runner 改用它；测试世界抽到 `tests/harness/signals-world.ts`（任务 8 的测试改用，仍 20 例通过）。`speech.db.test.ts` 16 例：默认装配下请求被拒（`model_unavailable`）、任务 0、读作 `capability_disabled`；同音频两次请求 ASR 只调一次，ASR 结果跨监控段共享；音频未归档 → `missing(audio_not_archived)` 无任务且列入 `needMedia`；**调用成功后写结果前崩溃，重启用同一 callKey，计费一次、结果一行**；输出非法 / 拒绝 → failed（不是 0 / 空文本 / not_meets）；网关瞬时错误 → dead 且错误详情无签名 URL；判定 deferred（`attemptCount` 0、`deferCount` 1、30 秒后再试）并按需建 ASR 任务；ASR 完成后判定结果行含结论、理由、模型、提示词 ID 与版本、标准文本哈希、转写结果 ID、`callKey`；不同标准文本互不复用，相同标准（规范化后）+ 提示词版本 + 模型版本跨监控段复用；模型 m1→m2 产生新行、m1 保留；请求后运行前换模型 → `dead(model_changed)`；转写失败 → 判定 failed 保留原失败码；ASR 任务已 dead → 判定自己 dead 且不复活 ASR；延后超限 → dead；只有 ASR 模型时判定被 `executability` 阻塞。变异检查三处（去掉 defer 的计数撤销、去掉模型变更检查、让非法输出不判失败，各使对应用例失败）。**偏差**：① `AiGatewayPort` 的 `judge` 改为 C 渲染提示词（`promptId`/`promptVersion`/`system`/`user`）、网关返回**原始结构化输出**由 C 校验（任务 2 的草案是 `transcript`/`standardText`，无法满足“输出不符合 schema → invalid_output”由 C 判定）；新增 `GatewayRefusedError` 表示模型拒绝；② 新增死亡原因 `model_changed`（已写入 design §6.4）；③ ASR 能力版本不含模型版本（design §12 已写明），换 ASR 模型靠人为升 `speech.asr` 版本。**未证明**：真实模型质量与计费（属 `h-ai-min` 的 smoke）；真实 OSS 签名 URL 能否被网关读取。
 
 - [ ] 10. 能力升级、`stale` 与显式重算
   - **Requirements:** SG-10、SG-11

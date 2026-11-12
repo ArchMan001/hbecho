@@ -15,9 +15,9 @@ describe("FakeAiGateway", () => {
   it("activeModel 可切换，null 表示禁用；新模型版本进入新结果", async () => {
     const g = new FakeAiGateway();
     expect(await g.activeModel("judge")).toBe("judge-m1");
-    const r1 = await g.judge({ callKey: "a", transcript: "t", standardText: "s", promptVersion: 1 });
+    const r1 = await g.judge({ callKey: "a", promptId: "p", promptVersion: 1, system: "s", user: "u" });
     g.models.judge = "judge-m2";
-    const r2 = await g.judge({ callKey: "b", transcript: "t", standardText: "s", promptVersion: 1 });
+    const r2 = await g.judge({ callKey: "b", promptId: "p", promptVersion: 1, system: "s", user: "u" });
     expect([r1.model, r2.model]).toEqual(["judge-m1", "judge-m2"]);
     g.models.asr = null;
     expect(await g.activeModel("asr")).toBeNull();

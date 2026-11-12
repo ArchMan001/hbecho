@@ -16,14 +16,24 @@ export interface TranscribeResult {
 }
 export interface JudgeRequest {
   callKey: string;
-  transcript: string;
-  standardText: string;
+  /** C 保管并渲染提示词（随代码版本化）；网关只负责把它送给 activeModel('judge')。 */
+  promptId: string;
   promptVersion: number;
+  system: string;
+  user: string;
 }
 export interface JudgeResult {
-  verdict: "meets" | "not_meets";
-  reason: string;
+  /** 模型的原始结构化输出；由 C 用 zod 校验，缺字段 / 取值非法 → failed(invalid_output)，**不写成 not_meets**。 */
+  output: unknown;
   model: string;
+}
+
+/** 模型拒绝回答（内容审核等）：确定性失败 failed(model_refused)。其余异常一律按瞬时失败重试。 */
+export class GatewayRefusedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "GatewayRefusedError";
+  }
 }
 
 export interface AiGatewayPort {

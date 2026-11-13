@@ -2157,6 +2157,24 @@ docker image prune -f
 ```
 每分钟一轮（转码回填、待删除媒体重试），每小时加一轮归档与残渣清理；日志在容器 stderr（JSON）。有步骤失败时日志级别是 error，消息 `learning_maintenance_errors`——**这是 VOD / OSS 不可用的唯一信号，需要接日志告警**。回滚 = 改回上一个 `WEB_TAG`。
 
+#### 同步 worker（sync-worker，2026-11-13 增补）
+
+名单「确认写入」只落 `resolve_account` 根任务；真正调 AI Master 的是 sync worker。**没有这个进程，确认后的账号会一直 pending**。它在 production 运行，启动守卫 `assertWorkerCanRun` 要求至少一个已批准的 capability（2026-11-12 起抖音 / 小红书已批准，见 `capability.ts` 的 `PRODUCTION_APPROVAL`）。
+
+```yaml
+  sync-worker:
+    image: hbecho-registry-registry-vpc.cn-beijing.cr.aliyuncs.com/hbecho/app:${WEB_TAG}
+    container_name: hbecho-sync-worker
+    restart: unless-stopped
+    env_file: /data/app/sync.env          # 独立环境文件：需要 AIMASTER_* 与 OSS 写权限，不复用 web.env
+    command: ["./node_modules/.bin/tsx", "src/worker/sync-main.ts"]
+    depends_on: [mysql]
+```
+
+`/data/app/sync.env`（root 600）至少包含：`HBECHO_DATABASE_URL`、`HBECHO_ENV=production`、`AIMASTER_BASE_URL`、`AIMASTER_API_KEY`、`AIMASTER_ENABLED=true`、`OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET` / `OSS_REGION` / `OSS_BUCKET_ODS` / `OSS_BUCKET_MEDIA`、`HBECHO_MEDIA_MAX_BYTES`，以及 tracer 的 modes / 并发 / 批次预算配置（键名见 `.env.example`）。**`HBECHO_ENV=test` 会被启动守卫拒绝**。
+
+**预算**：`AIMASTER_ENABLED=true` 后每个 provider 调用都计费；批次上限由 tracer 配置的 `batchBudget`（调用数 / 点数）与 `breaker` 控制，需与批准预算（刘学奎 2026-11-12：上限 1 万元、有效期一年）一致。**回滚**：从 compose 中去掉 `sync-worker` 并 `docker compose up -d`，任务停在 pending，不产生调用。
+
 ### 10.4 部署后必检
 
 1. 服务健康：`curl -s http://127.0.0.1:3000/api/health` 返回 `{"ok":true}`；公网 `https://echo.hbmarketer.com/login` 200 且页脚有备案号；`/users` 未登录 307 到 `/login`

@@ -209,12 +209,12 @@ describe("异步主页：提交 + 持久化任务 ID + 每次轮询一条 Provid
     expect((await env.root(rootId)).lastErrorCode).toBe("unsupported_capability");
   });
 
-  it("运行期再次过 capability gate：production 环境没有任何已批准 tuple，不发任何调用", async () => {
+  it("运行期再次过 capability gate：未登记的环境（staging）不放行，不发任何调用", async () => {
     const env = await setupTracer(t);
     env.serve.profile("douyin");
     env.serve.list("douyin");
     const rootId = await env.submit();
-    const r = await runner(env).run(rootId, { config: { environment: "production", modes: { media_user_info: "synchronous", user_video_list: "synchronous" } } });
+    const r = await runner(env).run(rootId, { config: { environment: "staging", modes: { media_user_info: "synchronous", user_video_list: "synchronous" } } });
     expect(r.kind).toBe("failed");
     expect(env.transport.calls).toHaveLength(0);
     expect(await calls()).toHaveLength(0);

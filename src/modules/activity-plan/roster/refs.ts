@@ -2,7 +2,7 @@
 // 预检传 db（只读快照），确认写入的每个块传事务（实时读取）。入口文本命中：哈希是索引，命中后复核原文。
 import { and, eq, inArray, ne } from "drizzle-orm";
 import type { Db, DbTx } from "../../../db/client";
-import { activityPlanBranches, activityPlanRoster, brands, mediaStaff, sectors, staffAccountAssignments as aa, stores } from "../../../db/schema";
+import { activityPlanBranches, activityPlanRoster, branches, brands, mediaStaff, sectors, staffAccountAssignments as aa, stores } from "../../../db/schema";
 import { sha256Utf8 } from "../../canonical-json";
 import { sectorKeyOf } from "../../master-data-import/mappings.v1";
 import type { LocalAccountRef, RosterRefs, StaffRef, StoreRef } from "./classify";
@@ -39,6 +39,15 @@ export async function loadRosterRefs(db: Db | DbTx, plan: { planId: bigint; bran
   const participation = new Map<bigint, "joined" | "exited">();
   const partQuery = db.select().from(activityPlanBranches).where(eq(activityPlanBranches.planId, plan.planId));
   for (const r of await (o.lockParticipation ? partQuery.for("share") : partQuery)) participation.set(r.branchId, r.status as "joined" | "exited");
+
+  // 本批门店涉及的分公司是否有效（总部提交的自动加入只在分公司有效时发生，AP-3 / 刘学奎 2026-11-12）
+  const branchActive = new Map<bigint, boolean>();
+  const branchIds = [...new Set([...storeMap.values()].map((s) => s.branchId))];
+  for (const part of chunks(branchIds)) {
+    for (const r of await db.select({ branchId: branches.branchId, status: branches.status }).from(branches).where(inArray(branches.branchId, part))) {
+      branchActive.set(r.branchId, r.status === "active");
+    }
+  }
 
   const staffMap = new Map<string, StaffRef[]>();
   for (const part of chunks(phones)) {
@@ -80,6 +89,7 @@ export async function loadRosterRefs(db: Db | DbTx, plan: { planId: bigint; bran
     store: (code) => storeMap.get(code),
     otherBrandCodes: (code) => otherBrands.get(code) ?? [],
     participation: (branchId) => participation.get(branchId),
+    branchActive: (branchId) => branchActive.get(branchId) ?? false,
     staffByPhone: (phone) => staffMap.get(phone) ?? [],
     matchAccount: (original, cleaned) => byOriginal.get(original) ?? byCleaned.get(cleaned),
     rosterEntry: (accountId) => entryMap.get(accountId),

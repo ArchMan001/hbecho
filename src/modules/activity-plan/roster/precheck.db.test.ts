@@ -42,7 +42,7 @@ describe("混合样例", () => {
     const r = await precheck(deps, { planId: w.planId, fileName: "mixed.csv", bytes: fx("mixed.utf8.csv") }, hq);
     expect(await businessCounts(t)).toEqual(before);
     expect(r.totalRows).toBe(9);
-    expect(r.summary.precheck).toMatchObject({ new: 1, new_staff: 1, update: 1, unchanged: 1, error: 5, example_rows: [1], possible_new_accounts: 2 });
+    expect(r.summary.precheck).toMatchObject({ new: 1, new_staff: 2, update: 1, unchanged: 1, error: 4, example_rows: [1], possible_new_accounts: 3, auto_join_branches: 1 });
     const rows = await rowsOf(r.batchId);
     expect(rows.map((x) => x.rowNo)).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10]); // 行号 = 文件行号（示例行占位）
     expect(rows.map((x) => [x.precheckClass, x.reasonCode])).toEqual([
@@ -54,7 +54,7 @@ describe("混合样例", () => {
       ["error", "phone_invalid"],
       ["error", "non_home_locator"],
       ["error", "platform_mismatch"],
-      ["error", "branch_not_joined"],
+      ["new_staff", null], // 总部提交：未加入的分公司自动加入后按可写入处理（刘学奎 2026-11-12）
     ]);
     expect(rows.every((x) => x.outcome === null)).toBe(true);
     expect(rows[0]?.rawRow).toEqual({ 门店编码: "S-W1", 专员姓名: "新人甲", 手机号: "13800020001", 主页链接: "https://www.douyin.com/user/AAA" });

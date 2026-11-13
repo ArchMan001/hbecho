@@ -24,6 +24,9 @@ interface Precheck {
   plan_entries_now: number;
   plan_entries_after: number;
   soft_cap_exceeded: boolean;
+  /** 总部提交时，文件中出现但尚未加入计划的分公司（确认写入自动加入，刘学奎 2026-11-12）。 */
+  auto_join_branches: number;
+  auto_join_branch_codes: string[];
 }
 
 export default async function ImportPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Q> }) {
@@ -183,6 +186,8 @@ export default async function ImportPage({ params, searchParams }: { params: Pro
                   softCapExceeded: p.soft_cap_exceeded === true,
                   ownerNote,
                   ownerBlocked,
+                  autoJoinBranches: count("auto_join_branches"),
+                  autoJoinCodes: p.auto_join_branch_codes ?? [],
                 }}
               />
             </div>
@@ -199,6 +204,11 @@ export default async function ImportPage({ params, searchParams }: { params: Pro
                 <div className="stat" key={label}><div className="stat-label">{label}</div><div className="stat-value">{n(value)}</div><div className="stat-hint">{hint}</div></div>
               ))}
             </div>
+            {count("auto_join_branches") > 0 ? (
+              <Callout icon="layers" style={{ marginBottom: 14 }}>
+                本文件包含 {n(count("auto_join_branches"))} 家尚未加入计划的分公司（{(p.auto_join_branch_codes ?? []).join("、")}）：确认写入时会自动加入，不需要先手动加入。
+              </Callout>
+            ) : null}
             <Callout icon="shield" style={{ marginBottom: 14 }}>预检只读：专员、账号、归属、名单、负责人的行数都没有变化；没有调用供应商接口。示例行和表头不产生行结果。</Callout>
             {batch.rowsVisible && rowsView ? (
               <>

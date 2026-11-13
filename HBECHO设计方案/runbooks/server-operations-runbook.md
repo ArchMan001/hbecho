@@ -2167,13 +2167,15 @@ docker image prune -f
     container_name: hbecho-sync-worker
     restart: unless-stopped
     env_file: /data/app/sync.env          # 独立环境文件：需要 AIMASTER_* 与 OSS 写权限，不复用 web.env
-    command: ["./node_modules/.bin/tsx", "src/worker/sync-main.ts"]
+    command: ["./node_modules/.bin/tsx", "src/worker/sync-main.ts", "worker"]   # 缺子命令只会打印用法；常驻必须显式 worker
     depends_on: [mysql]
 ```
 
 `/data/app/sync.env`（root 600）至少包含：`HBECHO_DATABASE_URL`、`HBECHO_ENV=production`、`AIMASTER_BASE_URL`、`AIMASTER_API_KEY`、`AIMASTER_ENABLED=true`、`OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET` / `OSS_REGION` / `OSS_BUCKET_ODS` / `OSS_BUCKET_MEDIA`、`HBECHO_MEDIA_MAX_BYTES`，以及 tracer 的 modes / 并发 / 批次预算配置（键名见 `.env.example`）。**`HBECHO_ENV=test` 会被启动守卫拒绝**。
 
 **预算**：`AIMASTER_ENABLED=true` 后每个 provider 调用都计费；批次上限由 tracer 配置的 `batchBudget`（调用数 / 点数）与 `breaker` 控制，需与批准预算（刘学奎 2026-11-12：上限 1 万元、有效期一年）一致。**回滚**：从 compose 中去掉 `sync-worker` 并 `docker compose up -d`，任务停在 pending，不产生调用。
+
+**2026-11-13 部署状态**：镜像 `6368b94798ef` 已推送 ACR 并在测试 ECS 拉取；`/data/app/sync.env`（root 600）已建，含数据库 URL、`HBECHO_ENV=production`、四个模式（均 synchronous）、并发 / QPS / 熔断 / 批次预算、媒体上限与能力服务地址；`docker-compose.yml` 已追加 `sync-worker`（原文件备份 `/data/backup/docker-compose.yml.bak-20261113`，`docker compose config` 通过）。**未启动**：试运行报 `环境变量 AIMASTER_API_KEY 缺失`，另外还缺 `AIMASTER_BASE_URL`、`OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET` / `OSS_REGION` / `OSS_BUCKET_ODS` / `OSS_BUCKET_MEDIA`，以及 Python 能力服务（`HBECHO_CAPABILITY_URL` 指向的 `capability` 容器尚未部署）。这些配好后 `docker compose up -d sync-worker` 即可。
 
 ### 10.4 部署后必检
 

@@ -2177,6 +2177,14 @@ docker image prune -f
 
 **2026-11-13 部署状态**：镜像 `6368b94798ef` 已推送 ACR 并在测试 ECS 拉取；`/data/app/sync.env`（root 600）已建，含数据库 URL、`HBECHO_ENV=production`、四个模式（均 synchronous）、并发 / QPS / 熔断 / 批次预算、媒体上限与能力服务地址；`docker-compose.yml` 已追加 `sync-worker`（原文件备份 `/data/backup/docker-compose.yml.bak-20261113`，`docker compose config` 通过）。**未启动**：试运行报 `环境变量 AIMASTER_API_KEY 缺失`，另外还缺 `AIMASTER_BASE_URL`、`OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET` / `OSS_REGION` / `OSS_BUCKET_ODS` / `OSS_BUCKET_MEDIA`，以及 Python 能力服务（`HBECHO_CAPABILITY_URL` 指向的 `capability` 容器尚未部署）。这些配好后 `docker compose up -d sync-worker` 即可。
 
+**2026-11-13 启动完成**：sync-worker 已启动并稳定（容器 Up，最近 2 分钟 0 条 `level=50`）。启动时补齐了三项：
+
+1. **`sync_settings` 必须手工初始化**：迁移 `0001` 明确不种入（「由运维显式配置」）。已插入 `settings_id=1`、`Asia/Shanghai`、`schedule_slots=[{"weekday":1,"time":"02:00"}]`、`initial_content_limit=20`、`list_safety_page_limit=5`、`comment_page_limit=5`、`account_resolve_max_attempts=3`、`task_max_attempts=3`、`config_version=1`；
+2. **`OSS_ENDPOINT=oss-cn-beijing-internal.aliyuncs.com` 必须写进 sync.env**：不写时 ali-oss 会拼公网域名，维护任务的 `sweep_orphans` 因 DNS 失败；`docker restart` 不会重读 `env_file`，改完要用 `docker compose up -d --no-deps --force-recreate sync-worker`；
+3. **sync-worker 的 image 临时固定为 `6368b94798ef`**（含 capability 放行），因为 `/data/app/.env` 的 `WEB_TAG` 仍是 `69595423c6d3`；web 升级后改回 `${WEB_TAG}`。
+
+维护任务已验证成功：`orphans["smoke/ods/"]` 删除 14 个孤儿对象，`failedSteps` 为空。
+
 ### 10.4 部署后必检
 
 1. 服务健康：`curl -s http://127.0.0.1:3000/api/health` 返回 `{"ok":true}`；公网 `https://echo.hbmarketer.com/login` 200 且页脚有备案号；`/users` 未登录 307 到 `/login`

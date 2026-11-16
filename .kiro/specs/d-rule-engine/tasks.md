@@ -27,7 +27,7 @@
 - [x] 任务 0 · 文档前置与待确认闸门（2026-11-16 完成：旧 design 归档、链接修复、CONTEXT 词条、PRD D 第 6 行；§14 闸门已答复）
 - [x] 任务 1 · schema 与迁移（2026-11-16：迁移 `0012_d_judgement_schema`，`judgement-schema.db.test.ts` 19 例；**完成后推第一次**）
 - [ ] 任务 2 · 骨架：错误、配置、端口与 fake、B 授权接入、审计、`facts.ts`、测试挂具、静态护栏
-- [ ] 任务 3 · 纯函数：配置、三值逻辑、条件求值、达标方式、窗口、分布
+- [x] 任务 3 · 纯函数：配置、三值逻辑、条件求值、达标方式、窗口、分布（2026-11-16：`src/modules/judgement/{config,engine/pure/*}`，unit 84 例）
 - [ ] 任务 4 · 判定计划、草稿与版本（含与 C 的 provisioning、发布协议、回退）
 - [ ] 任务 5 · 运行内核与圈定（**第一条可演示的纵向**）
 - [ ] 任务 6 · 试跑（第 2 层）：依赖协调、等待、报告
@@ -124,7 +124,7 @@
   - **验证**：缺 Capability 的调用在任何读库之前被拒绝（查询计数器）；`hq_manager` 非活动计划创建者能读不能写；`branch_manager` 只读其分公司参与的活动计划下的判定计划；越范围表现为未找到；`plan_creator` 重复注册不抛（先查再注册）；`facts` 的每个读取函数一例（改绑后 `assignmentsOf` 返回新专员、`orgChainOf` 沿专员当前门店向上、`contentsOf` 排除非 active 与无当前快照并计数、`syncCompleteness` 覆盖 §7.5 的五种结局）；缺任一必填环境变量启动失败；五条护栏的反向用例使护栏报错；`toDemandActor` 缺 `data.sync.trigger` 被拒、`actorId` 等于提交人；提交人被停用 / 范围无法解析时 `contextForUser` 失败使运行被取消；`SERVICE_PRINCIPALS` 无 diff。
   - **未证明**：真实 C 的签名与 `FakeSignals` 一致（任务 12）。
 
-- [ ] 3. 纯函数
+- [x] 3. 纯函数
   - **Requirements:** JP-2、JP-8、JP-9、JP-6
   - **Design:** §7.1、§7.4、§7.6、§7.10
   - `config.ts`（zod schema、`validateConfig`、规范化与 `config_sha256`、`deriveItems`；别名不进哈希；第 1 层 `quantity`；第 2 层 `abilities`；`image_text`/OCR 拒绝）；`engine/pure/`：`and3`、`evaluateMethod`、`fromSignal`、条件求值（关键词、话题、时长、分数阈值、ASR 结论）、层求值（提前终止）、`contentRequirementEnabled(cfg)`、`selectLayer1`（按专员各自点赞排序取前 N；非 `value` 状态排后，真实 0 有效；平局按发布时间降序、内容 ID 升序）、`bjtDaysToUtc`、`bucketize`（分布与样例，每档最多 5 个）。

@@ -63,7 +63,7 @@
 | B13 | JP-2 | `layer2.abilities` 的 `target=avatar|background` 在小红书 / 快手 | 被拒（平台信号不可得） |
 | B9 | JP-2 | `deriveItems` 与 `FakeSignals.platformSignals` | 推导出的每个信号都在平台可得集合里；配置不引用目录外信号 |
 | B10 | JP-2 | 配置保存的是关键词 / 话题**原文** | 取回配置与输入逐字相同（未被归一化） |
-| B14 | JP-2 / D-D21 | 内容要求启用：只配评论；只配头像或背景；只配话题；只配视频时长；只配 `target=cover` 的第 2 层能力；只配 ASR；什么要求都没有 | 内容结果 NULL；NULL；启用；启用；启用；启用；保存被拒 |
+| B14 | JP-2 / D-D21 | 内容要求启用：只配评论；只配头像或背景；只配话题；只配视频时长；只配 `target=cover` 的第 2 层能力；只配 ASR；什么要求都没有 | 内容结果 NULL；NULL；启用；启用；启用；启用；草稿可保存，圈定 / 发布被拒（`no_requirement`） |
 | B15 | JP-2 / D-D22 | `quantity` 存在而 `text`、`hashtags` 都为空；删掉最后一个文本 / 话题项并同一次保存去掉 `quantity` | 被拒；通过 |
 | B16 | JP-2 | ASR 的 `layer3.alias`；两个能力同别名；别名为空 | 都可保存；证据靠 `abilityId` 区分 |
 | B17 | JP-2 | 元素图上传：字节 SHA-256 作 `elementKey`（64 位十六进制）；同 `target` 重复字节；换图；草稿里缺 `elementKey` 的能力 | 通过 C 的正则；`element_duplicate`；新 key、旧 C 图行被删、能力的 key 更新；可保存、不能发布（`image_missing`） |

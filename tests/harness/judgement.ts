@@ -142,6 +142,8 @@ export interface JudgementEnv {
   onSleep: { fn: (() => void) | null };
   facts: Judgement["facts"];
   authz: Judgement["authz"];
+  /** 与 createJudgement 同一份审计（downstream 等直接构造的部件用它） */
+  audit: Judgement["audit"];
   audits: Array<{ event: string; risk: string; hasTx: boolean; detail: unknown }>;
   /** 活动计划创建者（user:7，hq_manager，范围 = 该品牌） */
   creator: AuthContext;
@@ -180,5 +182,5 @@ export function judgementEnv(t: TestDb, w: RosterWorld, over: { limits?: { maxIt
     clock.advance(ms);
     onSleep.fn?.();
   };
-  return { fake, demand, clock, plans: j.plans, versions: j.versions, runs: j.runs, outcomes: j.outcomes, claim: j.claim, sleep, onSleep, facts: j.facts, authz: j.authz, audits, creator, other: userCtx("hq_manager", 8, brandScope), admin: userCtx("platform_admin", 1, ALL_SCOPE), revoked };
+  return { fake, demand, clock, plans: j.plans, versions: j.versions, runs: j.runs, outcomes: j.outcomes, claim: j.claim, sleep, onSleep, facts: j.facts, authz: j.authz, audit: j.audit, audits, creator, other: userCtx("hq_manager", 8, brandScope), admin: userCtx("platform_admin", 1, ALL_SCOPE), revoked };
 }

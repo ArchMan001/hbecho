@@ -22,7 +22,7 @@ async function setup() {
   const e = judgementEnv(t, w);
   const { planId } = await e.plans.create(e.creator, { activityPlanId: w.planId, alias: "计划 A" });
   await e.versions.setConfig(e.creator, planId, CFG);
-  const down = createJudgementDownstream({ db: t.db, signals: e.fake.segments, purgeActor: PURGE_ACTOR });
+  const down = createJudgementDownstream({ db: t.db, signals: e.fake.segments, purgeActor: PURGE_ACTOR, audit: e.audit });
   return { w, e, planId, down };
 }
 async function content(w: JudgementWorld, e: JudgementEnv, id: string, like = 1) {
@@ -155,6 +155,7 @@ describe("与 A 的真实 plans / maintenance 联动（Q2 / Q4 / Q5 / Q6 / Q7）
     expect(await t.db.select().from(activityPlans).where(eq(activityPlans.planId, w.planId))).toHaveLength(0);
     expect(await dRows()).toEqual({ plans: 0, versions: 0, runs: 0, participants: 0, contents: 0 });
     expect(e.fake.segs.size).toBe(0);
+    expect(e.audits.filter((a) => a.event === "plan_purged")).toEqual([{ event: "plan_purged", risk: "high", hasTx: true, detail: expect.objectContaining({ activityPlanId: String(w.planId) }) }]);
   });
   it("purge 中途失败：A 不清除活动计划；下一次维护重试完成", async () => {
     const { w, e, aPlans, maint } = await withA();

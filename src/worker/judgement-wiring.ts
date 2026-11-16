@@ -5,6 +5,8 @@
 import type { Db } from "../db/client";
 import type { PlanDownstream } from "../modules/activity-plan/downstream";
 import { createJudgementDownstream } from "../modules/judgement/downstream";
+import { createAuditWriter } from "../modules/access-control";
+import { createJudgementAudit } from "../modules/judgement/audit";
 import { OssObjectStore } from "../modules/raw-capture";
 import { readOssSecrets } from "../modules/smoke";
 import { CAP_SEGMENT_MANAGE, createLogAudit, createSignals, parseSignalsConfig, SERVICE_ACTOR, SignalError, type SignalActor } from "../modules/signals";
@@ -35,5 +37,5 @@ export function buildJudgementDownstream(deps: { db: Db; env: Record<string, str
       matcher: unconfigured("能力服务"),
     }).segments;
   };
-  return createJudgementDownstream({ db, purgeActor: PURGE_ACTOR, signals: { purge: (a, id) => (segments ??= build()).purge(a, id) } });
+  return createJudgementDownstream({ db, purgeActor: PURGE_ACTOR, audit: createJudgementAudit(createAuditWriter({ db, clock: { now: () => new Date() }, logger: deps.logger as never })), signals: { purge: (a, id) => (segments ??= build()).purge(a, id) } });
 }

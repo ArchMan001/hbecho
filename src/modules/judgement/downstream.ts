@@ -6,6 +6,7 @@ import type { Db } from "../../db/client";
 import { judgementPlans, judgementPlanVersions, judgementRuns, runParticipants } from "../../db/schema";
 import type { PlanDownstream } from "../activity-plan/downstream";
 import { createRunOps } from "./run-ops";
+import type { JudgementAudit } from "./audit";
 import type { SignalActor, SignalsPort } from "./ports";
 
 const RUN_BATCH = 200;
@@ -15,10 +16,12 @@ export interface JudgementDownstreamDeps {
   signals: Pick<SignalsPort["segments"], "purge">;
   /** 清除由 A 的每日维护触发、没有提交人：调用 C 的 purge 所用的身份由装配处给（需要 C 的 segment 管理能力），D 不自造。 */
   purgeActor: SignalActor;
+  /** 期满清除是高风险审计：与删除判定计划行同一事务（JP-18）。 */
+  audit: JudgementAudit;
 }
 
 export function createJudgementDownstream(deps: JudgementDownstreamDeps): PlanDownstream {
-  const { db, signals, purgeActor } = deps;
+  const { db, signals, purgeActor, audit } = deps;
   const ops = createRunOps(db);
   const planIdsOf = async (activityPlanId: bigint): Promise<bigint[]> => (await db.select({ id: judgementPlans.planId }).from(judgementPlans).where(eq(judgementPlans.activityPlanId, activityPlanId)).orderBy(judgementPlans.planId)).map((r) => r.id);
 
@@ -41,8 +44,11 @@ export function createJudgementDownstream(deps: JudgementDownstreamDeps): PlanDo
           if (runIds.length === 0) break;
           await ops.deleteRunsById(runIds); // run_contents → run_participants → judgement_runs
         }
-        await db.delete(judgementPlanVersions).where(eq(judgementPlanVersions.planId, planId));
-        await db.delete(judgementPlans).where(eq(judgementPlans.planId, planId));
+        await db.transaction(async (tx) => {
+          await tx.delete(judgementPlanVersions).where(eq(judgementPlanVersions.planId, planId));
+          await tx.delete(judgementPlans).where(eq(judgementPlans.planId, planId));
+          await audit.record({ event: "plan_purged", actor: purgeActor.actor, planId, detail: { activityPlanId: String(activityPlanId) } }, tx);
+        });
       }
     },
   };

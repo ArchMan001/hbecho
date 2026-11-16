@@ -1,7 +1,7 @@
 // 运行入口（JP-5 圈定、JP-15 生命周期）：圈定是同步运算——当前进程自己领租约、跑 tick，直到终态；
 // 其余运行由 worker 领取（任务 11 的 serve）。同一个引擎、同一份逻辑，所以圈定条数 = 执行时 C1 条数。
 import { and, desc, eq, sql } from "drizzle-orm";
-import { judgementPlans, judgementRuns, runContents, runParticipants } from "../../db/schema";
+import { judgementPlanVersions as judgementPlanVersionsTable, judgementPlans, judgementRuns, runContents, runParticipants } from "../../db/schema";
 import type { AuthContext } from "../access-control";
 import { type Claim, type RunRow } from "./engine/claim";
 import type { Runner } from "./engine/runner";
@@ -168,6 +168,48 @@ export function createRuns(deps: JudgementDeps & { claim: Claim; runner: Runner;
     return { runId: run.runId, c1: run.c1Count ?? 0, abilities };
   }
 
+  /**
+   * 确认执行 / 重新执行（JP-3）：存在草稿 → 发布为新版本并在**同一事务**里建执行运行；没有草稿 → 对最近已发布版本再跑一次，不升版。
+   * 同一幂等键重复提交返回已有运行；同版本已有未终态运行 → run_active。归档的判定计划被拒；暂停 / 归档的活动计划仍可手动触发。
+   */
+  async function execute(ctx: AuthContext, planId: bigint, o: { key: string }): Promise<{ version: number; runId: bigint; created: boolean }> {
+    await authz.require(ctx, "execute");
+    const { plan, ref } = await loadPlan(deps, planId);
+    await authz.require(ctx, "execute", ref);
+    if (plan.status !== "active") throw new JudgementError("conflict", plan.status === "archived" ? "plan_archived" : "plan_provisioning", "判定计划当前不可执行");
+    if (!o.key.trim()) throw new JudgementError("input", "idempotency_key_required", "需要幂等键");
+    const start = async (tx: Parameters<Parameters<typeof db.transaction>[0]>[0], version: number) => {
+      const r = await claim.createRun(tx, { planId, version, kind: "execution", actor: ctx.actor, userId: ctx.userId, idempotencyKey: o.key, scopeSummary: { brands: ctx.scope.brands === "all" ? "all" : [...ctx.scope.brands].map(String), branches: ctx.scope.branches === "all" ? "all" : [...ctx.scope.branches].map(String) } });
+      if (r.created) await audit.record({ event: "execution_started", actor: ctx.actor, actorUserId: ctx.userId, planId, runId: r.runId, detail: { version } }, tx);
+      return r;
+    };
+    const draft = await versions.draftOf(planId);
+    if (draft?.status === "publishing") throw new JudgementError("conflict", "version_publishing", "正在发布，请先对账（reconcile）");
+    if (draft) {
+      let started: { runId: bigint; created: boolean } | undefined;
+      const { version } = await versions.publish(ctx, planId, { onPublished: async (tx, v) => void (started = await start(tx, v.version)) });
+      return { version, runId: started!.runId, created: started!.created };
+    }
+    const published = await db.select({ v: judgementPlanVersionsTable.version }).from(judgementPlanVersionsTable).where(and(eq(judgementPlanVersionsTable.planId, planId), eq(judgementPlanVersionsTable.status, "published"))).orderBy(desc(judgementPlanVersionsTable.version)).limit(1);
+    if (published.length === 0) throw new JudgementError("not_found", "version_not_found", "还没有已发布的版本");
+    const version = published[0]!.v;
+    const ex = await deps.signals.executability(await authz.toSignalActor(ctx), { planId, version });
+    if (!ex.executable) throw new JudgementError("conflict", "not_executable", "监控段当前不可执行，不能开始执行", { blockers: ex.blockers });
+    const r = await db.transaction(async (tx) => start(tx, version));
+    return { version, runId: r.runId, created: r.created };
+  }
+
+  /** worker 的一轮：领取所有当前可领取的运行并推进到它们各自「等待 / 终态」为止。 */
+  async function serveOnce(owner: string): Promise<{ ticks: number }> {
+    let ticks = 0;
+    for (;;) {
+      const run = await claim.claimNext(owner);
+      if (!run) return { ticks };
+      ticks++;
+      await runner.tick(run);
+    }
+  }
+
   async function cancel(ctx: AuthContext, runId: bigint): Promise<boolean> {
     await authz.require(ctx, "manage");
     const run = await claim.get(runId);
@@ -180,6 +222,6 @@ export function createRuns(deps: JudgementDeps & { claim: Claim; runner: Runner;
       return ok;
     });
   }
-  return { circle, trial, trialReport, drive, summaryOf, cancel, runRow: (runId: bigint) => db.select().from(judgementRuns).where(eq(judgementRuns.runId, runId)) };
+  return { circle, trial, trialReport, execute, serveOnce, drive, summaryOf, cancel, runRow: (runId: bigint) => db.select().from(judgementRuns).where(eq(judgementRuns.runId, runId)) };
 }
 export type Runs = ReturnType<typeof createRuns>;

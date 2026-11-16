@@ -31,7 +31,7 @@
 - [x] 任务 4 · 判定计划、草稿与版本（含与 C 的 provisioning、发布协议、回退）（2026-11-16：`plans.ts` / `versions.ts`，`plans.db` 14 + `versions.db` 32 例；与 C 真实 `segments` 的一致性在任务 12 的契约测试里确认）
 - [x] 任务 5 · 运行内核与圈定（**第一条可演示的纵向**）（2026-11-16：`engine/claim.ts`、`engine/runner.ts`、`runs.ts`、`assemble.ts`，`circle.db` 31 例；**`judgement circle` 的 CLI 级测试随任务 11 的 CLI 一并做**）
 - [x] 任务 6 · 试跑（第 2 层）：依赖协调、等待、报告（2026-11-16：`scores` 阶段、`runs.trial / trialReport`，`trial.db` 16 例；真实评分耗时在任务 12）
-- [ ] 任务 7 · 执行（第 1、2 层 + 账号要求）：确认执行、聚合、零内容、计划总结果
+- [x] 任务 7 · 执行（第 1、2 层 + 账号要求）：确认执行、聚合、零内容、计划总结果（2026-11-16：`aggregate` 阶段、`runs.execute / serveOnce`，`execute.db` 17 例；**第 3 层与评论要求在任务 8 之前显式失败 `not_implemented`**；`retainUntil` 证据保留与 `explain` 随任务 8 / 9）
 - [ ] 任务 8 · 第 3 层与评论：采集需求、ASR 判定、评论要求
 - [ ] 任务 9 · 对 E 的读取口、解释、保留与清理
 - [ ] 任务 10 · 下游端口与清除
@@ -152,7 +152,7 @@
   - **验证**：JP-6 验收逐条（对 C1 恰好一次 `requestScores`，且 `only` 不含第 3 层信号（acceptance F9）；换阈值再试跑不新增 C 任务；0.00 / 10.00 入档；样例每档最多 5 个；素材 `pending / failed / carried_forward` 记未获取并带 C 的原因码；试跑期间网关与 `demand.submit` 调用数 0；能力未启用时被拒并列阻塞项）；JP-13 验收（`FakeSignals` 模拟「N 次轮询后就绪」「永远 pending」「中途抛错」→ 正常完成 / `dependency_timeout` / 阶段重试后完成；杀进程后续跑不重复提交；等待上限为 0 时立即超时；事务内无跨模块调用的护栏）。
   - **未证明**：真实评分耗时（任务 12）。
 
-- [ ] 7. 执行：第 1、2 层与账号要求
+- [x] 7. 执行：第 1、2 层与账号要求（见上方进度行的范围说明）
   - **Requirements:** JP-3（confirm / execute）、JP-7、JP-8、JP-9、JP-11、JP-14（证据与 `retainUntil`）、JP-15
   - **Design:** §5.4、§7.4、§7.5、§7.6、§7.7（账号）
   - `confirm`（发布半段 + 创建执行运行，同事务带幂等键）与 `execute`；`aggregate`、`finalize` 阶段；内容 `at_least_n N`（N 来自 quantity）与评论 `evaluateMethod` 落库；零内容与同步完整；计划总结果；`primary_reason`；证据写入与 `retainUntil`（按块、去重）；`cancel` / `resume` 命令；`run show / list`。

@@ -9,7 +9,7 @@ import { sha256Utf8 } from "../../canonical-json";
 import type { Clock } from "../../raw-capture/ports";
 import type { JudgementAudit } from "../audit";
 import type { JudgementAuthz } from "../authz";
-import { accountAbilities, configSha256, contentAbilities, parseConfig, scoreSignalOf, type Ability, type Config } from "../config";
+import { accountAbilities, accountRequirementEnabled, commentRequirementEnabled, configSha256, contentAbilities, contentRequirementEnabled, parseConfig, scoreSignalOf, type Ability, type Config } from "../config";
 import type { JudgementConfig } from "../env";
 import { JudgementError } from "../errors";
 import type { ActivityPlanFact, Facts } from "../facts";
@@ -20,6 +20,9 @@ import { type Claim, type RunRow, StaleLeaseError } from "./claim";
 import { evalDuration, evalHashtags, evalKeywords, evalScore, thresholdToCents } from "./pure/conditions";
 import { combineLayer, type LayerResult } from "./pure/layer";
 import { selectLayer1 } from "./pure/select";
+import { contentCounts, contentOutcome, topReason, type ContentRowLite } from "./pure/aggregate";
+import { andOutcome } from "./pure/tri";
+import type { Outcome } from "./pure/types";
 import { bjtDaysToUtc } from "./pure/window";
 import type { RunOps } from "../run-ops";
 
@@ -61,7 +64,7 @@ type Out =
   | { kind: "done" }
   | { kind: "fail"; code: string; detail?: unknown };
 export type TickResult = "continue" | "waiting" | "terminal" | "stale";
-const PHASES_BY_KIND: Record<string, readonly string[]> = { circle: ["freeze", "scope", "layer1", "select", "finalize"], compare: ["freeze", "scope", "layer1", "select", "scores", "finalize"], execution: ["freeze", "scope", "layer1", "select", "scores", "finalize"] };
+const PHASES_BY_KIND: Record<string, readonly string[]> = { circle: ["freeze", "scope", "layer1", "select", "finalize"], compare: ["freeze", "scope", "layer1", "select", "scores", "finalize"], execution: ["freeze", "scope", "layer1", "select", "scores", "aggregate", "finalize"] };
 
 const hex = (b: Buffer | Uint8Array): string => Buffer.from(b).toString("hex");
 
@@ -379,6 +382,50 @@ export function createRunner(deps: RunnerDeps) {
       }
       if (waiting > 0) return { kind: "wait" };
     }
+    return { kind: "advance", phase: run.runKind === "execution" ? "aggregate" : "finalize" };
+  }
+
+  // ---- aggregate：行的最终结果 → 专员级结果（内容 / 账号 / 计划总结果），design §7.6 ----------------------------------------
+  async function aggregate(env: Env): Promise<Out> {
+    const { run, cfg } = env;
+    // 第 3 层与评论要求由任务 8 实现；在那之前宁可显式失败，也不把「没做」写成「通过」
+    if (cfg.contentRequirement?.layer3 || commentRequirementEnabled(cfg)) return { kind: "fail", code: "not_implemented", detail: { feature: "layer3 / comment" } };
+    const contentOn = contentRequirementEnabled(cfg);
+    const accountOn = accountRequirementEnabled(cfg);
+    // 走完全部层的行：没配第 3 层 → l3 = not_configured，最终通过
+    await claim.withFence(run, async (tx) => void (await tx.update(runContents).set({ l3: "not_configured", final: "pass" }).where(and(eq(runContents.runId, run.runId), isNull(runContents.final), eq(runContents.l0, "pass")))));
+    const people = await db.select().from(runParticipants).where(and(eq(runParticipants.runId, run.runId), eq(runParticipants.state, "pending"))).orderBy(asc(runParticipants.accountId));
+    for (const p of people) {
+      const rows = await db.select({ final: runContents.final, reasonCode: runContents.reasonCode, l1: runContents.l1, l2: runContents.l2, l0: runContents.l0, selected: runContents.layer1Selected, stale: runContents.stale }).from(runContents).where(and(eq(runContents.runId, run.runId), eq(runContents.accountId, p.accountId)));
+      const counts = contentCounts(rows.map((r) => ({ final: r.final as ContentRowLite["final"] })));
+      const reasons: Record<string, number> = {};
+      for (const r of rows) if (r.final === "unobtained") reasons[r.reasonCode ?? "unknown"] = (reasons[r.reasonCode ?? "unknown"] ?? 0) + 1;
+      const zero = { syncComplete: p.syncComplete ?? false, syncReason: (p.syncReason as "sync_failed" | "sync_gap" | "no_sync_in_window" | null) ?? null };
+      const content = contentOn ? contentOutcome(counts, cfg.layer1.quantity?.n ?? undefined, zero) : null;
+      const acc = accountOn ? (p.accountDetail as { result?: string; reason?: string; stale?: boolean } | null) : null;
+      const account: Outcome | null = !accountOn ? null : acc?.result === "pass" ? "success" : acc?.result === "fail" ? "not_met" : "unobtained";
+      const plan = andOutcome([content?.result ?? null, account]);
+      const primary = content?.result === "unobtained" ? (content.reason ?? topReason(reasons)) : account === "unobtained" ? (acc?.reason ?? "unknown") : null;
+      const c2 = rows.filter((r) => r.l0 === "pass" && ["pass", "not_configured"].includes(r.l1 ?? "") && r.selected !== false && ["pass", "not_configured"].includes(r.l2 ?? "")).length;
+      const prev = (p.reasonDetail as Record<string, unknown> | null) ?? {};
+      await claim.withFence(run, async (tx) => {
+        await tx
+          .update(runParticipants)
+          .set({
+            ...(contentOn ? { contentTotal: counts.p + counts.u + counts.f, contentPass: counts.p, contentFail: counts.f, contentUnobtained: counts.u, contentResult: content!.result } : {}),
+            contentSkipped: counts.skipped,
+            c2Count: c2,
+            c3Count: counts.p,
+            accountResult: account,
+            planResult: plan,
+            primaryReason: primary,
+            reasonDetail: { ...prev, unobtained_reasons: reasons } as never,
+            staleUsed: rows.some((r) => r.stale) || Boolean(acc?.stale),
+            state: "done",
+          })
+          .where(and(eq(runParticipants.runId, run.runId), eq(runParticipants.accountId, p.accountId), eq(runParticipants.state, "pending")));
+      });
+    }
     return { kind: "advance", phase: "finalize" };
   }
   // ---- finalize ------------------------------------------------------------------------------------------------
@@ -398,7 +445,10 @@ export function createRunner(deps: RunnerDeps) {
         await tx.execute(sql`
           UPDATE judgement_runs r SET
             content_total = (SELECT COUNT(*) FROM run_contents c WHERE c.run_id = r.run_id),
-            c1_count = (SELECT COALESCE(SUM(p.c1_count), 0) FROM run_participants p WHERE p.run_id = r.run_id)
+            c1_count = (SELECT COALESCE(SUM(p.c1_count), 0) FROM run_participants p WHERE p.run_id = r.run_id),
+            c2_count = (SELECT COALESCE(SUM(p.c2_count), 0) FROM run_participants p WHERE p.run_id = r.run_id),
+            c3_count = (SELECT COALESCE(SUM(p.c3_count), 0) FROM run_participants p WHERE p.run_id = r.run_id),
+            stale_used = EXISTS (SELECT 1 FROM run_participants p WHERE p.run_id = r.run_id AND p.stale_used = TRUE)
           WHERE r.run_id = ${id}`);
         // 圈定成功 → 向导进度 circled（只从 draft 起步，不回退已到 compared 的进度）
         if (run.runKind === "circle") await tx.update(judgementPlanVersions).set({ wizardStep: "circled", updatedAt: clock.now() }).where(and(eq(judgementPlanVersions.planId, run.planId), eq(judgementPlanVersions.version, run.version), eq(judgementPlanVersions.status, "draft"), eq(judgementPlanVersions.wizardStep, "draft")));
@@ -409,7 +459,7 @@ export function createRunner(deps: RunnerDeps) {
     return { kind: "done" };
   }
 
-  const PHASE_FN: Record<string, (env: Env) => Promise<Out>> = { freeze, scope, layer1, select, scores, finalize };
+  const PHASE_FN: Record<string, (env: Env) => Promise<Out>> = { freeze, scope, layer1, select, scores, aggregate, finalize };
 
   // ---- tick ----------------------------------------------------------------------------------------------------
   /** 提交人复核（JP-15）：每个 tick 开头用 contextForUser 现建身份并确认仍持有该类运行所需的 Capability；失败则取消运行。 */

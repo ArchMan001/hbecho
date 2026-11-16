@@ -1,11 +1,12 @@
 // 运行入口（JP-5 圈定、JP-15 生命周期）：圈定是同步运算——当前进程自己领租约、跑 tick，直到终态；
 // 其余运行由 worker 领取（任务 11 的 serve）。同一个引擎、同一份逻辑，所以圈定条数 = 执行时 C1 条数。
-import { and, eq, sql } from "drizzle-orm";
-import { judgementRuns, runContents, runParticipants } from "../../db/schema";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { judgementPlans, judgementRuns, runContents, runParticipants } from "../../db/schema";
 import type { AuthContext } from "../access-control";
 import { type Claim, type RunRow } from "./engine/claim";
 import type { Runner } from "./engine/runner";
-import { parseConfig, validateConfig } from "./config";
+import { accountAbilities, centsOfThreshold, contentAbilities, incompleteAbilities, parseConfig, scoreSignalOf, validateConfig, type Ability } from "./config";
+import { bucketize, passCount, type Scored } from "./engine/pure/trial";
 import type { JudgementConfig } from "./env";
 import { JudgementError } from "./errors";
 import { loadPlan, type JudgementDeps } from "./plans";
@@ -23,8 +24,26 @@ export interface CircleSummary {
   unobtained: number;
   byReason: Record<string, number>;
 }
+export interface TrialAbilityReport {
+  abilityId: string;
+  alias?: string;
+  kind: string;
+  target: string;
+  /** 对象：content = 封面（内容 ID），account = 头像 / 主页背景（账号 ID） */
+  subject: "content" | "account";
+  thresholdCents: number;
+  /** 11 档（0..9 为 [k, k+1)，10 为 10.00）的条数 */
+  counts: number[];
+  /** 每档至多 5 个样例 ID（升序，确定性） */
+  samples: bigint[][];
+  /** 用当前阈值重算的通过数（换阈值无需重新试跑） */
+  pass: number;
+  unobtained: { total: number; byReason: Record<string, number> };
+}
 export type Sleep = (ms: number) => Promise<void>;
 const realSleep: Sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const signalsOfAbilities = (abs: readonly Ability[]): string[] => [...new Set(abs.map(scoreSignalOf))];
 
 export function createRuns(deps: JudgementDeps & { claim: Claim; runner: Runner; versions: Versions; config: JudgementConfig; ops?: RunOps }) {
   const { db, clock, authz, audit, claim, runner, versions, config } = deps;
@@ -80,6 +99,75 @@ export function createRuns(deps: JudgementDeps & { claim: Claim; runner: Runner;
     return summaryOf(runId);
   }
 
+  /**
+   * 试跑（第 2 页）：对圈定留下的 C1 比对。先检查可执行性——不可执行就拒绝并返回阻塞项，不建运行、不返回全 0；
+   * 异步运行由 worker 领取；`wait` 时当前进程自己跑完（CLI 的 --wait）。不触发第 3 层，不发任何付费调用。
+   */
+  async function trial(ctx: AuthContext, planId: bigint, o: { wait?: boolean; sleep?: Sleep } = {}): Promise<{ runId: bigint; status: string }> {
+    await authz.require(ctx, "manage");
+    const { plan, ref, activity } = await loadPlan(deps, planId);
+    await authz.require(ctx, "manage", ref);
+    if (plan.status !== "active") throw new JudgementError("conflict", plan.status === "archived" ? "plan_archived" : "plan_provisioning", "判定计划当前不可操作");
+    const draft = await versions.draftOf(planId);
+    if (!draft || draft.status !== "draft") throw new JudgementError("conflict", "version_immutable", "只有草稿可以试跑；请先新建草稿");
+    if (draft.wizardStep === "draft") throw new JudgementError("conflict", "wizard_step_required", "请先完成圈定");
+    const cfg = parseConfig(draft.config);
+    const issues = validateConfig(cfg, activity.platformCode, deps.signals.platformSignals(activity.platformCode), deps.limits, { complete: true });
+    if (issues.length) throw new JudgementError("input", "config_invalid", issues.map((i) => i.message).join("；"), { issues });
+    if (cfg.layer2.abilities.length === 0) throw new JudgementError("input", "no_abilities", "第 2 页没有比对能力，不需要试跑");
+    if (incompleteAbilities(cfg).length) throw new JudgementError("input", "image_missing", "还有图片元素对比没有上传元素图");
+    const segment = { planId, version: draft.version };
+    const ex = await deps.signals.executability(await authz.toSignalActor(ctx), segment, { only: signalsOfAbilities(cfg.layer2.abilities) });
+    if (!ex.executable) throw new JudgementError("conflict", "not_executable", "比对能力当前不可用，不能试跑", { blockers: ex.blockers });
+    if (await ops.activeRunExists(planId, draft.version, ["circle", "compare", "execution"])) throw new JudgementError("conflict", "run_active", "这个版本已有未结束的运行");
+    await ops.deleteRuns(planId, draft.version, ["compare"]);
+    const { runId } = await claim.createRun(db, { planId, version: draft.version, kind: "compare", actor: ctx.actor, userId: ctx.userId, expiresAt: new Date(clock.now().getTime() + config.trialRetentionDays * 86_400_000) });
+    await audit.record({ event: "trial_run", actor: ctx.actor, actorUserId: ctx.userId, planId, runId });
+    if (!o.wait) return { runId, status: "planned" };
+    const done = await drive(runId, `inline:${ctx.actor}`, o.sleep);
+    if (done.status !== "completed") throw new JudgementError(done.status === "cancelled" ? "conflict" : "dependency", done.lastErrorCode ?? `run_${done.status}`, `试跑没有完成（${done.status}）`, done.lastErrorDetail);
+    return { runId, status: done.status };
+  }
+
+  /** 试跑报告：每个比对能力一份连续 0–10 分的 11 档分布与固定每档 5 个样例；通过数用当前阈值重算；素材问题原样汇总为未获取成功。 */
+  async function trialReport(ctx: AuthContext, planId: bigint): Promise<{ runId: bigint; c1: number; abilities: TrialAbilityReport[] }> {
+    await authz.require(ctx, "manage");
+    const { ref } = await loadPlan(deps, planId);
+    await authz.require(ctx, "manage", ref);
+    const draft = await versions.draftOf(planId);
+    const version = draft?.version ?? (await db.select({ v: judgementPlans.latestVersion }).from(judgementPlans).where(eq(judgementPlans.planId, planId)))[0]!.v;
+    const [run] = await db.select().from(judgementRuns).where(and(eq(judgementRuns.planId, planId), eq(judgementRuns.version, version), eq(judgementRuns.runKind, "compare"), eq(judgementRuns.status, "completed"))).orderBy(desc(judgementRuns.runId)).limit(1);
+    if (!run) throw new JudgementError("not_found", "trial_not_found", "还没有试跑结果");
+    const v = draft ?? (await versions.versionOf(planId, version))!;
+    const cfg = parseConfig(v.config);
+    const contentRows = await db.select({ id: runContents.contentId, evidence: runContents.evidence }).from(runContents).where(and(eq(runContents.runId, run.runId), sql`${runContents.l2} IS NOT NULL`, sql`${runContents.l2} <> 'skipped'`));
+    const people = await db.select({ id: runParticipants.accountId, detail: runParticipants.accountDetail }).from(runParticipants).where(eq(runParticipants.runId, run.runId));
+    const abilityEvidence = (raw: unknown, key: "l2" | "account", id: string): { state?: string; score?: string; reason?: string } | undefined => {
+      const list = (key === "l2" ? (raw as { l2?: { abilities?: unknown[] } } | null)?.l2?.abilities : (raw as { abilities?: unknown[] } | null)?.abilities) as Array<{ id: string; state?: string; score?: string; reason?: string }> | undefined;
+      return list?.find((x) => x.id === id);
+    };
+    const abilities: TrialAbilityReport[] = [];
+    for (const a of cfg.layer2.abilities) {
+      const isContent = contentAbilities(cfg).includes(a);
+      const scored: Scored[] = [];
+      const reasons: Record<string, number> = {};
+      let unobtained = 0;
+      const sources = isContent ? contentRows.map((r) => ({ id: r.id, ev: abilityEvidence(r.evidence, "l2", a.abilityId) })) : people.map((p) => ({ id: p.id, ev: abilityEvidence(p.detail, "account", a.abilityId), whole: p.detail as { result?: string; reason?: string } | null }));
+      for (const s of sources) {
+        if (s.ev?.score !== undefined) scored.push({ id: s.id, cents: centsOfThreshold(s.ev.score) });
+        else {
+          unobtained++;
+          const reason = s.ev?.reason ?? (s as { whole?: { reason?: string } | null }).whole?.reason ?? "unknown";
+          reasons[reason] = (reasons[reason] ?? 0) + 1;
+        }
+      }
+      const { counts, samples } = bucketize(scored);
+      const thresholdCents = centsOfThreshold(a.threshold);
+      abilities.push({ abilityId: a.abilityId, ...(a.alias ? { alias: a.alias } : {}), kind: a.kind, target: a.target, subject: isContent ? "content" : "account", thresholdCents, counts, samples, pass: passCount(scored, thresholdCents), unobtained: { total: unobtained, byReason: reasons } });
+    }
+    return { runId: run.runId, c1: run.c1Count ?? 0, abilities };
+  }
+
   async function cancel(ctx: AuthContext, runId: bigint): Promise<boolean> {
     await authz.require(ctx, "manage");
     const run = await claim.get(runId);
@@ -92,6 +180,6 @@ export function createRuns(deps: JudgementDeps & { claim: Claim; runner: Runner;
       return ok;
     });
   }
-  return { circle, drive, summaryOf, cancel, runRow: (runId: bigint) => db.select().from(judgementRuns).where(eq(judgementRuns.runId, runId)) };
+  return { circle, trial, trialReport, drive, summaryOf, cancel, runRow: (runId: bigint) => db.select().from(judgementRuns).where(eq(judgementRuns.runId, runId)) };
 }
 export type Runs = ReturnType<typeof createRuns>;

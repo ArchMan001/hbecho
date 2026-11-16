@@ -30,7 +30,7 @@
 - [x] 任务 3 · 纯函数：配置、三值逻辑、条件求值、达标方式、窗口、分布（2026-11-16：`src/modules/judgement/{config,engine/pure/*}`，unit 84 例）
 - [x] 任务 4 · 判定计划、草稿与版本（含与 C 的 provisioning、发布协议、回退）（2026-11-16：`plans.ts` / `versions.ts`，`plans.db` 14 + `versions.db` 32 例；与 C 真实 `segments` 的一致性在任务 12 的契约测试里确认）
 - [x] 任务 5 · 运行内核与圈定（**第一条可演示的纵向**）（2026-11-16：`engine/claim.ts`、`engine/runner.ts`、`runs.ts`、`assemble.ts`，`circle.db` 31 例；**`judgement circle` 的 CLI 级测试随任务 11 的 CLI 一并做**）
-- [ ] 任务 6 · 试跑（第 2 层）：依赖协调、等待、报告
+- [x] 任务 6 · 试跑（第 2 层）：依赖协调、等待、报告（2026-11-16：`scores` 阶段、`runs.trial / trialReport`，`trial.db` 16 例；真实评分耗时在任务 12）
 - [ ] 任务 7 · 执行（第 1、2 层 + 账号要求）：确认执行、聚合、零内容、计划总结果
 - [ ] 任务 8 · 第 3 层与评论：采集需求、ASR 判定、评论要求
 - [ ] 任务 9 · 对 E 的读取口、解释、保留与清理
@@ -145,7 +145,7 @@
   - **演示**：造一个活动计划（20 个专员、每人 10 条内容）→ `judgement plan create` → `config set` → `judgement circle` → 看到圈定条数与按原因的未获取分布。
   - **未证明**：真实 A 同步写入并发下的冻结一致性——测试机上用 `a-full-sync` 的 smoke 数据复核一次（任务 12）。
 
-- [ ] 6. 试跑（第 2 层）
+- [x] 6. 试跑（第 2 层）
   - **Requirements:** JP-6、JP-13
   - **Design:** §5.3、§7.2（`scores` 阶段）、§7.8、§7.10
   - `engine/deps.ts`（分批、`requestScores` / `readMany` 轮询、两类等待上限、`dependency_timeout`）；`scores` 阶段（截断后的内容 C1 + `target=avatar|background` 的账号能力主体）；`compare` 运行（自己重做冻结、范围构建与第 1 层，不拷贝圈定运行）；`trialReport`（每档最多 5 个样例）；向导进度 `circled → compared`；`trial` / `trial-report` 命令。

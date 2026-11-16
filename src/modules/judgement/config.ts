@@ -5,6 +5,9 @@ import { jcsSha256, type JcsValue } from "../canonical-json";
 import { bjtDayStartUtc } from "./engine/pure/window";
 import { thresholdToCents, centsToText } from "./engine/pure/conditions";
 
+/** 阈值 / 分数字符串 → 整数百分位（整数运算，不用浮点）。 */
+export const centsOfThreshold = thresholdToCents;
+
 export const CONFIG_SCHEMA_VERSION = 1;
 export const QUANTITY_MIN = 1;
 export const QUANTITY_MAX = 1000;
@@ -132,7 +135,7 @@ const SCORE_SIGNAL: Record<Ability["kind"] & string, Record<Ability["target"], s
   whole_image: { cover: "content.cover_template_score", avatar: "account.avatar_template_score", background: "account.bg_template_score" },
   image_element: { cover: "content.cover_element_score", avatar: "account.avatar_element_score", background: "account.bg_element_score" },
 };
-const scoreSignalOf = (a: Ability): string => SCORE_SIGNAL[a.kind]![a.target];
+export const scoreSignalOf = (a: Ability): string => SCORE_SIGNAL[a.kind]![a.target];
 
 /** 配置用到的信号键（不含 element_key；用于平台可得性校验）。 */
 export function requiredSignals(cfg: Config): Set<string> {

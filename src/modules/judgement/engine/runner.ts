@@ -9,14 +9,15 @@ import { sha256Utf8 } from "../../canonical-json";
 import type { Clock } from "../../raw-capture/ports";
 import type { JudgementAudit } from "../audit";
 import type { JudgementAuthz } from "../authz";
-import { configSha256, parseConfig, type Config } from "../config";
+import { accountAbilities, configSha256, contentAbilities, parseConfig, scoreSignalOf, type Ability, type Config } from "../config";
 import type { JudgementConfig } from "../env";
 import { JudgementError } from "../errors";
 import type { ActivityPlanFact, Facts } from "../facts";
 import type { SignalLike } from "./pure/types";
 import type { SignalsPort, SignalActor } from "../ports";
+import { SignalError } from "../../signals/errors";
 import { type Claim, type RunRow, StaleLeaseError } from "./claim";
-import { evalDuration, evalHashtags, evalKeywords } from "./pure/conditions";
+import { evalDuration, evalHashtags, evalKeywords, evalScore, thresholdToCents } from "./pure/conditions";
 import { combineLayer, type LayerResult } from "./pure/layer";
 import { selectLayer1 } from "./pure/select";
 import { bjtDaysToUtc } from "./pure/window";
@@ -60,7 +61,7 @@ type Out =
   | { kind: "done" }
   | { kind: "fail"; code: string; detail?: unknown };
 export type TickResult = "continue" | "waiting" | "terminal" | "stale";
-const PHASES_BY_KIND: Record<string, readonly string[]> = { circle: ["freeze", "scope", "layer1", "select", "finalize"], compare: ["freeze", "scope", "layer1", "select", "finalize"], execution: ["freeze", "scope", "layer1", "select", "finalize"] };
+const PHASES_BY_KIND: Record<string, readonly string[]> = { circle: ["freeze", "scope", "layer1", "select", "finalize"], compare: ["freeze", "scope", "layer1", "select", "scores", "finalize"], execution: ["freeze", "scope", "layer1", "select", "scores", "finalize"] };
 
 const hex = (b: Buffer | Uint8Array): string => Buffer.from(b).toString("hex");
 
@@ -261,9 +262,125 @@ export function createRunner(deps: RunnerDeps) {
         await tx.update(runParticipants).set({ reasonDetail: { ...((cur?.d as object | null) ?? {}), like_not_value: likeNotValue } as never }).where(and(eq(runParticipants.runId, run.runId), eq(runParticipants.accountId, p.accountId)));
       });
     }
-    return { kind: "advance", phase: "finalize" };
+    return { kind: "advance", phase: run.runKind === "circle" ? "finalize" : "scores" };
   }
 
+  // ---- scores（第 2 层素材比对；试跑与执行共用，只对第 1 层选中的内容与账号能力的账号请求）-------------------------
+  const chunk = <T,>(xs: readonly T[], n: number): T[][] => Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, i * n + n));
+  const mergeDetail = async (env: Env, patch: Record<string, unknown>): Promise<void> => {
+    const next = { ...((env.run.phaseDetail as object | null) ?? {}), ...patch };
+    await claim.withFence(env.run, async (tx) => void (await tx.update(judgementRuns).set({ phaseDetail: next as never, updatedAt: clock.now() }).where(eq(judgementRuns.runId, env.run.runId))));
+    env.run = { ...env.run, phaseDetail: next as never };
+  };
+  const signalsOf = (abs: readonly Ability[]): string[] => [...new Set(abs.map(scoreSignalOf))];
+  const paramOf = (ref: { planId: bigint; version: number }, a: Ability) => ({ segment: ref, ...(a.kind === "image_element" ? { elementKey: a.elementKey! } : {}) });
+  const evidenceOf = (a: Ability, r: { state: string; detail?: Record<string, unknown> | undefined; reason?: string | undefined }) => ({ id: a.abilityId, kind: a.kind, target: a.target, state: r.state, ...(r.detail ?? {}), ...(r.reason ? { reason: r.reason } : {}) });
+
+  async function scores(env: Env): Promise<Out> {
+    const { run, cfg, actor } = env;
+    const ref = { planId: run.planId, version: run.version };
+    const cAbs = contentAbilities(cfg);
+    const aAbs = accountAbilities(cfg);
+    const detail = (run.phaseDetail ?? {}) as { requestedContent?: boolean; requestedAccount?: boolean; waitDeadline?: string };
+    const deadline = detail.waitDeadline ? new Date(detail.waitDeadline) : null;
+    const expired = deadline !== null && clock.now() >= deadline;
+    const fingerprint = hex(sha256Utf8(JSON.stringify({ run: String(run.runId), plan: String(run.planId), version: run.version, cfg: env.frozen.configSha256 })));
+    const request = async (subjects: Array<{ kind: "content" | "account"; id: bigint }>, only: string[]): Promise<Out | null> => {
+      for (const part of chunk(subjects, config.signalBatch)) {
+        try {
+          await signals.requestScores(actor, ref, part, { caller: run.submittedByActor, scopeFingerprint: fingerprint, only });
+        } catch (e) {
+          if (e instanceof SignalError && e.code === "not_executable") return { kind: "fail", code: "not_executable", detail: { blockers: e.detail } };
+          throw e;
+        }
+      }
+      return null;
+    };
+    // 待比对的内容：被第 1 层选中（或没有数量要求）、没有停在前层、l2 还没评估
+    const pendingFilter = and(eq(runContents.runId, run.runId), eq(runContents.l0, "pass"), sql`${runContents.l1} IN ('pass','not_configured')`, sql`(${runContents.layer1Selected} IS NULL OR ${runContents.layer1Selected} = TRUE)`, isNull(runContents.l2));
+    if (cAbs.length === 0) {
+      await claim.withFence(run, async (tx) => void (await tx.update(runContents).set({ l2: "not_configured" }).where(pendingFilter)));
+    } else {
+      if (!detail.requestedContent) {
+        const ids = await db.select({ id: runContents.contentId }).from(runContents).where(pendingFilter).orderBy(asc(runContents.contentId));
+        const bad = await request(ids.map((r) => ({ kind: "content" as const, id: r.id })), signalsOf(cAbs));
+        if (bad) return bad;
+        await mergeDetail(env, { requestedContent: true });
+      }
+      const skip = new Set<bigint>();
+      let waiting = 0;
+      for (;;) {
+        if (Date.now() - env.startedMs > config.tickBudgetMs) return { kind: "more" };
+        const batch = (await db.select({ contentId: runContents.contentId }).from(runContents).where(pendingFilter).orderBy(asc(runContents.contentId)).limit(config.signalBatch + skip.size)).filter((r) => !skip.has(r.contentId)).slice(0, config.signalBatch);
+        if (batch.length === 0) break;
+        const subjects = batch.map((b) => ({ kind: "content" as const, id: b.contentId }));
+        const read = new Map<string, Map<bigint, SignalLike>>();
+        for (const a of cAbs) read.set(a.abilityId, await signals.readMany(actor, subjects, scoreSignalOf(a), { param: paramOf(ref, a) }));
+        const missing: SignalLike = { state: "missing", usable: false, reason: "not_computed" };
+        const results = batch.map((b) => {
+          const conds = cAbs.map((a) => evalScore(thresholdToCents(a.threshold), read.get(a.abilityId)!.get(b.contentId) ?? missing));
+          return { contentId: b.contentId, layer: combineLayer(conds), evidence: { l2: { abilities: cAbs.map((a, i) => evidenceOf(a, conds[i]!)) } } };
+        });
+        for (const r of results) if (r.layer.state === "waiting" && !expired) (skip.add(r.contentId), waiting++);
+        await claim.withFence(run, async (tx) => {
+          for (const r of results.filter((x) => x.layer.state !== "waiting" || expired)) {
+            const st = r.layer.state === "waiting" ? "unobtained" : r.layer.state;
+            const stop = st === "fail" || st === "unobtained";
+            const [cur] = await tx.select({ ev: runContents.evidence, stale: runContents.stale }).from(runContents).where(and(eq(runContents.runId, run.runId), eq(runContents.contentId, r.contentId)));
+            await tx
+              .update(runContents)
+              .set({ l2: st, ...(stop ? { l3: "skipped", final: st, stopLayer: "2", reasonCode: (r.layer.state === "waiting" ? "dependency_timeout" : r.layer.reason) ?? null } : {}), stale: Boolean(cur?.stale) || r.layer.stale, evidence: { ...((cur?.ev as object | null) ?? {}), ...r.evidence } as never })
+              .where(and(eq(runContents.runId, run.runId), eq(runContents.contentId, r.contentId), isNull(runContents.l2)));
+          }
+        });
+      }
+      if (waiting > 0) return { kind: "wait" };
+    }
+    // 账号能力（头像 / 主页背景）：对名单账号比对，不依赖内容层
+    if (aAbs.length > 0) {
+      const people = await db.select({ accountId: runParticipants.accountId, detail: runParticipants.accountDetail }).from(runParticipants).where(eq(runParticipants.runId, run.runId)).orderBy(asc(runParticipants.accountId));
+      if (!detail.requestedAccount) {
+        const ids = people.map((p) => p.accountId);
+        const asg = await facts.assignmentsOf(ids);
+        const prof = await facts.profileOf(ids);
+        const ready: bigint[] = [];
+        await claim.withFence(run, async (tx) => {
+          for (const id of ids) {
+            const reason = asg.get(id)?.slotReleasedAt ? "account_unavailable" : prof.get(id) ? null : "no_profile_snapshot";
+            if (reason) await tx.update(runParticipants).set({ accountDetail: { result: "unobtained", reason, abilities: [] } as never }).where(and(eq(runParticipants.runId, run.runId), eq(runParticipants.accountId, id)));
+            else ready.push(id);
+          }
+        });
+        const bad = await request(ready.map((id) => ({ kind: "account" as const, id })), signalsOf(aAbs));
+        if (bad) return bad;
+        await mergeDetail(env, { requestedAccount: true });
+      }
+      const open = (await db.select({ accountId: runParticipants.accountId }).from(runParticipants).where(and(eq(runParticipants.runId, run.runId), isNull(runParticipants.accountDetail))).orderBy(asc(runParticipants.accountId))).map((r) => r.accountId);
+      let waiting = 0;
+      for (const part of chunk(open, config.signalBatch)) {
+        const subjects = part.map((id) => ({ kind: "account" as const, id }));
+        const read = new Map<string, Map<bigint, SignalLike>>();
+        for (const a of aAbs) read.set(a.abilityId, await signals.readMany(actor, subjects, scoreSignalOf(a), { param: paramOf(ref, a) }));
+        const missing: SignalLike = { state: "missing", usable: false, reason: "not_computed" };
+        const writes: Array<{ id: bigint; value: unknown }> = [];
+        for (const id of part) {
+          const conds = aAbs.map((a) => evalScore(thresholdToCents(a.threshold), read.get(a.abilityId)!.get(id) ?? missing));
+          const layer = combineLayer(conds);
+          if (layer.state === "waiting" && !expired) {
+            waiting++;
+            continue;
+          }
+          const result = layer.state === "waiting" ? "unobtained" : layer.state;
+          writes.push({ id, value: { result, ...(layer.state === "waiting" ? { reason: "dependency_timeout" } : layer.reason ? { reason: layer.reason } : {}), abilities: aAbs.map((a, i) => evidenceOf(a, conds[i]!)), stale: layer.stale } });
+        }
+        await claim.withFence(run, async (tx) => {
+          for (const w of writes) await tx.update(runParticipants).set({ accountDetail: w.value as never }).where(and(eq(runParticipants.runId, run.runId), eq(runParticipants.accountId, w.id), isNull(runParticipants.accountDetail)));
+        });
+      }
+      if (waiting > 0) return { kind: "wait" };
+    }
+    return { kind: "advance", phase: "finalize" };
+  }
   // ---- finalize ------------------------------------------------------------------------------------------------
   async function finalize(env: Env): Promise<Out> {
     const { run } = env;
@@ -285,12 +402,14 @@ export function createRunner(deps: RunnerDeps) {
           WHERE r.run_id = ${id}`);
         // 圈定成功 → 向导进度 circled（只从 draft 起步，不回退已到 compared 的进度）
         if (run.runKind === "circle") await tx.update(judgementPlanVersions).set({ wizardStep: "circled", updatedAt: clock.now() }).where(and(eq(judgementPlanVersions.planId, run.planId), eq(judgementPlanVersions.version, run.version), eq(judgementPlanVersions.status, "draft"), eq(judgementPlanVersions.wizardStep, "draft")));
+        // 试跑成功 → compared（只从 circled 起步）
+        if (run.runKind === "compare") await tx.update(judgementPlanVersions).set({ wizardStep: "compared", updatedAt: clock.now() }).where(and(eq(judgementPlanVersions.planId, run.planId), eq(judgementPlanVersions.version, run.version), eq(judgementPlanVersions.status, "draft"), eq(judgementPlanVersions.wizardStep, "circled")));
       },
     );
     return { kind: "done" };
   }
 
-  const PHASE_FN: Record<string, (env: Env) => Promise<Out>> = { freeze, scope, layer1, select, finalize };
+  const PHASE_FN: Record<string, (env: Env) => Promise<Out>> = { freeze, scope, layer1, select, scores, finalize };
 
   // ---- tick ----------------------------------------------------------------------------------------------------
   /** 提交人复核（JP-15）：每个 tick 开头用 contextForUser 现建身份并确认仍持有该类运行所需的 Capability；失败则取消运行。 */

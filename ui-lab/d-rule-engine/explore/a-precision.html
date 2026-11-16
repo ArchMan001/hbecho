@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>A · 精密工作台</title>
+<style>
+  :root {
+    --bg: #f3f5f7;
+    --panel: #ffffff;
+    --ink: #111827;
+    --ink-2: #4b5563;
+    --ink-3: #64707d;
+    --line: #dfe4ea;
+    --line-2: #edf0f3;
+    --accent: #0f766e;
+    --accent-soft: #e6f4f1;
+    --danger: #b42318;
+    --radius: 8px;
+    --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    --mono: "SFMono-Regular", ui-monospace, "Cascadia Code", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  svg { display: block; }
+  .app { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100vh; }
+  .sidebar { background: #fff; border-right: 1px solid var(--line); padding: 18px 14px; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 6px 20px; }
+  .brand-mark { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; background: var(--accent); color: #fff; font-weight: 700; font-size: 14px; }
+  .brand b { display: block; font-size: 14px; letter-spacing: .2px; }
+  .brand span { display: block; font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
+  .nav-label { padding: 10px 8px 6px; font-size: 10px; letter-spacing: .12em; color: var(--ink-3); }
+  .nav-item { display: flex; align-items: center; gap: 9px; height: 34px; padding: 0 9px; border-radius: 7px; color: var(--ink-2); text-decoration: none; font-size: 12.5px; }
+  .nav-item svg { width: 15px; height: 15px; opacity: .8; }
+  .nav-item.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .nav-item.on svg { opacity: 1; }
+  .sidebar-foot { margin-top: auto; border-top: 1px solid var(--line-2); padding-top: 12px; }
+  .role { border: 1px solid var(--line); border-radius: 7px; padding: 9px 10px; background: #fbfcfd; }
+  .role small { display: block; color: var(--ink-3); font-size: 10px; letter-spacing: .08em; margin-bottom: 4px; }
+  .role b { font-size: 12px; font-weight: 600; }
+  .main { min-width: 0; }
+  .topbar { height: 48px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.82); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 5; }
+  .crumbs { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--ink-3); }
+  .crumbs b { color: var(--ink-2); font-weight: 550; }
+  .top-meta { display: flex; gap: 14px; font-size: 11.5px; color: var(--ink-2); }
+  .top-meta span { display: flex; align-items: center; gap: 5px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #28a37a; }
+  .page { padding: 12px 24px 14px; max-width: 1240px; }
+  .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+  .back { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--ink-3); text-decoration: none; margin-bottom: 8px; }
+  h1 { margin: 0; font-size: 21px; letter-spacing: -.2px; font-weight: 680; display: flex; align-items: center; gap: 9px; }
+  .badge { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border: 1px solid #ead9bd; border-radius: 4px; background: #fff8eb; color: #9a6718; font-size: 10.5px; font-weight: 600; }
+  .sub { margin: 4px 0 0; font-size: 11.5px; color: var(--ink-3); }
+  .head-actions { display: flex; gap: 8px; padding-top: 20px; }
+  .btn { height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line); background: #fff; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 550; white-space: nowrap; }
+  .btn svg { width: 14px; height: 14px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--ink-3); }
+  .steps { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); margin: 9px 0 10px; border-bottom: 1px solid var(--line); }
+  .step { display: flex; gap: 9px; align-items: flex-start; padding: 0 0 12px; position: relative; color: var(--ink-3); }
+  .step + .step::before { content: ""; position: absolute; left: -10px; top: 10px; width: 1px; height: 12px; background: var(--line); }
+  .step-num { width: 21px; height: 21px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); background: #fff; font-size: 10.5px; font-family: var(--mono); flex: none; }
+  .step.done .step-num { background: var(--accent-soft); border-color: #b9ded7; color: var(--accent); }
+  .step.now { color: var(--ink); }
+  .step.now .step-num { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .step b { display: block; font-size: 12px; font-weight: 600; line-height: 1.35; }
+  .step small { display: block; font-size: 10.5px; margin-top: 1px; color: var(--ink-3); }
+  .step.now::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--accent); }
+  .layout { display: grid; grid-template-columns: minmax(0,1fr) 250px; gap: 18px; align-items: start; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+  .card-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 10px 16px 8px; border-bottom: 1px solid var(--line-2); }
+  .card-head h2 { margin: 0; font-size: 15px; font-weight: 680; letter-spacing: -.1px; }
+  .card-head p { margin: 3px 0 0; font-size: 11px; color: var(--ink-3); }
+  .card-body { padding: 12px; }
+  .add { height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink-2); display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 550; }
+  .add svg { width: 13px; height: 13px; }
+  .inspection { border: 1px solid var(--line); border-radius: 7px; background: #fff; }
+  .inspection + .inspection { margin-top: 8px; }
+  .insp-head { display: grid; grid-template-columns: 30px minmax(0,1fr) auto 28px; align-items: center; gap: 10px; min-height: 39px; padding: 0 10px 0 12px; background: #fafbfc; border-bottom: 1px solid var(--line-2); border-radius: 7px 7px 0 0; }
+  .idx { font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: .02em; }
+  .alias { font-size: 12.5px; font-weight: 600; letter-spacing: -.05px; }
+  .type { display: inline-flex; align-items: center; height: 19px; padding: 0 6px; border-radius: 4px; border: 1px solid var(--line); background: #fff; color: var(--ink-3); font-size: 10px; }
+  .type.account { border-color: #d8e3ef; background: #f5f9fd; color: #426b92; }
+  .icon-btn { width: 26px; height: 26px; border: 0; background: transparent; border-radius: 5px; display: grid; place-items: center; color: var(--ink-3); }
+  .icon-btn svg { width: 14px; height: 14px; }
+  .insp-body { display: grid; grid-template-columns: 148px minmax(0,1fr); gap: 18px; padding: 8px 12px; }
+  .upload { height: 88px; border: 1px dashed #c8d1dc; border-radius: 6px; background: #f8fafb; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink-3); text-align: center; position: relative; overflow: hidden; }
+  .upload svg { width: 18px; height: 18px; color: #6f7d8c; }
+  .upload b { font-size: 11.5px; color: var(--ink-2); font-weight: 550; }
+  .upload small { font-size: 10px; letter-spacing: .02em; }
+  .upload.filled { border-style: solid; border-color: var(--line); background: linear-gradient(135deg, #dce9e6, #f2ede2 55%, #cfdde8); }
+  .upload.filled::after { content: "标准图已归档 · 替换"; position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 8px; background: rgba(17,24,39,.68); color: #fff; font-size: 10px; text-align: left; }
+  .upload .file-tag { position: absolute; top: 7px; left: 7px; padding: 1px 4px; border-radius: 3px; background: #fff; color: var(--ink-3); font-size: 8.5px; font-family: var(--mono); letter-spacing: .04em; }
+  .settings { min-width: 0; display: grid; gap: 12px; align-items: start; }
+  .settings.two { grid-template-columns: minmax(120px,.8fr) minmax(0,1.6fr); }
+  .field label { display: block; font-size: 10.5px; color: var(--ink-3); font-weight: 600; letter-spacing: .04em; margin-bottom: 4px; }
+  .io { height: 30px; border: 1px solid var(--line); border-radius: 5px; background: #fff; padding: 0 8px; display: flex; align-items: center; font-size: 12px; }
+  .io.select { justify-content: space-between; color: var(--ink-2); }
+  .io svg { width: 13px; height: 13px; color: var(--ink-3); }
+  .threshold { border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px 6px; background: #fcfdfd; }
+  .th-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+  .th-head label { margin: 0; }
+  .th-head span { font-size: 9.5px; color: var(--ink-3); font-family: var(--mono); }
+  .th-row { display: grid; grid-template-columns: 24px 58px 24px minmax(0,1fr); align-items: center; gap: 4px; }
+  .step-btn { width: 24px; height: 26px; border: 1px solid var(--line); background: #fff; border-radius: 4px; color: var(--ink-2); display: grid; place-items: center; font-size: 14px; line-height: 1; }
+  .score { height: 26px; border: 1px solid #b9c6d2; border-radius: 4px; text-align: center; font-family: var(--mono); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); background: #fff; }
+  .gauge { position: relative; height: 22px; margin-left: 7px; }
+  .gauge::before { content: ""; position: absolute; left: 0; right: 0; top: 10px; height: 3px; border-radius: 2px; background: #e6ebf0; }
+  .gauge i { position: absolute; top: 10px; left: 0; height: 3px; border-radius: 2px; background: var(--accent); }
+  .gauge b { position: absolute; top: 5px; width: 2px; height: 12px; background: var(--ink); }
+  .gauge b::after { content: ""; position: absolute; top: 10px; left: -2px; border: 3px solid transparent; border-top-color: var(--ink); }
+  .scale { display: flex; justify-content: space-between; margin: 1px 0 0 93px; color: var(--ink-3); font-size: 8.5px; font-family: var(--mono); }
+  .th-hint { margin: 3px 0 0; font-size: 10.5px; color: var(--ink-3); }
+  .method { margin-top: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; padding: 8px 14px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .method-title { font-size: 12px; font-weight: 650; }
+  .method-title span { display: block; font-weight: 400; font-size: 10px; color: var(--ink-3); margin-top: 1px; }
+  .method .field { width: 150px; }
+  .method .field.n { width: 92px; }
+  .method .hint { margin-left: auto; font-size: 10.5px; color: var(--ink-3); }
+  .footer-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  .side { display: grid; gap: 12px; }
+  .side-card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 13px 14px; }
+  .side-title { font-size: 12px; font-weight: 680; margin-bottom: 9px; }
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-top: 1px solid var(--line-2); font-size: 11px; }
+  .kv:first-of-type { border-top: 0; }
+  .kv span:first-child { color: var(--ink-3); }
+  .kv span:last-child { color: var(--ink-2); text-align: right; }
+  .side-card p { margin: 8px 0 0; font-size: 11px; line-height: 1.65; color: var(--ink-3); }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">H</div>
+      <div><b>hbecho</b><span>新媒体运营平台</span></div>
+    </div>
+    <div class="nav-label">工作台</div>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"/></svg>活动计划</a>
+    <a class="nav-item on" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 4h6v3H9zM7 5H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2M8 12h8M8 16h5"/></svg>判定计划</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>报表与看板</a>
+    <div class="nav-label">数据</div>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>账号与监控</a>
+    <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Zm0 0v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>主数据</a>
+    <div class="sidebar-foot"><div class="role"><small>当前角色</small><b>平台超管</b></div></div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div class="crumbs">工作台 <span>/</span> 判定计划 <span>/</span> <b>618 直播切片</b> <span>/</span> <b>第 2 页</b></div>
+      <div class="top-meta"><span><i class="dot"></i>海信 · 抖音</span><span>平台超管</span></div>
+    </div>
+    <div class="page">
+      <div class="page-head">
+        <div>
+          <a class="back" href="#">← 返回判定计划</a>
+          <h1>618 直播切片 <span class="badge">草稿 v1</span></h1>
+          <p class="sub">618 家电焕新季 · 抖音 · 2026-05-20 ~ 2026-06-18</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 5v14l11-7-11-7Z"/></svg>开始试跑</button>
+          <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>回退到第 1 页</button>
+        </div>
+      </div>
+
+      <div class="steps">
+        <div class="step done"><span class="step-num">1</span><span><b>第 1 页 · 圈定</b><small>条数与未获取原因</small></span></div>
+        <div class="step now"><span class="step-num">2</span><span><b>第 2 页 · 比对</b><small>分布、样例与阈值</small></span></div>
+        <div class="step"><span class="step-num">3</span><span><b>第 3 页 · 理解与执行</b><small>ASR、评论与确认</small></span></div>
+        <div class="step"><span class="step-num">4</span><span><b>执行与结果</b><small>记录、证据与 E</small></span></div>
+      </div>
+
+      <div class="layout">
+        <div>
+          <section class="card">
+            <div class="card-head">
+              <div><h2>比对能力</h2><p>按需添加；没有能力时第 2 页视为空配置</p></div>
+              <button class="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>添加能力</button>
+            </div>
+            <div class="card-body">
+              <article class="inspection">
+                <div class="insp-head"><span class="idx">01</span><span class="alias">封面视觉规范</span><span class="type">封面模板</span><button class="icon-btn" aria-label="删除能力"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+                <div class="insp-body">
+                  <div class="upload"><span class="file-tag">PNG / JPG</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0 4 4m-4-4L8 8M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><b>上传标准图</b><small>≤ 10 MiB · 可解码</small></div>
+                  <div class="settings">
+                    <div class="threshold">
+                      <div class="th-head"><label>匹配阈值</label><span>SCORE 0–10</span></div>
+                      <div class="th-row"><button class="step-btn">−</button><input class="score" value="6.50" aria-label="匹配阈值" /><button class="step-btn">+</button><div class="gauge"><i style="width:65%"></i><b style="left:65%"></b></div></div>
+                      <div class="scale"><span>0</span><span>5</span><span>10</span></div>
+                      <p class="th-hint">等于阈值判通过；调整阈值不重算分数。</p>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="inspection">
+                <div class="insp-head"><span class="idx">02</span><span class="alias">封面 logo 校验</span><span class="type">封面元素</span><button class="icon-btn" aria-label="删除能力"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+                <div class="insp-body">
+                  <div class="upload filled"><span class="file-tag">PNG</span></div>
+                  <div class="settings two">
+                    <div class="field"><label>元素键</label><div class="io">logo</div><p class="th-hint">同一元素键只算一个条件</p></div>
+                    <div class="threshold">
+                      <div class="th-head"><label>匹配阈值</label><span>SCORE 0–10</span></div>
+                      <div class="th-row"><button class="step-btn">−</button><input class="score" value="7.00" aria-label="匹配阈值" /><button class="step-btn">+</button><div class="gauge"><i style="width:70%"></i><b style="left:70%"></b></div></div>
+                      <div class="scale"><span>0</span><span>5</span><span>10</span></div>
+                      <p class="th-hint">0.00–10.00，等于阈值判通过。</p>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="inspection">
+                <div class="insp-head"><span class="idx">03</span><span class="alias">头像视觉规范</span><span class="type account">头像 · 账号要求</span><button class="icon-btn" aria-label="删除能力"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+                <div class="insp-body">
+                  <div class="upload"><span class="file-tag">PNG / JPG</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0 4 4m-4-4L8 8M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><b>上传标准图</b><small>≤ 10 MiB · 可解码</small></div>
+                  <div class="settings">
+                    <div class="threshold">
+                      <div class="th-head"><label>匹配阈值</label><span>SCORE 0–10</span></div>
+                      <div class="th-row"><button class="step-btn">−</button><input class="score" value="7.00" aria-label="匹配阈值" /><button class="step-btn">+</button><div class="gauge"><i style="width:70%"></i><b style="left:70%"></b></div></div>
+                      <div class="scale"><span>0</span><span>5</span><span>10</span></div>
+                      <p class="th-hint">账号要求与内容层并行，不依赖内容层。</p>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <div class="method">
+            <div class="method-title">内容达标方式<span>计划级，作用于每名专员的全部内容</span></div>
+            <div class="field"><label>方式</label><div class="io select">至少 N 条<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 9 6 6 6-6"/></svg></div></div>
+            <div class="field n"><label>N</label><div class="io">3</div></div>
+            <div class="hint">调整阈值或达标方式不需要重算分数。</div>
+          </div>
+
+          <div class="footer-actions">
+            <button class="btn ghost">取消</button>
+            <button class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 5v14l11-7-11-7Z"/></svg>开始试跑</button>
+          </div>
+        </div>
+
+        <aside class="side">
+          <div class="side-card">
+            <div class="side-title">试跑说明</div>
+            <div class="kv"><span>输入</span><span>圈定留下的 C1</span></div>
+            <div class="kv"><span>外部调用</span><span>只经 C 的评分</span></div>
+            <div class="kv"><span>第 3 层</span><span>不触发</span></div>
+            <div class="kv"><span>费用</span><span>模板 / 元素匹配免费</span></div>
+            <p>试跑是 rule.definition.manage 能力，不是 rule.run.execute；运行结果按保留期清理。</p>
+          </div>
+          <div class="side-card">
+            <div class="side-title">素材缺失</div>
+            <p>封面 / 头像未归档、下载失败或只有 carried_forward 时，该对象记未获取成功，并带 C 的原因码。D 不提图片采集需求。</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

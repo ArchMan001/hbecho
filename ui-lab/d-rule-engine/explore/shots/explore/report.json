@@ -1,0 +1,104 @@
+[
+  {
+    "file": "a-precision.png",
+    "target": "/Users/liuxuekui/Documents/hbecho/ui-lab/d-rule-engine/explore/a-precision.html",
+    "name": "A · 精密工作台",
+    "state": null,
+    "size": "1440x900",
+    "zoom": 1,
+    "thumb": true,
+    "animationWaitMs": 0,
+    "issues": [],
+    "lint": []
+  },
+  {
+    "file": "b-soft.png",
+    "target": "/Users/liuxuekui/Documents/hbecho/ui-lab/d-rule-engine/explore/b-soft.html",
+    "name": "B · 柔和层叠",
+    "state": null,
+    "size": "1440x900",
+    "zoom": 1,
+    "thumb": true,
+    "animationWaitMs": 0,
+    "issues": [],
+    "lint": []
+  },
+  {
+    "file": "c-ledger.png",
+    "target": "/Users/liuxuekui/Documents/hbecho/ui-lab/d-rule-engine/explore/c-ledger.html",
+    "name": "C · 编辑台式",
+    "state": null,
+    "size": "1440x900",
+    "zoom": 1,
+    "thumb": true,
+    "animationWaitMs": 0,
+    "issues": [],
+    "lint": []
+  },
+  {
+    "file": "sheet.png",
+    "width": 2000,
+    "height": 480,
+    "columns": 3,
+    "items": [
+      {
+        "naturalWidth": 720,
+        "naturalHeight": 450,
+        "scale": 1,
+        "renderScale": 0.8888888888888888,
+        "sourceCrop": {
+          "x": 0,
+          "y": 0,
+          "width": 720,
+          "height": 450
+        },
+        "width": 640,
+        "height": 400,
+        "labelHeight": 32,
+        "x": 24,
+        "y": 24,
+        "label": "A · 精密工作台",
+        "labelY": 432
+      },
+      {
+        "naturalWidth": 720,
+        "naturalHeight": 450,
+        "scale": 1,
+        "renderScale": 0.8888888888888888,
+        "sourceCrop": {
+          "x": 0,
+          "y": 0,
+          "width": 720,
+          "height": 450
+        },
+        "width": 640,
+        "height": 400,
+        "labelHeight": 32,
+        "x": 680,
+        "y": 24,
+        "label": "B · 柔和层叠",
+        "labelY": 432
+      },
+      {
+        "naturalWidth": 720,
+        "naturalHeight": 450,
+        "scale": 1,
+        "renderScale": 0.8888888888888888,
+        "sourceCrop": {
+          "x": 0,
+          "y": 0,
+          "width": 720,
+          "height": 450
+        },
+        "width": 640,
+        "height": 400,
+        "labelHeight": 32,
+        "x": 1336,
+        "y": 24,
+        "label": "C · 编辑台式",
+        "labelY": 432
+      }
+    ],
+    "issues": []
+  }
+]

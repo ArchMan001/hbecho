@@ -1,6 +1,8 @@
 # Rule Engine Design
 
-> **状态**：`draft`  
+> **2026-11-12：已被 [`d-rule-engine`](../d-rule-engine/design.md)（draft）取代。** 新 spec 按 D 域 PRD v1.1 重写了判定模型、数据模型与对 E 的输出契约；本文的 `AssessmentItem`、`composite`、分项率、`OutcomeSet` 的 item→run 映射都不再成立，**不得据此实现**。待 `d-rule-engine` 的闸门（其 tasks 任务 0）通过后，本文移到 `HBECHO设计方案/archive/` 并修复 INDEX、PRD D、PRD C、子 PRD 草案与 `metrics-and-dashboard/design.md` 里的链接；在那之前保留原位，正文未改。
+
+> **状态**：`draft`（已被取代）  
 > **模式**：Design-First；本轮重构历史技术设计，不包含 requirements/tasks  
 > **适用范围**：考核项、规则目录、纯求值、依赖规划、运行与证据、结果激活及下游契约  
 > **所属域**：D 规则与考核 · **目录命名**：旧名 `rule-engine`，按域代号应为 `d-rule-engine`；本目录当前只有 design.md（`requirements.md` 已从仓库移除）  

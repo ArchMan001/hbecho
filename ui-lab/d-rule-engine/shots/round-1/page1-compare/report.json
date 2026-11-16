@@ -1,0 +1,49 @@
+[
+  {
+    "file": "stitch.png",
+    "width": 1344,
+    "height": 560,
+    "columns": 2,
+    "items": [
+      {
+        "naturalWidth": 640,
+        "naturalHeight": 480,
+        "scale": 1.125,
+        "renderScale": 1,
+        "sourceCrop": {
+          "x": 0,
+          "y": 0,
+          "width": 640,
+          "height": 480
+        },
+        "width": 640,
+        "height": 480,
+        "labelHeight": 32,
+        "x": 24,
+        "y": 24,
+        "label": "第 1 轮前 · 第 1 页",
+        "labelY": 512
+      },
+      {
+        "naturalWidth": 1440,
+        "naturalHeight": 900,
+        "scale": 0.5,
+        "renderScale": 0.4444444444444444,
+        "sourceCrop": {
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 900
+        },
+        "width": 640,
+        "height": 400,
+        "labelHeight": 32,
+        "x": 680,
+        "y": 24,
+        "label": "第 1 轮后 · 第 1 页",
+        "labelY": 432
+      }
+    ],
+    "issues": []
+  }
+]

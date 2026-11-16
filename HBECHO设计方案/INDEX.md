@@ -13,7 +13,7 @@
 3. 理解产品目标、模块地图和阶段：[`prd-platform.md`](prd-platform.md)；已开写的子 PRD：[A 数据底座](prd-domain-a-data-foundation.md)、[B 访问控制](prd-domain-b-access-control.md)、[C 识别能力](prd-domain-c-signals.md)、[D 规则与考核](prd-domain-d-rule-engine.md)、[E 指标与看板](prd-domain-e-metrics.md)、[F 业务应用](prd-domain-f-business-apps.md)、[G 学习平台](prd-domain-g-learning.md)、[H AI 能力](prd-domain-h-ai.md)、[I 运维与成本](prd-domain-i-ops.md)
 4. 实现数据获取与资产域：[`database-design-v2.md`](domains/data-foundation/database-design-v2.md)
 5. 实现当前纵向切片：[`a-data-foundation-tracer`](../.kiro/specs/a-data-foundation-tracer/)
-6. 评审后续模块设计：[`b-access-control`](../.kiro/specs/b-access-control/design.md)、[`a-activity-plan`](../.kiro/specs/a-activity-plan/design.md)、[`rule-engine`](../.kiro/specs/rule-engine/design.md)、[`metrics-and-dashboard`](../.kiro/specs/metrics-and-dashboard/design.md)
+6. 评审后续模块设计：[`b-access-control`](../.kiro/specs/b-access-control/design.md)、[`a-activity-plan`](../.kiro/specs/a-activity-plan/design.md)、[`d-rule-engine`](../.kiro/specs/d-rule-engine/design.md)、[`metrics-and-dashboard`](../.kiro/specs/metrics-and-dashboard/design.md)
 7. 配置 hbecho 的服务器、OSS、密钥、Git 与部署：[`server-operations-runbook.md`](runbooks/server-operations-runbook.md)
 8. 开发、验证、CI、测试 ECS 与生产发布：[`dev-test-deploy-workflow.md`](runbooks/dev-test-deploy-workflow.md)
 9. 从 0 配置一台新服务器（hbdam 或其他项目）：[`new-server-bootstrap-checklist.md`](runbooks/new-server-bootstrap-checklist.md)
@@ -199,7 +199,6 @@ flowchart LR
 | `b-access-control` | B | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | B v1.21（current） | 2026-11-06 初建；替代并归档旧 `access-control/design.md`（继承与舍弃见 design §2.3）；仓库里 Next.js 只有无页面的 Route Handler 入口（`src/app`，`next build` 已一次性验证）；better-auth 已于 2026-11-10 锁定 1.7.18 并完成任务 1 验证（S1–S9 全部通过，认证表 ID 自增 BIGINT 通过，天花板与五处库外补丁见 [ADR-0015](architecture/adr/0015-auth-boundary-and-disabled-phone.md)，accepted，2026-11-10）；要求 `import_batches.import_kind` 增加 `user_import`；ADR-0005 已知坑 5 已订正为 B-D14 口径；页面任务 P1–P5 于 2026-11-11 实施并合并 `main`（Dockerfile、CI image job、测试 ECS 部署见 tasks 与运维手册 P6）；任务 1–12 于 2026-11-10 实施完成（本机 `verify.sh`、测试 ECS 运行记录见 tasks 实施记录）|
 | `c-signals` | C | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | C v1.3（定稿候选） | 2026-11-11 初建，2026-11-12 经三轮审查修订并通过任务 0 闸门（13 项采纳），任务 0–13 已实现并离线验证（分支 `c-signals`，待合并 `main`）；与 PRD v1.2 的字面差异（不做 pHash 预筛、标点方向、信号触发点、瞬时 / 确定性失败等）已在 PRD v1.3 订正（C-D15～C-D20，C-D09 前半句按规矩加删除线修订）；handoff 文档已在文首标注过时内容，ADR-0001 / ADR-0012 已增补；路线图排在 H 之前，故第 3 层定义 `AiGatewayPort` 并默认 disabled；标准图桶已创建；匹配分标定（缺业务样本）、监控段 API 与 D 的对齐为外部依赖 |
 | `d-rule-engine` | D | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | D v1.2（定稿候选） | 2026-11-12 初建，未实施，闸门未通过；判定模型按 D-71 重写（内容逐层过滤、无考核项 / composite / 分项率）；2026-11-16 同步 v1.2（数量 N、对比元素、别名、内容要求启用规则 D-D21 / D-D22）；C 已合入 `main`，对 C 的复核见 design §10.3，与 E 的对齐请求见 §10.4；界面设计已确认（2026-11-13，§15.6），页面任务 13–16 |
-| `rule-engine` | D | 旧名 | 仅 design | D v1.0（定稿候选） | **已被 `d-rule-engine` 取代**（文首已标注，正文未改）；待 `d-rule-engine` 任务 0 归档到 `archive/` 并修复 4 处链接 |
 | `metrics-and-dashboard` | E | 旧名，应为 `e-metrics` | 仅 design | E v1.0（定稿候选） | 已改：`n_day` 降为 2.0、投影自动激活；design 待同步分项列与两层分母 |
 | `g-learning-min` | G | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | G v1.0（定稿候选） | 已按 ADR-0007 去掉自动截图；spec 已同步 G v1.0.2（2026-11-11） |
 
@@ -216,6 +215,7 @@ flowchart LR
 | [`database-design-v1.md`](archive/data-foundation/database-design-v1.md) | archived | [`database-design-v2.md`](domains/data-foundation/database-design-v2.md) |
 | [`data-supply-mvp.md`](archive/data-foundation/data-supply-mvp.md) | superseded | v2 + `a-data-foundation-tracer` |
 | [`data-supply-and-assets.md`](archive/data-foundation/data-supply-and-assets.md) | superseded | v2 + `a-data-foundation-tracer` |
+| [`rule-engine-design-2026-09-02.md`](archive/rule-engine-design-2026-09-02.md) | superseded | [`d-rule-engine`](../.kiro/specs/d-rule-engine/design.md) |
 | [`access-control-design-2026-11-04.md`](archive/access-control-design-2026-11-04.md) | superseded | [`b-access-control`](../.kiro/specs/b-access-control/design.md)（2026-11-06；继承与舍弃见其 design §2.3） |
 
 两份 superseded 数据供给稿仍可用于追溯 parser fixture、错误分类、反腐层、限流/熔断和 raw-before-parse 的早期思路，但其中的旧表名、旧状态、旧组织模型和 API 假设均不得直接实现。

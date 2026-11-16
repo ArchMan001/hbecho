@@ -34,7 +34,7 @@
 4. [`c-signals`](../c-signals/requirements.md) spec 与 [`prd-domain-c-signals.md`](../../../HBECHO设计方案/prd-domain-c-signals.md)：信号、监控段、补算与读取口的合同；
 5. [`prd-domain-e-metrics.md`](../../../HBECHO设计方案/prd-domain-e-metrics.md)、[`prd-domain-b-access-control.md`](../../../HBECHO设计方案/prd-domain-b-access-control.md)、[`prd-domain-h-ai.md`](../../../HBECHO设计方案/prd-domain-h-ai.md)：消费方、授权与模型通道的产品语义；D 与它们冲突时先停下来协调；
 6. [`a-activity-plan`](../a-activity-plan/requirements.md)、[`a-full-sync`](../a-full-sync/requirements.md)、[`b-access-control`](../b-access-control/requirements.md)：已合并的实现与约定；
-7. 本 spec：不得静默改写以上事实。旧 [`rule-engine/design.md`](../rule-engine/design.md)（文首已标注被本 spec 取代，待任务 0 归档）只作历史素材，其中的 `AssessmentItem`、`composite`、分项率、同平台多账号聚合、`OutcomeSet` 的 item→run 映射都**不再成立**。
+7. 本 spec：不得静默改写以上事实。旧 [`rule-engine` design](../../../HBECHO设计方案/archive/rule-engine-design-2026-09-02.md)（已于 2026-11-16 归档）只作历史素材，其中的 `AssessmentItem`、`composite`、分项率、同平台多账号聚合、`OutcomeSet` 的 item→run 映射都**不再成立**。
 
 ### 1.2 上游与依赖
 

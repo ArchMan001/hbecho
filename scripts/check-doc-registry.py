@@ -35,7 +35,7 @@ REQUIRED = [
 ]
 
 # 只有 design.md 的 spec，必须在 HBECHO设计方案/INDEX.md 明确登记。新增条目要单独评审，不要在这里顺手放宽。
-DESIGN_ONLY_SPECS = {"rule-engine", "metrics-and-dashboard"}
+DESIGN_ONLY_SPECS = {"metrics-and-dashboard"}
 
 # 受控 legacy 文件：位置已统一到 archive/legacy/，仍必须由 INDEX 逐项登记（INDEX §8.2）。
 LEGACY_FILES = [

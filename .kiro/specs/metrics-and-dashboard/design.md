@@ -34,7 +34,7 @@ flowchart LR
 
 1. [`CONTEXT.md`](../../../CONTEXT.md)：稳定身份、历史归属、ContentDiscovery、快照、ValueState 和时间语义；
 2. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座当前事实与约束；
-3. [`rule-engine/design.md`](../rule-engine/design.md)：OutcomeSet、ParticipantFact、ItemOutcomeFact 和 AttributionSnapshot 契约；
+3. [`d-rule-engine/design.md`](../d-rule-engine/design.md)（旧 `rule-engine` 已被取代；`OutcomeSet` 等已由 `JudgementOutcomeReader` 取代，见其 §10.4）：OutcomeSet、ParticipantFact、ItemOutcomeFact 和 AttributionSnapshot 契约；
 4. [`b-access-control/design.md`](../b-access-control/design.md)：Capability、DataScope 和异步撤权语义；
 5. 本设计：指标、投影、报表、看板和导出；
 6. 历史输入：[`hbecho-模块设计-指标与看板.md`](../../../HBECHO设计方案/prd-drafts-子PRD草案/hbecho-模块设计-指标与看板.md)。

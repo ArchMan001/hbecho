@@ -12,13 +12,13 @@ function setup(brandRows: Array<{ code: string }> = [{ code: "HITACHI" }]) {
   const registry = createRegistry();
   registerJudgementAuthz(registry);
   const queries: number[] = [];
-  const db = { select: () => ({ from: () => ({ where: async () => { queries.push(1); return brandRows; } }) }) } as never;
+  const facts = { brandCodesOf: async () => { queries.push(1); return brandRows.map((r) => r.code); } };
   const resolverCalls: bigint[] = [];
   let resolverResult: { ok: true; ctx: AuthContext } | { ok: false; kind: "unauthenticated"; reason: "user_not_active" } = { ok: true, ctx: ctxOf("hq_manager", "user:7") };
   const authz = createJudgementAuthz({
     authorizer: createAuthorizer({ registry }),
     resolver: { contextForUser: async (id: bigint) => { resolverCalls.push(id); return resolverResult as never; } },
-    db,
+    facts,
   });
   return { authz, registry, queries, resolverCalls, setResolver: (r: typeof resolverResult) => (resolverResult = r) };
 }
@@ -102,7 +102,7 @@ describe("提交人身份（继承，不新增服务身份）", () => {
   it("toDemandActor：actorId 等于提交人；缺 data.sync.trigger 被拒；范围放宽到全平台是有意的窄适配", () => {
     const a = toDemandActor(ctxOf("hq_manager", "user:7", scoped([10n], "all")));
     expect(a).toMatchObject({ actorId: "user:7", platformAdmin: false, scope: { platformCodes: "all", mediaStaffIds: "all" } });
-    expect(toDemandActor(ctxOf("platform_admin", "user:1")).platformAdmin).toBe(true);
+    expect(toDemandActor(ctxOf("platform_admin", "user:1")).platformAdmin).toBe(false); // demand 不用它；业务代码不写角色条件
     expect(() => toDemandActor(ctxOf("store_staff", "user:3"))).toThrow(JudgementError);
   });
 });

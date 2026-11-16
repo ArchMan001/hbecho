@@ -1,7 +1,4 @@
 // D 的授权接入（design §9、JP-18）：走 B 的 authorize（先于任何读库）；后台运行继承提交人身份（不新增服务身份）。
-import { inArray } from "drizzle-orm";
-import type { Db } from "../../db/client";
-import { brands } from "../../db/schema";
 import { constraintOf, isEmptyScope, type AccessRegistry, type AuthContext, type Authorizer, type ContextResolver, type DataScope, type ScopeStrategy } from "../access-control";
 import { JudgementError } from "./errors";
 import type { ActorContext, SignalActor } from "./ports";
@@ -33,7 +30,7 @@ export function registerJudgementAuthz(registry: AccessRegistry): void {
 export type JudgementAction = "read" | "manage" | "execute";
 const CAPABILITY: Record<JudgementAction, string> = { read: "rule.definition.read", manage: "rule.definition.manage", execute: "rule.run.execute" };
 
-export function createJudgementAuthz(deps: { authorizer: Authorizer; resolver: Pick<ContextResolver, "contextForUser">; db: Pick<Db, "select"> }) {
+export function createJudgementAuthz(deps: { authorizer: Authorizer; resolver: Pick<ContextResolver, "contextForUser">; facts: { brandCodesOf(ids: readonly bigint[]): Promise<string[]> } }) {
   /**
    * 授权入口：读 = Capability + 范围；写与执行再要求谓词 plan_creator（操作者是所属活动计划创建者或超管）。
    * 越范围的对象表现为 not_found（不泄露存在性）；缺 Capability / 谓词失败 = authorization。
@@ -63,9 +60,9 @@ export function createJudgementAuthz(deps: { authorizer: Authorizer; resolver: P
     if (ctx.scope.brands === "all") return { actor: ctx.actor, capabilities: ctx.capabilities, brandScope: "all" };
     const ids = [...ctx.scope.brands];
     if (ids.length === 0) return { actor: ctx.actor, capabilities: ctx.capabilities, brandScope: new Set() };
-    const rows = await deps.db.select({ code: brands.brandCode }).from(brands).where(inArray(brands.brandId, ids));
-    if (rows.length !== ids.length) throw new JudgementError("authorization", "brand_unmappable", "无法把授权品牌映射成品牌编码");
-    return { actor: ctx.actor, capabilities: ctx.capabilities, brandScope: new Set(rows.map((r) => r.code)) };
+    const codes = await deps.facts.brandCodesOf(ids);
+    if (codes.length !== ids.length) throw new JudgementError("authorization", "brand_unmappable", "无法把授权品牌映射成品牌编码");
+    return { actor: ctx.actor, capabilities: ctx.capabilities, brandScope: new Set(codes) };
   }
 
   return { require, contextForSubmitter, toSignalActor, toDemandActor };
@@ -74,10 +71,10 @@ export type JudgementAuthz = ReturnType<typeof createJudgementAuthz>;
 
 /**
  * 把提交人译成 A 的 ActorContext（design §9）。A 的 ActorContext 没有品牌维度，B 的 toTracerActor 只给全范围用户适配，
- * 品牌受限的 hq_manager 会被拒；D 的窄适配：actorId 与 capabilities 取提交人的，范围放宽为全平台——
+ * 品牌受限的 hq_manager 会被拒；D 的窄适配：actorId 与 capabilities 取提交人的，范围放宽为全平台；`platformAdmin` 恒为 false（demand 不用它，业务代码也不写角色条件，B-AX-6）——
  * 放宽只发生在这一处，且 D 提交的主体只来自已冻结的、提交人已授权范围内的名单（design §14 第 31 项）。
  */
 export function toDemandActor(ctx: AuthContext): ActorContext {
   if (!ctx.capabilities.has("data.sync.trigger")) throw new JudgementError("authorization", "denied_capability_not_granted", "提交人没有触发采集的权限");
-  return { actorId: ctx.actor, capabilities: ctx.capabilities, platformAdmin: ctx.role === "platform_admin", scope: { platformCodes: "all", mediaStaffIds: "all" } };
+  return { actorId: ctx.actor, capabilities: ctx.capabilities, platformAdmin: false, scope: { platformCodes: "all", mediaStaffIds: "all" } };
 }

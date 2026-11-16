@@ -26,7 +26,7 @@
 
 - [x] 任务 0 · 文档前置与待确认闸门（2026-11-16 完成：旧 design 归档、链接修复、CONTEXT 词条、PRD D 第 6 行；§14 闸门已答复）
 - [x] 任务 1 · schema 与迁移（2026-11-16：迁移 `0012_d_judgement_schema`，`judgement-schema.db.test.ts` 19 例；**完成后推第一次**）
-- [ ] 任务 2 · 骨架：错误、配置、端口与 fake、B 授权接入、审计、`facts.ts`、测试挂具、静态护栏（**进行中**：2026-11-16 已完成 `errors / env / ports / fakes / authz`（unit 共 102 例，含授权矩阵、提交人身份、环境变量逐项缺失）；**未做**：`audit.ts`、`facts.ts`、`assemble.ts` 空壳、`tests/harness` 的 `insertJudgementWorld`、五条静态护栏、契约测试骨架）
+- [x] 任务 2 · 骨架：错误、配置、端口与 fake、B 授权接入、审计、`facts.ts`、测试挂具、静态护栏（2026-11-16 完成；`assemble.ts` 随任务 4 起逐步装配；真实 C 的契约测试在任务 12）
 - [x] 任务 3 · 纯函数：配置、三值逻辑、条件求值、达标方式、窗口、分布（2026-11-16：`src/modules/judgement/{config,engine/pure/*}`，unit 84 例）
 - [ ] 任务 4 · 判定计划、草稿与版本（含与 C 的 provisioning、发布协议、回退）
 - [ ] 任务 5 · 运行内核与圈定（**第一条可演示的纵向**）
@@ -114,7 +114,7 @@
   - **验证**（`judgement-schema.db.test.ts`）：干净库连续迁移两次幂等；`drizzle-kit generate` 无新文件；`(activity_plan_id, alias)` 重复被拒；`platform_id` 与活动计划不一致被复合外键拒；同计划第二个草稿被 `draft_key` 拒；同（计划，版本）第二个未终态运行被 `active_key` 拒、终态后可再建；`active_key` 与状态不一致的行被 CHECK 拒；`running` 缺租约被拒；`run_participants` 同一运行同一专员两行被拒；`run_contents` 引用不存在的参与专员被复合外键拒；`run_contents.like_state` 沿用 A 的 `valueStateCheck`（`value` 才非空，`explicit_null` 等四态为空）；`layer1_selected` 非空必须 `l1='pass'`；`final='skipped'` 当且仅当 `l1='pass' ∧ layer1_selected=FALSE`；`run_contents.final` 允许 `skipped`（只由第 1 层数量截断产生）；对已被运行引用的版本 / 计划做 DELETE 被 RESTRICT 拒；层结果 / 专员结果取值 CHECK；`judgement_plans` 引用的活动计划被 A 物理删除时被 RESTRICT 拒（模拟 A 的 purge 在 D 未清除时失败）。
   - **完成后推第一次**（迁移在干净库跑通；异地备份）。
 
-- [ ] 2. 骨架、端口、授权、`facts.ts`、测试挂具与静态护栏
+- [x] 2. 骨架、端口、授权、`facts.ts`、测试挂具与静态护栏
   - **Requirements:** JP-13、JP-18、JP-19、JP-21
   - **Design:** §4、§9、§10、§11
   - `errors.ts`（`JudgementError` 分类 + 稳定码，退出码映射）；`env.ts`（zod 校验环境变量；缺任一必填数值即失败并指出缺哪一项）；`ports.ts`（`SignalsPort`、`DemandPort`、`FactsPort` 类型）与 `fakes.ts`（`FakeSignals`：可编程返回各状态的 `SignalValue`、记录调用、可切换 `executability`；`FakeDemand`：可编程终态序列）；`authz.ts`（`createJudgementAuthz(authorizer)`：`require(ctx, capability, ref)`；`judgement_plan` 的 `ScopeStrategy`；`plan_creator` 谓词体，先查再注册；`toSignalActor`、`toDemandActor`；提交人复核：每 tick 用 B 的 `contextForUser` 重建并检查 Capability）；`audit.ts`（B 的 `AuditWriter` 适配，事件枚举与 `reasonCode`）；**B 零改动**（2026-11-16：继承提交人身份，不新增服务身份）；`facts.ts`（批量只读：`rosterOf`（经 A 的 `PlanReader`）、`assignmentsOf`、`orgChainOf`、`contentsOf`（含点赞值 / 值状态）、`snapshotsOf`、`commentsOf`、`profileOf`、`syncCompleteness`）；`assemble.ts` 的 `createJudgement(deps)` 空壳。

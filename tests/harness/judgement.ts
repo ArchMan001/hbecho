@@ -149,6 +149,7 @@ export interface JudgementEnv {
   versions: Judgement["versions"];
   runs: Judgement["runs"];
   outcomes: Judgement["outcomes"];
+  views: Judgement["views"];
   claim: Judgement["claim"];
   /** 休眠 = 推进 FakeClock，并在每次休眠后调用 onSleep（让测试在等待期间「让信号就绪」） */
   sleep: Sleep;
@@ -195,5 +196,5 @@ export function judgementEnv(t: TestDb, w: RosterWorld, over: { limits?: { maxIt
     clock.advance(ms);
     onSleep.fn?.();
   };
-  return { fake, demand, clock, plans: j.plans, versions: j.versions, runs: j.runs, outcomes: j.outcomes, claim: j.claim, sleep, onSleep, facts: j.facts, authz: j.authz, audit: j.audit, audits, creator, other: userCtx("hq_manager", 8, brandScope), admin: userCtx("platform_admin", 1, ALL_SCOPE), revoked };
+  return { fake, demand, clock, plans: j.plans, versions: j.versions, runs: j.runs, outcomes: j.outcomes, views: j.views, claim: j.claim, sleep, onSleep, facts: j.facts, authz: j.authz, audit: j.audit, audits, creator, other: userCtx("hq_manager", 8, brandScope), admin: userCtx("platform_admin", 1, ALL_SCOPE), revoked };
 }

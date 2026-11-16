@@ -5,13 +5,15 @@ import { ROLE_LABEL } from "../_lib/labels";
 import { requireUser, web } from "../_lib/session";
 
 // 管理端外壳：左侧浅色侧栏 + 顶栏（ui-foundation §2）。没有对应 Capability 的入口不显示；
-// 还没有建好的页面（活动计划、判定计划、报表……）也不显示，页面上线时随各自的 spec 加入。
+// 还没有建好的页面（报表……）也不显示，页面上线时随各自的 spec 加入。
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const ctx = await requireUser();
   const profile = await web().profile(ctx);
   const groups: NavGroup[] = [];
   // 活动计划与账号监控（A）：入口按 Capability 显示；页面与动作各自再判断一次
   if (ctx.capabilities.has("activity_plan.create") || ctx.capabilities.has("activity_plan.join")) groups.push({ label: "工作台", items: [{ href: "/plans", label: "活动计划", icon: "calendar", also: ["/batches"] }] });
+  // 判定计划（D）：读取 Capability 即有入口；门店专员没有该 Capability，不显示
+  if (ctx.capabilities.has("rule.definition.read")) groups.push({ label: "规则", items: [{ href: "/judgement", label: "判定计划", icon: "clipboard" }] });
   const dataItems: NavGroup["items"] = [];
   if (ctx.capabilities.has("data.account.manage")) dataItems.push({ href: "/accounts", label: "账号与监控", icon: "activity" });
   if (ctx.capabilities.has("data.master_data.import") || ctx.capabilities.has("data.master_data.structure")) dataItems.push({ href: "/master-data", label: "主数据", icon: "database", also: ["/master-data/import", "/master-data/batches"] });

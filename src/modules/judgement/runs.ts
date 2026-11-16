@@ -129,11 +129,11 @@ export function createRuns(deps: JudgementDeps & { claim: Claim; runner: Runner;
     return { runId, status: done.status };
   }
 
-  /** 试跑报告：每个比对能力一份连续 0–10 分的 11 档分布与固定每档 5 个样例；通过数用当前阈值重算；素材问题原样汇总为未获取成功。 */
+  /** 试跑报告（读取：有读取权限且在范围内即可看，与试跑本身的写权限分开）：每个比对能力一份连续 0–10 分的 11 档分布与固定每档 5 个样例；通过数用当前阈值重算；素材问题原样汇总为未获取成功。 */
   async function trialReport(ctx: AuthContext, planId: bigint): Promise<{ runId: bigint; c1: number; abilities: TrialAbilityReport[] }> {
-    await authz.require(ctx, "manage");
+    await authz.require(ctx, "read");
     const { ref } = await loadPlan(deps, planId);
-    await authz.require(ctx, "manage", ref);
+    await authz.require(ctx, "read", ref);
     const draft = await versions.draftOf(planId);
     const version = draft?.version ?? (await db.select({ v: judgementPlans.latestVersion }).from(judgementPlans).where(eq(judgementPlans.planId, planId)))[0]!.v;
     const [run] = await db.select().from(judgementRuns).where(and(eq(judgementRuns.planId, planId), eq(judgementRuns.version, version), eq(judgementRuns.runKind, "compare"), eq(judgementRuns.status, "completed"))).orderBy(desc(judgementRuns.runId)).limit(1);

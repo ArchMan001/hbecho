@@ -110,6 +110,12 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     return new Map(rows.map((r) => [r.planId, r]));
   }
 
+  /** 这些活动计划里没进回收站的（E 读取执行结果时用：回收站里的计划结果不可见）。 */
+  async function liveActivityPlans(ids: readonly bigint[]): Promise<Set<bigint>> {
+    const rows = await inChunks(ids, (c) => db.select({ id: activityPlans.planId }).from(activityPlans).where(and(inArray(activityPlans.planId, c), sql`${activityPlans.status} <> 'deleted'`)));
+    return new Set(rows.map((r) => r.id));
+  }
+
   /** 品牌 ID → 品牌编码（SignalActor 的品牌范围用）；调用方核对条数，找不到的不返回。 */
   async function brandCodesOf(ids: readonly bigint[]): Promise<string[]> {
     const rows = await inChunks(ids, (c) => db.select({ code: brands.brandCode }).from(brands).where(inArray(brands.brandId, c)));
@@ -258,6 +264,6 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     return out;
   }
 
-  return { rosterOf, planOf, activityPlansOf, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, contentsOf, durationsOf, commentIdsOf, profileOf, syncCompletenessOf };
+  return { rosterOf, planOf, liveActivityPlans, activityPlansOf, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, contentsOf, durationsOf, commentIdsOf, profileOf, syncCompletenessOf };
 }
 export type Facts = ReturnType<typeof createFacts>;

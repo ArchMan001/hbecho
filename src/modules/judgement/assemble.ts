@@ -10,6 +10,7 @@ import { createClaim } from "./engine/claim";
 import { createRunner } from "./engine/runner";
 import type { JudgementConfig } from "./env";
 import { createFacts } from "./facts";
+import { createOutcomes } from "./outcomes";
 import { createPlans } from "./plans";
 import type { DemandPort, SignalsPort } from "./ports";
 import { createRunOps } from "./run-ops";
@@ -42,6 +43,7 @@ export function createJudgement(a: JudgementAssembly) {
   const versions = createVersions(deps);
   const runner = createRunner({ ...deps, claim, ops, config: a.config });
   const runs = createRuns({ ...deps, claim, runner, versions, config: a.config, ops });
-  return { facts, authz, audit, plans, versions, runs, claim, runner, ops, config: a.config };
+  const outcomes = createOutcomes({ ...deps, config: a.config, ops });
+  return { facts, authz, audit, plans, versions, runs, outcomes, claim, runner, ops, config: a.config };
 }
 export type Judgement = ReturnType<typeof createJudgement>;

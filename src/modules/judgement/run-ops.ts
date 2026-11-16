@@ -33,6 +33,15 @@ export function createRunOps(db: Db) {
     await db.delete(judgementRuns).where(inArray(judgementRuns.runId, [...ids]));
     return { runs: ids.length, rows };
   }
+  /** 只删内容级行（保留运行与参与专员行）：保留期修剪用。分块、可重复运行。 */
+  async function deleteContentRows(runId: bigint): Promise<number> {
+    let n = 0;
+    for (;;) {
+      const [r] = await db.delete(runContents).where(eq(runContents.runId, runId)).limit(DELETE_CHUNK);
+      n += r.affectedRows;
+      if (r.affectedRows < DELETE_CHUNK) return n;
+    }
+  }
   const deleteRuns = async (planId: bigint, version: number, kinds: RunKind[]) => deleteRunsById(await runIdsOf(planId, version, kinds));
   async function countRuns(planId: bigint, version: number, kinds: RunKind[]): Promise<{ runs: number; rows: number }> {
     const ids = await runIdsOf(planId, version, kinds);
@@ -41,6 +50,6 @@ export function createRunOps(db: Db) {
     const [p] = await db.select({ n: count() }).from(runParticipants).where(inArray(runParticipants.runId, ids));
     return { runs: ids.length, rows: Number(c!.n) + Number(p!.n) };
   }
-  return { runIdsOf, activeRunExists, deleteRuns, deleteRunsById, countRuns };
+  return { runIdsOf, activeRunExists, deleteRuns, deleteRunsById, deleteContentRows, countRuns };
 }
 export type RunOps = ReturnType<typeof createRunOps>;

@@ -33,7 +33,7 @@
 - [x] 任务 6 · 试跑（第 2 层）：依赖协调、等待、报告（2026-11-16：`scores` 阶段、`runs.trial / trialReport`，`trial.db` 16 例；真实评分耗时在任务 12）
 - [x] 任务 7 · 执行（第 1、2 层 + 账号要求）：确认执行、聚合、零内容、计划总结果（2026-11-16：`aggregate` 阶段、`runs.execute / serveOnce`，`execute.db` 17 例；**第 3 层与评论要求在任务 8 之前显式失败 `not_implemented`**；`retainUntil` 证据保留与 `explain` 随任务 8 / 9）
 - [x] 任务 8 · 第 3 层与评论：采集需求、ASR 判定、评论要求（2026-11-16：`engine/dependency-phases.ts`，`layer3-comments.db` 20 例；`retainUntil` 先于证据写入；评论依赖失败时「不达标」改判未获取成功，已回写 requirements JP-10 / design §7.7 / acceptance J5；**`DemandPort` 的真实封装（A 的 `createDemandModule`）随任务 11 装配，现只有 FakeDemand 验证**）
-- [ ] 任务 9 · 对 E 的读取口、解释、保留与清理
+- [x] 任务 9 · 对 E 的读取口、解释、保留与清理（2026-11-16：`outcomes.ts`，`outcomes.db` 16 例；越范围的 explain 表现为 `judgement_plan_not_found`；第 2 层证据尚无 C 的 `resultId` 字段）
 - [ ] 任务 10 · 下游端口与清除
 - [ ] 任务 11 · CLI 全集与 `judgement serve` 装配
 - [ ] 任务 12 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾（**完成后推第二次**）
@@ -166,7 +166,7 @@
   - **验证**：JP-12 验收逐条（默认装配下含第 3 层的计划发布被拒且 `demand.submit` / `requestScores` 调用数 0；不含第 3 层的计划照常；中途 `capability_disabled` 剩余内容记原因且不发调用；`not_meets` → 不通过、`failed(invalid_output)` → 未获取；证据四要素；音频需求主体只含 C2）；JP-10 验收逐条（评论 `demand` 主体只含 C2；覆盖 `complete / partial / unknown` 的缺口；「至少 3 条评论含关键词」三种情形；快手配置期被拒、运行时 `unsupported_platform`；评论零候选三种分支；证据里只有 ID 与计数）；`demand` 幂等：杀进程后续跑不重复提交（批次 ID 与 `demandKey` 断言）；`out_of_scope` 不会出现（服务身份全范围）的断言。
   - **未证明**：真实采集与真实模型（`h-ai-min` 与任务 12 的 `[环境]` 项）。
 
-- [ ] 9. 对 E 的读取口、解释、保留与清理
+- [x] 9. 对 E 的读取口、解释、保留与清理
   - **Requirements:** JP-14、JP-16
   - **Design:** §7.11、§7.13
   - `outcomes.ts`：`listCompleted`（游标为 (completed_at, run_id)，acceptance P9）`/ describe / streamParticipants / streamContents / streamCircleRows`（游标分页、冻结组织链 + `ResourceConstraint` 过滤；圈定行带 `layer1_selected / layer1_rank`）；`explain`；`maintain`（圈定 / 试跑期满、内容级行按 `KEEP_CONTENT_RUNS` 修剪、失败运行清理，分块、幂等）；`result *` 命令。

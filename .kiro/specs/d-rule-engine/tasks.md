@@ -34,7 +34,7 @@
 - [x] 任务 7 · 执行（第 1、2 层 + 账号要求）：确认执行、聚合、零内容、计划总结果（2026-11-16：`aggregate` 阶段、`runs.execute / serveOnce`，`execute.db` 17 例；**第 3 层与评论要求在任务 8 之前显式失败 `not_implemented`**；`retainUntil` 证据保留与 `explain` 随任务 8 / 9）
 - [x] 任务 8 · 第 3 层与评论：采集需求、ASR 判定、评论要求（2026-11-16：`engine/dependency-phases.ts`，`layer3-comments.db` 20 例；`retainUntil` 先于证据写入；评论依赖失败时「不达标」改判未获取成功，已回写 requirements JP-10 / design §7.7 / acceptance J5；**`DemandPort` 的真实封装（A 的 `createDemandModule`）随任务 11 装配，现只有 FakeDemand 验证**）
 - [x] 任务 9 · 对 E 的读取口、解释、保留与清理（2026-11-16：`outcomes.ts`，`outcomes.db` 16 例；越范围的 explain 表现为 `judgement_plan_not_found`；第 2 层证据尚无 C 的 `resultId` 字段）
-- [ ] 任务 10 · 下游端口与清除
+- [x] 任务 10 · 下游端口与清除（2026-11-16：`downstream.ts`、`src/worker/judgement-wiring.ts`，`downstream.db` 10 + `judgement-wiring.db` 1 例；用 A 的真实 `plans.delete / restore` 与 `maintenance.runNow` 联动；`plan-main` 已传 D 的下游，清除所需的 C 配置用到才读，缺项时 purge 抛出、A 保守不清除；E 的组合下游待 E）
 - [ ] 任务 11 · CLI 全集与 `judgement serve` 装配
 - [ ] 任务 12 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾（**完成后推第二次**）
 - [ ] 任务 13 · 页面基础、判定计划列表与详情
@@ -173,7 +173,7 @@
   - **验证**：JP-16 验收逐条（未完成 / 取消 / 失败的执行不可见；成功 + 不达标 + 未获取 = 参与专员数；组织链取冻结值、改绑 / 换店后不变；`empty / branches / self` 三种约束的过滤；`streamCircleRows` 的行数（含 `skipped` 行）；`ContentFact` 带 `final='skipped'`、`layer1_selected`、`layer1_rank`、点赞值与状态；`ExecutionDescriptor` 带能力的 `abilityId / 别名`；fake E 消费者走完整序列）；JP-14（`explain` 逐层逐条件、越范围表现为未找到）；`maintain`：用 `FakeClock` 推进，期满的圈定 / 试跑运行被删，修剪后 `streamContents` 返回 `content_rows_pruned`，参与专员级数据保留；清理幂等、可重复、中途退出可续。
   - **未证明**：E 的真实消费者（`e-metrics` 的 spec 对齐后）。
 
-- [ ] 10. 下游端口与清除
+- [x] 10. 下游端口与清除
   - **Requirements:** JP-17
   - **Design:** §7.12、§10.2
   - `downstream.ts`（`summarize / onDeleted / onRestored / purge`）；`plan-main.ts` 装配（与 E 的下游以组合下游注入，E 尚无则只有 D）；`purge` 的 C 调用与分块删除。

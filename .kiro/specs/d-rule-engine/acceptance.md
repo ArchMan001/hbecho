@@ -83,9 +83,10 @@
 ### 手工项与环境项
 | 项 | 状态 |
 |---|---|
-| MAN-1 ～ MAN-4 | **未做**：需要业务代表与评审人在测试机上用 CLI 走查；真实 C 的图像比对与真实采集未接通，MAN-2 标「未验证」 |
+| MAN-1、MAN-3、MAN-4 | **环境已就绪，待走查**：2026-11-16 已部署到测试 ECS，真实栈冒烟通过（圈定 + 执行 + worker）；走查记录单见 [`man-walkthrough.md`](man-walkthrough.md) |
+| MAN-2 | **未验证**：真实的图像比对没有接通（没有 `hbecho-signals` 桶与能力服务） |
 | MAN-5 | design §14 各项已答复并回写；第 31 项（`toDemandActor` 的窄适配）待确认 |
-| MAN-6、ENV-9 | 页面任务 13–16 未开始 |
+| MAN-6、ENV-9 | 页面已合入 `main` 并部署到测试 ECS，界面差异已确认（design §15.7）；业务走查待做，见 `man-walkthrough.md` |
 | ENV-5、ENV-6、ENV-7、ENV-8 | 属于 E、`h-ai-min`、C 的任务 7，未验证 |
 
 ## 自动项

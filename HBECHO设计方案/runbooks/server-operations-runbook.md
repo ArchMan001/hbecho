@@ -99,6 +99,7 @@
 | 44 | ✅ Kiro | `echo.hbmarketer.com` 的 nginx 由静态占位页改为反代到 `127.0.0.1:3000`（`X-Forwarded-For` 用 `$remote_addr` 覆盖，`client_max_body_size 12m`，HSTS 一天）；旧配置备份 `/data/backup/echo.hbmarketer.com.conf.bak-20261111`，回滚 = 还原该文件并 `systemctl reload nginx` | §10.7 |
 | 45 | ✅ 刘学奎 | 首个超管已用真实短信验证码激活并登录（2026-11-11）；当前镜像标签 `93bff48bf251` | tasks 实施记录 |
 | 46 | ✅ Kiro | 2026-11-12 经刘学奎同意上线：镜像标签 `69595423c6d3`（main 合并提交，CI run 43160976258 verify + image 全绿；含活动计划页面 P1–P5 与主数据导入页面）。`pull` → 迁移（无新迁移，`migrations applied`）→ `WEB_TAG` 切换并 `docker compose up -d web learning-worker`；`/api/health` 正常，`/plans`、`/accounts`、`/master-data/import`、`/batches` 未登录 307 到 `/login`，公网 `/login` 200 且页脚有备案号，除 22/80/443 外无公网监听。回滚 = `WEB_TAG` 改回 `718a8a4bfef3`。页面进程默认 `HBECHO_ENV=production`，名单确认的 `media_user_info` capability 未放行，所以真实环境里「确认写入」会被拒绝并说明原因，直到 capability 获批 | §10.3 |
+| 47 | ✅ Claude（刘学奎 2026-11-16 同意） | 部署主数据浏览 `…/hbecho/app:8c6b2ff9e9a6`（main 合并提交 `8c6b2ff`；CI run 43803345217 的 image job 已推 ACR）：内网拉取 → 迁移无新增（`__drizzle_migrations` 仍 12）→ 只重启 `web`。健康 `{"ok":true}`、公网 `/login` 200、`/users` 307，`.next/server/app/(app)/master-data` 在新镜像中。`learning-worker` / `sync-worker` 仍为 `6368b94798ef`。**发现**：`/data/app/docker-compose.yml` 的镜像标签写死、不读 `.env` 的 `WEB_TAG`，与 §10.3 不一致；本次备份 `/data/backup/docker-compose.yml.bak-20261116` 后只改 web 行，待后续统一改成 `${WEB_TAG}` | §10.3 / §10.4 |
 
 ### 待触发（有前置条件，暂不做）
 
@@ -2789,6 +2790,7 @@ ssh hbecho 'growpart /dev/<设备> 1 && resize2fs /dev/<设备>p1 && df -h /data
 | 2026-11-10 | 刘学奎确认 ACR 自动续费已生效（到期 2026-12-11），§P5 #39 关闭 | 刘学奎 |
 | 2026-11-11 | 测试 ECS 上线应用：`hbecho-mysql` 8.0.46 → 8.4.13（先备份）并加 `--log-bin-trust-function-creators=1`；建 `hbecho_web` 运行账号与迁移账号；`/data/app/web.env`、`migrate.env`（root 600，短信 AccessKey 由本机经 Workbench 上传，只在服务器落盘）；compose 增加 `web` 服务；迁移全部应用；nginx 反代到 `127.0.0.1:3000`；创建待激活的首个超管。镜像 `…/hbecho/app:cd8188516e13` | Kiro（刘学奎同意） |
 | 2026-11-12 | 建 `hbecho-signals` 桶（c-signals 标准图 / 元素图；cn-beijing、私有、LRS、碎片 7 天、阻止公共访问）；`hbecho-oss-rw` v2 → v3 新增 `SignalsStdImageReadWriteDelete`（只含该桶，Resource 精确到桶名）；测试 ECS 实例角色实测：该桶写 / 列 / 读 / 删通过，`hbecho-media` 删除仍被拒（实测时在 media 留下的探针对象已用 setup 身份删除）。刘学奎 2026-11-12 事先书面同意创建桶与改 RAM | Kiro |
+| 2026-11-16 | 测试 ECS 部署主数据浏览：镜像 `…/hbecho/app:8c6b2ff9e9a6`（main 合并提交 `8c6b2ff`，CI run 43803345217 已推 ACR）；内网拉取、迁移无新增（`__drizzle_migrations` 12）、只重启 web；健康检查通过（`/api/health` ok、`/login` 200、`/users` 307）。发现 compose 镜像标签写死、不读 `WEB_TAG`，与 §10.3 不一致；备份 compose 后只改 web 行，worker 仍为 `6368b94798ef`。待后续把三处改成 `${WEB_TAG}` | Claude（刘学奎同意部署） |
 
 ### 17.1 当前进度
 

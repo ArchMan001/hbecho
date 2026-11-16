@@ -10,6 +10,11 @@ export const MD_CLASS: Record<string, { label: string; tone: Tone }> = {
 };
 export const MD_CLASS_ORDER = ["new", "update", "unchanged", "error", "needs_superadmin"] as const;
 export const MD_MODE: Record<string, string> = { import: "普通导入", structure: "结构导入" };
+/** 门店状态（主数据浏览）：与 stores.status 的取值一一对应。 */
+export const STORE_STATUS: Record<string, { label: string; tone: Tone }> = {
+  active: { label: "在用", tone: "green" },
+  closed: { label: "已撤店", tone: "plain" },
+};
 export const MD_OUTCOME: Record<string, { label: string; tone: Tone }> = {
   imported: { label: "已写入", tone: "green" },
   unchanged: { label: "未变", tone: "plain" },

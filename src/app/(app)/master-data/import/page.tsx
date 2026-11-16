@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { MdClassBadge, MdReason } from "../../../_components/master/cells";
 import { ClosureProvider, ClosureTable, ReportBar, type ClosureItem } from "../../../_components/master/report";
 import { MasterUpload, MdSteps } from "../../../_components/master/upload";
+import { MasterTabs } from "../../../_components/master/tabs";
 import { Pager } from "../../../_components/plans/pager";
 import { Callout, DeniedState, PageHead } from "../../../_components/ui";
 import { HEADER } from "../../../../modules/master-data-import";
@@ -59,11 +60,14 @@ export default async function MasterImportPage({ searchParams }: { searchParams:
     </aside>
   );
   const head = (
-    <PageHead
-      title="主数据导入"
-      sub="导入权威主档导出（门店信息）；预检只读，确认后才写入业务表。"
-      actions={<Link className="btn" href="/master-data/batches">导入记录</Link>}
-    />
+    <>
+      <MasterTabs active="import" />
+      <PageHead
+        title="主数据导入"
+        sub="导入权威主档导出（门店信息）；预检只读，确认后才写入业务表。"
+        actions={<Link className="btn" href="/master-data/batches">导入记录</Link>}
+      />
+    </>
   );
 
   if (!q.batch) {

@@ -90,7 +90,8 @@
 | 账户 | 登录（密码 / 短信）、激活、忘记密码、修改密码 | `b-access-control` | — | 低 |
 | 用户与权限 | 用户列表、新建用户、批量导入用户、编辑角色与范围、停用 / 恢复 | `b-access-control` | — | 中 |
 | 系统 | 审计日志 | `b-access-control` | — | 低 |
-| 主数据 | 组织与门店浏览、专员列表、权威主档导入（F5 路径 1）、单条纠错、结构变更（超管） | `a-master-data-import` | `master-data-import` Module | 中 |
+| 主数据 | 组织与门店浏览 | `a-master-data-browse`（归属订正，2026-11-16） | `master-data-import` Module 的只读 `browse` 读口 | 中 |
+| 主数据 | 专员列表、权威主档导入（F5 路径 1）、单条纠错、结构变更（超管） | `a-master-data-import` | `master-data-import` Module | 中 |
 | 活动计划 | 计划列表、新建计划、计划详情（基本信息 / 参与分公司 / 名单 / 下游判定计划 / 变更记录）、名单导入（F5 路径 2）、负责人 | `a-activity-plan` | — | **高** |
 | 账号与监控 | 账号列表（综合状态列）、五级监控开关、单账号手工补抓 | `a-activity-plan`（账号列表与开关）；补抓入口等随后续 UI spec | `monitoring`、`sync-ops` | 中 |
 | 同步 | 批次列表、账号级同步结果、数据质量问题 | 后续 UI spec | `a-full-sync` 的 `sync-status`、`sync-ops` | 低 |

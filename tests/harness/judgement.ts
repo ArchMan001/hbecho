@@ -79,6 +79,18 @@ export async function addContent(db: Db, s: ContentSpec): Promise<{ contentId: b
   return { contentId, snapshotId };
 }
 /** 造一条一级评论（active）；评论正文不进测试数据，文本信号由 FakeSignals 编程。 */
+/** 给内容追加一条更新的 finalized 快照（点赞为 like）并把 contents.current_snapshot_id 指向它：模拟「冻结之后又有一次同步」。 */
+export async function moveCurrentSnapshot(db: Db, contentId: bigint, o: { like: number }): Promise<bigint> {
+  const [c] = await db.select().from(contents).where(eq(contents.contentId, contentId));
+  const [old] = await db.select().from(contentSnapshots).where(eq(contentSnapshots.contentSnapshotId, c!.currentSnapshotId!));
+  const later = new Date(old!.snapshotAt.getTime() + 3_600_000);
+  const batchId = await insertBatch(db, later);
+  const { contentSnapshotId: _drop, ...rest } = old!;
+  const [r] = await db.insert(contentSnapshots).values({ ...rest, batchId, likeState: "value", likeValue: BigInt(o.like), snapshotAt: later, finalizedAt: later, createdAt: later, updatedAt: later });
+  const id = BigInt(r.insertId);
+  await db.update(contents).set({ currentSnapshotId: id, currentSnapshotSelectedAt: later }).where(eq(contents.contentId, contentId));
+  return id;
+}
 export async function addComment(db: Db, a: { contentId: bigint; platformCommentId: string; status?: "active" | "suspected_deleted" | "deleted"; now?: Date }): Promise<bigint> {
   const now = a.now ?? T0;
   const [r] = await db.insert(comments).values({ contentId: a.contentId, platformCommentId: a.platformCommentId, platformCommentIdSha256: sha(a.platformCommentId), status: a.status ?? "active", likeState: "missing", replyState: "missing", firstSeenAt: now, lastSeenAt: now, createdAt: now, updatedAt: now });
@@ -108,8 +120,9 @@ export async function addListTask(db: Db, a: { accountId: bigint; status: "succe
     updatedAt: a.at,
   });
 }
-export async function addCheckpoint(db: Db, accountId: bigint, continuityStatus: "ready" | "in_progress" | "rebased_after_gap" | "blocked", lastGapAt: Date | null = null): Promise<void> {
-  await db.insert(syncCheckpoints).values({ accountId, providerId: await providerIdOf(db), anchorMode: "empty", cursorEnvelope: { kind: "null" }, cursorSha256: sha("cursor"), continuityStatus, lastGapAt, version: 1n, updatedAt: T0 });
+/** `scope` 缺省 default；给别的 scope 造一条检查点，用来证明谓词只读 default（I16）。 */
+export async function addCheckpoint(db: Db, accountId: bigint, continuityStatus: "ready" | "in_progress" | "rebased_after_gap" | "blocked", lastGapAt: Date | null = null, scope = "default"): Promise<void> {
+  await db.insert(syncCheckpoints).values({ accountId, checkpointScope: scope, providerId: await providerIdOf(db), anchorMode: "empty", cursorEnvelope: { kind: "null" }, cursorSha256: sha("cursor"), continuityStatus, lastGapAt, version: 1n, updatedAt: T0 });
 }
 
 // ---- 装配：判定模块的真实实现 + FakeSignals + 内存审计 -------------------------------------------------------

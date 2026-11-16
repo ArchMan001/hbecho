@@ -106,18 +106,17 @@ describe("失效矩阵与进度（JP-4）", () => {
     await setStep(s.planId, 1, "compared");
     return { ...s, circle, compare };
   };
-  it("改关键词 / 数量 N → 圈定与试跑结果及其行全部删除，进度回到 draft", async () => {
-    for (const edit of [{ layer1: { text: [{ fields: ["title"], mode: "any", keywords: ["海信", "618"] }], quantity: { n: 3 } } }, { layer1: { ...BASE.layer1, quantity: { n: 4 } } }]) {
-      const { e, planId } = await withRuns();
-      const r = await e.versions.setConfig(e.creator, planId, { ...BASE, layer2: { abilities: [ab()] }, ...edit });
-      expect(r.invalidation).toBe("circle_and_trial");
-      expect(await runCount(planId)).toEqual([]);
-      expect(await t.db.select().from(runContents)).toHaveLength(0);
-      expect(await t.db.select().from(runParticipants)).toHaveLength(0);
-      expect((await draft(planId)).wizardStep).toBe("draft");
-      await t.db.delete(judgementRuns); // 下一轮另造
-      return;
-    }
+  it.each([
+    ["关键词与 N", { layer1: { text: [{ fields: ["title"], mode: "any", keywords: ["海信", "618"] }], quantity: { n: 3 } } }],
+    ["只改数量 N", { layer1: { ...BASE.layer1, quantity: { n: 4 } } }],
+  ])("改%s → 圈定与试跑结果及其行全部删除，进度回到 draft", async (_name, edit) => {
+    const { e, planId } = await withRuns();
+    const r = await e.versions.setConfig(e.creator, planId, { ...BASE, layer2: { abilities: [ab()] }, ...edit });
+    expect(r.invalidation).toBe("circle_and_trial");
+    expect(await runCount(planId)).toEqual([]);
+    expect(await t.db.select().from(runContents)).toHaveLength(0);
+    expect(await t.db.select().from(runParticipants)).toHaveLength(0);
+    expect((await draft(planId)).wizardStep).toBe("draft");
   });
   it("删掉最后一个文本项（连同 N）→ 圈定与试跑都失效", async () => {
     const { e, planId } = await withRuns();

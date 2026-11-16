@@ -201,14 +201,18 @@ describe("确认执行与重新执行（JP-3）", () => {
     expect(await code(e.runs.execute(e.creator, planId, { key: "other" }))).toBe("run_active");
     expect(await t.db.select().from(judgementRuns)).toHaveLength(1);
   });
-  it("新建草稿改阈值再确认 → 版本 +1，旧版本及其执行仍可读", async () => {
+  it("新建草稿改数量 N 再确认 → 版本 +1、配置哈希不同，旧版本及其执行仍可读", async () => {
     const { e, planId } = await ready();
     const a = await e.runs.execute(e.creator, planId, { key: "k1" });
     await e.runs.drive(a.runId, "w", e.sleep);
     await e.versions.newDraft(e.creator, planId);
+    await e.versions.setConfig(e.creator, planId, { ...BASE, layer1: { ...TEXT, quantity: { n: 1 } } });
     await t.db.update(judgementPlanVersions).set({ wizardStep: "circled" }).where(and(eq(judgementPlanVersions.planId, planId), eq(judgementPlanVersions.status, "draft")));
     const b = await e.runs.execute(e.creator, planId, { key: "k2" });
     expect(b.version).toBe(2);
+    const vs = await t.db.select().from(judgementPlanVersions).orderBy(judgementPlanVersions.version);
+    expect(vs.map((v) => v.status)).toEqual(["published", "published"]);
+    expect(vs[0]!.configSha256.equals(vs[1]!.configSha256)).toBe(false);
     expect((await t.db.select().from(judgementRuns).where(eq(judgementRuns.runId, a.runId)))[0]!.status).toBe("completed");
   });
   it("归档的判定计划被拒；非创建者被拒；暂停的活动计划仍可手动执行", async () => {
@@ -224,7 +228,7 @@ describe("确认执行与重新执行（JP-3）", () => {
     const { e, planId } = await ready();
     const a = await e.runs.execute(e.creator, planId, { key: "k1" });
     await e.runs.drive(a.runId, "w", e.sleep);
-    e.fake.blockers = [{ code: "capability_disabled", signal: "content.cover_template_score" }];
+    e.fake.blockers = [{ code: "capability_disabled", signal: "text.title_normalized" }]; // 本计划监控段里有的信号（C 只对段内信号负责）
     expect(await code(e.runs.execute(e.creator, planId, { key: "k2" }))).toBe("not_executable");
     expect(await t.db.select().from(judgementRuns)).toHaveLength(1);
   });

@@ -6,7 +6,7 @@ import { createPlanReader } from "../activity-plan/reader";
 import { staffAccountAssignments } from "../../db/schema";
 import { useTestDb } from "../../../tests/harness/db";
 import { insertStaff } from "../../../tests/harness/plan";
-import { addCheckpoint, addContent, addListTask, addParticipant, judgementWorld, T0 } from "../../../tests/harness/judgement";
+import { addCheckpoint, addContent, addListTask, addParticipant, judgementWorld, T0, moveCurrentSnapshot } from "../../../tests/harness/judgement";
 import { createFacts } from "./facts";
 
 const t = useTestDb();
@@ -61,8 +61,10 @@ describe("facts", () => {
     const w = await judgementWorld(t);
     const c = await addContent(t.db, { accountId: w.accZhao, platformContentId: "c1", like: 1 });
     const before = (await facts().contentsOf([w.accZhao])).rows[0]!;
-    await addContent(t.db, { accountId: w.accZhao, platformContentId: "c2", like: 2 }); // 另一条，不影响
     expect(before.snapshotId).toBe(c.snapshotId);
+    const moved = await moveCurrentSnapshot(t.db, c.contentId, { like: 9 });
+    expect(before).toMatchObject({ snapshotId: c.snapshotId, likeValue: 1n }); // 已读结果是值，不随 current 移动
+    expect((await facts().contentsOf([w.accZhao])).rows[0]).toMatchObject({ snapshotId: moved, likeValue: 9n }); // 再读才读到新的
   });
   it("profileOf：没有当前主页快照为 null", async () => {
     const w = await judgementWorld(t);

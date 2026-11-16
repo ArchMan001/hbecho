@@ -1,7 +1,7 @@
 // d-rule-engine 任务 9：对 E 的读取口、解释、保留与清理——JP-16 / JP-14。
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { activityPlans, judgementPlanVersions, judgementRuns, runContents, runParticipants, staffAccountAssignments } from "../../db/schema";
+import { activityPlans, judgementPlanVersions, judgementRuns, mediaStaff, runContents, runParticipants } from "../../db/schema";
 import { useTestDb } from "../../../tests/harness/db";
 import { addContent, addListTask, addParticipant, judgementEnv, judgementWorld, type JudgementEnv, type JudgementWorld } from "../../../tests/harness/judgement";
 import type { ResourceConstraint } from "../access-control";
@@ -95,8 +95,10 @@ describe("JudgementOutcomeReader（JP-16）", () => {
     expect(r.filter((x) => x === "success").length + r.filter((x) => x === "not_met").length + r.filter((x) => x === "unobtained").length).toBe(2);
     expect(ps.find((p) => p.staffId === w.staff.zhao)).toMatchObject({ results: { content: "success", plan: "success" }, counts: { c1: 2, c3: 2, p: 2 }, org: { branchId: w.bj, storeId: w.stores.sW1 }, syncComplete: true });
     // 执行之后改绑 / 门店换分公司：流出的组织链不变
-    await t.db.update(staffAccountAssignments).set({ staffId: w.staff.li }).where(eq(staffAccountAssignments.accountId, w.accZhao)).catch(() => undefined);
-    expect((await collect(e.outcomes.streamParticipants(execId, ALL))).find((p) => p.accountId === w.accZhao)!.org.branchId).toBe(w.bj);
+    await t.db.update(mediaStaff).set({ storeId: w.stores.sH1 }).where(eq(mediaStaff.staffId, w.staff.zhao)); // 换到上海的门店
+    expect((await t.db.select().from(mediaStaff).where(eq(mediaStaff.staffId, w.staff.zhao)))[0]!.storeId).toBe(w.stores.sH1);
+    const frozen = (await collect(e.outcomes.streamParticipants(execId, ALL))).find((p) => p.accountId === w.accZhao)!;
+    expect(frozen.org).toMatchObject({ branchId: w.bj, storeId: w.stores.sW1 }); // 流出的仍是冻结时的组织链
   });
   it("范围约束：empty → 空；branches 限定；brands 限定；self 只流出本人", async () => {
     const { w, e, execId } = await twoStaff();

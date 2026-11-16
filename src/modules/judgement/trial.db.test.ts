@@ -103,6 +103,8 @@ describe("试跑（JP-6）", () => {
     expect((await rowOf(runId, c)).reasonCode).toBe("media_carried_forward");
     const r = await e.runs.trialReport(e.creator, planId);
     expect(r.abilities[0]!.unobtained).toEqual({ total: 3, byReason: { media_pending: 1, media_failed: 1, media_carried_forward: 1 } });
+    expect(e.demand.submitted).toHaveLength(0); // 没有任何采集需求
+    expect(e.demand.getCalls).toBe(0);
     expect(r.abilities[0]!.counts[9]).toBe(1);
     expect(e.fake.callsOf("readMany").every((x) => (x.args as { signalKey: string }).signalKey.startsWith("text.") || (x.args as { signalKey: string }).signalKey.startsWith("content.cover"))).toBe(true);
   });

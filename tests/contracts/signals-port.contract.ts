@@ -47,6 +47,36 @@ export function signalsPortContract(name: string, make: () => Promise<SignalsPor
       expect(m).toBeInstanceOf(Map);
       expect(m.size).toBe(0);
     });
+    it("executability 的 only：只看所给信号，段里没有的信号即使有阻塞也不影响；blockers 项带 signal 与 code", async () => {
+      const { port, actor, nextPlanId } = await make();
+      const k = await port.segments.create(actor, { planId: nextPlanId(), platform: "douyin" });
+      await port.segments.setItems(actor, k, [{ signal: "text.title_normalized" }]);
+      const all = await port.executability(actor, k);
+      const only = await port.executability(actor, k, { only: ["text.title_normalized"] });
+      expect(only.executable).toBe(all.executable || all.blockers.every((b) => b.signal !== "text.title_normalized"));
+      for (const b of all.blockers) expect(typeof b.code).toBe("string");
+      await expect(port.executability(actor, k, { only: [] })).rejects.toMatchObject({ code: "only_empty" }); // 空数组既不是「什么都不做」也不是「全部」，C 直接拒绝
+    });
+    it("show.images 的形状：模板图 {kind, target}，元素图再带 elementKey；removeImage 之后消失", async () => {
+      const { port, actor, nextPlanId } = await make();
+      const k = await port.segments.create(actor, { planId: nextPlanId(), platform: "douyin" });
+      const key = "a".repeat(64);
+      await port.segments.setItems(actor, k, [{ signal: "content.cover_template_score" }, { signal: "content.cover_element_score", element_key: key }]);
+      const bytes = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from("contract")]);
+      await port.segments.putImage(actor, { ...k, kind: "template", target: "cover" }, bytes);
+      await port.segments.putImage(actor, { ...k, kind: "element", target: "cover", elementKey: key }, bytes);
+      const shown = (await port.segments.show(actor, k)) as unknown as { images: Array<{ kind: string; target: string; elementKey?: string }> };
+      expect(shown.images.map((i) => `${i.kind}/${i.target}/${i.elementKey ?? ""}`).sort()).toEqual([`element/cover/${key}`, "template/cover/"]);
+      await port.segments.removeImage(actor, { ...k, kind: "element", target: "cover", elementKey: key });
+      const after = (await port.segments.show(actor, k)) as unknown as { images: Array<{ kind: string }> };
+      expect(after.images.map((i) => i.kind)).toEqual(["template"]);
+    });
+    it("normalizeKeyword 幂等且不区分大小写；retainUntil 对空清单不报错", async () => {
+      const { port, actor } = await make();
+      expect(port.normalizeKeyword("ABC")).toBe(port.normalizeKeyword("abc"));
+      expect(port.normalizeKeyword(port.normalizeKeyword("海信 New"))).toBe(port.normalizeKeyword("海信 New"));
+      expect(await port.retainUntil(actor, [], new Date("2027-02-16T00:00:00Z"))).toEqual({ matched: 0 });
+    });
     it("platformSignals 给出该平台可得的信号集合：文本信号三平台都有，评论只有抖音与小红书", async () => {
       const { port } = await make();
       expect(port.platformSignals("douyin").has("text.hashtags")).toBe(true);

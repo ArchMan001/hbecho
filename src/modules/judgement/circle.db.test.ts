@@ -56,6 +56,8 @@ describe("圈定（JP-5）", () => {
     await e.runs.circle(e.creator, planId);
     expect(e.fake.callsOf("requestScores")).toHaveLength(0);
     expect(e.fake.callsOf("segments.publish")).toHaveLength(0);
+    expect(e.demand.submitted).toHaveLength(0);
+    expect(e.demand.getCalls).toBe(0);
     expect(e.fake.callsOf("readMany").length).toBeGreaterThan(0);
   });
   it("话题整体相等：618 不匹配 618大促；关键词全含 / 任一", async () => {

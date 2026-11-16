@@ -56,7 +56,11 @@ export class FakeSignals implements SignalsPort {
 
   async executability(_a: SignalActor, ref: SegmentRef, o: { only?: readonly string[] } = {}): Promise<Executability> {
     this.log("executability", { ref, only: o.only });
-    const bs = this.blockers.filter((b) => o.only === undefined || b.signal === undefined || o.only.includes(b.signal));
+    if (o.only?.length === 0) throw new SignalError("input", "only_empty", "only 不能是空数组；要处理全部信号就不传 only"); // 与 C 的 parseOnly 一致
+    // 与真实 C 一致：监控段只对自己 items 里的信号负责（blockers 是全局编程的，这里按该段的信号过滤）
+    const seg = this.segs.get(keyOf(ref));
+    const inSegment = (signal: string): boolean => !seg || seg.items.some((i) => (i as { signal?: string }).signal === signal);
+    const bs = this.blockers.filter((b) => (o.only === undefined || b.signal === undefined || o.only.includes(b.signal)) && (b.signal === undefined || inSegment(b.signal)));
     return { executable: bs.length === 0, blockers: bs };
   }
 
@@ -133,6 +137,7 @@ export class FakeSignals implements SignalsPort {
 
   async requestScores(_a: SignalActor, ref: SegmentRef, subjects: readonly Subject[], ctx: { only: readonly string[] }): Promise<RequestResult> {
     this.log("requestScores", { ref, subjects: subjects.map((s) => `${s.kind}:${s.id}`), only: ctx.only });
+    if (ctx.only.length === 0) throw new SignalError("input", "only_empty", "only 不能是空数组；要处理全部信号就不传 only");
     const ex = await this.executability(_a, ref, { only: ctx.only });
     if (!ex.executable) throw new SignalError("conflict", "not_executable", "监控段当前不可执行，不能补算", ex.blockers);
     return {

@@ -1,6 +1,11 @@
-# Rule Engine Design
+# Rule Engine Design（旧草案）
+> **状态**：`superseded` / `archived`（2026-11-16）
 
-> **状态**：`draft`  
+> **替代文档**：[`.kiro/specs/d-rule-engine/`](../../.kiro/specs/d-rule-engine/design.md)（requirements / design / tasks / acceptance 四件套）
+
+> **禁止用途**：不得作为实现依据；其 `AssessmentItem`、`composite`、分项完成率、同平台多账号聚合、`OutcomeSet` 的 item→run 映射都已被 D 域 PRD v1.2 与新 spec 取代。保留只为追溯 2026-09 的技术思路。
+
+
 > **模式**：Design-First；本轮重构历史技术设计，不包含 requirements/tasks  
 > **适用范围**：考核项、规则目录、纯求值、依赖规划、运行与证据、结果激活及下游契约  
 > **所属域**：D 规则与考核 · **目录命名**：旧名 `rule-engine`，按域代号应为 `d-rule-engine`；本目录当前只有 design.md（`requirements.md` 已从仓库移除）  
@@ -49,11 +54,11 @@ flowchart LR
 
 优先级：
 
-1. [`CONTEXT.md`](../../../CONTEXT.md)：身份、归属、发现、快照、ValueState 和媒资不变量；
-2. [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)：数据底座实体、状态、事务和当前接入契约；
-3. [`b-access-control/design.md`](../b-access-control/design.md)：Capability、DataScope、异步范围交集与当前查询授权语义；
+1. [`CONTEXT.md`](../../CONTEXT.md)：身份、归属、发现、快照、ValueState 和媒资不变量；
+2. [`database-design-v2.md`](../domains/data-foundation/database-design-v2.md)：数据底座实体、状态、事务和当前接入契约；
+3. [`b-access-control/design.md`](../../.kiro/specs/b-access-control/design.md)：Capability、DataScope、异步范围交集与当前查询授权语义；
 4. 本设计：规则域拥有的规则、运行、证据和 outcome；
-5. 历史输入：[`hbecho-模块设计-规则引擎.md`](../../../HBECHO设计方案/prd-drafts-子PRD草案/hbecho-模块设计-规则引擎.md)。
+5. 历史输入：[`hbecho-模块设计-规则引擎.md`](../prd-drafts-子PRD草案/hbecho-模块设计-规则引擎.md)。
 
 历史设计中的产品能力可被吸收，但旧 DDL、SQL、表名和组织假设不是实施基线。本文刻意不定义物理 schema。
 

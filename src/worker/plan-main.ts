@@ -8,6 +8,7 @@
 //   HBECHO_AP_PLATFORM_ADMIN   可选，true / false，缺省 false
 //   HBECHO_ENV                 缺省 production（fail closed）；HBECHO_SYNC_PROFILE_MODE / HBECHO_SYNC_LIST_MODE 决定确认时的 capability 门控
 // `plan resolve --once` 额外需要完整的 worker 配置（sync-config.ts 的全部变量，含花钱上限），且只在有已批准 capability 时运行。
+//   清除活动计划（plan maintain）要调 C 的 segments.purge：用到才读 C 的数值配置与 OSS_BUCKET_SIGNALS / OSS 凭证，缺项时清除失败、计划留在回收站（见 judgement-wiring.ts）
 // B 域落地后，Web 入口用 toPlanActor 构造 PlanActor，这里的环境变量身份只给运维 CLI。
 import { readFileSync, writeFileSync } from "node:fs";
 import { eq } from "drizzle-orm";
@@ -21,6 +22,7 @@ import { runTracerRoot } from "../modules/orchestrator";
 import type { RawCaptureGateway } from "../modules/raw-capture";
 import { createLogSyncAuditSink, createSyncCommands, createSyncScheduler } from "../modules/sync-schedule";
 import { CAP_SYNC_TRIGGER, createLogAuditSink, createTracerCommands, type ActorContext } from "../modules/tracer-command";
+import { buildJudgementDownstream } from "./judgement-wiring";
 import { runPlanCli } from "./plan-cli";
 import { parseSyncWorkerConfig } from "./sync-config";
 import { assertWorkerCanRun, buildAccountRunners } from "./sync-runner-wiring";
@@ -82,7 +84,9 @@ if (process.argv[2] === "resolve") {
     process.exit(1);
   }
 }
-const ap = createActivityPlan({ db, clock, audit, monitoring, tracer, tracerConfig, ...(runRoot ? { runRoot } : {}), ...(supplement ? { supplement } : {}) });
+// 下游：D 的判定计划（E 落地后在这里改成组合下游，任一失败整体失败）；清除用到的 C 配置用到才读
+const downstream = buildJudgementDownstream({ db, env: process.env, logger });
+const ap = createActivityPlan({ db, clock, audit, monitoring, tracer, tracerConfig, downstream, ...(runRoot ? { runRoot } : {}), ...(supplement ? { supplement } : {}) });
 const code = await runPlanCli(process.argv.slice(2), {
   ap,
   actor,

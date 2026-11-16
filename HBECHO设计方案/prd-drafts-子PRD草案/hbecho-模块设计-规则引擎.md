@@ -2,7 +2,7 @@
 
 > **文档状态**：`draft`（2026-10-26 由 liuxuekui 从归档恢复为子 PRD 草案，待复核）  
 > **复核状态**：未复核。此前 2026-09-02 的 `superseded` 标记作废。  
-> **权威关系**：与 [`rule-engine/design.md`](../../.kiro/specs/rule-engine/design.md) 和 [`prd-platform.md`](../prd-platform.md) 冲突时，以它们为准。  
+> **权威关系**：与 [`d-rule-engine/design.md`](../../.kiro/specs/d-rule-engine/design.md) 和 [`prd-platform.md`](../prd-platform.md) 冲突时，以它们为准。  
 > **用途**：作为规则与考核子 PRD 重写的素材。  
 > **禁止用途**：不得作为当前实现合同，不得复用旧 DDL、旧 SQL、旧表名或过时组织假设。
 

@@ -6,9 +6,9 @@
 >
 > **本文档的范围**：只写"从内容与图片里抽什么、什么时候抽、抽不出来怎么表达、能力升级后怎么办"。**不含表结构、算法参数、接口定义、模型选型**——那些属于 C 域 spec 与 ADR。
 >
-> **产品语义的唯一真相源是本文档。** `rule-engine/design.md` 与 `database-design-v2.md` 若与本文冲突，以本文为准，并回来修订它们。
+> **产品语义的唯一真相源是本文档。** `d-rule-engine` 的 design 与 `database-design-v2.md` 若与本文冲突，以本文为准，并回来修订它们。
 >
-> **来源说明**：本域没有现成的独立 PRD 草稿。素材取自 [`hbecho-设计大纲.md`](prd-drafts-子PRD草案/hbecho-设计大纲.md) §4 分层能力模型、§6.C 识别能力层、§6.D 判定链路，以及 [`rule-engine/design.md`](../.kiro/specs/rule-engine/design.md) §8.2「媒资与特征需求」中仍然有效的部分。
+> **来源说明**：本域没有现成的独立 PRD 草稿。素材取自 [`hbecho-设计大纲.md`](prd-drafts-子PRD草案/hbecho-设计大纲.md) §4 分层能力模型、§6.C 识别能力层、§6.D 判定链路，以及 [旧 `rule-engine` 设计](archive/rule-engine-design-2026-09-02.md) §8.2「媒资与特征需求」中仍然有效的部分。
 
 ---
 

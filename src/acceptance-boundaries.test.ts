@@ -208,6 +208,7 @@ describe("AP：计划每日维护不依赖 OSS（装配静态检查，AP-D15）"
 import { getTableName, is } from "drizzle-orm";
 import { MySqlTable } from "drizzle-orm/mysql-core";
 import * as allSchema from "./db/schema";
+import * as judgementSchema from "./db/schema/judgement";
 import * as signalsSchema from "./db/schema/signals";
 
 describe("SG-16 护栏：signals 模块与 A 域、供应商、模型的边界", () => {
@@ -330,5 +331,136 @@ describe("SG-16 护栏：signals 模块与 A 域、供应商、模型的边界",
     const odsRef = /\bods_\w+|\bods[A-Z]\w*/;
     expect(sources.filter((f) => odsRef.test(f.text)).map((f) => f.rel)).toEqual([]);
     expect(odsRef.test("db.select().from(odsPayloads)")).toBe(true); // 反向：扫描条件本身能识别
+  });
+});
+
+// ---- d-rule-engine（JP-21 五条静态护栏，各配一个故意违规的反向用例）-----------------------------------------------
+describe("JP-21 护栏：judgement 模块与 A 域、C 域、供应商的边界", () => {
+  type Src = { rel: string; text: string };
+  const FACTS = "modules/judgement/facts.ts";
+  const sources: Src[] = nonTestSources.filter((p) => rel(p).startsWith("modules/judgement/")).map((p) => ({ rel: rel(p), text: code(p) }));
+  // D 自己的表 = judgement.ts 导出的；其余全部 schema 导出的表都是 A / C 的
+  const dTables = new Set(Object.keys(judgementSchema));
+  const foreign = Object.entries(allSchema).filter(([name, v]) => is(v, MySqlTable) && !dTables.has(name)) as Array<[string, MySqlTable]>;
+  const foreignNames = foreign.map(([n]) => n);
+  const foreignSql = foreign.map(([, t]) => getTableName(t));
+  const writeDrizzle = new RegExp(`\\.(?:insert|update|delete)\\(\\s*(?:${foreignNames.join("|")})\\s*\\)`);
+  const writeSql = new RegExp(`\\b(?:INSERT\\s+(?:IGNORE\\s+)?INTO|UPDATE|DELETE\\s+FROM|REPLACE\\s+INTO)\\s+\`?(?:${foreignSql.join("|")})\`?\\b`, "i");
+  const readSql = new RegExp(`\\b(?:FROM|JOIN)\\s+\`?(?:${foreignSql.join("|")})\`?\\b`, "i");
+  const namespaceImport = /import\s*\*\s*as\s+\w+\s+from\s*["'][^"']*\/db\/schema(?:\/[\w-]+)?["']/;
+  const importedNames = (text: string): string[] =>
+    [...text.matchAll(/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*["'][^"']*\/db\/schema(?:\/[\w-]+)?["']/g)].flatMap((m) => m[1]!.split(",").map((n) => n.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0]!).filter(Boolean));
+  const specs = (text: string): Array<{ spec: string; typeOnly: boolean }> =>
+    [...text.matchAll(/(?:import|export)\s+(type\s+)?[^"';]*?\bfrom\s*["']([^"']+)["']|import\s+["']([^"']+)["']/g)].map((m) => ({ spec: m[2] ?? m[3]!, typeOnly: m[1] !== undefined }));
+
+  // ① 不写 A、C 的表；A 的表只在 facts.ts 里被引用；C 的表一概不引用（只经函数）
+  const writes = (files: Src[]): string[] => files.filter((f) => writeDrizzle.test(f.text) || writeSql.test(f.text)).map((f) => f.rel);
+  const readsOutsideFacts = (files: Src[]): string[] =>
+    files.filter((f) => f.rel !== FACTS && (importedNames(f.text).some((n) => foreignNames.includes(n)) || namespaceImport.test(f.text) || readSql.test(f.text))).map((f) => f.rel);
+  // ② 不碰供应商调用、采集网关、orchestrator 的领取
+  const forbiddenImport = ({ spec, typeOnly }: { spec: string; typeOnly: boolean }): boolean =>
+    /provider-adapter|\/orchestrator(\/|$)/.test(spec) || (/raw-capture/.test(spec) && !typeOnly);
+  const touchesProvider = (files: Src[]): string[] => files.filter((f) => specs(f.text).some(forbiddenImport) || /\b(?:RawCaptureGateway|callAndInterpret|HttpProviderTransport)\b/.test(f.text)).map((f) => f.rel);
+  // ③ 事务回调里不调 SignalsPort / DemandPort（data-discipline 纪律 2）
+  const CROSS_CALL = /\b(?:signals|demand|segments)\.\w+\s*\(|\b(?:requestScores|readMany|retainUntil|executability)\s*\(/;
+  const transactionBodies = (text: string): string[] => {
+    const out: string[] = [];
+    for (const m of text.matchAll(/\.transaction\s*\(/g)) {
+      let depth = 0;
+      let started = false;
+      let i = m.index! + m[0].length;
+      const start = i;
+      for (; i < text.length; i++) {
+        const c = text[i]!;
+        if (c === "{") (depth++, (started = true));
+        else if (c === "}") depth--;
+        if (started && depth === 0) break;
+      }
+      out.push(text.slice(start, i + 1));
+    }
+    return out;
+  };
+  const crossCallInTransaction = (files: Src[]): string[] => files.filter((f) => transactionBodies(f.text).some((b) => CROSS_CALL.test(b))).map((f) => f.rel);
+  // ④ judgement 下的 *.db.test.ts 没有 Promise.all
+  const PROMISE_ALL = ["Promise", "all("].join(".");
+  const dbTests = [...walk(join(SRC, "modules", "judgement")), join(SRC, "db", "judgement-schema.db.test.ts")].filter((f) => f.endsWith(".db.test.ts"));
+  // ⑤ D 的配置与证据不含原文字段
+  const RAW_KEY = /\b(?:title|body|contentText|content_text|commentText|comment_text|authorName|author_name|authorId)\s*\??:/;
+  const rawFields = (files: Src[]): string[] => files.filter((f) => RAW_KEY.test(f.text)).map((f) => f.rel);
+
+  it("扫描到了 judgement 的源文件（避免目录改名后护栏空转）", () => {
+    expect(sources.length).toBeGreaterThan(8);
+    expect(sources.map((s) => s.rel)).toContain(FACTS);
+    expect(foreignNames).toEqual(expect.arrayContaining(["contents", "contentSnapshots", "syncTasks", "activityPlans", "signalResults", "monitoringSegments"]));
+    expect(foreignNames).not.toContain("judgementRuns");
+  });
+  it("① 不对 A、C 的表做 insert / update / delete；A 的表只在 facts.ts 里被引用，C 的表一概不引用", () => {
+    expect(writes(sources)).toEqual([]);
+    expect(readsOutsideFacts(sources)).toEqual([]);
+  });
+  it("① 反向用例", () => {
+    const bad: Src[] = [
+      { rel: "modules/judgement/zz-a.ts", text: "await tx.insert(syncTasks).values(x);" },
+      { rel: "modules/judgement/zz-b.ts", text: "await tx.update( signalResults ).set(y);" },
+      { rel: "modules/judgement/zz-c.ts", text: "await tx.execute(sql`DELETE FROM contents WHERE 1`);" },
+    ];
+    expect(writes(bad)).toEqual(bad.map((b) => b.rel));
+    const ok: Src[] = [
+      { rel: "modules/judgement/zz-d.ts", text: 'import { judgementRuns } from "../../db/schema"; await tx.insert(judgementRuns).values(x); await tx.update(runContents).set(y);' },
+      { rel: FACTS, text: 'import { contents } from "../../db/schema"; await db.select().from(contents);' },
+    ];
+    expect(writes(ok)).toEqual([]);
+    expect(readsOutsideFacts(ok)).toEqual([]);
+    const reads: Src[] = [
+      { rel: "modules/judgement/zz-e.ts", text: 'import { contents } from "../../db/schema";' },
+      { rel: "modules/judgement/zz-f.ts", text: 'import * as schema from "../../db/schema";' },
+      { rel: "modules/judgement/zz-g.ts", text: "await db.execute(sql`SELECT 1 FROM signal_results WHERE 1`);" },
+    ];
+    expect(readsOutsideFacts(reads)).toEqual(reads.map((r) => r.rel));
+  });
+  it("② 不 import provider-adapter / orchestrator / 采集网关，不写 sync_tasks（后者由 ① 守）", () => {
+    expect(touchesProvider(sources)).toEqual([]);
+  });
+  it("② 反向用例", () => {
+    const bad: Src[] = [
+      { rel: "modules/judgement/zz-a.ts", text: 'import { decode } from "../provider-adapter";' },
+      { rel: "modules/judgement/zz-b.ts", text: 'import { claimTask } from "../orchestrator/claim";' },
+      { rel: "modules/judgement/zz-c.ts", text: 'import { RawCaptureGateway } from "../raw-capture";' },
+    ];
+    expect(touchesProvider(bad)).toEqual(bad.map((b) => b.rel));
+    expect(touchesProvider([{ rel: "modules/judgement/zz-d.ts", text: 'import type { Clock } from "../raw-capture/ports";' }])).toEqual([]);
+  });
+  it("③ 事务回调里没有对 SignalsPort / DemandPort 的调用", () => {
+    expect(crossCallInTransaction(sources)).toEqual([]);
+  });
+  it("③ 反向用例：事务里调 C / A 被抓到；事务外的同名调用与事务里的纯数据库操作不算", () => {
+    const bad: Src[] = [
+      { rel: "modules/judgement/zz-a.ts", text: "await db.transaction(async (tx) => { await tx.update(x); await signals.requestScores(a, r, s, c); });" },
+      { rel: "modules/judgement/zz-b.ts", text: "await this.db.transaction(async (tx) => { const m = await deps.signals.readMany(a, s, k); });" },
+      { rel: "modules/judgement/zz-c.ts", text: "await db.transaction(async (tx) => { if (x) { await demand.submit(a, i); } });" },
+    ];
+    expect(crossCallInTransaction(bad)).toEqual(bad.map((b) => b.rel));
+    const ok: Src[] = [{ rel: "modules/judgement/zz-d.ts", text: "await signals.requestScores(a, r, s, c); await db.transaction(async (tx) => { await tx.update(x); });" }];
+    expect(crossCallInTransaction(ok)).toEqual([]);
+  });
+  it("④ judgement 下的 *.db.test.ts 没有 Promise.all（dev-ci-cadence 第 3 条）", () => {
+    expect(dbTests.length).toBeGreaterThan(1);
+    expect(dbTests.filter((f) => readFileSync(f, "utf8").includes(PROMISE_ALL)).map(rel)).toEqual([]);
+  });
+  it("④ 反向用例：扫描条件本身能识别 Promise.all", () => {
+    expect(`await ${PROMISE_ALL}[a(), b()])`.includes(PROMISE_ALL)).toBe(true);
+    expect("for (const x of xs) await run(x);".includes(PROMISE_ALL)).toBe(false);
+  });
+  it("⑤ 配置与证据的类型 / schema 里没有正文、评论原文、作者字段", () => {
+    expect(rawFields(sources)).toEqual([]);
+  });
+  it("⑤ 反向用例", () => {
+    const bad: Src[] = [
+      { rel: "modules/judgement/zz-a.ts", text: "type Evidence = { title: string };" },
+      { rel: "modules/judgement/zz-b.ts", text: "const s = z.object({ commentText: z.string() });" },
+      { rel: "modules/judgement/zz-c.ts", text: "interface X { authorName?: string }" },
+    ];
+    expect(rawFields(bad)).toEqual(bad.map((b) => b.rel));
+    expect(rawFields([{ rel: "modules/judgement/zz-d.ts", text: 'fields: z.array(z.enum(["title", "body"]))' }])).toEqual([]); // 字段选择器的取值不是原文字段
   });
 });

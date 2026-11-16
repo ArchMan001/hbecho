@@ -24,7 +24,7 @@
 - [x] 任务 1 · Module 读口 `browse`（门店 / 分公司查询 + 六项筛选与选项校验）+ 测试（2026-11-16）
 - [x] 任务 2 · `ui-lab` 原型走查与界面确认（design §16.6，2026-11-16）
 - [x] 任务 3 · 页面 `/master-data`（2026-11-16）
-- [ ] 任务 4 · 验收回填、INDEX 状态更新与实施记录
+- [~] 任务 4 · 验收回填、INDEX 状态更新与实施记录（本机全部通过；E1/E2 待部署测试 ECS）
 
 ## 依赖图
 
@@ -183,3 +183,11 @@ T2（已完成，2026-11-16 界面确认）
 - 修改：`src/app/(app)/layout.tsx`（导航落点与 `also`）、`src/app/(app)/master-data/import/page.tsx`（接入切换）、`src/app/_lib/master-labels.ts`（`STORE_STATUS`）、`src/app/globals.css`（`.md-tabs`）、`src/app/_actions/plan-actions.guard.test.ts`（页面清单 11 → 12）。
 - 验证：`pnpm typecheck` 通过；unit `browse.test.ts` + `plan-actions.guard.test.ts` 27/27；db `browse.db.test.ts` 11/11；本机 3204 真实登录（平台超管）走查：门店 / 分公司视图、六项筛选、未设置、空状态、分公司行下钻、切换导入页、导航激活均正常。
 - 本机走查发现并修正：列表 chip 缺 `key` 的 React 警告；`HBECHO_PUBLIC_ORIGIN` 必须与端口一致，否则完整刷新时页面内容停在流式占位（既有 `/users` 同样表现，与页面代码无关）。
+
+### 2026-11-16 · T4 验收与收尾
+
+- A19：新增 10,000 行规模用例；db `browse.db.test.ts` 12/12 通过。
+- M3 / M4：本机 3204 用李静（分公司，`13800002043`）与王敏（总部，`13800002042`）走查；导航裁剪、直接访问「无权访问」、品牌范围与门店数均符合预期。
+- 第一次推送的 CI：run `43797106972` 通过（`verify` 9m26s、`image` 1m36s；分支不推 ACR）。
+- 收尾全量 `verify.sh`：unit 1028 通过；db 1455 通过 / 1 跳过 / **1 失败**，失败项是 `src/modules/activity-plan/scale.perf.db.test.ts` 的已知并发抖动（单独复跑 2/2 通过），不在本 spec 范围，未修改该测试；Python 侧本机未验证（工作树环境缺 pytest/ffmpeg，CI 也不验）。
+- E1 / E2：未执行，需先把镜像部署到测试 ECS（人工步骤，runbook §P6）。

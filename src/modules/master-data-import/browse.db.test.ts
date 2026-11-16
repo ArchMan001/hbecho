@@ -125,6 +125,31 @@ describe("门店读口", () => {
     expect(new Set(all.items.map((s) => s.storeCode)).size).toBe(25);
   });
 
+  it("10,000 行：单页只返回 ≤ pageSize，total 与切片一致（A19）", async () => {
+    const env = await fixture();
+    const [base] = await t.db.select().from(stores).where(eq(stores.storeCode, "S-1"));
+    const now = new Date("2026-11-16T00:00:00.000Z");
+    const bulk = Array.from({ length: 10_000 }, (_, i) => ({
+      storeCode: `L-${String(i + 1).padStart(5, "0")}`,
+      storeName: `规模门店 ${i + 1}`,
+      dealerId: base!.dealerId,
+      brandId: base!.brandId,
+      sectorId: base!.sectorId,
+      status: i % 50 === 0 ? "closed" : "active",
+      storeTier: i % 7 === 0 ? null : "规模等级",
+      createdAt: now,
+      updatedAt: now,
+    }));
+    for (let i = 0; i < bulk.length; i += 2000) await t.db.insert(stores).values(bulk.slice(i, i + 2000));
+    const first = await env.md.browse.stores({ page: 1, pageSize: 100, keyword: "L-" }, adminActor());
+    expect(first.total).toBe(10_000);
+    expect(first.items).toHaveLength(100);
+    expect(first.items[0]!.storeCode).toBe("L-00001");
+    const last = await env.md.browse.stores({ page: 100, pageSize: 100, keyword: "L-" }, adminActor());
+    expect(last.items).toHaveLength(100);
+    expect(last.items.at(-1)!.storeCode).toBe("L-10000");
+  });
+
   it("无 Capability 拒绝；读口不改变业务表", async () => {
     const env = await fixture();
     await expect(env.md.browse.stores({ ...page }, actor("all", []))).rejects.toMatchObject({ category: "authorization", code: "forbidden" });

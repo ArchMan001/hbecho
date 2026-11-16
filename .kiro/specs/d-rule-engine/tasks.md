@@ -232,4 +232,12 @@
 
 ## 实施记录
 
-（实施时按任务回填：本机 `verify.sh` 的测试数、测试 ECS 的通过数与耗时、与计划不同的地方、没有做的事。）
+**2026-11-16（分支 `d-rule-engine`，worktree `../hbecho-d-rule-engine`）**：任务 0–7 完成。本机 `./scripts/verify.sh` 全绿：类型检查、unit 1146、db 1580（1 skipped）、迁移一致、密钥、链接、登记；Python 侧未验证（本机无 pytest / ffmpeg）。**测试 ECS 未跑；与 C 的真实契约（`tests/contracts/signals-port.contract.ts` 对真实实现）未验证；没有任何真实付费调用。**
+
+与计划不同的地方：
+- 后台运行继承提交人身份（`contextForUser`），不新增 `service:judgement`，B 零改动；对 A 的 `demand` 用 D 的窄适配 `toDemandActor`（design §14 第 31 项，待确认）；
+- `validateConfig` 的「至少一类要求」只在圈定 / 试跑 / 发布前（`complete`）强制，草稿编辑中途允许为空；
+- 对 C 的形状差异（`segment_exists`、`score` 为 number、`Map<bigint>`、`RequestResult` 结构）由 D 一处吸收；
+- 第 3 层与评论要求在任务 8 之前执行时显式失败 `not_implemented`。
+
+没有做的事：任务 8（第 3 层与评论）、9（对 E 的读取口与 explain、保留清理）、10（下游端口与清除）、11（CLI 与 serve，含 `judgement circle` 的 CLI 级测试）、12（全量验收、规模演练、测试 ECS）、13–16（页面）。`retainUntil` 证据保留随任务 8。

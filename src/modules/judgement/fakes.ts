@@ -159,25 +159,53 @@ export class FakeSignals implements SignalsPort {
   }
 }
 
+export type FakeWantOutcome = { state: "ready" | "failed" | "unsupported" | "pending" | "running" | "reused_ready"; disposition?: "queued" | "reused" | "unsupported_platform" | "capability_disabled" | "content_not_found" | "out_of_scope"; reason?: string; comments?: { coverage: "complete" | "partial" | "unknown"; fetchedCount: number; reportedTotal: string | null } };
 export class FakeDemand implements DemandPort {
-  readonly submitted: Array<{ actor: string; input: SubmitDemand }> = [];
+  readonly submitted: Array<{ actor: string; input: SubmitDemand; batchId: string }> = [];
   /** 同一 (actor, demandKey) 重复提交得到同一批次。 */
   private readonly batches = new Map<string, SubmitResult>();
+  private readonly items = new Map<string, Array<{ contentId: string; wants: string[] }>>();
   private seq = 0;
-  /** 编程：get 返回的视图；默认全部 ready。 */
-  views = new Map<string, DemandView>();
+  /** 编程：某内容某 want 的结果；缺省 ready（评论缺省 coverage complete、已取 0 条）。 */
+  readonly outcomes = new Map<string, FakeWantOutcome>();
+  /** 编程：前 N 次 get 返回 pending（模拟还在采集）。 */
+  pendingGets = 0;
+  getCalls = 0;
+  setOutcome(contentId: bigint, want: string, o: FakeWantOutcome): void {
+    this.outcomes.set(`${contentId}|${want}`, o);
+  }
   async submit(actor: ActorContext, input: SubmitDemand): Promise<SubmitResult> {
     const key = `${actor.actorId}|${(input as { demandKey: string }).demandKey}`;
     const have = this.batches.get(key);
     if (have) return { ...have, kind: "deduplicated" };
-    this.submitted.push({ actor: actor.actorId, input });
     const r: SubmitResult = { kind: "created", batchId: `fake-batch-${++this.seq}`, status: "running", dispositions: [], taskCount: 0 };
+    this.submitted.push({ actor: actor.actorId, input, batchId: r.batchId });
+    this.items.set(r.batchId, (input as { items: Array<{ contentId: string; wants: string[] }> }).items);
     this.batches.set(key, r);
     return r;
   }
   async get(_actor: ActorContext, batchId: string): Promise<DemandView> {
-    const v = this.views.get(batchId);
-    if (!v) throw new Error(`FakeDemand：批次 ${batchId} 没有编程视图`);
-    return v;
+    this.getCalls++;
+    const items = this.items.get(batchId);
+    if (!items) throw new Error(`FakeDemand：批次 ${batchId} 不存在`);
+    const pending = this.getCalls <= this.pendingGets;
+    return {
+      batchId,
+      status: pending ? "running" : "completed",
+      items: items.flatMap((i) =>
+        i.wants.map((want) => {
+          const o = this.outcomes.get(`${i.contentId}|${want}`) ?? { state: "ready" as const, ...(want === "comments" ? { comments: { coverage: "complete" as const, fetchedCount: 0, reportedTotal: "0" } } : {}) };
+          const state = pending && o.state !== "failed" && o.state !== "unsupported" ? "pending" : o.state;
+          return {
+            contentId: i.contentId,
+            want: want as never,
+            state: state as never,
+            disposition: (o.disposition ?? "queued") as never,
+            ...(o.reason ? { reason: o.reason } : {}),
+            ...(o.comments ? { pointers: { comments: { fetchedAt: new Date(0).toISOString(), coverage: o.comments.coverage, fetchedCount: o.comments.fetchedCount, reportedTotal: o.comments.reportedTotal } } } : {}),
+          };
+        }),
+      ),
+    };
   }
 }

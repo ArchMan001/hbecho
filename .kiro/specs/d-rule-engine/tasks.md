@@ -32,7 +32,7 @@
 - [x] 任务 5 · 运行内核与圈定（**第一条可演示的纵向**）（2026-11-16：`engine/claim.ts`、`engine/runner.ts`、`runs.ts`、`assemble.ts`，`circle.db` 31 例；**`judgement circle` 的 CLI 级测试随任务 11 的 CLI 一并做**）
 - [x] 任务 6 · 试跑（第 2 层）：依赖协调、等待、报告（2026-11-16：`scores` 阶段、`runs.trial / trialReport`，`trial.db` 16 例；真实评分耗时在任务 12）
 - [x] 任务 7 · 执行（第 1、2 层 + 账号要求）：确认执行、聚合、零内容、计划总结果（2026-11-16：`aggregate` 阶段、`runs.execute / serveOnce`，`execute.db` 17 例；**第 3 层与评论要求在任务 8 之前显式失败 `not_implemented`**；`retainUntil` 证据保留与 `explain` 随任务 8 / 9）
-- [ ] 任务 8 · 第 3 层与评论：采集需求、ASR 判定、评论要求
+- [x] 任务 8 · 第 3 层与评论：采集需求、ASR 判定、评论要求（2026-11-16：`engine/dependency-phases.ts`，`layer3-comments.db` 20 例；`retainUntil` 先于证据写入；评论依赖失败时「不达标」改判未获取成功，已回写 requirements JP-10 / design §7.7 / acceptance J5；**`DemandPort` 的真实封装（A 的 `createDemandModule`）随任务 11 装配，现只有 FakeDemand 验证**）
 - [ ] 任务 9 · 对 E 的读取口、解释、保留与清理
 - [ ] 任务 10 · 下游端口与清除
 - [ ] 任务 11 · CLI 全集与 `judgement serve` 装配
@@ -159,7 +159,7 @@
   - **验证**：JP-9 验收全部（PRD D §六「专员级判定」九条逐条成为测试，含「至少 3 条：2 通过 + 1 第 2 层缺素材 → 未获取成功」「零内容：同步完整 / 失败 / 有缺口」「总结果 AND3 与不达标优先」）；JP-11 验收（账号要求与内容要求互不影响；无主页快照 / 素材缺失 / 阈值边界；名额已释放不调 C）；JP-8 验收（表驱动：每层三态 × 下一层是否被调用；第 2 层未获取的内容不出现在后续 `requestScores` 主体里）；内容 T / U 口径（第 1 层未获取成功计 U：N=3、2 通过 + 1 条第 1 层未获取 → 未获取成功；参与内容 10 条都没命中话题 → 不达标，不走零内容；参与内容 0 条才走零内容；`skipped` 不计 P / U / F）；内容要求未启用的计划（只配评论 / 只配头像）内容结果为 NULL 且不拖累总结果；JP-3（草稿 `confirm` 后再 `execute` 两次 → 一个已发布版本、三次执行；`new-draft` 改阈值 `confirm` 版本 +1；同幂等键重复 `confirm` 只一个运行）；JP-14（证据自包含：删除 `FakeSignals` 的结果后 `explain` 数据仍完整；`retainUntil` 主体恰为读取到的 `resultId` 去重；证据 JSON 无原文字段的 schema 断言）；JP-15（取消后不再提交新依赖）；执行可复现：同一冻结输入跑两次，`run_participants` 与 `run_contents` 逐行相同。
   - **演示**：`judgement confirm … --apply` → `judgement serve --once` → `judgement result summary` 看到成功 / 不达标 / 未获取成功人数与主要原因。
 
-- [ ] 8. 第 3 层与评论
+- [x] 8. 第 3 层与评论
   - **Requirements:** JP-10、JP-12
   - **Design:** §7.2（`demand / layer3 / comments` 阶段）、§7.7、§7.8
   - `DemandPort` 的真实封装（提交人身份译成的 A 侧 `ActorContext`，`actorId` = 提交人，见 design §9）；`demand` 阶段（分批、键 `exec:{id}:l3:{n}` / `exec:{id}:cm:{n}`、`requester` / `ruleDecisionId` / `ruleVersion`）；`layer3` 阶段（`requestScores(asr_judgement)`、求值、四要素证据）；`comments` 阶段（读 A 的一级评论、`readMany(comment.text_normalized)`、`cm_*`、覆盖缺口）；评论零候选规则；`content_not_found / unsupported_platform / capability_disabled / out_of_scope` 的处置。
@@ -238,6 +238,7 @@
 - 后台运行继承提交人身份（`contextForUser`），不新增 `service:judgement`，B 零改动；对 A 的 `demand` 用 D 的窄适配 `toDemandActor`（design §14 第 31 项，待确认）；
 - `validateConfig` 的「至少一类要求」只在圈定 / 试跑 / 发布前（`complete`）强制，草稿编辑中途允许为空；
 - 对 C 的形状差异（`segment_exists`、`score` 为 number、`Map<bigint>`、`RequestResult` 结构）由 D 一处吸收；
-- 第 3 层与评论要求在任务 8 之前执行时显式失败 `not_implemented`。
+- 评论依赖失败的专员，按公式得「不达标」时改判未获取成功（未知评论数没有上界），是对 design §7.7 的补充；
+- 证据里第 2 层能力项暂未带 C 的 `resultId`（保留期延长已做，按块先于证据写入），`explain` 随任务 9 补。
 
 没有做的事：任务 8（第 3 层与评论）、9（对 E 的读取口与 explain、保留清理）、10（下游端口与清除）、11（CLI 与 serve，含 `judgement circle` 的 CLI 级测试）、12（全量验收、规模演练、测试 ECS）、13–16（页面）。`retainUntil` 证据保留随任务 8。

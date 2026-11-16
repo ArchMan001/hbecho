@@ -204,7 +204,7 @@
 | J2 | JP-10 | 覆盖 `complete` / `partial`（总数已知）/ `unknown` | T = 评论条数 / T 含缺口 `总数 − 已取` / T 含缺口 1 |
 | J3 | JP-10 | 「至少 3 条评论含关键词」：命中 2 + 缺口 1；命中 2 + 覆盖完整 | 未获取成功；不达标 |
 | J4 | JP-10 | 评论信号 `not_computed` | 在等，超限记 `dependency_timeout` |
-| J5 | JP-10 | `demand` 处置 `unsupported_platform` / `content_not_found` / `capability_disabled` | 该内容评论记未获取，原因逐一对应 |
+| J5 | JP-10 | `demand` 处置 `unsupported_platform` / `content_not_found` / `capability_disabled` / 失败 / 超时 | 该内容评论记未获取，原因逐一对应；这类专员的评论结果不会是不达标（只可能成功或未获取成功） |
 | J6 | JP-10 | 评论候选为空：有候选在第 1、2 层未获取；根本无参与内容；候选全部确定性不通过 | 未获取成功；按零内容规则；不达标 |
 | J7 | JP-10 | 证据与落库 | 只有评论 ID（≤ 3）与计数；无评论原文、作者、点赞数 |
 | J8 | JP-10 | 评论结果是否反过来过滤内容 | 否（内容 `final` 不受评论影响） |

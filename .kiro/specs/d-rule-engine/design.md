@@ -559,6 +559,7 @@ comments 阶段: 对每条 C2 内容
                  覆盖 partial/unknown: 缺口 g = max(1, reportedTotal − fetchedCount)（总数已知）或 1；cm_total += g；cm_unobtained += g；原因 comments_incomplete
     failed / unsupported / content_not_found / timeout → cm_total += 1；cm_unobtained += 1；原因随 dep
 聚合: T,P,U 累加；F = T − P − U
+  依赖失败（该专员有 C2 内容的评论需求采集失败 / 不支持 / 超时）且按公式得「不达标」→ 改判未获取成功（未知评论数没有上界，不达标不成立；成功仍可成立）
   T = 0:
      若该专员有参与内容在 L1/L2 ended unobtained → unobtained
      否则若该专员根本没有参与内容 → 零内容规则

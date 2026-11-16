@@ -11,7 +11,7 @@ import { createRunner } from "./engine/runner";
 import type { JudgementConfig } from "./env";
 import { createFacts } from "./facts";
 import { createPlans } from "./plans";
-import type { SignalsPort } from "./ports";
+import type { DemandPort, SignalsPort } from "./ports";
 import { createRunOps } from "./run-ops";
 import { createRuns } from "./runs";
 import { createVersions } from "./versions";
@@ -21,6 +21,7 @@ export interface JudgementAssembly {
   clock: Clock;
   reader: Pick<PlanReader, "rosterSnapshot">;
   signals: SignalsPort;
+  demand: DemandPort;
   resolver: Pick<ContextResolver, "contextForUser">;
   authorizer: Authorizer;
   /** 授权器用的注册表：这里先查再注册 judgement_plan 与 plan_creator（重复装配不抛）。 */
@@ -34,7 +35,7 @@ export function createJudgement(a: JudgementAssembly) {
   const authz = createJudgementAuthz({ authorizer: a.authorizer, resolver: a.resolver, facts });
   const audit = createJudgementAudit(a.auditWriter);
   const limits = { maxItems: a.config.maxItems, maxKeywordLength: a.config.maxKeywordLength };
-  const deps = { db: a.db, clock: a.clock, facts, authz, audit, signals: a.signals, limits };
+  const deps = { db: a.db, clock: a.clock, facts, authz, audit, signals: a.signals, demand: a.demand, limits };
   const claim = createClaim({ db: a.db, clock: a.clock, leaseSeconds: a.config.leaseSeconds });
   const ops = createRunOps(a.db);
   const plans = createPlans(deps);

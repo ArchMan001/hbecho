@@ -7,6 +7,7 @@ import {
   activityPlans,
   branches,
   brands,
+  comments,
   contents,
   contentSnapshots,
   externalAccounts,
@@ -203,6 +204,14 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     return new Map(rows.map((r) => [r.id, { state: r.state, value: r.value, unit: r.unit }]));
   }
 
+  /** 内容下的一级评论（active）的 ID，按内容分组；评论正文不读（评论文本信号由 C 提供）。 */
+  async function commentIdsOf(contentIds: readonly bigint[]): Promise<Map<bigint, bigint[]>> {
+    const rows = await inChunks(contentIds, (c) => db.select({ id: comments.commentId, contentId: comments.contentId }).from(comments).where(and(inArray(comments.contentId, c), eq(comments.status, "active"))).orderBy(asc(comments.commentId)));
+    const out = new Map<bigint, bigint[]>();
+    for (const r of rows) out.set(r.contentId, [...(out.get(r.contentId) ?? []), r.id]);
+    return out;
+  }
+
   /** 账号当前 finalized 主页快照（账号要求用；没有为 null）。 */
   async function profileOf(accountIds: readonly bigint[]): Promise<Map<bigint, bigint | null>> {
     const rows = await inChunks(accountIds, (c) => db.select({ a: externalAccounts.accountId, p: externalAccounts.currentProfileSnapshotId }).from(externalAccounts).where(inArray(externalAccounts.accountId, c)));
@@ -249,6 +258,6 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     return out;
   }
 
-  return { rosterOf, planOf, activityPlansOf, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, contentsOf, durationsOf, profileOf, syncCompletenessOf };
+  return { rosterOf, planOf, activityPlansOf, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, contentsOf, durationsOf, commentIdsOf, profileOf, syncCompletenessOf };
 }
 export type Facts = ReturnType<typeof createFacts>;

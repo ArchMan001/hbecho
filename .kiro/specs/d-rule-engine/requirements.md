@@ -409,7 +409,7 @@ L3  第 3 层条件（只对 L2 通过者；1.0 仅 ASR 判定）
 - 评论的候选内容 = 该专员的 **C2**（通过第 1、2 层）（D-D12）；评论不反过来过滤内容；
 - 对 C2 内容向 A 提出 `comments` 需求（`demand.submit`，≤ 5,000 项 / 次，键 `exec:{runId}:cm:{n}`），轮询 `demand.get` 直到全部终态或超时；`unsupported_platform`（快手）在配置阶段已被挡住，运行时出现则记 `unsupported_platform`；`content_not_found`、`capability_disabled`、`out_of_scope` 各记对应原因；
 - 评论取自 A 的一级评论最新态（`status = 'active'`）；条件是**单条评论**上的关键词命中，经 C 的 `comment.text_normalized`（`readMany`，评论主体）与 `normalizeKeyword(raw, normalizerVersion)` 判定；评论信号 `missing(not_computed)` 视为「在等」（评论刚入库、C 扫描尚未到），有上限等待；
-- T / P / U 按 §1.4 第 11 项累加，覆盖不全的内容加缺口 U；达标方式同 JP-9；
+- T / P / U 按 §1.4 第 11 项累加，覆盖不全的内容加缺口 U；达标方式同 JP-9；某内容的评论需求根本没拿到（采集失败 / 不支持 / 超时）时，按公式得「不达标」的改判为未获取成功（未知评论数没有上界；成功仍可成立）；
 - 评论条数很大时，每条内容保存 `comment_total / pass / unobtained` 与至多 3 个命中评论 ID（证据）；**不**逐条评论落库；
 - 不保存评论原文与作者信息（只存 ID 与计数）。
 

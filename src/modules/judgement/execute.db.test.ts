@@ -228,13 +228,6 @@ describe("确认执行与重新执行（JP-3）", () => {
     expect(await code(e.runs.execute(e.creator, planId, { key: "k2" }))).toBe("not_executable");
     expect(await t.db.select().from(judgementRuns)).toHaveLength(1);
   });
-  it("第 3 层 / 评论要求在任务 8 之前显式失败（not_implemented），不把「没做」写成「通过」", async () => {
-    const { w, e, planId } = await setup({ ...BASE, commentRequirement: { mode: "any", keywords: ["安装"], method: { type: "any" } } });
-    await syncOk(w.accZhao);
-    await content(w, e, "a");
-    const { done } = await run(e, planId);
-    expect(done).toMatchObject({ status: "failed", lastErrorCode: "not_implemented" });
-  });
 });
 
 describe("可复现与取消", () => {

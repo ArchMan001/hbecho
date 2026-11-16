@@ -2,7 +2,7 @@
 // 在 rosterWorld（品牌 HITACHI、分公司 101 已加入、门店 S-W1 等）之上再造，造数函数都说明「为什么这样造」。
 import { eq } from "drizzle-orm";
 import type { Db } from "../../src/db/client";
-import { contents, contentSnapshots, syncCheckpoints, syncTasks } from "../../src/db/schema";
+import { comments, contents, contentSnapshots, syncCheckpoints, syncTasks } from "../../src/db/schema";
 import { insertAccount, insertAssignment, insertBatch, insertContent, sha } from "./factories";
 import { platformIdOf, providerIdOf } from "./seed";
 import type { TestDb } from "./db";
@@ -78,6 +78,12 @@ export async function addContent(db: Db, s: ContentSpec): Promise<{ contentId: b
   if (finalized) await db.update(contents).set({ currentSnapshotId: snapshotId, currentSnapshotSelectedAt: now }).where(eq(contents.contentId, contentId));
   return { contentId, snapshotId };
 }
+/** 造一条一级评论（active）；评论正文不进测试数据，文本信号由 FakeSignals 编程。 */
+export async function addComment(db: Db, a: { contentId: bigint; platformCommentId: string; status?: "active" | "suspected_deleted" | "deleted"; now?: Date }): Promise<bigint> {
+  const now = a.now ?? T0;
+  const [r] = await db.insert(comments).values({ contentId: a.contentId, platformCommentId: a.platformCommentId, platformCommentIdSha256: sha(a.platformCommentId), status: a.status ?? "active", likeState: "missing", replyState: "missing", firstSeenAt: now, lastSeenAt: now, createdAt: now, updatedAt: now });
+  return BigInt(r.insertId);
+}
 /** 造一条已终态的列表同步任务（批次 logical_at = at）。 */
 export async function addListTask(db: Db, a: { accountId: bigint; status: "succeeded" | "succeeded_with_gap" | "failed" | "dead" | "cancelled" | "pending"; at: Date; gap?: boolean }): Promise<void> {
   const batchId = await insertBatch(db, a.at);
@@ -112,7 +118,7 @@ import { CATALOG } from "../../src/modules/signals/catalog";
 import { createPlanReader } from "../../src/modules/activity-plan/reader";
 import type { JudgementAuditEvent } from "../../src/modules/judgement/audit";
 import { createJudgement, type Judgement } from "../../src/modules/judgement/assemble";
-import { FakeSignals } from "../../src/modules/judgement/fakes";
+import { FakeDemand, FakeSignals } from "../../src/modules/judgement/fakes";
 import type { Sleep } from "../../src/modules/judgement/runs";
 import type { JudgementConfig } from "../../src/modules/judgement/env";
 import { FakeClock } from "./fake-clock";
@@ -124,6 +130,7 @@ export const userCtx = (role: RoleCode, id: number, scope: DataScope): AuthConte
 export const ALL_SCOPE: DataScope = { brands: "all", branches: "all", self: { kind: "none" }, level: 3 };
 export interface JudgementEnv {
   fake: FakeSignals;
+  demand: FakeDemand;
   clock: FakeClock;
   plans: Judgement["plans"];
   versions: Judgement["versions"];
@@ -145,6 +152,7 @@ export interface JudgementEnv {
 }
 export function judgementEnv(t: TestDb, w: RosterWorld, over: { limits?: { maxItems: number; maxKeywordLength: number }; config?: Partial<JudgementConfig> } = {}): JudgementEnv {
   const fake = new FakeSignals();
+  const demand = new FakeDemand();
   for (const p of ["douyin", "xiaohongshu", "kuaishou"]) fake.platformMap.set(p, new Set(CATALOG.filter((e) => (e.platforms as readonly string[]).includes(p)).map((e) => e.key)));
   const clock = new FakeClock(new Date("2026-11-16T02:00:00.000Z"));
   const registry = createRegistry();
@@ -159,6 +167,7 @@ export function judgementEnv(t: TestDb, w: RosterWorld, over: { limits?: { maxIt
     clock,
     reader: createPlanReader({ db: t.db, resolver: { targets: async () => ({ rows: [], next: null }) } as never }),
     signals: fake,
+    demand,
     resolver: { contextForUser: async (id: bigint) => (revoked.has(id) ? ({ ok: false, kind: "unauthenticated", reason: "user_not_active" } as never) : ({ ok: true, ctx: id === 7n ? creator : userCtx("hq_manager", Number(id), brandScope) } as never)) },
     authorizer: createAuthorizer({ registry }),
     registry,
@@ -170,5 +179,5 @@ export function judgementEnv(t: TestDb, w: RosterWorld, over: { limits?: { maxIt
     clock.advance(ms);
     onSleep.fn?.();
   };
-  return { fake, clock, plans: j.plans, versions: j.versions, runs: j.runs, claim: j.claim, sleep, onSleep, facts: j.facts, authz: j.authz, audits, creator, other: userCtx("hq_manager", 8, brandScope), admin: userCtx("platform_admin", 1, ALL_SCOPE), revoked };
+  return { fake, demand, clock, plans: j.plans, versions: j.versions, runs: j.runs, claim: j.claim, sleep, onSleep, facts: j.facts, authz: j.authz, audits, creator, other: userCtx("hq_manager", 8, brandScope), admin: userCtx("platform_admin", 1, ALL_SCOPE), revoked };
 }

@@ -11,7 +11,7 @@ import type { JudgementAudit } from "./audit";
 import { JudgementError, isDuplicateKey } from "./errors";
 import type { JudgementAuthz, JudgementPlanRef } from "./authz";
 import type { Facts } from "./facts";
-import type { SignalsPort } from "./ports";
+import type { DemandPort, SignalsPort } from "./ports";
 
 export interface JudgementDeps {
   db: Db;
@@ -20,6 +20,7 @@ export interface JudgementDeps {
   authz: JudgementAuthz;
   audit: JudgementAudit;
   signals: SignalsPort;
+  demand: DemandPort;
   limits: ConfigLimits;
 }
 export type PlanRow = typeof judgementPlans.$inferSelect;

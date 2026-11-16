@@ -406,11 +406,17 @@ export function createRunner(deps: RunnerDeps) {
       run,
       { status: "completed", counters: {} },
       async (tx) => {
-        // 每位参与专员的 C1 与未选中数：c1 = 通过（或没配）第 1 层且没被数量要求截掉的内容
+        // 每位参与专员的 C1 与未选中数：c1 = 通过（或没配）第 1 层且没被数量要求截掉的内容。
+        // 一次分组聚合再按账号连接：相关子查询会让优化器按每位专员各扫一遍 run_contents（规模演练里 2,000 × 40,000 行用了 35 秒）
         await tx.execute(sql`
-          UPDATE run_participants p SET
-            c1_count = (SELECT COUNT(*) FROM run_contents c WHERE c.run_id = p.run_id AND c.account_id = p.account_id AND c.l0 = 'pass' AND c.l1 IN ('pass','not_configured') AND (c.layer1_selected IS NULL OR c.layer1_selected = TRUE)),
-            content_skipped = (SELECT COUNT(*) FROM run_contents c WHERE c.run_id = p.run_id AND c.account_id = p.account_id AND c.final = 'skipped')
+          UPDATE run_participants p
+          LEFT JOIN (
+            SELECT account_id,
+                   SUM(l0 = 'pass' AND l1 IN ('pass','not_configured') AND (layer1_selected IS NULL OR layer1_selected = TRUE)) AS c1,
+                   SUM(final = 'skipped') AS skipped
+            FROM run_contents WHERE run_id = ${id} GROUP BY account_id
+          ) x ON x.account_id = p.account_id
+          SET p.c1_count = COALESCE(x.c1, 0), p.content_skipped = COALESCE(x.skipped, 0)
           WHERE p.run_id = ${id}`);
         await tx.execute(sql`
           UPDATE judgement_runs r SET

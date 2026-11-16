@@ -823,7 +823,35 @@ C 的 design §14 第 11 项把「监控段 / 读取口 / 补算请求的 API �
 
 ### 12.1 规模演练与实施发现
 
-（任务 12 回填。）
+**规模演练**（2026-11-16，`src/modules/judgement/scale.perf.db.test.ts`，本机 Docker MySQL 8.4，`FakeSignals`，配置取 `.env.example` 的建议值：块 200、信号批 1000、tick 预算 5 秒）：2,000 名单账号 × 20 条内容 = 40,000 行；文本关键词 + 数量 N=3 + 封面图片对比，一次执行从 `freeze` 到 `completed`。
+
+| 阶段 | 耗时 | 说明 |
+|---|---:|---|
+| freeze / scope | 0.2 s / 2.9 s | 名单与归属冻结；40,000 条内容行与快照 ID 冻结 |
+| layer1 | 11.5 s | 读文本信号并求值（46 次 `readMany`） |
+| select | 10.0 s | 按点赞取前 N、写选中标记与名次 |
+| scores | 3.0 s | 封面比对（6 次 `requestScores`，批 1000） |
+| aggregate | 4.6 s | 2,001 位专员逐个聚合 |
+| finalize | < 0.1 s | 汇总计数 |
+| **合计** | **32.3 s** | 造数 19 s 不计入；峰值 RSS 312 MB（含测试进程与 8 万条 fake 信号值）、堆 246 MB |
+
+| 表 | 行数 | 平均行长 | 数据 | 索引 |
+|---|---:|---:|---:|---:|
+| `run_contents` | 40,000 | 416 B | 16 MB | 11 MB |
+| `run_participants` | 2,001 | 810 B | 2 MB | 1 MB |
+
+`run_contents.evidence` 平均 70 B、最大 174 B。一次执行约 27 MB；保留最近 5 次执行的内容级行（`KEEP_CONTENT_RUNS`）时，单个（判定计划，版本）约 135 MB，与 §12 的 `ponytail:` 估算一致。
+
+**演练发现并已修复**：`finalize` 里「每位专员的 C1 与未选中数」最初用相关子查询（`UPDATE run_participants p SET c1_count = (SELECT COUNT(*) FROM run_contents c WHERE c.account_id = p.account_id …)`），单独就用了 35 秒，占一次执行的一半以上。改成一次分组聚合再按账号连接后降到 0.1 秒以内，总耗时 63 s → 32 s。**以后写「按专员汇总内容行」类 SQL 时用分组连接，不用相关子查询。**
+
+**演练没有证明的**：真实 C 的评分延迟与并发限制、A 的采集等待（执行耗时的主要来源是它们，不是 D）；测试 ECS 的数字（演练在本机跑，ECS 只跑了全量测试，见 acceptance「逐条结果」）；两个 worker 同时领取的吞吐（租约与 fencing 由 DB 测试覆盖，没有压测）。吞吐上限仍是单 worker 顺序处理各阶段（§12）。
+
+**其它实施发现**
+- **契约测试发现 fake 与真实 C 的差异**：C 的 `executability` / `requestScores` 对空的 `only` 直接拒绝（`only_empty`），`FakeSignals` 原先接受；C 的可执行性只对监控段 `items` 里的信号负责，`FakeSignals.blockers` 原先是全局的。两处都已让 fake 与真实一致。契约测试 `tests/contracts/signals-port.contract.ts` 同时跑 fake 与真实 C（`createSignals` + 真实 MySQL + FakeObjectStore），另加了 `only`、`show.images` 形状、`normalizeKeyword` / `retainUntil` 三条。
+- **验收覆盖映射发现 7 处空转或漏断言的既有测试**（只跑首个分支的循环、被 `.catch` 吞掉的更新、标题声称断言实际没有的 `demand.submitted == 0`、没移动指针的「current 移动」用例、没改阈值的「改阈值再确认」），已修；并补了 16 条验收项的缺失用例，见 `acceptance-gaps.db.test.ts`。
+- **CLI 与设计的三处出入**：`image put / remove` 以 `--ability <能力 ID>` 为准（`elementKey` 由 D 按字节算出，不让用户给）；`trial-report` 取判定计划 ID；身份只有 `HBECHO_JP_ACTOR=user:<id>`。已回写 §9 与 requirements JP-20。
+- **`plan_purged` 高风险审计**：期满清除时与删除判定计划行同一事务写入；任务 10 初版漏了，任务 11 期间补上。
+- **同一次 `serveOnce` 里一个运行可能因阶段预算被多次领取**（`fencingToken` 递增），测试断言看终态与租约，不要断言 token 数。
 
 ## 13. Decision records
 

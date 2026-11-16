@@ -96,3 +96,93 @@ describe("views.detail", () => {
     expect(await code(e.views.detail(e.creator, planId))).toBe("judgement_plan_not_found");
   });
 });
+
+// ---- 任务 14 / 15：向导与执行记录 ------------------------------------------------------------------------------
+async function withContent(w: Awaited<ReturnType<typeof judgementWorld>>, e: ReturnType<typeof judgementEnv>) {
+  await addListTask(t.db, { accountId: w.accZhao, status: "succeeded", at: day(6) });
+  const hit = await addContent(t.db, { accountId: w.accZhao, platformContentId: "h1", kind: "video", like: 5, publishedAt: day(5) });
+  const miss = await addContent(t.db, { accountId: w.accZhao, platformContentId: "h2", kind: "video", like: 1, publishedAt: day(5) });
+  e.fake.setValue("text.title_normalized", hit.contentId, { state: "valid", usable: true, value: "海信新品", normalizerVersion: 1 });
+  e.fake.setValue("text.title_normalized", miss.contentId, { state: "valid", usable: true, value: "无关", normalizerVersion: 1 });
+  return { hit: hit.contentId, miss: miss.contentId };
+}
+describe("views.wizard", () => {
+  it("没有草稿 = null；草稿按进度给出 current；圈定后带圈定摘要；写权限者才有确认执行预览", async () => {
+    const { w, e, planId } = await setup();
+    await withContent(w, e);
+    const v0 = (await e.views.wizard(e.creator, planId))!;
+    expect(v0).toMatchObject({ current: 1, circle: null, trial: null, trialRun: null });
+    expect(v0.detail.draft).toMatchObject({ version: 1, wizardStep: "draft" });
+    await e.runs.circle(e.creator, planId, { sleep: e.sleep });
+    const v1 = (await e.views.wizard(e.creator, planId))!;
+    // 第 2 页没有比对能力：圈定后直接可进第 3 页
+    expect(v1.current).toBe(3);
+    expect(v1.circle).toMatchObject({ c1: 1, participants: 1, contents: 2, unobtained: 0 });
+    expect(v1.circle!.runId).toMatch(/^\d+$/);
+    expect(v1.publish).toMatchObject({ ready: true, blockers: [] });
+    // 加一个比对能力 → 圈定后只能进第 2 页，并给出「还没上传素材」
+    await e.versions.setConfig(e.creator, planId, { ...CFG, layer2: { abilities: [{ abilityId: "cv", kind: "image_element", target: "cover", threshold: "6.50" }] } });
+    await e.runs.circle(e.creator, planId, { sleep: e.sleep });
+    const v2 = (await e.views.wizard(e.creator, planId))!;
+    expect(v2.current).toBe(2);
+    expect(v2.uploaded).toEqual({ cv: false });
+    // 只读（同品牌另一位总部）：能看到向导里已有的内容（素材状态、试跑结果），但没有确认执行的预览
+    const ro = (await e.views.wizard(e.other, planId))!;
+    expect(ro.detail.canWrite).toBe(false);
+    expect(ro).toMatchObject({ trial: null, publish: null, uploaded: { cv: false } });
+    // 越范围 = 不存在；已发布且没有草稿 = null
+    const stranger = { ...e.creator, scope: { ...e.creator.scope, brands: new Set([w.org.hisenseBrandId]) } };
+    expect(await code(e.views.wizard(stranger, planId))).toBe("judgement_plan_not_found");
+  });
+});
+describe("views.executions / executionDetail / participants / staffEvidence", () => {
+  async function executed() {
+    const s = await setup();
+    const ids = await withContent(s.w, s.e);
+    await t.db.update(judgementPlanVersions).set({ wizardStep: "compared" }).where(eq(judgementPlanVersions.planId, s.planId));
+    const r = await s.e.runs.execute(s.e.creator, s.planId, { key: "k" });
+    await s.e.runs.drive(r.runId, "w", s.e.sleep);
+    return { ...s, ...ids, runId: r.runId };
+  }
+  it("执行记录：带计划别名与计划总结果；越范围的不出现", async () => {
+    const { w, e, planId, runId } = await executed();
+    const rows = await e.views.executions(e.creator);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ runId: String(runId), planId: String(planId), alias: "618 主推视频考核", status: "completed", outcomes: { success: 1, notMet: 0, unobtained: 0 } });
+    const stranger = { ...e.creator, scope: { ...e.creator.scope, brands: new Set([w.org.hisenseBrandId]) } };
+    expect(await e.views.executions(stranger)).toEqual([]);
+  });
+  it("执行详情：写权限、冻结的时间窗、同步不完整计数；越范围与不存在一致", async () => {
+    const { w, e, runId } = await executed();
+    const d = await e.views.executionDetail(e.creator, runId);
+    expect(d).toMatchObject({ alias: "618 主推视频考核", canAct: true, syncIncomplete: 0, contentsPruned: false, window: { from: "2026-11-01" } });
+    expect((await e.views.executionDetail(e.other, runId)).canAct).toBe(false);
+    const stranger = { ...e.creator, scope: { ...e.creator.scope, brands: new Set([w.org.hisenseBrandId]) } };
+    expect(await code(e.views.executionDetail(stranger, runId))).toMatch(/^(judgement_plan_not_found|run_not_found|execution_not_found)$/);
+    expect(await code(e.views.executionDetail(e.creator, 999999n))).toBe("run_not_found");
+  });
+  it("参与专员：带姓名 / 门店 / 分公司，没有手机号；按结果与同步缺口筛选；分页", async () => {
+    const { e, runId } = await executed();
+    const all = await e.views.participants(e.creator, runId, { filter: "all", offset: 0, limit: 10 });
+    expect(all.total).toBe(1);
+    expect(all.rows[0]).toMatchObject({ planResult: "success", total: 2, c1: 1, p: 1 });
+    expect(all.rows[0]!.name).not.toBe("—");
+    expect(JSON.stringify(all.rows)).not.toMatch(/(?<!\d)1[3-9]\d{9}(?!\d)/);
+    expect((await e.views.participants(e.creator, runId, { filter: "not_met", offset: 0, limit: 10 })).total).toBe(0);
+    expect((await e.views.participants(e.creator, runId, { filter: "sync", offset: 0, limit: 10 })).total).toBe(0);
+    expect((await e.views.participants(e.creator, runId, { filter: "all", offset: 5, limit: 10 })).rows).toEqual([]);
+  });
+  it("证据抽屉：内容级行需要 data.content.read；内容原文不出现；越范围的专员 = 没有找到", async () => {
+    const { w, e, runId } = await executed();
+    const [p] = (await e.views.participants(e.creator, runId, { filter: "all", offset: 0, limit: 1 })).rows;
+    const ev = await e.views.staffEvidence(e.creator, runId, BigInt(p!.staffId));
+    expect(ev.pruned).toBe(false);
+    expect(ev.contents).toHaveLength(2);
+    expect(ev.contents!.map((c) => c.final).sort()).toEqual(["fail", "pass"]);
+    expect(JSON.stringify(ev)).not.toContain("海信新品"); // 只有结果与原因码，没有正文 / 归一化文本
+    const noRead = { ...e.creator, capabilities: new Set([...e.creator.capabilities].filter((c) => c !== "data.content.read")) } as typeof e.creator;
+    expect((await e.views.staffEvidence(noRead, runId, BigInt(p!.staffId))).contents).toBeNull();
+    const stranger = { ...e.creator, scope: { ...e.creator.scope, brands: new Set([w.org.hisenseBrandId]) } };
+    expect(await code(e.views.staffEvidence(stranger, runId, BigInt(p!.staffId)))).toMatch(/^(judgement_plan_not_found|explain_target_not_found)$/);
+  });
+});

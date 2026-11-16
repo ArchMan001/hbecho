@@ -32,12 +32,12 @@ export const KIND_LABEL: Record<string, string> = { video: "视频", image: "图
 export const TARGET_LABEL: Record<string, string> = { avatar: "头像", cover: "封面", background: "主页背景" };
 export const ABILITY_LABEL: Record<string, string> = { whole_image: "整张图片对比", image_element: "图片元素对比" };
 const MODE_LABEL: Record<string, string> = { any: "任一", all: "全含" };
-const METHOD_LABEL = (m: { type: string; n?: number; ratio?: string } | undefined): string => {
+export const METHOD_LABEL = (m: { type: string; n?: number; bp?: number } | undefined): string => {
   if (!m) return "";
   if (m.type === "at_least_n") return `至少 ${m.n} 条`;
   if (m.type === "all") return "全部命中";
   if (m.type === "any") return "任一命中";
-  if (m.type === "ratio") return `命中率 ≥ ${m.ratio}`;
+  if (m.type === "ratio") return `命中率 ≥ ${(m.bp ?? 0) / 100}%`;
   return m.type;
 };
 /** 配置摘要：一行一个条件，业务看得懂的话（不含正文原文，只有配置里的关键词 / 话题）。 */
@@ -68,3 +68,60 @@ export const timeText = (d: Date | null): string => {
   const p = (v: number) => String(v).padStart(2, "0");
   return `${p(x.getUTCMonth() + 1)}-${p(x.getUTCDate())} ${p(x.getUTCHours())}:${p(x.getUTCMinutes())}`;
 };
+
+/** 未获取成功 / 未通过的原因码 → 人话；未登记的原样显示码，不吞。 */
+const REASON: Record<string, string> = {
+  media_pending: "素材未归档",
+  audio_not_archived: "音频未归档",
+  comments_incomplete: "评论覆盖不全",
+  account_unavailable: "账号不可用",
+  no_profile_snapshot: "无主页快照",
+  sync_gap: "同步有缺口",
+  sync_failed: "同步失败",
+  not_computed: "识别尚未补算",
+  published_at_missing: "发布时间缺失",
+  content_kind_unknown: "内容形态无法归类",
+  layer1_not_selected: "未进入前 N 条",
+  layer1_text_miss: "第 1 层文本未命中",
+  layer2_below_threshold: "第 2 层低于阈值",
+  dependency_timeout: "依赖超时",
+  not_executable: "能力不可执行",
+  incomplete_judgement_evidence: "判定证据不完整",
+};
+export const reasonLabel = (code: string | null | undefined): string => (code ? (REASON[code] ?? code) : "—");
+/** 三值结果（内容 / 评论 / 账号 / 总结果 / 各层）的显示。 */
+export const RESULT: Record<string, { label: string; tone: Tone }> = {
+  success: { label: "成功", tone: "green" },
+  pass: { label: "通过", tone: "green" },
+  not_met: { label: "不达标", tone: "red" },
+  fail: { label: "不通过", tone: "red" },
+  unobtained: { label: "未获取成功", tone: "gray" },
+  skipped: { label: "未进入", tone: "gray" },
+  not_configured: { label: "未配置", tone: "gray" },
+  waiting: { label: "等待中", tone: "amber" },
+};
+export const resultOf = (v: string | null | undefined): { label: string; tone: Tone } => (v ? (RESULT[v] ?? { label: v, tone: "gray" as const }) : { label: "—", tone: "gray" as const });
+/** 向导里阻塞项的稳定码 → 人话。 */
+export const BLOCKER: Record<string, string> = {
+  config_invalid: "配置还不完整：请回到对应页面补全",
+  image_missing: "还有图片元素对比没有上传元素图",
+  wizard_step_required: "请先完成上一步（圈定 / 试跑）",
+  not_executable: "有能力当前不可用（例如音频理解尚未启用），暂时不能发布与执行",
+};
+/** 执行的阶段（顺序即进度）：页面只显示「正在做什么」与大致进度，不显示内部阶段名。 */
+const EXECUTION_PHASES: Array<[string, string]> = [
+  ["freeze", "冻结名单与内容"],
+  ["scope", "确定参与范围"],
+  ["layer1", "第 1 层条件"],
+  ["select", "按点赞取前 N 条"],
+  ["scores", "第 2 层比对"],
+  ["demand", "提交采集需求"],
+  ["layer3", "第 3 层判定"],
+  ["comments", "评论要求"],
+  ["aggregate", "汇总结果"],
+  ["finalize", "收尾"],
+];
+export function phaseInfo(phase: string | null): { label: string; percent: number } {
+  const i = EXECUTION_PHASES.findIndex(([k]) => k === phase);
+  return i < 0 ? { label: "准备中", percent: 5 } : { label: EXECUTION_PHASES[i]![1], percent: Math.round(((i + 0.5) / EXECUTION_PHASES.length) * 100) };
+}

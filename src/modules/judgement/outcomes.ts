@@ -73,7 +73,7 @@ export interface CircleRow extends ContentFact {
 }
 const PAGE = 500;
 
-const outcomeWhere = (c: ResourceConstraint): SQL | null => {
+export const outcomeWhere = (c: ResourceConstraint): SQL | null => {
   if (c.empty) return null;
   const parts: SQL[] = [];
   if (c.brands !== "all") parts.push(c.brands.length ? inArray(runParticipants.brandId, [...c.brands]) : sql`1 = 0`);

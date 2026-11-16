@@ -14,7 +14,11 @@ describe("判定计划：服务端动作都经过 run()", () => {
   it("以 use server 开头，且每个导出的动作都调用 run()", () => {
     expect(src.startsWith('"use server"')).toBe(true);
     const actions = [...src.matchAll(/export async function (\w+)\([^)]*\)[^{]*\{([\s\S]*?)\n\}/g)];
-    expect(actions.map((m) => m[1])).toEqual(["createJudgementPlan", "archiveJudgementPlan", "unarchiveJudgementPlan"]);
+    expect(actions.map((m) => m[1])).toEqual([
+      "createJudgementPlan", "archiveJudgementPlan", "unarchiveJudgementPlan",
+      "saveJudgementConfig", "circleJudgementPlan", "trialJudgementPlan", "uploadAbilityImage", "removeAbilityImage", "rollbackJudgementPlan", "newJudgementDraft", "executeJudgementPlan",
+      "cancelJudgementRun", "resumeJudgementRun", "loadStaffEvidence", "loadContentEvidence",
+    ]);
     expect(actions.filter((m) => !/\brun\(/.test(m[2]!)).map((m) => m[1])).toEqual([]);
   });
 });
@@ -22,7 +26,14 @@ describe("判定计划：服务端动作都经过 run()", () => {
 describe("判定计划：页面", () => {
   const pages = walk(join(APP, "(app)", "judgement")).filter((f) => f.endsWith("page.tsx"));
   it("当前覆盖的页面", () => {
-    expect(pages.map(rel).sort()).toEqual(["(app)/judgement/[id]/page.tsx", "(app)/judgement/page.tsx"]);
+    expect(pages.map(rel).sort()).toEqual([
+      "(app)/judgement/[id]/page.tsx",
+      "(app)/judgement/[id]/wizard/[step]/page.tsx",
+      "(app)/judgement/executions/[runId]/page.tsx",
+      "(app)/judgement/executions/page.tsx",
+      "(app)/judgement/page.tsx",
+      "(app)/judgement/results/[runId]/page.tsx",
+    ]);
   });
   for (const f of pages) {
     it(`${rel(f)}：requireUser → rule.definition.read → DeniedState`, () => {
@@ -43,7 +54,7 @@ describe("判定计划：页面层只经 Module 取数", () => {
     for (const f of files) {
       const src = readFileSync(f, "utf8").replace(/\/\/.*$/gm, "");
       expect(src, rel(f)).not.toMatch(/\b(platform_admin|hq_manager|branch_manager|store_staff)\b/);
-      expect(src, rel(f)).not.toMatch(/\.(insert|update|delete|execute|transaction)\(|\bsql`/);
+      expect(src, rel(f)).not.toMatch(/\b(db|tx)\.(select|insert|update|delete|execute|transaction)\(|\bsql`/);
       expect(src, rel(f)).not.toMatch(/from "[./]*\/db\/|from "[./]*\/activity-plan|from "[./]*\/signals|drizzle-orm/);
     }
   });

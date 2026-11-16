@@ -180,6 +180,19 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     return new Map(rows.map((r) => [r.staffId, r]));
   }
 
+  /** 页面显示用：专员姓名 / 门店 / 分公司（只取名称，不含手机号）。 */
+  async function staffLabelsOf(staffIds: readonly bigint[]): Promise<Map<bigint, { staffName: string; storeName: string; branchName: string }>> {
+    const rows = await inChunks(staffIds, (c) =>
+      db
+        .select({ staffId: mediaStaff.staffId, staffName: mediaStaff.staffName, storeName: stores.storeName, branchName: branches.branchName })
+        .from(mediaStaff)
+        .innerJoin(stores, eq(stores.storeId, mediaStaff.storeId))
+        .innerJoin(sectors, eq(sectors.sectorId, stores.sectorId))
+        .innerJoin(branches, eq(branches.branchId, sectors.branchId))
+        .where(inArray(mediaStaff.staffId, c)),
+    );
+    return new Map(rows.map((r) => [r.staffId, { staffName: r.staffName, storeName: r.storeName, branchName: r.branchName }]));
+  }
   /**
    * 账号名下 active 且有 finalized 当前快照的内容（带冻结所需的快照字段）；
    * 非 active、无当前快照的内容不落行，只按账号计数。
@@ -282,6 +295,6 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     return out;
   }
 
-  return { rosterOf, planOf, liveActivityPlans, activityPlansOf, brandsOf, collectingPlans, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, contentsOf, durationsOf, commentIdsOf, profileOf, syncCompletenessOf };
+  return { rosterOf, planOf, liveActivityPlans, activityPlansOf, brandsOf, collectingPlans, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, staffLabelsOf, contentsOf, durationsOf, commentIdsOf, profileOf, syncCompletenessOf };
 }
 export type Facts = ReturnType<typeof createFacts>;

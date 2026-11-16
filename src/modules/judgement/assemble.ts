@@ -45,7 +45,7 @@ export function createJudgement(a: JudgementAssembly) {
   const runner = createRunner({ ...deps, claim, ops, config: a.config });
   const runs = createRuns({ ...deps, claim, runner, versions, config: a.config, ops });
   const outcomes = createOutcomes({ ...deps, config: a.config, ops });
-  const views = createViews({ ...deps, plans });
+  const views = createViews({ ...deps, plans, runs, versions, outcomes });
   return { facts, authz, audit, plans, versions, runs, outcomes, views, claim, runner, ops, config: a.config };
 }
 export type Judgement = ReturnType<typeof createJudgement>;

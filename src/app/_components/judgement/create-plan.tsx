@@ -37,7 +37,7 @@ export function CreateJudgementPlan({ options, label = "新建判定计划", but
       }
       toast("判定计划已创建，从第 1 页开始圈定");
       setOpen(false);
-      router.push(`/judgement/${r.data.planId}`);
+      router.push(`/judgement/${r.data.planId}/wizard/1`);
     });
   return (
     <>

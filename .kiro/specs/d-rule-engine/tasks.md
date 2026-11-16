@@ -38,9 +38,9 @@
 - [x] 任务 11 · CLI 全集与 `judgement serve` 装配（2026-11-16：`src/worker/judgement-{cli,loop,main,wiring}.ts`、`src/modules/judgement/real-ports.ts`；`judgement-cli.db` 9 + `judgement-loop.db` 3 + `judgement-main.db` 3 例；真实 B 装配（`createAccessServices`）在子进程里验证；**真实 C 的契约与真实 A 采集链路未验证，留任务 12**；design §9 的 CLI 形状按实现改了三处：`image put/remove` 用 `--ability`、`trial-report` 用 planId、身份只有 `HBECHO_JP_ACTOR`）
 - [x] 任务 12 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾（2026-11-16：本机 verify 全绿 unit 1149 / db 1666；测试 ECS 全量通过；规模演练本机 32.3 s / ECS 18.7 s；验收 212 条映射：163 已覆盖 / 42 部分 / 7 无测试，见 acceptance「逐条结果」；**第二次推送与 CI 合并见下方实施记录**）
 - [x] 任务 13 · 页面基础、判定计划列表与详情（2026-11-16：`/judgement`、`/judgement/[id]`、新建弹窗、归档 / 取消归档、导航入口；`views.db` 4 + `judgement.guard` 与 `judgement-labels` 单测；`next build` 通过；**未做页面渲染与截图，留任务 16**）
-- [ ] 任务 14 · 三页向导页面
-- [ ] 任务 15 · 执行记录、证据抽屉与 E 入口
-- [ ] 任务 16 · 页面验收与视觉回归
+- [x] 任务 14 · 三页向导页面（2026-11-16：`/judgement/[id]/wizard/[1-3]`；配置防抖保存、圈定 / 试跑 / 上传 / 回退 / 新建草稿 / 确认执行；本机演示环境里整条流程用浏览器走通）
+- [x] 任务 15 · 执行记录、证据抽屉与 E 入口（2026-11-16：`/judgement/executions`、`/judgement/executions/[runId]`、`/judgement/results/[runId]` 占位；取消 / 续跑 / 从此版本新建草稿；证据不含正文）
+- [x] 任务 16 · 页面验收与视觉回归（2026-11-16：1440×900 与 390×844 实拍 25 张在 `ui-lab/d-rule-engine/app-shots/`，13 个页面两种宽度都没有横向溢出；**与确认原型的差异 8 项待刘学奎确认，见 design §15.7**；MAN-1～MAN-6 业务走查仍未做）
 - [ ] 页面任务：已展开为任务 13–16（界面设计 2026-11-13 已确认，design §15.6；确认版本 `ui-lab/d-rule-engine/precision/` v15）。全量视频明细视图归 E，D 不实现明细表。
 
 ## Planning rules
@@ -257,4 +257,12 @@
 - 部署配置缺失（`HBECHO_JP_*` / `HBECHO_SIGNALS_*`）时页面显示稳定错误码，不当作「没有数据」。
 - 与已确认原型的差异：详情页还没有「新建草稿 / 重新执行 / 回退 / 执行记录」入口与步骤条，这些依赖向导（任务 14）与执行记录页（任务 15）；列表与详情里指向向导的「继续配置」链接在任务 14 完成前会 404，因此**本批页面不能在任务 14 之前合并**。
 - 没有证明的：页面没有渲染测试（仓库无 jsdom），只有静态护栏；没有用真实登录态走过页面，也没有截图，留任务 16；列表筛选与分页在内存里做（范围内判定计划数量级为几十），上限与升级路径：数量上千后改为查询层分页。
+
+**2026-11-16（任务 14–16：向导、执行记录、证据抽屉；尚未推送，页面这一批做完后推第三次）**：
+- 新增：`views.wizard / executions / executionDetail / participants / staffEvidence`（页面只经它们取数）；15 个服务端动作都经 `run()`；`trialReport` 的授权从「管理」改为「读取」（只读角色也能看试跑结果，试跑本身仍是管理）。
+- 本机演示环境：`./scripts/demo-judgement.sh`（一次性 MySQL + 假的 C 端口 + 同进程 Next dev，种子在 `tests/demo/judgement-demo.ts`）。**对 C 的端口是 FakeSignals，没有任何真实采集 / 识别 / 付费调用；`judgement serve` 由进程内小循环代替**。
+- 浏览器走通的流程：新建 → 第 1 页加文本能力 / 关键词 / N（自动保存）→ 确认圈定 → 删最后一张文本卡（圈定结果与 N 一并清掉）→ 加话题 → 第 2 页加整张图片对比 → 上传标准图 → 试跑（后台领取，页面轮询）→ 分布与样例 → 第 3 页确认执行 → 发布 v1 并开始执行 → 执行完成；回退预览、新建草稿、取消执行弹窗；总部非创建者与分公司只读。
+- 本机 `./scripts/verify.sh` OK：unit 1175、db 1687（1 skipped）；Python 侧未验证。自动检查：`views.db` 9 例、静态护栏（动作都经 run、页面先 requireUser 再判 Capability、页面不碰数据库表、界面无内部字段名）、`judgement-labels` 单测；`next build` 通过。
+- **没有证明的**：没有页面渲染测试（仓库无 jsdom），交互只在本机演示环境用 puppeteer 走过，没有写成可重复的自动化；演示环境用假的 C，真实 C 的图片上传 / 评分 / 可执行性在页面里没有验证；审计里页面动作的 `actor` 与脱敏、`explain` 的真实数据量（单专员内容 > 200 条时只显示前 200 条）没有压测；MAN-1～MAN-6 业务走查没做。
+- 与计划不同：试跑在页面进程里**只提交**，由 `judgement serve` 领取（页面每 3 秒刷新）；圈定仍是同步运算；「下载圈定结果」按钮置灰，等 E 的导出（需要 report.export）。
 

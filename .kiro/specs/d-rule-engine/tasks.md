@@ -25,7 +25,7 @@
 ## 进度
 
 - [x] 任务 0 · 文档前置与待确认闸门（2026-11-16 完成：旧 design 归档、链接修复、CONTEXT 词条、PRD D 第 6 行；§14 闸门已答复）
-- [ ] 任务 1 · schema 与迁移（**完成后推第一次**）
+- [x] 任务 1 · schema 与迁移（2026-11-16：迁移 `0012_d_judgement_schema`，`judgement-schema.db.test.ts` 19 例；**完成后推第一次**）
 - [ ] 任务 2 · 骨架：错误、配置、端口与 fake、B 授权接入、审计、`facts.ts`、测试挂具、静态护栏
 - [ ] 任务 3 · 纯函数：配置、三值逻辑、条件求值、达标方式、窗口、分布
 - [ ] 任务 4 · 判定计划、草稿与版本（含与 C 的 provisioning、发布协议、回退）
@@ -107,7 +107,7 @@
   - 闸门通过后，若第 2、3、4 项的答复与建议不同，回写 requirements §1.4、JP-3、JP-4 与 design §7.9、§13，并在对应 PRD 版本记录写明。
   - **验证**：`./scripts/verify.sh`（链接、登记、密钥）通过；`grep` 全仓库无指向 `.kiro/specs/rule-engine/` 的 Markdown 链接（归档目录内的历史引用与修订清单里的反引号路径除外）。
 
-- [ ] 1. schema 与迁移
+- [x] 1. schema 与迁移
   - **Requirements:** JP-1、JP-3、JP-7、JP-15、JP-16、JP-17
   - **Design:** §6
   - 新增 `src/db/schema/judgement.ts`（五张表，含全部 CHECK、唯一键、生成列 `draft_key`、`active_key` 与其 CHECK、复合外键 `(activity_plan_id, platform_id)`；`run_contents` 增加 `like_value / like_state / layer1_selected / layer1_rank`，含 design §6.1 的 CHECK；`run_participants` 增加 `content_skipped`）；`src/db/schema/index.ts` 导出；`drizzle-kit generate` 生成迁移；`pnpm db:migrate` 在干净库上通过。

@@ -4,6 +4,7 @@ export * from "./accounts";
 export * from "./auth";
 export * from "./content";
 export * from "./import";
+export * from "./judgement";
 export * from "./learning";
 export * from "./media";
 export * from "./org";

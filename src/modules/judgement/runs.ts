@@ -200,9 +200,10 @@ export function createRuns(deps: JudgementDeps & { claim: Claim; runner: Runner;
   }
 
   /** worker 的一轮：领取所有当前可领取的运行并推进到它们各自「等待 / 终态」为止。 */
-  async function serveOnce(owner: string): Promise<{ ticks: number }> {
+  async function serveOnce(owner: string, o: { shouldStop?: () => boolean } = {}): Promise<{ ticks: number }> {
     let ticks = 0;
     for (;;) {
+      if (o.shouldStop?.()) return { ticks }; // 停止信号：当前 tick 已结束（租约已在 tick 末尾释放），不再领新的
       const run = await claim.claimNext(owner);
       if (!run) return { ticks };
       ticks++;
@@ -222,6 +223,34 @@ export function createRuns(deps: JudgementDeps & { claim: Claim; runner: Runner;
       return ok;
     });
   }
-  return { circle, trial, trialReport, execute, serveOnce, drive, summaryOf, cancel, runRow: (runId: bigint) => db.select().from(judgementRuns).where(eq(judgementRuns.runId, runId)) };
+  const viewOf = (r: RunRow) => ({
+    runId: r.runId, planId: r.planId, version: r.version, kind: r.runKind, status: r.status, phase: r.phase, attemptCount: r.attemptCount, lastErrorCode: r.lastErrorCode,
+    submittedBy: r.submittedByActor, participants: r.participantCount, contentTotal: r.contentTotal, c1: r.c1Count, c2: r.c2Count, c3: r.c3Count, staleUsed: r.staleUsed,
+    createdAt: r.createdAt, startedAt: r.startedAt, completedAt: r.completedAt,
+  });
+  async function show(ctx: AuthContext, runId: bigint) {
+    await authz.require(ctx, "read");
+    const run = await claim.get(runId);
+    if (!run) throw new JudgementError("not_found", "run_not_found", "运行不存在");
+    const { ref } = await loadPlan(deps, run.planId);
+    await authz.require(ctx, "read", ref);
+    return viewOf(run);
+  }
+  async function list(ctx: AuthContext, planId: bigint) {
+    await authz.require(ctx, "read");
+    const { ref } = await loadPlan(deps, planId);
+    await authz.require(ctx, "read", ref);
+    return (await db.select().from(judgementRuns).where(eq(judgementRuns.planId, planId)).orderBy(desc(judgementRuns.runId)).limit(200)).map(viewOf);
+  }
+  /** 续跑 failed 的运行（O8）：在原行上从持久化的阶段继续；返回是否真的续了。 */
+  async function resume(ctx: AuthContext, runId: bigint): Promise<boolean> {
+    await authz.require(ctx, "manage");
+    const run = await claim.get(runId);
+    if (!run) throw new JudgementError("not_found", "run_not_found", "运行不存在");
+    const { ref } = await loadPlan(deps, run.planId);
+    await authz.require(ctx, run.runKind === "execution" ? "execute" : "manage", ref);
+    return claim.resume(runId);
+  }
+  return { show, list, resume, circle, trial, trialReport, execute, serveOnce, drive, summaryOf, cancel, runRow: (runId: bigint) => db.select().from(judgementRuns).where(eq(judgementRuns.runId, runId)) };
 }
 export type Runs = ReturnType<typeof createRuns>;

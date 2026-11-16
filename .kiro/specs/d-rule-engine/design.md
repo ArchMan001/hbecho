@@ -706,22 +706,22 @@ judgement plan show <planId> | list [--activity-plan <id>] [--status <状态>]
 judgement plan archive|unarchive <planId>
 judgement plan reconcile [--plan <id>]
 judgement config show <planId> [--version <n>] | set <planId> --file <config.json>
-judgement image put <planId> --kind template|element --target cover|avatar|background [--element-key <k>] --file <路径>
-judgement image remove <planId> --kind … --target … [--element-key <k>]
+judgement image put <planId> --ability <能力ID> --kind template|element --file <路径>   # elementKey 由 D 按字节算出，不由用户给
+judgement image remove <planId> --ability <能力ID>
 judgement circle <planId>
-judgement trial <planId> [--wait] | trial-report <runId>
+judgement trial <planId> [--wait] | trial-report <planId>
 judgement rollback <planId> [--apply]
 judgement new-draft <planId> [--from <已发布版本>]
 judgement confirm <planId> --key <幂等键> [--apply]      # 无 --apply 只预览：将发布的版本与阻塞项
 judgement execute <planId> --key <幂等键>                # 对最近已发布版本重新执行
 judgement run show <runId> | list --plan <id> | cancel <runId> [--apply] | resume <runId>
-judgement result summary <executionId> | participants <executionId> [--result …] | contents <executionId> [--staff <id>] [--final …] | circle <runId>
+judgement result summary <executionId> | participants <executionId> [--result …] [--limit <n>] | contents <executionId> [--staff <id>] [--final …] [--limit <n>] | circle <runId> [--limit <n>]
 judgement explain --execution <id> (--content <cid> | --staff <sid>)
 judgement serve                      # 常驻：领取运行 + tick + 每日 maintain
 judgement maintain --once
 ```
 
-输出一行 JSON；BIGINT 十进制字符串；退出码沿用 `plan-cli`（0 成功 / 2 校验或授权 / 3 冲突 / 4 不存在 / 5 超限 / 1 其他）；`parseArgs` strict；没有 `--force`、`--skip-auth`；身份来自 `HBECHO_JP_ACTOR / CAPABILITIES / BRAND_SCOPE / BRANCH_SCOPE / PLATFORM_ADMIN`，缺任一项启动失败。
+输出一行 JSON；BIGINT 十进制字符串；退出码沿用 `plan-cli`（0 成功 / 2 校验或授权 / 3 冲突 / 4 不存在 / 5 超限 / 1 其他）；`parseArgs` strict；没有 `--force`、`--skip-auth`；身份**只有** `HBECHO_JP_ACTOR=user:<id>`（用该用户当前的 `AuthContext`；没有自带 Capability / 范围的环境变量），缺失或不是 `user:<id>` 启动失败；列表类输出默认 100 条、上限 1000 条（`--limit`），超出时 `truncated: true`；`result` 命令先按「读」授权所属判定计划，越范围表现为未找到。
 
 ## 10. 对既有代码与依赖的改动
 

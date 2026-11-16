@@ -605,7 +605,7 @@ streamCircleRows(runId, constraint): AsyncIterable<CircleRow>                // 
 
 ### JP-20 · CLI
 
-**陈述**：`pnpm judgement <命令>`，只调用 Module，输出一行 JSON（BIGINT 十进制字符串），退出码沿用 `plan-cli`（0 成功 / 2 输入或授权 / 3 冲突 / 4 不存在 / 5 超限 / 1 配置与其他）；`parseArgs` strict；影响多个对象的命令（回退、清除、取消）默认只预览，`--apply` 才写；没有 `--force`、`--skip-auth`；身份来自环境变量（`HBECHO_JP_ACTOR / CAPABILITIES / BRAND_SCOPE / BRANCH_SCOPE / PLATFORM_ADMIN`），缺任一项启动失败。命令清单见 design §9。
+**陈述**：`pnpm judgement <命令>`，只调用 Module，输出一行 JSON（BIGINT 十进制字符串），退出码沿用 `plan-cli`（0 成功 / 2 输入或授权 / 3 冲突 / 4 不存在 / 5 超限 / 1 配置与其他）；`parseArgs` strict；影响多个对象的命令（回退、清除、取消）默认只预览，`--apply` 才写；没有 `--force`、`--skip-auth`；身份只来自环境变量 `HBECHO_JP_ACTOR=user:<id>`（用该用户当前的 `AuthContext` 走与页面相同的授权；没有自带 Capability / 范围的环境变量，服务身份不能用），缺失或不合法启动失败。命令清单见 design §9。
 
 **验收标准**
 

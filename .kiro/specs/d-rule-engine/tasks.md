@@ -35,7 +35,7 @@
 - [x] 任务 8 · 第 3 层与评论：采集需求、ASR 判定、评论要求（2026-11-16：`engine/dependency-phases.ts`，`layer3-comments.db` 20 例；`retainUntil` 先于证据写入；评论依赖失败时「不达标」改判未获取成功，已回写 requirements JP-10 / design §7.7 / acceptance J5；**`DemandPort` 的真实封装（A 的 `createDemandModule`）随任务 11 装配，现只有 FakeDemand 验证**）
 - [x] 任务 9 · 对 E 的读取口、解释、保留与清理（2026-11-16：`outcomes.ts`，`outcomes.db` 16 例；越范围的 explain 表现为 `judgement_plan_not_found`；第 2 层证据尚无 C 的 `resultId` 字段）
 - [x] 任务 10 · 下游端口与清除（2026-11-16：`downstream.ts`、`src/worker/judgement-wiring.ts`，`downstream.db` 10 + `judgement-wiring.db` 1 例；用 A 的真实 `plans.delete / restore` 与 `maintenance.runNow` 联动；`plan-main` 已传 D 的下游，清除所需的 C 配置用到才读，缺项时 purge 抛出、A 保守不清除；E 的组合下游待 E）
-- [ ] 任务 11 · CLI 全集与 `judgement serve` 装配
+- [x] 任务 11 · CLI 全集与 `judgement serve` 装配（2026-11-16：`src/worker/judgement-{cli,loop,main,wiring}.ts`、`src/modules/judgement/real-ports.ts`；`judgement-cli.db` 9 + `judgement-loop.db` 3 + `judgement-main.db` 3 例；真实 B 装配（`createAccessServices`）在子进程里验证；**真实 C 的契约与真实 A 采集链路未验证，留任务 12**；design §9 的 CLI 形状按实现改了三处：`image put/remove` 用 `--ability`、`trial-report` 用 planId、身份只有 `HBECHO_JP_ACTOR`）
 - [ ] 任务 12 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾（**完成后推第二次**）
 - [ ] 任务 13 · 页面基础、判定计划列表与详情
 - [ ] 任务 14 · 三页向导页面
@@ -179,7 +179,7 @@
   - `downstream.ts`（`summarize / onDeleted / onRestored / purge`）；`plan-main.ts` 装配（与 E 的下游以组合下游注入，E 尚无则只有 D）；`purge` 的 C 调用与分块删除。
   - **验证**：JP-17 验收逐条（`summarize` 的在途数随运行状态变化；`purge` 删除全部 D 行与 C 监控段、第二次无副作用、中途失败后重试完成；`onDeleted / onRestored` 重复调用无副作用；活动计划在回收站时读取与 `listCompleted` 不返回其结果，恢复后返回）；调用时机契约测试（记录顺序的 fake 对照 A 的 `plans.remove` 与 `maintenance`）；用 A 的真实 `plans.remove` / `maintenance` + D 的真实 `downstream`（`FakeSignals`）端到端走一遍「有在途 → 删除被拒 → 取消 → 删除 → 期满清除」。
 
-- [ ] 11. CLI 全集与 `judgement serve` 装配
+- [x] 11. CLI 全集与 `judgement serve` 装配
   - **Requirements:** JP-20、JP-19
   - **Design:** §9
   - `judgement-cli.ts` 补齐 design §9 的全部命令；`judgement-main.ts` 装配（pino 日志、连接池、环境变量身份、`serve` 的领取循环与每日 `maintain`）；`package.json` 脚本；`.env.example`。

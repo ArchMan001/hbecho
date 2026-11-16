@@ -16,6 +16,7 @@
     "master-data": "tsx src/worker/master-data-main.ts",
     "plan": "tsx src/worker/plan-main.ts",
     "signals": "tsx src/worker/signals-main.ts",
+    "judgement": "tsx src/worker/judgement-main.ts",
     "smoke": "tsx src/worker/smoke-main.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",

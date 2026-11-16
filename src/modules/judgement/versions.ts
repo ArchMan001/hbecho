@@ -317,6 +317,20 @@ export function createVersions(deps: JudgementDeps) {
     await markPublished(ctx, plan.planId, draft.version, hooks);
     return { version: draft.version };
   }
+  /** 确认执行的预览（CLI `confirm` 不带 --apply）：列出将发布的版本与全部阻塞项，不改任何状态、不写 C。 */
+  async function previewPublish(ctx: AuthContext, planId: bigint): Promise<{ version: number; wizardStep: string; ready: boolean; blockers: Array<{ code: string; detail?: unknown }> }> {
+    const { draft, activity, actor } = await openDraft(ctx, planId, "execute");
+    const cfg = parseConfig(draft.config);
+    const blockers: Array<{ code: string; detail?: unknown }> = [];
+    const issues = validateConfig(cfg, activity.platformCode, signals.platformSignals(activity.platformCode), limits, { complete: true });
+    if (issues.length) blockers.push({ code: "config_invalid", detail: issues.map((i) => i.message) });
+    const missing = incompleteAbilities(cfg);
+    if (missing.length) blockers.push({ code: "image_missing", detail: missing.map((a) => a.abilityId) });
+    if (STEP_ORDER.indexOf(draft.wizardStep as Step) < STEP_ORDER.indexOf(requiredStep(cfg))) blockers.push({ code: "wizard_step_required" });
+    const ex = await signals.executability(actor, { planId, version: draft.version });
+    if (!ex.executable) blockers.push({ code: "not_executable", detail: ex.blockers });
+    return { version: draft.version, wizardStep: draft.wizardStep, ready: blockers.length === 0, blockers };
+  }
   async function markPublished(ctx: AuthContext, planId: bigint, version: number, hooks: { onPublished?: (tx: DbTx, v: { version: number }) => Promise<void> }): Promise<void> {
     const now = clock.now();
     await db.transaction(async (tx: DbTx) => {
@@ -351,6 +365,6 @@ export function createVersions(deps: JudgementDeps) {
     return { version: v.version, status: v.status, wizardStep: v.wizardStep, config: parseConfig(v.config), configSha256: Buffer.from(v.configSha256).toString("hex") };
   }
 
-  return { setConfig, putTemplate, putElement, removeImage, reconcileDraft, rollback, newDraft, publish, reconcilePublishing, showConfig, draftOf, versionOf, requiredStep, contentEnabled: contentRequirementEnabled };
+  return { previewPublish, setConfig, putTemplate, putElement, removeImage, reconcileDraft, rollback, newDraft, publish, reconcilePublishing, showConfig, draftOf, versionOf, requiredStep, contentEnabled: contentRequirementEnabled };
 }
 export type Versions = ReturnType<typeof createVersions>;

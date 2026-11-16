@@ -26,11 +26,12 @@ describe("judgement-main 启动", () => {
     expect(main(["plan", "list"], {})).toMatchObject({ code: 1, err: expect.stringContaining("HBECHO_DATABASE_URL") });
     expect(main(["plan", "list"], without(base, "HBECHO_JP_ACTOR"))).toMatchObject({ code: 1, err: expect.stringContaining("HBECHO_JP_ACTOR") });
     for (const bad of ["service:judgement", "user:0", "user:abc", "admin", "user:1,2"]) expect(main(["plan", "list"], full(bad)), bad).toMatchObject({ code: 1, err: expect.stringContaining("HBECHO_JP_ACTOR") });
-    for (const k of JUDGEMENT_ENV_KEYS) expect(main(["plan", "list"], without(base, k)), k).toMatchObject({ code: 1, err: expect.stringContaining(k) });
+    // 每个键缺失都点名由 env.test 在进程内穷举；这里每起一个子进程要 1–3 秒（CI 更慢），只抽首尾两项证明入口把它接上了
+    for (const k of [JUDGEMENT_ENV_KEYS[0]!, JUDGEMENT_ENV_KEYS.at(-1)!]) expect(main(["plan", "list"], without(base, k)), k).toMatchObject({ code: 1, err: expect.stringContaining(k) });
     expect(main(["plan", "list"], without(base, "HBECHO_SIGNALS_SCAN_BATCH"))).toMatchObject({ code: 1, err: expect.stringContaining("HBECHO_SIGNALS_SCAN_BATCH") });
     const r = main(["plan", "list"], without(base, "HBECHO_JP_BLOCK_SIZE"));
     expect(r.out).toBe("");
-  });
+  }, 120_000);
   it("serve 另需 A 需求的运行模式，缺则启动失败并点名；其余命令不需要", async () => {
     const acc = accessEnv(t);
     const org = await seedAccessOrg(acc);
@@ -40,7 +41,7 @@ describe("judgement-main 启动", () => {
     const serve = main(["serve"], env);
     expect(serve).toMatchObject({ code: 1, err: expect.stringContaining("HBECHO_SYNC_DETAIL_MODE") });
     expect(main(["plan", "list"], env).code).toBe(0);
-  });
+  }, 120_000);
   it("完整配置：用真实 B 装配取到该用户的 AuthContext，只读命令成功；用户不存在 / 已停用 = 2；没有 OSS 配置时 image put 报未配置而不是崩溃", async () => {
     const acc = accessEnv(t);
     await seedAccessOrg(acc);
@@ -55,5 +56,5 @@ describe("judgement-main 启动", () => {
     expect(bad.code).toBe(2);
     expect(JSON.parse(bad.out).error.code).toBe("invalid_input");
     expect(main(["plan", "list", "--force"], full(`user:${admin}`)).code).toBe(2); // 没有旁路
-  });
+  }, 120_000);
 });

@@ -2,9 +2,9 @@
 // 回退只作用于草稿（design §14 第 3 项）。对 C 的调用一律在事务之外；C 的调用失败不回滚已提交的 D 配置，
 // 发布前会再把 deriveItems 同步给 C，所以 C 侧落后只会被补齐，不会被带上线。
 import { createHash, randomUUID } from "node:crypto";
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import type { DbTx } from "../../db/client";
-import { judgementPlanVersions, judgementPlans, judgementRuns, runContents, runParticipants } from "../../db/schema";
+import { judgementPlanVersions, judgementPlans } from "../../db/schema";
 import type { AuthContext } from "../access-control";
 import { SignalError } from "../signals/errors";
 import {
@@ -13,11 +13,10 @@ import {
 } from "./config";
 import { JudgementError } from "./errors";
 import { loadPlan, type JudgementDeps, type PlanRow, type VersionRow } from "./plans";
+import { createRunOps, type RunKind } from "./run-ops";
 
-const DELETE_CHUNK = 1000;
 const STEP_ORDER = ["draft", "circled", "compared"] as const;
 type Step = (typeof STEP_ORDER)[number];
-type RunKind = "circle" | "compare" | "execution";
 const minStep = (a: Step, b: Step): Step => (STEP_ORDER.indexOf(a) <= STEP_ORDER.indexOf(b) ? a : b);
 const sha256Hex = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
@@ -60,40 +59,7 @@ export function createVersions(deps: JudgementDeps) {
     editablePlan(loaded.plan);
     return { ...loaded, draft: await needDraft(planId), actor: await authz.toSignalActor(ctx) };
   }
-  async function activeRunExists(planId: bigint, version: number, kinds: RunKind[]): Promise<boolean> {
-    const rows = await db
-      .select({ id: judgementRuns.runId })
-      .from(judgementRuns)
-      .where(and(eq(judgementRuns.planId, planId), eq(judgementRuns.version, version), inArray(judgementRuns.runKind, kinds), inArray(judgementRuns.status, ["planned", "running", "waiting"])))
-      .limit(1);
-    return rows.length > 0;
-  }
-
-  // ---- 删除运行与其行（分块、显式 DELETE，没有级联）-------------------------------------------------------------
-  async function runIdsOf(planId: bigint, version: number, kinds: RunKind[]): Promise<bigint[]> {
-    const rows = await db.select({ id: judgementRuns.runId }).from(judgementRuns).where(and(eq(judgementRuns.planId, planId), eq(judgementRuns.version, version), inArray(judgementRuns.runKind, kinds)));
-    return rows.map((r) => r.id);
-  }
-  async function deleteRuns(planId: bigint, version: number, kinds: RunKind[]): Promise<{ runs: number; rows: number }> {
-    const ids = await runIdsOf(planId, version, kinds);
-    let rows = 0;
-    for (const table of [runContents, runParticipants] as const) {
-      for (;;) {
-        const [r] = await db.delete(table).where(inArray(table.runId, ids.length ? ids : [0n])).limit(DELETE_CHUNK);
-        rows += r.affectedRows;
-        if (r.affectedRows < DELETE_CHUNK) break;
-      }
-    }
-    if (ids.length) await db.delete(judgementRuns).where(inArray(judgementRuns.runId, ids));
-    return { runs: ids.length, rows };
-  }
-  async function countRuns(planId: bigint, version: number, kinds: RunKind[]): Promise<{ runs: number; rows: number }> {
-    const ids = await runIdsOf(planId, version, kinds);
-    if (ids.length === 0) return { runs: 0, rows: 0 };
-    const [c] = await db.select({ n: count() }).from(runContents).where(inArray(runContents.runId, ids));
-    const [p] = await db.select({ n: count() }).from(runParticipants).where(inArray(runParticipants.runId, ids));
-    return { runs: ids.length, rows: Number(c!.n) + Number(p!.n) };
-  }
+  const { activeRunExists, deleteRuns, countRuns } = createRunOps(db);
   const kindsOf = (inv: Invalidation): RunKind[] => (inv === "circle_and_trial" ? ["circle", "compare"] : inv === "trial" ? ["compare"] : []);
   const stepAfter = (inv: Invalidation, cur: Step): Step => (inv === "circle_and_trial" ? "draft" : inv === "trial" ? minStep(cur, "circled") : cur);
 

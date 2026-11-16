@@ -1,0 +1,375 @@
+// 阶段机（design §7.2）：圈定 freeze → scope → layer1 → select → finalize；后续任务在这条链上加 scores / demand / layer3 / comments / aggregate。
+// 每个阶段只做「还没做的部分」，重进幂等：行上的 NULL 是待办标记，游标写在运行行里；所有写入走 withFence。
+// 对 C 的调用（readMany）在事务之外；阶段内的事务只做数据库读写。
+import { and, asc, eq, gt, isNull, sql } from "drizzle-orm";
+import type { Db, DbTx } from "../../../db/client";
+import { judgementPlanVersions, judgementPlans, judgementRuns, runContents, runParticipants } from "../../../db/schema";
+import type { AuthContext } from "../../access-control";
+import { sha256Utf8 } from "../../canonical-json";
+import type { Clock } from "../../raw-capture/ports";
+import type { JudgementAudit } from "../audit";
+import type { JudgementAuthz } from "../authz";
+import { configSha256, parseConfig, type Config } from "../config";
+import type { JudgementConfig } from "../env";
+import { JudgementError } from "../errors";
+import type { ActivityPlanFact, Facts } from "../facts";
+import type { SignalLike } from "./pure/types";
+import type { SignalsPort, SignalActor } from "../ports";
+import { type Claim, type RunRow, StaleLeaseError } from "./claim";
+import { evalDuration, evalHashtags, evalKeywords } from "./pure/conditions";
+import { combineLayer, type LayerResult } from "./pure/layer";
+import { selectLayer1 } from "./pure/select";
+import { bjtDaysToUtc } from "./pure/window";
+import type { RunOps } from "../run-ops";
+
+export interface RunnerDeps {
+  db: Db;
+  clock: Clock;
+  facts: Facts;
+  authz: JudgementAuthz;
+  audit: JudgementAudit;
+  signals: SignalsPort;
+  claim: Claim;
+  ops: RunOps;
+  config: JudgementConfig;
+}
+export interface Frozen {
+  frozenAt: string;
+  window: { from: string; to?: string; fromUtc: string; toUtc: string };
+  platform: string;
+  startsOn: string;
+  endsOn: string | null;
+  configSha256: string;
+  segment: { planId: string; version: number };
+  rosterSha256: string;
+  freezeDone: boolean;
+}
+interface Env {
+  run: RunRow;
+  cfg: Config;
+  ctx: AuthContext;
+  actor: SignalActor;
+  activity: ActivityPlanFact;
+  frozen: Frozen;
+  startedMs: number;
+}
+type Out =
+  | { kind: "advance"; phase: string }
+  | { kind: "more"; cursor?: bigint | null }
+  | { kind: "wait" }
+  | { kind: "done" }
+  | { kind: "fail"; code: string; detail?: unknown };
+export type TickResult = "continue" | "waiting" | "terminal" | "stale";
+const PHASES_BY_KIND: Record<string, readonly string[]> = { circle: ["freeze", "scope", "layer1", "select", "finalize"], compare: ["freeze", "scope", "layer1", "select", "finalize"], execution: ["freeze", "scope", "layer1", "select", "finalize"] };
+
+const hex = (b: Buffer | Uint8Array): string => Buffer.from(b).toString("hex");
+
+export function createRunner(deps: RunnerDeps) {
+  const { db, clock, facts, authz, audit, signals, claim, config } = deps;
+
+  const setPhase = (tx: DbTx, run: RunRow, phase: string, cursor: bigint | null, detail: unknown = null) =>
+    tx.update(judgementRuns).set({ phase, phaseCursor: cursor, phaseDetail: detail as never, updatedAt: clock.now() }).where(eq(judgementRuns.runId, run.runId));
+
+  // ---- freeze -------------------------------------------------------------------------------------------------
+  async function freeze(env: Env): Promise<Out> {
+    const { run, cfg, activity } = env;
+    if (env.frozen.freezeDone) return { kind: "advance", phase: "scope" };
+    // 崩溃在中途、frozen 尚未写完：此时还没有任何下游行，删掉已写的参与专员后整段重做（名单可能已变，以重做时读到的为准）
+    await claim.withFence(run, async (tx) => void (await tx.delete(runParticipants).where(eq(runParticipants.runId, run.runId))));
+    const roster = await facts.rosterOf(activity.planId);
+    if (!roster) return { kind: "fail", code: "plan_not_found", detail: { activityPlanId: String(activity.planId) } };
+    const accountIds = roster.entries.map((e) => BigInt(e.accountId)).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    const assignments = await facts.assignmentsOf(accountIds);
+    const staffOf = new Map<bigint, bigint>();
+    for (const a of accountIds) {
+      const asg = assignments.get(a);
+      if (!asg || asg.watchType !== "staff" || asg.staffId === null || asg.platformId !== activity.platformId) return { kind: "fail", code: "no_staff_assignment", detail: { accountId: String(a) } };
+      const dup = [...staffOf.entries()].find(([, s]) => s === asg.staffId);
+      if (dup) return { kind: "fail", code: "participant_conflict", detail: { staffId: String(asg.staffId), accountIds: [String(dup[0]), String(a)] } };
+      staffOf.set(a, asg.staffId);
+    }
+    const chains = await facts.orgChainOf([...staffOf.values()]);
+    for (const [a, s] of staffOf) if (!chains.has(s)) return { kind: "fail", code: "no_staff_assignment", detail: { accountId: String(a), staffId: String(s) } };
+    const frozenAt = clock.now();
+    const w = bjtDaysToUtc(cfg.window, frozenAt);
+    const frozen: Frozen = {
+      frozenAt: frozenAt.toISOString(),
+      window: { from: cfg.window.from, ...(cfg.window.to ? { to: cfg.window.to } : {}), fromUtc: w.fromUtc.toISOString(), toUtc: w.toUtc.toISOString() },
+      platform: activity.platformCode,
+      startsOn: activity.startsOn,
+      endsOn: activity.endsOn,
+      configSha256: hex(configSha256(cfg)),
+      segment: { planId: String(run.planId), version: run.version },
+      rosterSha256: hex(sha256Utf8(accountIds.join(","))),
+      freezeDone: false,
+    };
+    for (let i = 0; i < accountIds.length; i += config.blockSize) {
+      const chunk = accountIds.slice(i, i + config.blockSize);
+      await claim.withFence(run, async (tx) => {
+        await tx.insert(runParticipants).values(
+          chunk.map((accountId) => {
+            const c = chains.get(staffOf.get(accountId)!)!;
+            return { runId: run.runId, accountId, staffId: c.staffId, storeId: c.storeId, dealerId: c.dealerId, brandId: c.brandId, sectorId: c.sectorId, branchId: c.branchId, regionId: c.regionId };
+          }),
+        );
+      });
+    }
+    // 最后一个事务：frozen 一次写全并标记完成，之后各阶段只读它，不再读名单
+    await claim.withFence(run, async (tx) => {
+      await tx.update(judgementRuns).set({ frozen: { ...frozen, freezeDone: true } as never, participantCount: accountIds.length, updatedAt: clock.now() }).where(eq(judgementRuns.runId, run.runId));
+      await setPhase(tx, run, "scope", null);
+    });
+    env.frozen = { ...frozen, freezeDone: true };
+    return { kind: "advance", phase: "scope" };
+  }
+
+  // ---- scope：参与内容的范围构建与冻结（含同步完整谓词）----------------------------------------------------------
+  async function scope(env: Env): Promise<Out> {
+    const { run, cfg, frozen } = env;
+    const fromUtc = new Date(frozen.window.fromUtc);
+    const toUtc = new Date(frozen.window.toUtc);
+    const cursor = run.phaseCursor ?? 0n;
+    const chunk = await db.select({ accountId: runParticipants.accountId }).from(runParticipants).where(and(eq(runParticipants.runId, run.runId), gt(runParticipants.accountId, cursor))).orderBy(asc(runParticipants.accountId)).limit(config.blockSize);
+    if (chunk.length === 0) return { kind: "advance", phase: "layer1" };
+    const accountIds = chunk.map((c) => c.accountId);
+    const read = await facts.contentsOf(accountIds);
+    const sync = await facts.syncCompletenessOf(accountIds, fromUtc);
+    const wantAll = cfg.kinds.length === 2;
+    const kindOk = (k: string): "yes" | "no" | "unknown" => {
+      const mapped = k === "video" ? "video" : k === "image" || k === "text" ? "image" : null;
+      if (mapped === null) return wantAll ? "yes" : "unknown";
+      return (cfg.kinds as string[]).includes(mapped) ? "yes" : "no";
+    };
+    const rows: Array<typeof runContents.$inferInsert> = [];
+    for (const c of read.rows) {
+      const k = kindOk(c.contentKind);
+      if (k === "no") continue;
+      const common = { runId: run.runId, contentId: c.contentId, accountId: c.accountId, contentSnapshotId: c.snapshotId, publishedAt: c.publishedAt, likeValue: c.likeValue, likeState: c.likeState };
+      if (c.publishedAt === null) rows.push({ ...common, l0: "unobtained", l1: "skipped", l2: "skipped", l3: "skipped", final: "unobtained", reasonCode: "published_at_missing", stopLayer: "0" });
+      else if (c.publishedAt < fromUtc || c.publishedAt >= toUtc) continue; // 窗口外：不参与，不落行
+      else if (k === "unknown") rows.push({ ...common, l0: "unobtained", l1: "skipped", l2: "skipped", l3: "skipped", final: "unobtained", reasonCode: "content_kind_unknown", stopLayer: "0" });
+      else rows.push({ ...common, l0: "pass" });
+    }
+    await claim.withFence(run, async (tx) => {
+      for (let i = 0; i < rows.length; i += 500) await tx.insert(runContents).values(rows.slice(i, i + 500)).onDuplicateKeyUpdate({ set: { runId: sql`run_id` } }); // 重进幂等
+      for (const a of accountIds) {
+        const s = sync.get(a)!;
+        const ex = read.excluded.get(a);
+        await tx.update(runParticipants).set({ syncComplete: s.complete, syncReason: s.reason, reasonDetail: { excluded_status: ex?.status ?? 0, excluded_no_snapshot: ex?.noSnapshot ?? 0 } as never }).where(and(eq(runParticipants.runId, run.runId), eq(runParticipants.accountId, a)));
+      }
+      await tx.update(judgementRuns).set({ phaseCursor: accountIds[accountIds.length - 1]!, updatedAt: clock.now() }).where(eq(judgementRuns.runId, run.runId));
+    });
+    env.run = { ...env.run, phaseCursor: accountIds[accountIds.length - 1]! };
+    return { kind: "more" };
+  }
+
+  // ---- layer1：文本 / 话题 / 时长（只读 C 的文本信号与 A 的快照；不触发任何外部调用）----------------------------
+  const l1Configured = (cfg: Config): boolean => cfg.layer1.text.length > 0 || cfg.layer1.hashtags.length > 0 || cfg.layer1.duration !== undefined;
+  const waitDeadlineOf = (run: RunRow): Date | null => {
+    const d = (run.phaseDetail as { waitDeadline?: string } | null)?.waitDeadline;
+    return d ? new Date(d) : null;
+  };
+
+  async function layer1(env: Env): Promise<Out> {
+    const { run, cfg, actor } = env;
+    if (!l1Configured(cfg)) {
+      await claim.withFence(run, async (tx) => void (await tx.update(runContents).set({ l1: "not_configured" }).where(and(eq(runContents.runId, run.runId), eq(runContents.l0, "pass"), isNull(runContents.l1)))));
+      return { kind: "advance", phase: "select" };
+    }
+    const deadline = waitDeadlineOf(run);
+    const expired = deadline !== null && clock.now() >= deadline;
+    const skip = new Set<bigint>();
+    let waiting = 0;
+    for (;;) {
+      if (Date.now() - env.startedMs > config.tickBudgetMs) return { kind: "more" };
+      const batch = (
+        await db
+          .select({ contentId: runContents.contentId, snapshotId: runContents.contentSnapshotId })
+          .from(runContents)
+          .where(and(eq(runContents.runId, run.runId), eq(runContents.l0, "pass"), isNull(runContents.l1)))
+          .orderBy(asc(runContents.contentId))
+          .limit(config.signalBatch + skip.size)
+      ).filter((r) => !skip.has(r.contentId)).slice(0, config.signalBatch);
+      if (batch.length === 0) break;
+      const subjects = batch.map((b) => ({ kind: "content" as const, id: b.contentId }));
+      const need = (key: string) => signals.readMany(actor, subjects, key);
+      const usesTitle = cfg.layer1.text.some((t) => t.fields.includes("title"));
+      const usesBody = cfg.layer1.text.some((t) => t.fields.includes("body"));
+      const [title, body, tags] = [usesTitle ? await need("text.title_normalized") : null, usesBody ? await need("text.body_normalized") : null, cfg.layer1.hashtags.length ? await need("text.hashtags") : null];
+      const durations = cfg.layer1.duration ? await facts.durationsOf(batch.map((b) => b.snapshotId)) : null;
+      const results: Array<{ contentId: bigint; layer: LayerResult; evidence: unknown }> = [];
+      for (const b of batch) {
+        const missing: SignalLike = { state: "missing", usable: false, reason: "not_computed" };
+        const textSignalsOf = (id: bigint, ti: Map<bigint, SignalLike> | null, bo: Map<bigint, SignalLike> | null) => {
+          const bySignal: Partial<Record<"title" | "body", SignalLike>> = {}; // 键是信号字段选择器，不是正文字段
+          if (ti) bySignal["title"] = ti.get(id) ?? missing;
+          if (bo) bySignal["body"] = bo.get(id) ?? missing;
+          return bySignal;
+        };
+        const conds = [
+          ...cfg.layer1.text.map((t) => evalKeywords(t, textSignalsOf(b.contentId, title, body), (r, v) => signals.normalizeKeyword(r, v))),
+          ...cfg.layer1.hashtags.map((h) => evalHashtags(h, tags!.get(b.contentId) ?? missing, (r, v) => signals.normalizeKeyword(r, v))),
+          ...(cfg.layer1.duration ? [evalDuration(cfg.layer1.duration, durations!.get(b.snapshotId) ?? { state: "missing", value: null, unit: "unknown" })] : []),
+        ];
+        const layer = combineLayer(conds);
+        results.push({ contentId: b.contentId, layer, evidence: { l1: conds.map((c, idx) => ({ idx, state: c.state, ...(c.detail ?? {}), ...(c.reason ? { reason: c.reason } : {}) })) } });
+      }
+      const settled = results.filter((r) => r.layer.state !== "waiting" || expired);
+      for (const r of results) if (r.layer.state === "waiting" && !expired) (skip.add(r.contentId), waiting++);
+      await claim.withFence(run, async (tx) => {
+        for (const r of settled) {
+          const layerState = r.layer.state === "waiting" ? "unobtained" : r.layer.state;
+          const reason = r.layer.state === "waiting" ? "dependency_timeout" : r.layer.reason;
+          const stop = layerState === "fail" || layerState === "unobtained";
+          await tx
+            .update(runContents)
+            .set({
+              l1: layerState,
+              ...(stop ? { l2: "skipped", l3: "skipped", final: layerState, stopLayer: "1", reasonCode: reason ?? null } : {}),
+              stale: r.layer.stale,
+              evidence: r.evidence as never,
+            })
+            .where(and(eq(runContents.runId, run.runId), eq(runContents.contentId, r.contentId), isNull(runContents.l1)));
+        }
+      });
+    }
+    if (waiting > 0) return { kind: "wait" };
+    return { kind: "advance", phase: "select" };
+  }
+
+  // ---- select：第 1 层数量要求（按专员各自按点赞取前 N；N 缺省不截断）----------------------------------------------
+  async function select(env: Env): Promise<Out> {
+    const { run, cfg } = env;
+    const n = cfg.layer1.quantity?.n;
+    const people = await db.select({ accountId: runParticipants.accountId }).from(runParticipants).where(eq(runParticipants.runId, run.runId)).orderBy(asc(runParticipants.accountId));
+    for (const p of people) {
+      const rows = await db
+        .select({ contentId: runContents.contentId, likeState: runContents.likeState, likeValue: runContents.likeValue, publishedAt: runContents.publishedAt })
+        .from(runContents)
+        .where(and(eq(runContents.runId, run.runId), eq(runContents.accountId, p.accountId), eq(runContents.l1, "pass")));
+      if (rows.length === 0) continue;
+      const { ranked, likeNotValue } = selectLayer1(rows.map((r) => ({ contentId: r.contentId, likeState: r.likeState, likeValue: r.likeValue, publishedAt: r.publishedAt! })), n);
+      await claim.withFence(run, async (tx) => {
+        // ponytail: 逐行更新，单专员 l1 通过的内容通常只有几十条；若出现上千条再改成 CASE 批量更新
+        for (const r of ranked) {
+          await tx
+            .update(runContents)
+            .set(r.selected ? { layer1Selected: true, layer1Rank: r.rank } : { layer1Selected: false, layer1Rank: r.rank, l2: "skipped", l3: "skipped", final: "skipped", reasonCode: "layer1_not_selected", stopLayer: "1" })
+            .where(and(eq(runContents.runId, run.runId), eq(runContents.contentId, r.contentId)));
+        }
+        const [cur] = await tx.select({ d: runParticipants.reasonDetail }).from(runParticipants).where(and(eq(runParticipants.runId, run.runId), eq(runParticipants.accountId, p.accountId)));
+        await tx.update(runParticipants).set({ reasonDetail: { ...((cur?.d as object | null) ?? {}), like_not_value: likeNotValue } as never }).where(and(eq(runParticipants.runId, run.runId), eq(runParticipants.accountId, p.accountId)));
+      });
+    }
+    return { kind: "advance", phase: "finalize" };
+  }
+
+  // ---- finalize ------------------------------------------------------------------------------------------------
+  async function finalize(env: Env): Promise<Out> {
+    const { run } = env;
+    const id = run.runId;
+    await claim.settle(
+      run,
+      { status: "completed", counters: {} },
+      async (tx) => {
+        // 每位参与专员的 C1 与未选中数：c1 = 通过（或没配）第 1 层且没被数量要求截掉的内容
+        await tx.execute(sql`
+          UPDATE run_participants p SET
+            c1_count = (SELECT COUNT(*) FROM run_contents c WHERE c.run_id = p.run_id AND c.account_id = p.account_id AND c.l0 = 'pass' AND c.l1 IN ('pass','not_configured') AND (c.layer1_selected IS NULL OR c.layer1_selected = TRUE)),
+            content_skipped = (SELECT COUNT(*) FROM run_contents c WHERE c.run_id = p.run_id AND c.account_id = p.account_id AND c.final = 'skipped')
+          WHERE p.run_id = ${id}`);
+        await tx.execute(sql`
+          UPDATE judgement_runs r SET
+            content_total = (SELECT COUNT(*) FROM run_contents c WHERE c.run_id = r.run_id),
+            c1_count = (SELECT COALESCE(SUM(p.c1_count), 0) FROM run_participants p WHERE p.run_id = r.run_id)
+          WHERE r.run_id = ${id}`);
+        // 圈定成功 → 向导进度 circled（只从 draft 起步，不回退已到 compared 的进度）
+        if (run.runKind === "circle") await tx.update(judgementPlanVersions).set({ wizardStep: "circled", updatedAt: clock.now() }).where(and(eq(judgementPlanVersions.planId, run.planId), eq(judgementPlanVersions.version, run.version), eq(judgementPlanVersions.status, "draft"), eq(judgementPlanVersions.wizardStep, "draft")));
+      },
+    );
+    return { kind: "done" };
+  }
+
+  const PHASE_FN: Record<string, (env: Env) => Promise<Out>> = { freeze, scope, layer1, select, finalize };
+
+  // ---- tick ----------------------------------------------------------------------------------------------------
+  /** 提交人复核（JP-15）：每个 tick 开头用 contextForUser 现建身份并确认仍持有该类运行所需的 Capability；失败则取消运行。 */
+  async function submitterContext(run: RunRow): Promise<AuthContext | null> {
+    try {
+      const ctx = await authz.contextForSubmitter(run.submittedByActor);
+      await authz.require(ctx, run.runKind === "execution" ? "execute" : "manage");
+      return ctx;
+    } catch (e) {
+      if (!(e instanceof JudgementError)) throw e;
+      // 取消与高风险审计在同一事务里：审计写失败则整笔回滚，下个 tick 再试
+      await db.transaction(async (tx) => {
+        if (await claim.cancel(run.runId, tx)) await audit.record({ event: "submitter_revoked", actor: run.submittedByActor, planId: run.planId, runId: run.runId, reasonCode: "submitter_revoked" }, tx);
+      });
+      return null;
+    }
+  }
+
+  async function tick(run: RunRow): Promise<TickResult> {
+    const startedMs = Date.now();
+    const ctx = await submitterContext(run);
+    if (!ctx) return "terminal";
+    try {
+      const [v] = await db.select().from(judgementPlanVersions).where(and(eq(judgementPlanVersions.planId, run.planId), eq(judgementPlanVersions.version, run.version)));
+      const planRow = await facts.activityPlansOf([await activityPlanIdOf(run.planId)]);
+      const activity = [...planRow.values()][0];
+      if (!v || !activity || activity.status === "deleted") {
+        await claim.settle(run, { status: "failed", code: "plan_not_found" });
+        return "terminal";
+      }
+      const env: Env = { run, cfg: parseConfig(v.config), ctx, actor: await authz.toSignalActor(ctx), activity, frozen: (run.frozen as Frozen) ?? ({} as Frozen), startedMs };
+      let phase = run.phase ?? "freeze";
+      const order = PHASES_BY_KIND[run.runKind]!;
+      for (;;) {
+        const fn = PHASE_FN[phase];
+        if (!fn || !order.includes(phase)) {
+          await claim.settle(run, { status: "failed", code: "internal_error", detail: { phase } });
+          return "terminal";
+        }
+        const out = await fn(env);
+        if (out.kind === "done") return "terminal";
+        if (out.kind === "fail") {
+          await claim.settle(run, { status: "failed", code: out.code, detail: out.detail });
+          return "terminal";
+        }
+        if (out.kind === "advance") {
+          phase = out.phase;
+          await claim.withFence(run, async (tx) => void (await setPhase(tx, run, phase, null)));
+          env.run = { ...env.run, phase, phaseCursor: null, phaseDetail: null };
+          continue;
+        }
+        const now = clock.now();
+        if (out.kind === "wait") {
+          const detail = (env.run.phaseDetail as { waitDeadline?: string } | null) ?? {};
+          const waitDeadline = detail.waitDeadline ?? new Date(now.getTime() + config.waitSignalSeconds * 1000).toISOString();
+          await claim.settle(run, { status: "waiting", nextTickAt: new Date(now.getTime() + config.pollSeconds * 1000), phase, phaseDetail: { ...detail, waitDeadline, waitingOn: "signals" }, attemptCount: 0 });
+          return "waiting";
+        }
+        await claim.settle(run, { status: "waiting", nextTickAt: now, phase, phaseCursor: env.run.phaseCursor ?? null, attemptCount: 0 });
+        return "continue";
+      }
+    } catch (e) {
+      if (e instanceof StaleLeaseError) return "stale";
+      // 阶段内的瞬时异常：退避重试；超过次数置 failed（已定的行保留，可 resume）
+      const attempts = run.attemptCount + 1;
+      try {
+        if (attempts > config.phaseMaxAttempts) await claim.settle(run, { status: "failed", code: "internal_error", detail: { message: String((e as Error).message).slice(0, 200) } });
+        else await claim.settle(run, { status: "waiting", nextTickAt: new Date(clock.now().getTime() + config.pollSeconds * 1000), attemptCount: attempts });
+      } catch (inner) {
+        if (!(inner instanceof StaleLeaseError)) throw inner;
+        return "stale";
+      }
+      return attempts > config.phaseMaxAttempts ? "terminal" : "waiting";
+    }
+  }
+  async function activityPlanIdOf(planId: bigint): Promise<bigint> {
+    const [p] = await db.select({ a: judgementPlans.activityPlanId }).from(judgementPlans).where(eq(judgementPlans.planId, planId));
+    return p!.a;
+  }
+  return { tick };
+}
+export type Runner = ReturnType<typeof createRunner>;

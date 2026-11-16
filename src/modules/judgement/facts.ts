@@ -195,6 +195,14 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     return out;
   }
 
+  /** 冻结快照的时长字段（第 1 层时长条件用；run_contents 不重复存）。 */
+  async function durationsOf(snapshotIds: readonly bigint[]): Promise<Map<bigint, { state: string; value: string | null; unit: string }>> {
+    const rows = await inChunks(snapshotIds, (c) =>
+      db.select({ id: contentSnapshots.contentSnapshotId, state: contentSnapshots.durationState, value: contentSnapshots.durationValue, unit: contentSnapshots.durationUnit }).from(contentSnapshots).where(inArray(contentSnapshots.contentSnapshotId, c)),
+    );
+    return new Map(rows.map((r) => [r.id, { state: r.state, value: r.value, unit: r.unit }]));
+  }
+
   /** 账号当前 finalized 主页快照（账号要求用；没有为 null）。 */
   async function profileOf(accountIds: readonly bigint[]): Promise<Map<bigint, bigint | null>> {
     const rows = await inChunks(accountIds, (c) => db.select({ a: externalAccounts.accountId, p: externalAccounts.currentProfileSnapshotId }).from(externalAccounts).where(inArray(externalAccounts.accountId, c)));
@@ -241,6 +249,6 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     return out;
   }
 
-  return { rosterOf, planOf, activityPlansOf, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, contentsOf, profileOf, syncCompletenessOf };
+  return { rosterOf, planOf, activityPlansOf, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, contentsOf, durationsOf, profileOf, syncCompletenessOf };
 }
 export type Facts = ReturnType<typeof createFacts>;

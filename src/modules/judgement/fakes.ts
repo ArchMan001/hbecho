@@ -28,6 +28,8 @@ export class FakeSignals implements SignalsPort {
   platformMap = new Map<string, ReadonlySet<string>>();
   allSignals: ReadonlySet<string> = new Set();
   failNext: { fn: string; error: Error } | null = null;
+  /** 持续失败：每次调用该函数都抛（模拟依赖一直不可用）。 */
+  readonly alwaysFail = new Map<string, Error>();
   readonly retained: Array<{ ids: bigint[]; until: Date }> = [];
 
   constructor(allSignals?: Iterable<string>) {
@@ -35,6 +37,8 @@ export class FakeSignals implements SignalsPort {
   }
   private log(fn: string, args: unknown): void {
     this.calls.push({ fn, args });
+    const always = this.alwaysFail.get(fn);
+    if (always) throw always;
     if (this.failNext?.fn === fn) {
       const e = this.failNext.error;
       this.failNext = null;

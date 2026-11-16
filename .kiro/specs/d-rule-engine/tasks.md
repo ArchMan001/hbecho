@@ -29,7 +29,7 @@
 - [x] 任务 2 · 骨架：错误、配置、端口与 fake、B 授权接入、审计、`facts.ts`、测试挂具、静态护栏（2026-11-16 完成；`assemble.ts` 随任务 4 起逐步装配；真实 C 的契约测试在任务 12）
 - [x] 任务 3 · 纯函数：配置、三值逻辑、条件求值、达标方式、窗口、分布（2026-11-16：`src/modules/judgement/{config,engine/pure/*}`，unit 84 例）
 - [x] 任务 4 · 判定计划、草稿与版本（含与 C 的 provisioning、发布协议、回退）（2026-11-16：`plans.ts` / `versions.ts`，`plans.db` 14 + `versions.db` 32 例；与 C 真实 `segments` 的一致性在任务 12 的契约测试里确认）
-- [ ] 任务 5 · 运行内核与圈定（**第一条可演示的纵向**）
+- [x] 任务 5 · 运行内核与圈定（**第一条可演示的纵向**）（2026-11-16：`engine/claim.ts`、`engine/runner.ts`、`runs.ts`、`assemble.ts`，`circle.db` 31 例；**`judgement circle` 的 CLI 级测试随任务 11 的 CLI 一并做**）
 - [ ] 任务 6 · 试跑（第 2 层）：依赖协调、等待、报告
 - [ ] 任务 7 · 执行（第 1、2 层 + 账号要求）：确认执行、聚合、零内容、计划总结果
 - [ ] 任务 8 · 第 3 层与评论：采集需求、ASR 判定、评论要求
@@ -137,7 +137,7 @@
   - **验证**（`*.db.test.ts`，`FakeSignals`、`FakeClock`）：JP-1 全部验收（`reconcile` 捕获 C 的 `segment_exists` 后核对平台；活动计划状态限制、创建者谓词、别名唯一、provisioning 恢复、重复创建不产生第二份 C 草稿、归档语义、回收站不可见）；JP-3 全部验收中与发布相关的部分（已发布不可变、ASR 判定项 + C 报不可执行 → 发布被拒且 D 与 C 均不变、`newDraft` 版本号与 C 一致 / 不一致报 `version_mismatch`、在 `publishing` 处杀进程后 `reconcile`）；JP-4 的失效矩阵（改关键词 / 改数量 N → 圈定与试跑结果被删；只改能力别名 → 不动；只改 ASR 标准 → 不动）、回退只退一层、跳层被拒、预览不写表、已发布版本回退返回 `version_immutable`；`setConfig` 之后 `setItems` 调用的 `items` 与 `deriveItems` 一致；写 C 的调用都在事务之外（护栏）。
   - **未证明**：与 C 真实 `segments` 的行为一致（任务 12）。
 
-- [ ] 5. 运行内核与圈定（第一条纵向）
+- [x] 5. 运行内核与圈定（第一条纵向；CLI 部分归任务 11）
   - **Requirements:** JP-5、JP-7、JP-8（第 1 层）、JP-15
   - **Design:** §5.2、§7.2、§7.3、§7.4、§7.5
   - `engine/claim.ts`（领取、租约、fencing、`active_key`、取消、续跑、提交人复核）；`engine/runner.ts` 的 `freeze → scope → layer1（含按点赞取前 N、写 layer1_selected/rank）→ finalize` 阶段；`circle` 命令；`circle` 运行的保留与替换；CLI 骨架与 `judgement circle`。

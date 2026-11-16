@@ -844,7 +844,9 @@ C 的 design §14 第 11 项把「监控段 / 读取口 / 补算请求的 API �
 
 **演练发现并已修复**：`finalize` 里「每位专员的 C1 与未选中数」最初用相关子查询（`UPDATE run_participants p SET c1_count = (SELECT COUNT(*) FROM run_contents c WHERE c.account_id = p.account_id …)`），单独就用了 35 秒，占一次执行的一半以上。改成一次分组聚合再按账号连接后降到 0.1 秒以内，总耗时 63 s → 32 s。**以后写「按专员汇总内容行」类 SQL 时用分组连接，不用相关子查询。**
 
-**演练没有证明的**：真实 C 的评分延迟与并发限制、A 的采集等待（执行耗时的主要来源是它们，不是 D）；测试 ECS 的数字（演练在本机跑，ECS 只跑了全量测试，见 acceptance「逐条结果」）；两个 worker 同时领取的吞吐（租约与 fencing 由 DB 测试覆盖，没有压测）。吞吐上限仍是单 worker 顺序处理各阶段（§12）。
+**测试 ECS（`i-2zef8qpi1d2mldntjgrv`，一次性 `mysql:8.4` + `node:24-slim` 容器）上同一演练**：合计 18.7 s（freeze 0.2 / scope 2.0 / layer1 6.3 / select 5.6 / scores 1.7 / aggregate 2.8 / finalize < 0.1），峰值 RSS 449 MB、堆 285 MB；表大小与本机一致。
+
+**演练没有证明的**：真实 C 的评分延迟与并发限制、A 的采集等待（执行耗时的主要来源是它们，不是 D）；两个 worker 同时领取的吞吐（租约与 fencing 由 DB 测试覆盖，没有压测）。吞吐上限仍是单 worker 顺序处理各阶段（§12）。
 
 **其它实施发现**
 - **契约测试发现 fake 与真实 C 的差异**：C 的 `executability` / `requestScores` 对空的 `only` 直接拒绝（`only_empty`），`FakeSignals` 原先接受；C 的可执行性只对监控段 `items` 里的信号负责，`FakeSignals.blockers` 原先是全局的。两处都已让 fake 与真实一致。契约测试 `tests/contracts/signals-port.contract.ts` 同时跑 fake 与真实 C（`createSignals` + 真实 MySQL + FakeObjectStore），另加了 `only`、`show.images` 形状、`normalizeKeyword` / `retainUntil` 三条。

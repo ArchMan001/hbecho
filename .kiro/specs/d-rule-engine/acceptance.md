@@ -1,6 +1,6 @@
 # D 规则与考核（d-rule-engine）· 验收
 
-> **状态**：`draft`
+> **状态**：`draft`（引擎与 CLI 的自动项已验收，页面项与 MAN / 部分 ENV 未做；见「逐条结果」）
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -14,7 +14,7 @@
 >
 > **最近核对**：2026-11-16
 >
-> **更新日期**：2026-11-16（随 2026-11-13 UI / 模型修订更新；尚未实施，所有条目未执行）
+> **更新日期**：2026-11-16（任务 12：引擎、CLI、下游端口的离线验收已回填「逐条结果」；页面项未做）
 
 ## 怎么用
 
@@ -28,8 +28,65 @@
 - 凡涉及三值结果的断言，同时断言**原因码**，不只断言结果。
 
 ## 逐条结果
+**2026-11-16 · 任务 12 · 分支 `d-rule-engine`（引擎、CLI、下游端口、离线验收；页面项见 ENV-9，未做）**
 
-（任务 12 回填：每组通过 / 未通过、对应测试文件、本机 `verify.sh` 的测试数、测试 ECS 的通过数与耗时。）
+### 运行记录
+| 项 | 结果 |
+|---|---|
+| 本机 `./scripts/verify.sh`（任务 12 收尾时，合入 `origin/main` 之前的 `052d0e9` 之后） | **OK**：类型检查；unit 100 个文件 **1149** 例；迁移一致；db 128 个文件 **1666** 例（1 skipped）；密钥 / 链接 / 登记；**Python 侧未验证**（本机无 pytest / ffmpeg）；「静态门禁」在 `verify.sh` 里仍是占位，D 的五条静态护栏在 unit 的 `src/acceptance-boundaries.test.ts` 里。第一次运行曾有 1 个失败：`activity-plan/scale.perf.db.test.ts`（A 的 2,000 行并发解析在 `sync_batches` 上死锁，A 的代码，本分支未改）；同文件单独连跑 3 次全过，第二次整套全过，按**间歇性失败（A 的既有问题）**记录，未处理 |
+| 测试 ECS 全量测试（ENV-2） | **通过**。实例 `i-2zef8qpi1d2mldntjgrv`，经 Workbench；一次性容器：`mysql:8.4`（独立网络、不映射宿主端口、库名 `hbecho_test`）+ `node:24-slim`（与 MySQL 共用网络命名空间，经回环访问，满足 `_test` 与回环闸门）；源码为 `git archive f5c80e7`；`pnpm install --frozen-lockfile` 15 s；typecheck + unit **1149** 例 + db **1666** 例（1 skipped）全部通过，db 370 s；容器、网络、源码目录已删除；宿主 `hbecho-mysql` 与 `hbecho` 库未触碰；没有 `.env`、没有任何凭证进入测试容器 |
+| 规模演练（ENV-3） | 2,000 账号 × 20 条 = 40,000 行：**本机 32.3 s**，**测试 ECS 18.7 s**（峰值 RSS 449 MB）；表大小、阶段耗时与发现见 design §12.1 |
+| 对真实 C 的契约（ENV-1，部分） | `tests/contracts/signals-port.contract.ts` 的 7 条同时对 `FakeSignals` 与**真实 `createSignals`（真实 MySQL + FakeObjectStore / FakeMatcher）**通过，发现并修正 fake 的两处差异（空 `only`、按监控段过滤阻塞项）。**仍未验证**：真实 OSS、真实图像匹配服务、真实模型 / 网关（C 的 `DisabledAiGateway` 下语音类信号读作 `capability_disabled`），以及真实采集下的评分延迟 |
+| A 的真实 `plans.delete / restore` 与 `maintenance.runNow` + D 的真实下游（ENV-4） | `downstream.db.test.ts` 10 例（含 `plan_purged` 高风险审计）；与上面同一套全量测试在 ECS 通过 |
+| 真实付费调用 | **没有，也不需要**：D 不发供应商调用；C 的网关默认 disabled；测试进程 `network-deny` |
+
+### 自动项覆盖（212 条；按验收条目逐条映射测试，见任务 12 的覆盖映射）
+映射方法：逐条读 `it(...)` 标题与断言，判定「已覆盖 / 部分覆盖 / 未覆盖」；拿不准的记「部分覆盖」。映射时 145 / 55 / 12；补测与修复后下表。
+
+| 组 | 已覆盖 | 部分 | 未覆盖 | 主要测试文件 |
+|---|---:|---:|---:|---|
+| A 判定计划与创建 | 7 | 1 | 0 | `plans.db` |
+| B 配置与校验 | 11 | 7 | 0 | `config.test`、`versions.db` |
+| C 版本、草稿、发布 | 8 | 3 | 0 | `versions.db`、`execute.db` |
+| D 向导进度与回退 | 6 | 4 | 0 | `versions.db` |
+| E 圈定 | 17 | 1 | 0 | `circle.db`、`select.test`、`acceptance-gaps.db` |
+| F 试跑 | 5 | 5 | 0 | `trial.db`、`trial.test` |
+| G 执行输入冻结 | 10 | 1 | 0 | `facts.db`、`circle.db`、`acceptance-gaps.db` |
+| H 内容逐层过滤 | 10 | 0 | 0 | `layer.test`、`circle.db`、`acceptance-gaps.db` |
+| I 专员级达标与计划总结果 | 19 | 3 | 0 | `aggregate.test`、`execute.db` |
+| J 评论要求 | 8 | 0 | 0 | `layer3-comments.db`、`acceptance-gaps.db` |
+| K 账号要求 | 7 | 0 | 0 | `execute.db`、`acceptance-gaps.db` |
+| L 第 3 层 | 7 | 1 | 0 | `layer3-comments.db`、`acceptance-gaps.db` |
+| M 依赖协调 | 4 | 3 | 0 | `layer3-comments.db`、`acceptance-gaps.db` |
+| N 证据与可解释 | 5 | 1 | 1 | `outcomes.db`、`layer3-comments.db` |
+| O 运行生命周期 | 7 | 2 | 0 | `circle.db`、`judgement-loop.db` |
+| P 对 E 的输出契约 | 8 | 2 | 2 | `outcomes.db` |
+| Q 下游端口 | 8 | 0 | 0 | `downstream.db`、`judgement-wiring.db` |
+| R 授权与审计 | 5 | 3 | 1 | `authz.test`、`audit.test`、各 `*.db` 的授权用例 |
+| S 配置、门控与默认离线 | 2 | 2 | 1 | `env.test`、`judgement-main.db` |
+| T CLI | 4 | 2 | 0 | `judgement-cli.db`、`judgement-main.db`、`judgement-loop.db` |
+| U 对既有代码的改动与护栏 | 5 | 1 | 2 | `acceptance-boundaries.test`、`judgement-schema.db` |
+| **合计** | **163** | **42** | **7** | |
+
+**任务 12 补测的 16 条**（`acceptance-gaps.db.test.ts`，每条都对照设计里的预期，不是照着实现写）：E13、E18、G6、G11、H1、H2、J1、J4、J8、K3、K4、K7、L2、L6、M7、I16；并给 E1、F4 补上标题声称却没有的 `demand.submitted == 0` 断言。**修复的空转测试 6 处**：`versions.db` 的失效矩阵只跑首个分支；`outcomes.db` 的改绑被 `.catch` 吞掉；`circle.db` / `trial.db` 缺 `demand.submitted == 0`；`facts.db` 没有真正移动 current 指针；`execute.db` 的「改阈值再确认」没改配置（改为改数量 N 并断言配置哈希不同）。
+
+**仍然只有「部分覆盖」的 42 条**（场景已基本覆盖，缺的是个别断言，**不声称通过**）：A6、B2、B6、B10、B11、B12、B16、B18、C4、C9、C11、D3、D5、D6、D8、E4、F3、F5、F8、F9、F10、G1、I12、I13、I14、L1、M1、M3、M4、N3、O4、O9、P1、P11、R6、R7、R9、S2、S4、T4、T6、U1。其中对业务结果影响最大的是：**C4**（`publishing` 处中断后对账恰有一次执行：现有用例的钩子抛错使整笔回滚，没有走到「C 已发布、D 未置位」）、**M3 / M4 / O4**（没有「逐阶段首次调用抛错一次」的续跑矩阵，没有「提交之后、记批次 ID 之前中断」）、**I13**（主要原因优先级只验了内容 > 评论）、**G1**（运行中改名单 / 换店后只验了分公司没验门店）、**R6**（审计写失败使业务写入回滚，没有注入审计失败的用例）。
+
+**没有任何测试的 7 条**：
+| 编号 | 原因 / 现状 |
+|---|---|
+| N7、R7 | 审计 detail 与日志不含签名 URL / 评论原文 / 模型 Key：没有机器化扫描。代码里没有写这些字段（静态护栏 ⑤ 禁止原文字段进配置与证据 schema），但没有对运行时输出的正则扫描 |
+| P7、P8 | 「最新 completed 即当前结果、D 不激活」「D 不产出文件」：没有断言。`outcomes.ts` 的导出里没有 activate / setCurrent，D 不 import xlsx / 写文件库——靠人读，没有静态护栏 |
+| R5、U7 | B 的服务身份名单零改动、A / C 零修改：**手工核对**——相对分叉点 `git diff`，A、B、C、`demand`、`orchestrator` 的模块目录零改动，`src/db/schema/` 只有 `index.ts` 加了一行导出；既有代码的其余改动只有 `plan-main.ts`（装配下游）、`package.json`、`.env.example`、两个表数量测试、`acceptance-boundaries.test.ts`、`check-doc-registry.py`。没有机器化 |
+| S5、U8 | `verify.sh` 通过、既有测试保持通过：是运行结果，见上表（本机与 ECS 各一次） |
+
+### 手工项与环境项
+| 项 | 状态 |
+|---|---|
+| MAN-1 ～ MAN-4 | **未做**：需要业务代表与评审人在测试机上用 CLI 走查；真实 C 的图像比对与真实采集未接通，MAN-2 标「未验证」 |
+| MAN-5 | design §14 各项已答复并回写；第 31 项（`toDemandActor` 的窄适配）待确认 |
+| MAN-6、ENV-9 | 页面任务 13–16 未开始 |
+| ENV-5、ENV-6、ENV-7、ENV-8 | 属于 E、`h-ai-min`、C 的任务 7，未验证 |
 
 ## 自动项
 
@@ -365,10 +422,10 @@
 
 | # | 内容 | 当前状态 |
 |---|---|---|
-| ENV-1 | C 的真实实现与 `tests/contracts/signals-port.contract.ts` 的契约测试 | 未验证（C 已合入 `main`；契约测试在任务 12 对真实实现跑，fake 与真实共用同一份） |
-| ENV-2 | 测试 ECS 上的全量测试（一次性 `_test` 库容器） | 未执行 |
-| ENV-3 | 规模演练（2,000 账号 × 20 条）与表大小 | 未执行 |
-| ENV-4 | A 的真实 `plans.remove / maintenance` + D 的真实 `downstream` 端到端 | 随任务 10 在本机离线完成；测试 ECS 复核待做 |
+| ENV-1 | C 的真实实现与 `tests/contracts/signals-port.contract.ts` 的契约测试 | **部分验证**（2026-11-16）：7 条契约对 fake 与真实 `createSignals`（真实 MySQL + FakeObjectStore / FakeMatcher）通过；真实 OSS、匹配服务、模型 / 网关未验证 |
+| ENV-2 | 测试 ECS 上的全量测试（一次性 `_test` 库容器） | **通过**（2026-11-16）：unit 1149、db 1666（1 skipped），db 370 s；详见「逐条结果」 |
+| ENV-3 | 规模演练（2,000 账号 × 20 条）与表大小 | **完成**（2026-11-16）：本机 32.3 s、测试 ECS 18.7 s；数字见 design §12.1 |
+| ENV-4 | A 的真实 `plans.remove / maintenance` + D 的真实 `downstream` 端到端 | **完成**：本机离线（任务 10），测试 ECS 随全量测试通过 |
 | ENV-5 | E 的真实消费者（`e-metrics` spec 对齐后） | 后续 spec |
 | ENV-6 | 结果下载经 E6 的三个 sheet（PRD D §六最后一条） | 属于 E 的验收；D 只证明数据口（P 组） |
 | ENV-7 | H1 网关落地后第 3 层的真实 smoke | 属于 `h-ai-min`，需要人工批准、显式开关、固定预算与审计摘要 |

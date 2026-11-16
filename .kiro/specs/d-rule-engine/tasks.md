@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**：未开始。界面设计闸门已通过（2026-11-13，design §15.6）；design §14 其余项按任务边界处理。**待确认闸门未全部通过前不写迁移**；进度以下方勾选为准
+> **执行状态**：任务 0–12（引擎、CLI、下游端口、离线验收）已完成，页面任务 13–16 未开始；进度以下方勾选为准。界面设计闸门已通过（2026-11-13，design §15.6）
 >
 > **需求**：[`requirements.md`](requirements.md)
 >
@@ -36,7 +36,7 @@
 - [x] 任务 9 · 对 E 的读取口、解释、保留与清理（2026-11-16：`outcomes.ts`，`outcomes.db` 16 例；越范围的 explain 表现为 `judgement_plan_not_found`；第 2 层证据尚无 C 的 `resultId` 字段）
 - [x] 任务 10 · 下游端口与清除（2026-11-16：`downstream.ts`、`src/worker/judgement-wiring.ts`，`downstream.db` 10 + `judgement-wiring.db` 1 例；用 A 的真实 `plans.delete / restore` 与 `maintenance.runNow` 联动；`plan-main` 已传 D 的下游，清除所需的 C 配置用到才读，缺项时 purge 抛出、A 保守不清除；E 的组合下游待 E）
 - [x] 任务 11 · CLI 全集与 `judgement serve` 装配（2026-11-16：`src/worker/judgement-{cli,loop,main,wiring}.ts`、`src/modules/judgement/real-ports.ts`；`judgement-cli.db` 9 + `judgement-loop.db` 3 + `judgement-main.db` 3 例；真实 B 装配（`createAccessServices`）在子进程里验证；**真实 C 的契约与真实 A 采集链路未验证，留任务 12**；design §9 的 CLI 形状按实现改了三处：`image put/remove` 用 `--ability`、`trial-report` 用 planId、身份只有 `HBECHO_JP_ACTOR`）
-- [ ] 任务 12 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾（**完成后推第二次**）
+- [x] 任务 12 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾（2026-11-16：本机 verify 全绿 unit 1149 / db 1666；测试 ECS 全量通过；规模演练本机 32.3 s / ECS 18.7 s；验收 212 条映射：163 已覆盖 / 42 部分 / 7 无测试，见 acceptance「逐条结果」；**第二次推送与 CI 合并见下方实施记录**）
 - [ ] 任务 13 · 页面基础、判定计划列表与详情
 - [ ] 任务 14 · 三页向导页面
 - [ ] 任务 15 · 执行记录、证据抽屉与 E 入口
@@ -185,7 +185,7 @@
   - `judgement-cli.ts` 补齐 design §9 的全部命令；`judgement-main.ts` 装配（pino 日志、连接池、环境变量身份、`serve` 的领取循环与每日 `maintain`）；`package.json` 脚本；`.env.example`。
   - **验证**：每条命令一个 CLI 级测试（成功、输入错误、授权错误）；缺身份环境变量启动失败且退出码非零；`rollback` / `cancel` 不带 `--apply` 不改任何表；退出码映射表；`serve` 在 SIGTERM 时释放租约后退出；缺必填数值配置时 `serve` 与 CLI 启动失败并指出缺哪项。
 
-- [ ] 12. 全量离线验收、规模演练、测试 ECS 运行与文档收尾
+- [x] 12. 全量离线验收、规模演练、测试 ECS 运行与文档收尾
   - **Requirements:** 全部
   - **Design:** §11、§12.1
   - 跑通 acceptance 全部 `[自动]` 项；规模演练（2,000 名单账号 × 平均 20 条内容 = 40,000 行：各阶段耗时、峰值内存、`run_contents` 行大小与表大小），回填 design §12.1；测试 ECS 上按 `server-access.md` 第 5 条运行全量测试（只连一次性 `_test` 库容器）；对 C 的真实实现跑 `tests/contracts/signals-port.contract.ts`（C 未合并则明确写「未验证」）；回填 acceptance 的「逐条结果」；INDEX 状态、tasks 实施记录、design §14 的采纳记录；`dev-ci-cadence`：CI 绿后合并。
@@ -242,3 +242,11 @@
 - 证据里第 2 层能力项暂未带 C 的 `resultId`（保留期延长已做，按块先于证据写入），`explain` 随任务 9 补。
 
 没有做的事：任务 8（第 3 层与评论）、9（对 E 的读取口与 explain、保留清理）、10（下游端口与清除）、11（CLI 与 serve，含 `judgement circle` 的 CLI 级测试）、12（全量验收、规模演练、测试 ECS）、13–16（页面）。`retainUntil` 证据保留随任务 8。
+**2026-11-16（任务 8–12 收尾；第二次推送）**：任务 8–12 完成。本机 `./scripts/verify.sh` OK：类型检查、unit 1149、db 1666（1 skipped）、迁移一致、密钥、链接、登记；Python 侧未验证。**测试 ECS 全量测试通过**（一次性 `mysql:8.4` + `node:24-slim` 容器，unit 1149、db 1666，370 s，用后删除）。规模演练 40,000 行：本机 32.3 s、ECS 18.7 s。对真实 C 的 `SignalsPort` 契约 7 条通过（真实 MySQL + fake 对象存储 / 匹配）。没有真实付费调用。
+与计划不同的地方：
+- 任务 8–11 的范围与 design 一致，三处 CLI 形状按实现调整并回写（`image --ability`、`trial-report <planId>`、身份只有 `HBECHO_JP_ACTOR`）；
+- 任务 10 初版漏了 `plan_purged` 高风险审计，任务 11 期间补上（与删除判定计划行同事务）；
+- 任务 9 的 `explain`：越范围的执行表现为 `judgement_plan_not_found`；第 2 层证据尚无 C 的 `resultId` 字段（保留期延长已做）；
+- 任务 11 把 `plan-main` 的下游装配改成「C 的配置用到才读」，缺项时 `purge` 抛出、A 保守不清除；
+- 任务 12 的覆盖映射发现并修复 6 处空转测试，补 16 条验收项的用例，并发现 fake 与真实 C 的两处差异（空 `only`、按监控段过滤阻塞项）；规模演练发现并修复 `finalize` 里的相关子查询（35 s → < 0.1 s）。
+没有做的事与未证明的：页面任务 13–16；MAN-1 ～ MAN-6；真实 OSS / 图像匹配 / 模型下的 C；真实采集下的端到端；E 的真实消费者；验收 212 条里 42 条只有「部分覆盖」、7 条无测试（编号与原因见 acceptance「逐条结果」）；`toDemandActor` 的窄适配（design §14 第 31 项）待刘学奎确认。`activity-plan/scale.perf.db.test.ts` 在本机整套运行中出现过 1 次死锁失败（A 的既有间歇性问题，单跑与重跑都过）。

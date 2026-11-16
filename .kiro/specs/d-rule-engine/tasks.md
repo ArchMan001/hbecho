@@ -40,7 +40,7 @@
 - [x] 任务 13 · 页面基础、判定计划列表与详情（2026-11-16：`/judgement`、`/judgement/[id]`、新建弹窗、归档 / 取消归档、导航入口；`views.db` 4 + `judgement.guard` 与 `judgement-labels` 单测；`next build` 通过；**未做页面渲染与截图，留任务 16**）
 - [x] 任务 14 · 三页向导页面（2026-11-16：`/judgement/[id]/wizard/[1-3]`；配置防抖保存、圈定 / 试跑 / 上传 / 回退 / 新建草稿 / 确认执行；本机演示环境里整条流程用浏览器走通）
 - [x] 任务 15 · 执行记录、证据抽屉与 E 入口（2026-11-16：`/judgement/executions`、`/judgement/executions/[runId]`、`/judgement/results/[runId]` 占位；取消 / 续跑 / 从此版本新建草稿；证据不含正文）
-- [x] 任务 16 · 页面验收与视觉回归（2026-11-16：1440×900 与 390×844 实拍 25 张在 `ui-lab/d-rule-engine/app-shots/`，13 个页面两种宽度都没有横向溢出；**与确认原型的差异 8 项待刘学奎确认，见 design §15.7**；MAN-1～MAN-6 业务走查仍未做）
+- [x] 任务 16 · 页面验收与视觉回归（2026-11-16：1440×900 与 390×844 实拍 25 张在 `ui-lab/d-rule-engine/app-shots/`，13 个页面两种宽度都没有横向溢出；**与确认原型的差异 8 项已由刘学奎于 2026-11-16 确认，见 design §15.7**；MAN-1～MAN-6 业务走查仍未做）
 - [ ] 页面任务：已展开为任务 13–16（界面设计 2026-11-13 已确认，design §15.6；确认版本 `ui-lab/d-rule-engine/precision/` v15）。全量视频明细视图归 E，D 不实现明细表。
 
 ## Planning rules
@@ -265,4 +265,4 @@
 - 本机 `./scripts/verify.sh` OK：unit 1175、db 1687（1 skipped）；Python 侧未验证。自动检查：`views.db` 9 例、静态护栏（动作都经 run、页面先 requireUser 再判 Capability、页面不碰数据库表、界面无内部字段名）、`judgement-labels` 单测；`next build` 通过。
 - **没有证明的**：没有页面渲染测试（仓库无 jsdom），交互只在本机演示环境用 puppeteer 走过，没有写成可重复的自动化；演示环境用假的 C，真实 C 的图片上传 / 评分 / 可执行性在页面里没有验证；审计里页面动作的 `actor` 与脱敏、`explain` 的真实数据量（单专员内容 > 200 条时只显示前 200 条）没有压测；MAN-1～MAN-6 业务走查没做。
 - 与计划不同：试跑在页面进程里**只提交**，由 `judgement serve` 领取（页面每 3 秒刷新）；圈定仍是同步运算；「下载圈定结果」按钮置灰，等 E 的导出（需要 report.export）。
-
+- 2026-11-16：刘学奎看过演示环境与截图，确认页面并同意 §15.7 的 8 项差异（含只读角色可看试跑结果）。

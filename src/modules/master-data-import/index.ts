@@ -6,11 +6,13 @@ import { bootstrap, type SeedRow } from "./bootstrap";
 import { confirm, type ConfirmCommand, type ConfirmDeps } from "./confirm";
 import { precheck, type PrecheckInput } from "./precheck";
 import { createQuery } from "./query";
+import { createBrowse } from "./browse";
 import { changeStoreCode } from "./structure";
 import type { ActorContext } from "./authorization";
 
 export * from "./audit";
 export * from "./authorization";
+export * from "./browse";
 export * from "./errors";
 export { loadSeed, parseSeed, type SeedRow } from "./bootstrap";
 export { HEADER } from "./file-parser";
@@ -31,6 +33,7 @@ export function createMasterData(db: Db, clock: Clock, audit: AuditSink, opts: M
       changeStoreCode: (storeId: string, newCode: string, actor: ActorContext) => changeStoreCode(deps, storeId, newCode, actor),
     },
     query: createQuery(db),
+    browse: createBrowse(db),
   };
 }
 export type MasterData = ReturnType<typeof createMasterData>;

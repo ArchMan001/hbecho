@@ -1063,6 +1063,29 @@ code {
   font-weight: 600;
 }
 
+/* 主数据区：浏览 ⇄ 导入 切换（a-master-data-browse design §16.1） */
+.md-tabs {
+  display: inline-flex;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 4px;
+  border: 1px solid #e6ecf3;
+  border-radius: 999px;
+  background: var(--surface-sunken, #f8fafc);
+}
+
+.md-tabs .chip {
+  border-color: transparent;
+  background: transparent;
+}
+
+.md-tabs .chip.active {
+  background: #fff;
+  border-color: #cfdce5;
+  color: var(--ink);
+  font-weight: 600;
+}
+
 .chip.locked {
   background: var(--surface-sunken);
   color: #9aa4b2;

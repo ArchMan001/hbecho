@@ -27,12 +27,13 @@ describe("服务端动作：每个导出的动作都经过 run()（会话校验 
 
 describe("页面：每个页面先 requireUser，再按 Capability 决定显示还是「无权访问」", () => {
   const pages = ["plans", "batches", "accounts", "master-data"].flatMap((d) => walk(join(APP, "(app)", d)).filter((f) => f.endsWith("page.tsx")));
-  it("覆盖到全部 11 个页面", () => {
+  it("覆盖到全部 12 个页面", () => {
     expect(pages.map((p) => p.slice(APP.length + 1)).sort()).toEqual([
       "(app)/accounts/page.tsx",
       "(app)/master-data/batches/[id]/page.tsx",
       "(app)/master-data/batches/page.tsx",
       "(app)/master-data/import/page.tsx",
+      "(app)/master-data/page.tsx",
       "(app)/batches/[id]/page.tsx",
       "(app)/batches/page.tsx",
       "(app)/plans/[id]/import/page.tsx",

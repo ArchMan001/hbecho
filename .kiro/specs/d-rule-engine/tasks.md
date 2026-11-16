@@ -26,7 +26,7 @@
 
 - [x] 任务 0 · 文档前置与待确认闸门（2026-11-16 完成：旧 design 归档、链接修复、CONTEXT 词条、PRD D 第 6 行；§14 闸门已答复）
 - [x] 任务 1 · schema 与迁移（2026-11-16：迁移 `0012_d_judgement_schema`，`judgement-schema.db.test.ts` 19 例；**完成后推第一次**）
-- [ ] 任务 2 · 骨架：错误、配置、端口与 fake、B 授权接入、审计、`facts.ts`、测试挂具、静态护栏
+- [ ] 任务 2 · 骨架：错误、配置、端口与 fake、B 授权接入、审计、`facts.ts`、测试挂具、静态护栏（**进行中**：2026-11-16 已完成 `errors / env / ports / fakes / authz`（unit 共 102 例，含授权矩阵、提交人身份、环境变量逐项缺失）；**未做**：`audit.ts`、`facts.ts`、`assemble.ts` 空壳、`tests/harness` 的 `insertJudgementWorld`、五条静态护栏、契约测试骨架）
 - [x] 任务 3 · 纯函数：配置、三值逻辑、条件求值、达标方式、窗口、分布（2026-11-16：`src/modules/judgement/{config,engine/pure/*}`，unit 84 例）
 - [ ] 任务 4 · 判定计划、草稿与版本（含与 C 的 provisioning、发布协议、回退）
 - [ ] 任务 5 · 运行内核与圈定（**第一条可演示的纵向**）

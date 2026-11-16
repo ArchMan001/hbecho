@@ -97,6 +97,18 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     return r ?? null;
   }
 
+  /** 一批活动计划的状态与品牌（判定计划列表过滤回收站、构造授权引用用）。 */
+  async function activityPlansOf(ids: readonly bigint[]): Promise<Map<bigint, ActivityPlanFact>> {
+    const rows = await inChunks(ids, (c) =>
+      db
+        .select({ planId: activityPlans.planId, brandId: activityPlans.brandId, platformId: activityPlans.platformId, platformCode: platforms.platformCode, status: activityPlans.status, startsOn: activityPlans.startsOn, endsOn: activityPlans.endsOn, createdByActor: activityPlans.createdByActor })
+        .from(activityPlans)
+        .innerJoin(platforms, eq(platforms.platformId, activityPlans.platformId))
+        .where(inArray(activityPlans.planId, c)),
+    );
+    return new Map(rows.map((r) => [r.planId, r]));
+  }
+
   /** 品牌 ID → 品牌编码（SignalActor 的品牌范围用）；调用方核对条数，找不到的不返回。 */
   async function brandCodesOf(ids: readonly bigint[]): Promise<string[]> {
     const rows = await inChunks(ids, (c) => db.select({ code: brands.brandCode }).from(brands).where(inArray(brands.brandId, c)));
@@ -229,6 +241,6 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     return out;
   }
 
-  return { rosterOf, planOf, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, contentsOf, profileOf, syncCompletenessOf };
+  return { rosterOf, planOf, activityPlansOf, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, contentsOf, profileOf, syncCompletenessOf };
 }
 export type Facts = ReturnType<typeof createFacts>;

@@ -96,7 +96,7 @@ export class FakeSignals implements SignalsPort {
         items: s.items as never,
         createdByActor: "fake",
         publishedAt: s.status === "published" ? new Date(0) : null,
-        images: [...s.images.entries()].map(([id, v]) => ({ id, ...v })) as never,
+        images: [...s.images.entries()].map(([id, v]) => { const [kind, target, elementKey] = id.split("/"); return { kind, target, elementKey: elementKey ?? "", sha256: v.sha256, byteLength: v.bytes }; }) as never,
       } as never;
     },
     publish: async (_a, k) => {

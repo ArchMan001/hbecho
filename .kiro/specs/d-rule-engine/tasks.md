@@ -28,7 +28,7 @@
 - [x] 任务 1 · schema 与迁移（2026-11-16：迁移 `0012_d_judgement_schema`，`judgement-schema.db.test.ts` 19 例；**完成后推第一次**）
 - [x] 任务 2 · 骨架：错误、配置、端口与 fake、B 授权接入、审计、`facts.ts`、测试挂具、静态护栏（2026-11-16 完成；`assemble.ts` 随任务 4 起逐步装配；真实 C 的契约测试在任务 12）
 - [x] 任务 3 · 纯函数：配置、三值逻辑、条件求值、达标方式、窗口、分布（2026-11-16：`src/modules/judgement/{config,engine/pure/*}`，unit 84 例）
-- [ ] 任务 4 · 判定计划、草稿与版本（含与 C 的 provisioning、发布协议、回退）
+- [x] 任务 4 · 判定计划、草稿与版本（含与 C 的 provisioning、发布协议、回退）（2026-11-16：`plans.ts` / `versions.ts`，`plans.db` 14 + `versions.db` 32 例；与 C 真实 `segments` 的一致性在任务 12 的契约测试里确认）
 - [ ] 任务 5 · 运行内核与圈定（**第一条可演示的纵向**）
 - [ ] 任务 6 · 试跑（第 2 层）：依赖协调、等待、报告
 - [ ] 任务 7 · 执行（第 1、2 层 + 账号要求）：确认执行、聚合、零内容、计划总结果
@@ -130,7 +130,7 @@
   - `config.ts`（zod schema、`validateConfig`、规范化与 `config_sha256`、`deriveItems`；别名不进哈希；第 1 层 `quantity`；第 2 层 `abilities`；`image_text`/OCR 拒绝）；`engine/pure/`：`and3`、`evaluateMethod`、`fromSignal`、条件求值（关键词、话题、时长、分数阈值、ASR 结论）、层求值（提前终止）、`contentRequirementEnabled(cfg)`、`selectLayer1`（按专员各自点赞排序取前 N；非 `value` 状态排后，真实 0 有效；平局按发布时间降序、内容 ID 升序）、`bjtDaysToUtc`、`bucketize`（分布与样例，每档最多 5 个）。
   - **验证**（纯函数，`unit`）：requirements JP-2 / JP-2a / JP-8 / JP-9 验收逐条；`contentRequirementEnabled` 的 7 种组合；`quantity` 无文本 / 话题被拒；`evaluateMethod(at_least_n)` 的 P=6、N=5 等纯函数例子（不经过截断）；`and3` 3×3 全表；`evaluateMethod` 四种方式 × T ≤ 5 的 (P,U,F) 穷举与手写参照实现逐格相等（固定种子的属性测试）；`ratio` 边界（`P·10000 = bp·T` 判成功）；关键词单调性（一个字段不可用不会把本该 pass 的变成 unobtained）；话题整体相等（`618` 不匹配 `618大促`）；时长边界 / 单位未知 / 真实 0 秒；分数 `"8.00"` 等于阈值 `"8"` 判通过；窗口换算（含 `to` 缺省、跨月、`2026-11-10` 闭区间的 UTC 上界）；分布分档（0.00 → 档 0，9.99 → 档 9，10.00 → 档 10）；`deriveItems` 与 C 目录（`FakeSignals.platformSignals`）逐项对得上；规范化哈希与键序无关；配置里没有 `regex` / 否定 / 播放量 / 发布时段 / 作者字段（`strict`）。
 
-- [ ] 4. 判定计划、草稿与版本
+- [x] 4. 判定计划、草稿与版本
   - **Requirements:** JP-1、JP-2、JP-3、JP-4
   - **Design:** §5.1、§5.4、§7.1、§7.9
   - `plans.ts`（`create`、`show`、`list`、`archive / unarchive`、`reconcile`；provisioning）；`versions.ts`（`setConfig`、`putImage / removeImage`（转发 C 并按失效矩阵回退进度；元素图用 `putElement(planId, abilityId, bytes)`：SHA-256 作 `elementKey`，同 `target` 重复拒绝，换图换 key 并删旧 C 图行，`reconcile` 以 C 的 `show().images` 对账）、`rollback`（预览 / 应用）、`newDraft(planId, fromVersion?)`、`confirm` 的发布半段（`publishing → C.publish → published`，运行的创建留给任务 7，这里先用桩）、`reconcile`）。

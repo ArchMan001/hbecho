@@ -18,7 +18,7 @@ describe("facts", () => {
     const w = await judgementWorld(t);
     const f = facts();
     const plan = await f.planOf(w.planId);
-    expect(plan).toMatchObject({ platformCode: "douyin", status: "collecting", createdByActor: "user:creator" });
+    expect(plan).toMatchObject({ platformCode: "douyin", status: "collecting", createdByActor: "user:7" });
     expect(await f.joinedBranchIds(w.planId)).toEqual([w.bj]);
     const roster = await f.rosterOf(w.planId);
     expect(roster!.entries.map((e) => e.accountId)).toEqual([String(w.accZhao)]); // 老钱已移出，不在名单

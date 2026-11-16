@@ -15,7 +15,7 @@ export interface JudgementWorld extends RosterWorld {
   zhao: { staffId: bigint; accountId: bigint };
 }
 export async function judgementWorld(t: TestDb): Promise<JudgementWorld> {
-  const w = await rosterWorld(t);
+  const w = await rosterWorld(t, { createdBy: "user:7" });
   return { ...w, zhao: { staffId: w.staff.zhao, accountId: w.accZhao } };
 }
 /** 再加一名参与专员（门店 S-W1、抖音账号、已在名单）。 */
@@ -104,4 +104,56 @@ export async function addListTask(db: Db, a: { accountId: bigint; status: "succe
 }
 export async function addCheckpoint(db: Db, accountId: bigint, continuityStatus: "ready" | "in_progress" | "rebased_after_gap" | "blocked", lastGapAt: Date | null = null): Promise<void> {
   await db.insert(syncCheckpoints).values({ accountId, providerId: await providerIdOf(db), anchorMode: "empty", cursorEnvelope: { kind: "null" }, cursorSha256: sha("cursor"), continuityStatus, lastGapAt, version: 1n, updatedAt: T0 });
+}
+
+// ---- 装配：判定模块的真实实现 + FakeSignals + 内存审计 -------------------------------------------------------
+import { createAuthorizer, createRegistry, ROLE_CAPABILITIES, type AuthContext, type DataScope, type RoleCode } from "../../src/modules/access-control";
+import { CATALOG } from "../../src/modules/signals/catalog";
+import { createPlanReader } from "../../src/modules/activity-plan/reader";
+import { createJudgementAudit, type JudgementAuditEvent } from "../../src/modules/judgement/audit";
+import { createJudgementAuthz, registerJudgementAuthz } from "../../src/modules/judgement/authz";
+import { FakeSignals } from "../../src/modules/judgement/fakes";
+import { createFacts } from "../../src/modules/judgement/facts";
+import { createPlans } from "../../src/modules/judgement/plans";
+import { createVersions } from "../../src/modules/judgement/versions";
+import { FakeClock } from "./fake-clock";
+
+export const LIMITS = { maxItems: 50, maxKeywordLength: 64 } as const;
+export const userCtx = (role: RoleCode, id: number, scope: DataScope): AuthContext => ({ kind: "user", actor: `user:${id}`, userId: BigInt(id), role, capabilities: ROLE_CAPABILITIES[role], scope, sessionId: null });
+export const ALL_SCOPE: DataScope = { brands: "all", branches: "all", self: { kind: "none" }, level: 3 };
+export interface JudgementEnv {
+  fake: FakeSignals;
+  clock: FakeClock;
+  plans: ReturnType<typeof createPlans>;
+  versions: ReturnType<typeof createVersions>;
+  facts: ReturnType<typeof createFacts>;
+  authz: ReturnType<typeof createJudgementAuthz>;
+  audits: Array<{ event: string; risk: string; hasTx: boolean; detail: unknown }>;
+  /** 活动计划创建者（user:7，hq_manager，范围 = 该品牌） */
+  creator: AuthContext;
+  /** 同品牌的另一位 hq_manager（不是创建者） */
+  other: AuthContext;
+  admin: AuthContext;
+  /** 让某次 contextForUser 失败（提交人被停用） */
+  revoked: Set<bigint>;
+}
+export function judgementEnv(t: TestDb, w: RosterWorld, over: { limits?: { maxItems: number; maxKeywordLength: number } } = {}): JudgementEnv {
+  const fake = new FakeSignals();
+  for (const p of ["douyin", "xiaohongshu", "kuaishou"]) fake.platformMap.set(p, new Set(CATALOG.filter((e) => (e.platforms as readonly string[]).includes(p)).map((e) => e.key)));
+  const clock = new FakeClock(new Date("2026-11-16T02:00:00.000Z"));
+  const registry = createRegistry();
+  registerJudgementAuthz(registry);
+  const facts = createFacts({ db: t.db, reader: createPlanReader({ db: t.db, resolver: { targets: async () => ({ rows: [], next: null }) } as never }) });
+  const revoked = new Set<bigint>();
+  const brandScope: DataScope = { brands: new Set([w.org.hitachiBrandId]), branches: "all", self: { kind: "none" }, level: 2 };
+  const creator = userCtx("hq_manager", 7, brandScope);
+  const authz = createJudgementAuthz({
+    authorizer: createAuthorizer({ registry }),
+    resolver: { contextForUser: async (id: bigint) => (revoked.has(id) ? ({ ok: false, kind: "unauthenticated", reason: "user_not_active" } as never) : ({ ok: true, ctx: id === 7n ? creator : userCtx("hq_manager", Number(id), brandScope) } as never)) },
+    facts,
+  });
+  const audits: JudgementEnv["audits"] = [];
+  const audit = createJudgementAudit({ write: async (e, o) => void audits.push({ event: e.eventType.replace("judgement.", "") as JudgementAuditEvent, risk: o.risk, hasTx: o.tx !== undefined, detail: e.detail }) });
+  const deps = { db: t.db, clock, facts, authz, audit, signals: fake, limits: over.limits ?? LIMITS };
+  return { fake, clock, plans: createPlans(deps), versions: createVersions(deps), facts, authz, audits, creator, other: userCtx("hq_manager", 8, brandScope), admin: userCtx("platform_admin", 1, ALL_SCOPE), revoked };
 }

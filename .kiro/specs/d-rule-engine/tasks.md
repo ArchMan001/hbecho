@@ -37,7 +37,7 @@
 - [x] 任务 10 · 下游端口与清除（2026-11-16：`downstream.ts`、`src/worker/judgement-wiring.ts`，`downstream.db` 10 + `judgement-wiring.db` 1 例；用 A 的真实 `plans.delete / restore` 与 `maintenance.runNow` 联动；`plan-main` 已传 D 的下游，清除所需的 C 配置用到才读，缺项时 purge 抛出、A 保守不清除；E 的组合下游待 E）
 - [x] 任务 11 · CLI 全集与 `judgement serve` 装配（2026-11-16：`src/worker/judgement-{cli,loop,main,wiring}.ts`、`src/modules/judgement/real-ports.ts`；`judgement-cli.db` 9 + `judgement-loop.db` 3 + `judgement-main.db` 3 例；真实 B 装配（`createAccessServices`）在子进程里验证；**真实 C 的契约与真实 A 采集链路未验证，留任务 12**；design §9 的 CLI 形状按实现改了三处：`image put/remove` 用 `--ability`、`trial-report` 用 planId、身份只有 `HBECHO_JP_ACTOR`）
 - [x] 任务 12 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾（2026-11-16：本机 verify 全绿 unit 1149 / db 1666；测试 ECS 全量通过；规模演练本机 32.3 s / ECS 18.7 s；验收 212 条映射：163 已覆盖 / 42 部分 / 7 无测试，见 acceptance「逐条结果」；**第二次推送与 CI 合并见下方实施记录**）
-- [ ] 任务 13 · 页面基础、判定计划列表与详情
+- [x] 任务 13 · 页面基础、判定计划列表与详情（2026-11-16：`/judgement`、`/judgement/[id]`、新建弹窗、归档 / 取消归档、导航入口；`views.db` 4 + `judgement.guard` 与 `judgement-labels` 单测；`next build` 通过；**未做页面渲染与截图，留任务 16**）
 - [ ] 任务 14 · 三页向导页面
 - [ ] 任务 15 · 执行记录、证据抽屉与 E 入口
 - [ ] 任务 16 · 页面验收与视觉回归
@@ -250,3 +250,11 @@
 - 任务 11 把 `plan-main` 的下游装配改成「C 的配置用到才读」，缺项时 `purge` 抛出、A 保守不清除；
 - 任务 12 的覆盖映射发现并修复 6 处空转测试，补 16 条验收项的用例，并发现 fake 与真实 C 的两处差异（空 `only`、按监控段过滤阻塞项）；规模演练发现并修复 `finalize` 里的相关子查询（35 s → < 0.1 s）。
 没有做的事与未证明的：页面任务 13–16；MAN-1 ～ MAN-6；真实 OSS / 图像匹配 / 模型下的 C；真实采集下的端到端；E 的真实消费者；验收 212 条里 42 条只有「部分覆盖」、7 条无测试（编号与原因见 acceptance「逐条结果」）；`toDemandActor` 的窄适配（design §14 第 31 项）待刘学奎确认。`activity-plan/scale.perf.db.test.ts` 在本机整套运行中出现过 1 次死锁失败（A 的既有间歇性问题，单跑与重跑都过）。
+
+**2026-11-16（任务 13：页面基础、列表与详情；尚未推送，页面任务做完后推第三次）**：本机 `./scripts/verify.sh` OK：类型检查、unit 1171、db 1682（1 skipped）、迁移一致、密钥、链接、登记；Python 侧未验证；`next build` 通过，`/judgement` 与 `/judgement/[id]` 已注册。没有任何真实付费调用。
+- 页面只经 `src/modules/judgement/views.ts` 取数（列表、新建弹窗的活动计划下拉、详情）；授权全部复用 `authz`，越范围 = 不存在（详情 404）。写权限只用于决定显示哪些按钮，动作自己再判一次。
+- 导航入口由 `rule.definition.read` 控制（门店专员没有该 Capability，无入口；页面直链显示「无权访问」）；新建按钮由 `rule.definition.manage` 控制，下拉只列调用方是创建者的采集中活动计划。
+- 部署配置缺失（`HBECHO_JP_*` / `HBECHO_SIGNALS_*`）时页面显示稳定错误码，不当作「没有数据」。
+- 与已确认原型的差异：详情页还没有「新建草稿 / 重新执行 / 回退 / 执行记录」入口与步骤条，这些依赖向导（任务 14）与执行记录页（任务 15）；列表与详情里指向向导的「继续配置」链接在任务 14 完成前会 404，因此**本批页面不能在任务 14 之前合并**。
+- 没有证明的：页面没有渲染测试（仓库无 jsdom），只有静态护栏；没有用真实登录态走过页面，也没有截图，留任务 16；列表筛选与分页在内存里做（范围内判定计划数量级为几十），上限与升级路径：数量上千后改为查询层分页。
+

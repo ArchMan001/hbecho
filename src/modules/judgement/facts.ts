@@ -32,6 +32,7 @@ async function inChunks<T, R>(items: readonly T[], fn: (chunk: T[]) => Promise<R
 
 export interface ActivityPlanFact {
   planId: bigint;
+  planName: string;
   brandId: bigint;
   platformId: bigint;
   platformCode: string;
@@ -84,6 +85,7 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     const [r] = await db
       .select({
         planId: activityPlans.planId,
+        planName: activityPlans.planName,
         brandId: activityPlans.brandId,
         platformId: activityPlans.platformId,
         platformCode: platforms.platformCode,
@@ -102,7 +104,7 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
   async function activityPlansOf(ids: readonly bigint[]): Promise<Map<bigint, ActivityPlanFact>> {
     const rows = await inChunks(ids, (c) =>
       db
-        .select({ planId: activityPlans.planId, brandId: activityPlans.brandId, platformId: activityPlans.platformId, platformCode: platforms.platformCode, status: activityPlans.status, startsOn: activityPlans.startsOn, endsOn: activityPlans.endsOn, createdByActor: activityPlans.createdByActor })
+        .select({ planId: activityPlans.planId, planName: activityPlans.planName, brandId: activityPlans.brandId, platformId: activityPlans.platformId, platformCode: platforms.platformCode, status: activityPlans.status, startsOn: activityPlans.startsOn, endsOn: activityPlans.endsOn, createdByActor: activityPlans.createdByActor })
         .from(activityPlans)
         .innerJoin(platforms, eq(platforms.platformId, activityPlans.platformId))
         .where(inArray(activityPlans.planId, c)),
@@ -120,6 +122,22 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
   async function brandCodesOf(ids: readonly bigint[]): Promise<string[]> {
     const rows = await inChunks(ids, (c) => db.select({ code: brands.brandCode }).from(brands).where(inArray(brands.brandId, c)));
     return rows.map((r) => r.code);
+  }
+
+  /** 品牌的编码与显示名（页面显示用）。 */
+  async function brandsOf(ids: readonly bigint[]): Promise<Map<bigint, { code: string; name: string }>> {
+    const rows = await inChunks(ids, (c) => db.select({ id: brands.brandId, code: brands.brandCode, name: brands.brandName }).from(brands).where(inArray(brands.brandId, c)));
+    return new Map(rows.map((r) => [r.id, { code: r.code, name: r.name }]));
+  }
+
+  /** 采集中的活动计划（新建判定计划的下拉用）；授权由调用方逐个再判。 */
+  async function collectingPlans(): Promise<ActivityPlanFact[]> {
+    return db
+      .select({ planId: activityPlans.planId, planName: activityPlans.planName, brandId: activityPlans.brandId, platformId: activityPlans.platformId, platformCode: platforms.platformCode, status: activityPlans.status, startsOn: activityPlans.startsOn, endsOn: activityPlans.endsOn, createdByActor: activityPlans.createdByActor })
+      .from(activityPlans)
+      .innerJoin(platforms, eq(platforms.platformId, activityPlans.platformId))
+      .where(eq(activityPlans.status, "collecting"))
+      .orderBy(asc(activityPlans.planName), asc(activityPlans.planId));
   }
 
   /** 活动计划已加入（joined）的分公司：判定计划授权范围用。 */
@@ -264,6 +282,6 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     return out;
   }
 
-  return { rosterOf, planOf, liveActivityPlans, activityPlansOf, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, contentsOf, durationsOf, commentIdsOf, profileOf, syncCompletenessOf };
+  return { rosterOf, planOf, liveActivityPlans, activityPlansOf, brandsOf, collectingPlans, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, contentsOf, durationsOf, commentIdsOf, profileOf, syncCompletenessOf };
 }
 export type Facts = ReturnType<typeof createFacts>;

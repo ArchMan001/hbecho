@@ -58,6 +58,11 @@ export async function run<T>(fn: (ctx: AuthContext) => Promise<T>): Promise<Acti
       const pe = e as Error & { code: string; detail?: Record<string, unknown> };
       return fail(pe.code, pe.message, planHint(pe.code, pe.detail));
     }
+    // 判定计划（D）的拒绝：message 面向业务，code 是稳定码；阻塞项（blockers）等 detail 不下发，页面按码给提示
+    if (e instanceof Error && e.name === "JudgementError") {
+      const je = e as Error & { code: string };
+      return fail(je.code, je.message);
+    }
     // 只记错误类型与数据库错误码：驱动的错误信息里会带 SQL 参数（手机号等），不进日志
     const cause = (e as { cause?: { code?: string } } | null)?.cause;
     console.error("action_failed", e instanceof Error ? e.name : typeof e, cause?.code ?? "");

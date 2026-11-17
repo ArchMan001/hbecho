@@ -3,7 +3,7 @@
 // 数据为虚构，量级取真实库（8,327 家门店、42 个分公司）；只渲染，动作由 app.js 统一接管。
 
 import { state } from "./store.js";
-import { icon, esc, badge, renderShell, stateAware, emptyState, deniedState, dataCell } from "./ui.js";
+import { icon, esc, badge, renderShell, stateAware, emptyState, deniedState, dataCell, hoverFilter } from "./ui.js";
 import { masterTabs } from "./pages-m.js";
 
 const num = (v) => Number(v).toLocaleString("en-US");
@@ -57,6 +57,7 @@ const STORES = Array.from({ length: 8327 }, (_, i) => {
     brand: brand.name,
     branchId: branch.branchId,
     branchName: branch.name,
+    region: branch.region,
     sector: SECTORS[i % SECTORS.length],
     dealerCode: `D${String((i % 180) + 1).padStart(4, "0")}`,
     dealerName: `${branch.city}${DEALER_SUFFIX[i % DEALER_SUFFIX.length]}`,
@@ -87,15 +88,19 @@ function filterOf() {
   return state.mdBrowse;
 }
 
+// 每个下拉多选：同一下拉内取「或」，不同下拉之间取「且」；空数组 = 不限。
+const any = (picked, hit) => !picked.length || hit;
+
 function applyStoreFilter(rows, f) {
   const kw = f.kw.trim().toLowerCase();
   return rows.filter((s) =>
-    (f.brand === "all" || s.brand === f.brand) &&
-    (f.branch === "all" || s.branchId === f.branch) &&
-    (f.sector === "all" || s.sector === f.sector) &&
-    (f.tier === "all" || (f.tier === "none" ? s.tier === null : s.tier === f.tier)) &&
-    (f.status === "all" || s.status === f.status) &&
-    (!kw || s.code.toLowerCase().includes(kw) || s.name.toLowerCase().includes(kw)),
+    any(f.brand, f.brand.includes(s.brand)) &&
+    any(f.region, f.region.includes(s.region)) &&
+    any(f.branch, f.branch.includes(s.branchId)) &&
+    any(f.sector, f.sector.includes(s.sector)) &&
+    any(f.tier, f.tier.includes(s.tier ?? "none")) &&
+    any(f.status, f.status.includes(s.status)) &&
+    (!kw || [s.code, s.name, s.dealerCode, s.dealerName].some((v) => v.toLowerCase().includes(kw))),
   );
 }
 
@@ -114,37 +119,28 @@ function branchesWithCounts() {
   });
 }
 
-function chip(group, value, label, current, action = "data-md-filter") {
-  return `<button type="button" class="chip ${current === value ? "active" : ""}" ${action}="${group}" data-value="${esc(value)}">${esc(label)}</button>`;
-}
-
 function storeFilters(f) {
   const brands = state.role === "platform_admin" ? BRANDS.map((b) => b.name) : ["日立", "海信"];
+  const branchOpts = BRANCHES.filter((b) => !f.region.length || f.region.includes(b.region));
+  // 大区收窄后，不在这些大区里的分公司选择自动丢弃
+  f.branch = f.branch.filter((id) => branchOpts.some((b) => b.branchId === id));
+  const o = (arr) => arr.map((x) => ({ value: x, label: x }));
+  const dd = (id, label, key, options, align = "") => hoverFilter({ id: `md-${id}`, label, key: `mdBrowse.${key}`, options, selected: f[key], align });
   return `
     <section class="filter-card open" aria-label="门店筛选">
-      <div class="filter-line"><span class="filter-label">品牌</span>
-        ${chip("brand", "all", "全部品牌", f.brand)}${brands.map((b) => chip("brand", b, b, f.brand)).join("")}
+      <div class="hf-row">
+        ${dd("brand", "品牌", "brand", o(brands))}
+        ${dd("sector", "板块", "sector", o(SECTORS))}
+        ${dd("tier", "门店标准", "tier", [...o(TIERS), { value: "none", label: "未设置" }])}
+        ${dd("status", "状态", "status", [{ value: "active", label: "在用" }, { value: "closed", label: "已撤店" }])}
+        ${dd("region", "大区", "region", o(REGIONS))}
+        ${dd("branch", "分公司", "branch", branchOpts.map((b) => ({ value: b.branchId, label: b.name })))}
       </div>
-      <div class="filter-line"><span class="filter-label">分公司</span>
-        <label class="filter-select"><select data-md-branch>
-          <option value="all" ${f.branch === "all" ? "selected" : ""}>全部分公司</option>
-          ${BRANCHES.map((b) => `<option value="${b.branchId}" ${f.branch === b.branchId ? "selected" : ""}>${esc(b.name)}</option>`).join("")}
-        </select></label>
-        <span class="filter-note">分公司跨品牌共享；门店计数只含授权品牌内的门店</span>
-      </div>
-      <div class="filter-line"><span class="filter-label">板块</span>
-        ${chip("sector", "all", "全部板块", f.sector)}${SECTORS.map((x) => chip("sector", x, x, f.sector)).join("")}
-      </div>
-      <div class="filter-line"><span class="filter-label">店面标准</span>
-        ${chip("tier", "all", "全部", f.tier)}${TIERS.map((x) => chip("tier", x, x, f.tier)).join("")}${chip("tier", "none", "未设置", f.tier)}
-      </div>
-      <div class="filter-line"><span class="filter-label">状态</span>
-        ${chip("status", "all", "全部", f.status)}${chip("status", "active", "在用", f.status)}${chip("status", "closed", "已撤店", f.status)}
-      </div>
-      <div class="filter-line"><span class="filter-label">搜索</span>
-        <input class="input" data-md-kw value="${esc(f.kw)}" placeholder="门店编码或名称" style="max-width:260px" />
-        <button type="button" class="btn btn-sm" data-action="md-search">搜索</button>
-        <button type="button" class="btn btn-sm" data-action="md-clear">清空</button>
+      <div class="filter-line">
+        <label class="course-search" style="max-width:340px">${icon("search")}<input type="search" data-md-kw value="${esc(f.kw)}" placeholder="门店编码或名称、经销商编码或名称" aria-label="搜索门店" /></label>
+        <button type="button" class="btn btn-primary btn-sm" data-action="md-search">检索</button>
+        ${f.brand.length + f.region.length + f.branch.length + f.sector.length + f.tier.length + f.status.length + (f.kw ? 1 : 0) ? '<button type="button" class="btn btn-sm btn-ghost" data-action="md-clear">清空全部</button>' : ""}
+        <span class="filter-note">分公司跨品牌共享，选了大区后只列该大区的分公司；门店计数只含授权品牌内的门店</span>
       </div>
     </section>`;
 }

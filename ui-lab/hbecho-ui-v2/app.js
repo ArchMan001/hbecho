@@ -52,7 +52,7 @@ function parseRoute() {
   return { name: head, id: second, sub: third };
 }
 
-function render() {
+function renderRaw() {
   const route = parseRoute();
   const authRoutes = ["login", "activate", "forgot", "change-password"];
   if (authRoutes.includes(route.name)) {
@@ -155,6 +155,10 @@ function go(hash) {
 /* ---------- 事件 ---------- */
 
 document.addEventListener("click", (event) => {
+  if (state.openPanel && !event.target.closest(".hf")) {
+    state.openPanel = null;
+    render();
+  }
   const actionEl = event.target.closest("[data-action]");
   if (actionEl) {
     event.preventDefault();
@@ -176,13 +180,6 @@ document.addEventListener("click", (event) => {
   const userFilter = event.target.closest("[data-user-filter]");
   if (userFilter) {
     state.userFilter[userFilter.dataset.userFilter] = userFilter.dataset.value;
-    render();
-    return;
-  }
-  const mdFilter = event.target.closest("[data-md-filter]");
-  if (mdFilter) {
-    state.mdBrowse[mdFilter.dataset.mdFilter] = mdFilter.dataset.value;
-    state.mdBrowse.page = 1;
     render();
     return;
   }
@@ -229,11 +226,6 @@ document.addEventListener("change", (event) => {
     state.mdBrowse.page = 1;
     render();
     return;
-  }
-  if (el.matches("[data-md-branch]")) {
-    state.mdBrowse.branch = el.value;
-    state.mdBrowse.page = 1;
-    render();
   }
 });
 
@@ -430,6 +422,28 @@ function handleAction(el) {
       state.mdMode = el.dataset.mode;
       render();
       break;
+    case "hf-pin":
+      // 桌面端靠悬停/聚焦展开；只有触屏（无 hover）才用点击固定展开
+      if (window.matchMedia("(hover: none)").matches) {
+        state.openPanel = state.openPanel === el.dataset.id ? null : el.dataset.id;
+        render();
+      }
+      break;
+    case "hf-toggle": {
+      const field = el.dataset.key.replace("mdBrowse.", "");
+      const cur = state.mdBrowse[field];
+      state.mdBrowse[field] = cur.includes(el.dataset.value) ? cur.filter((v) => v !== el.dataset.value) : [...cur, el.dataset.value];
+      state.mdBrowse.page = 1;
+      render();
+      break;
+    }
+    case "hf-clear": {
+      const field = el.dataset.key.replace("mdBrowse.", "");
+      state.mdBrowse[field] = [];
+      state.mdBrowse.page = 1;
+      render();
+      break;
+    }
     case "md-view":
       state.mdBrowse.view = el.dataset.view;
       state.mdBrowse.page = 1;
@@ -443,7 +457,7 @@ function handleAction(el) {
       break;
     }
     case "md-clear":
-      state.mdBrowse = { ...state.mdBrowse, brand: "all", branch: "all", sector: "all", tier: "all", status: "all", kw: "", page: 1 };
+      state.mdBrowse = { ...state.mdBrowse, brand: [], region: [], branch: [], sector: [], tier: [], status: [], kw: "", page: 1 };
       render();
       break;
     case "md-page":
@@ -452,7 +466,7 @@ function handleAction(el) {
       break;
     case "md-open-branch":
       state.mdBrowse.view = "stores";
-      state.mdBrowse.branch = el.dataset.id;
+      state.mdBrowse = { ...state.mdBrowse, brand: [], region: [], branch: [el.dataset.id], sector: [], tier: [], status: [], kw: "" };
       state.mdBrowse.page = 1;
       render();
       break;
@@ -708,6 +722,26 @@ function handleForm(name, form) {
     default:
       toast("原型：表单已提交");
   }
+}
+
+/* 重渲染会让指针下的下拉面板丢失 :hover；记住指针所在的面板和列表滚动位置，渲染后补回 */
+let hoverHf = null;
+document.addEventListener("mousemove", (e) => {
+  const h = e.target.closest?.(".hf") ?? null;
+  document.querySelectorAll(".hf.hover-keep").forEach((x) => { if (x !== h) x.classList.remove("hover-keep"); });
+  hoverHf = h?.dataset.hfId ?? null;
+});
+function render() {
+  const scrolls = {};
+  document.querySelectorAll(".hf").forEach((h) => {
+    const l = h.querySelector(".hf-list:not(.hidden)");
+    if (l) scrolls[h.dataset.hfId] = [...h.querySelectorAll(".hf-list")].map((x) => x.scrollTop);
+  });
+  renderRaw();
+  Object.entries(scrolls).forEach(([id, tops]) => {
+    document.querySelectorAll(`.hf[data-hf-id="${id}"] .hf-list`).forEach((x, i) => { x.scrollTop = tops[i] ?? 0; });
+  });
+  if (hoverHf) document.querySelector(`.hf[data-hf-id="${hoverHf}"]`)?.classList.add("hover-keep");
 }
 
 window.addEventListener("hashchange", render);

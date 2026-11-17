@@ -353,3 +353,57 @@ export function avatarFor(name) {
 export function timeCell(value) {
   return `<span class="num" style="font-size:11px;color:var(--ink-3)">${esc(value)}</span>`;
 }
+/* ---------- 悬停下拉筛选（借鉴 hbdam 素材库）：悬停/聚焦展开，移开收起；触屏点击固定展开 ---------- */
+
+function hfBox(on) {
+  return `<span class="hf-box">${on ? icon("check") : ""}</span>`;
+}
+
+/** options: [{value,label}]；mode: multi 复选 / single 单选（再点一次取消）；set 用于单选时限定同组取值。 */
+export function hoverFilter({ id, label, options, selected, key, mode = "multi", align = "", set = null }) {
+  const picked = options.filter((o) => selected.includes(o.value));
+  const n = picked.length;
+  const btnText = mode === "single" && n ? `${label} · ${picked[0].label}` : label;
+  const groupAttr = set ? ` data-set="${esc(set.join("|"))}"` : "";
+  return `
+    <div class="hf ${align} ${state.openPanel === id ? "pinned" : ""}" data-hf-id="${esc(id)}">
+      <button type="button" class="hf-btn ${n ? "on" : ""}" data-action="hf-pin" data-id="${esc(id)}" aria-haspopup="true" aria-expanded="${state.openPanel === id}">
+        <span>${esc(btnText)}</span>${mode === "multi" && n ? `<span class="hf-count">${n}</span>` : ""}${icon("chevron")}
+      </button>
+      <div class="hf-pop"><div class="hf-panel" role="group" aria-label="${esc(label)}">
+        <div class="hf-list">
+          ${options.map((o) => {
+            const on = selected.includes(o.value);
+            return `<button type="button" class="hf-opt ${mode === "single" ? "radio" : ""} ${on ? "on" : ""}" role="${mode === "single" ? "radio" : "checkbox"}" aria-checked="${on}" data-action="hf-toggle" data-key="${esc(key)}" data-mode="${mode}" data-value="${esc(o.value)}"${groupAttr}>${hfBox(on)}<span>${esc(o.label)}</span></button>`;
+          }).join("")}
+        </div>
+        <div class="hf-foot"><span>移开鼠标收起</span>${n ? `<button type="button" class="hf-clear" data-action="hf-clear" data-key="${esc(key)}" data-set="${esc(options.map((o) => o.value).join("|"))}">清空</button>` : ""}</div>
+      </div></div>
+    </div>`;
+}
+
+/** 两栏标签选择：左一级、右二级复选。选中项由 data-action="toggle-tag" 接管。 */
+export function tagPicker({ id, categories, selected }) {
+  const activeId = state.tagPane?.[id] ?? categories[0]?.id;
+  const count = (cat) => cat.tags.filter((t) => selected.includes(t)).length;
+  const total = selected.length;
+  return `
+    <div class="hf ${state.openPanel === id ? "pinned" : ""}" data-hf-id="${esc(id)}">
+      <button type="button" class="hf-btn ${total ? "on" : ""}" data-action="hf-pin" data-id="${esc(id)}" aria-haspopup="true" aria-expanded="${state.openPanel === id}">
+        ${icon("tag")}<span>选择标签</span>${total ? `<span class="hf-count">${total}</span>` : ""}${icon("chevron")}
+      </button>
+      <div class="hf-pop"><div class="hf-panel tp-panel" role="group" aria-label="选择标签">
+        <div class="tp-levels">
+          ${categories.map((c) => `<button type="button" class="tp-level ${c.id === activeId ? "on" : ""}" data-pane-picker="${esc(id)}" data-pane-level="${esc(c.id)}"><span>${esc(c.name)}</span>${count(c) ? `<span class="hf-count">${count(c)}</span>` : ""}</button>`).join("")}
+        </div>
+        ${categories.map((c) => `
+          <div class="tp-pane ${c.id === activeId ? "on" : ""}" data-pane-picker="${esc(id)}" data-pane-of="${esc(c.id)}">
+            ${c.tags.length ? `<div class="hf-list">${c.tags.map((t) => {
+              const on = selected.includes(t);
+              return `<button type="button" class="hf-opt ${on ? "on" : ""}" role="checkbox" aria-checked="${on}" data-action="toggle-tag" data-tag="${esc(t)}">${hfBox(on)}<span>${esc(t)}</span></button>`;
+            }).join("")}</div>` : `<p class="hint" style="padding:8px">这个一级标签下还没有二级标签。</p>`}
+          </div>`).join("")}
+        <div class="tp-foot"><span>移开鼠标收起</span><span>已选 ${total}</span></div>
+      </div></div>
+    </div>`;
+}

@@ -65,7 +65,7 @@ function resetFormFor(route) {
   state.tagError = null;
 }
 
-function render() {
+function renderRaw() {
   const route = parseRoute();
   const key = `${route.name}:${route.id ?? ""}`;
   if (key !== lastRouteKey) {
@@ -99,11 +99,6 @@ function render() {
       html = renderCourseList();
   }
   app.innerHTML = html;
-  const search = document.querySelector("[data-course-search]");
-  if (search && state.courseQuery) {
-    search.focus();
-    search.setSelectionRange(search.value.length, search.value.length);
-  }
 }
 
 function toast(message) {
@@ -139,6 +134,10 @@ function captureForm() {
 /* ---------- 事件 ---------- */
 
 document.addEventListener("click", (event) => {
+  if (state.openPanel && !event.target.closest(".hf")) {
+    state.openPanel = null;
+    render();
+  }
   const actionEl = event.target.closest("[data-action]");
   if (actionEl) {
     event.preventDefault();
@@ -156,10 +155,7 @@ document.addEventListener("click", (event) => {
 
 document.addEventListener("input", (event) => {
   const el = event.target;
-  if (el.matches("[data-course-search]")) {
-    state.courseQuery = el.value;
-    render();
-  }
+  if (el.matches("[data-course-search]")) state.courseDraft = el.value;
   if (el.matches("#course-title")) state.formTitle = el.value;
   if (el.matches("#course-desc")) state.formDesc = el.value;
 });
@@ -181,6 +177,24 @@ document.addEventListener("change", (event) => {
     state.formLevel = el.value;
     render();
   }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && event.target.matches("[data-course-search]")) {
+    state.courseQuery = event.target.value.trim();
+    render();
+  }
+});
+
+// 两栏标签选择器：悬停左栏切换右栏，只改 DOM，不重渲染
+document.addEventListener("mouseover", (event) => {
+  const lv = event.target.closest("[data-pane-level]");
+  if (!lv || lv.classList.contains("on")) return;
+  const id = lv.dataset.panePicker;
+  state.tagPane[id] = lv.dataset.paneLevel;
+  document.querySelectorAll(`[data-pane-picker="${id}"]`).forEach((n) => {
+    n.classList.toggle("on", n.dataset.paneLevel === lv.dataset.paneLevel || n.dataset.paneOf === lv.dataset.paneLevel);
+  });
 });
 
 document.addEventListener("submit", (event) => {
@@ -233,6 +247,35 @@ function handleAction(el) {
     case "close-modal":
       closeModal();
       break;
+    case "hf-pin":
+      // 桌面端靠悬停/聚焦展开；只有触屏（无 hover）才用点击固定展开
+      if (window.matchMedia("(hover: none)").matches) {
+        state.openPanel = state.openPanel === el.dataset.id ? null : el.dataset.id;
+        render();
+      }
+      break;
+    case "hf-toggle": {
+      const { key, value, mode } = el.dataset;
+      const cur = state[key];
+      const group = el.dataset.set ? el.dataset.set.split("|") : [value];
+      const has = cur.includes(value);
+      state[key] = mode === "single"
+        ? [...cur.filter((v) => !group.includes(v)), ...(has ? [] : [value])]
+        : has ? cur.filter((v) => v !== value) : [...cur, value];
+      render();
+      break;
+    }
+    case "hf-clear": {
+      const set = el.dataset.set.split("|");
+      state[el.dataset.key] = state[el.dataset.key].filter((v) => !set.includes(v));
+      render();
+      break;
+    }
+    case "course-search": {
+      state.courseQuery = state.courseDraft.trim();
+      render();
+      break;
+    }
     case "toggle-in-progress":
       state.onlyInProgress = !state.onlyInProgress;
       render();
@@ -243,7 +286,10 @@ function handleAction(el) {
       break;
     case "clear-course-filter":
       state.courseQuery = "";
+      state.courseDraft = "";
       state.courseTags = [];
+      state.courseBrands = [];
+      state.courseKinds = [];
       state.onlyInProgress = false;
       render();
       break;
@@ -312,14 +358,14 @@ function handleAction(el) {
       const input = document.getElementById("new-category");
       const name = String(input?.value ?? "").trim();
       if (!name) {
-        state.tagError = "分类名称不能为空。";
+        state.tagError = "一级标签名称不能为空。";
       } else if (TAG_CATEGORIES.some((c) => c.name === name)) {
-        state.tagError = `分类「${name}」已存在。`;
+        state.tagError = `一级标签「${name}」已存在。`;
       } else {
         TAG_CATEGORIES.push({ id: `cat-${Date.now()}`, name, tags: [] });
         state.tagError = null;
         render();
-        toast(`已新建分类「${name}」（原型）`);
+        toast(`已新建一级标签「${name}」（原型）`);
         break;
       }
       render();
@@ -329,10 +375,10 @@ function handleAction(el) {
       const cat = TAG_CATEGORIES.find((c) => c.id === el.dataset.category);
       if (!cat) break;
       openModal({
-        title: "重命名分类",
+        title: "重命名一级标签",
         body: `
-          <div class="field"><label for="rename-category">分类名称</label><input class="input" id="rename-category" maxlength="32" value="${esc(cat.name)}" /></div>
-          <p class="hint" style="margin-top:10px">只改显示名，不影响分类下的标签与课程引用。</p>
+          <div class="field"><label for="rename-category">一级标签名称</label><input class="input" id="rename-category" maxlength="32" value="${esc(cat.name)}" /></div>
+          <p class="hint" style="margin-top:10px">只改显示名，不影响它下面的二级标签与课程引用。</p>
         `,
         foot: `<button class="btn" data-action="close-modal">取消</button><button class="btn btn-primary" data-action="confirm-rename-category" data-category="${cat.id}">保存</button>`,
       });
@@ -343,12 +389,12 @@ function handleAction(el) {
       const input = document.getElementById("rename-category");
       const next = String(input?.value ?? "").trim();
       if (!cat) break;
-      if (!next) { toast("分类名称不能为空"); break; }
-      if (TAG_CATEGORIES.some((c) => c !== cat && c.name === next)) { toast(`分类「${next}」已存在`); break; }
+      if (!next) { toast("一级标签名称不能为空"); break; }
+      if (TAG_CATEGORIES.some((c) => c !== cat && c.name === next)) { toast(`一级标签「${next}」已存在`); break; }
       cat.name = next;
       closeModal();
       render();
-      toast("分类已改名；标签与课程引用不变（原型）");
+      toast("一级标签已改名；二级标签与课程引用不变（原型）");
       break;
     }
     case "delete-category": {
@@ -356,28 +402,27 @@ function handleAction(el) {
       if (idx < 0) break;
       const cat = TAG_CATEGORIES[idx];
       if (cat.tags.length) {
-        toast(`分类下还有 ${cat.tags.length} 个标签，不能删除`);
+        toast(`还有 ${cat.tags.length} 个二级标签，不能删除`);
         break;
       }
       TAG_CATEGORIES.splice(idx, 1);
       render();
-      toast("空分类已删除（原型）");
+      toast("空的一级标签已删除（原型）");
       break;
     }
     case "add-tag": {
-      const cat = TAG_CATEGORIES.find((c) => c.id === el.dataset.category);
+      const cat = TAG_CATEGORIES.find((c) => c.id === document.getElementById("new-tag-cat")?.value);
       if (!cat) break;
-      const input = document.getElementById(`new-tag-${cat.id}`);
-      const name = String(input?.value ?? "").trim();
+      const name = String(document.getElementById("new-tag-name")?.value ?? "").trim();
       if (!name) {
-        state.tagError = "标签名称不能为空。";
+        state.tagError = "二级标签名称不能为空。";
       } else if (cat.tags.includes(name)) {
-        state.tagError = `「${cat.name}」下已有标签「${name}」。`;
+        state.tagError = `「${cat.name}」下已有二级标签「${name}」。`;
       } else {
         cat.tags.push(name);
         state.tagError = null;
         render();
-        toast(`已新建标签「${name}」（原型）`);
+        toast(`已在「${cat.name}」下新建二级标签「${name}」（原型）`);
         break;
       }
       render();
@@ -387,10 +432,10 @@ function handleAction(el) {
       const tag = el.dataset.tag;
       const categoryId = el.dataset.category;
       openModal({
-        title: "重命名标签",
+        title: "重命名二级标签",
         body: `
-          <div class="field"><label for="rename-tag">标签名称</label><input class="input" id="rename-tag" maxlength="32" value="${esc(tag)}" /></div>
-          <p class="hint" style="margin-top:10px">改名原地生效，不需要迁移课程引用；同一分类内不能重名。</p>
+          <div class="field"><label for="rename-tag">二级标签名称</label><input class="input" id="rename-tag" maxlength="32" value="${esc(tag)}" /></div>
+          <p class="hint" style="margin-top:10px">改名原地生效，不需要迁移课程引用；同一一级标签下不能重名。</p>
         `,
         foot: `<button class="btn" data-action="close-modal">取消</button><button class="btn btn-primary" data-action="confirm-rename-tag" data-tag="${esc(tag)}" data-category="${esc(categoryId)}">保存</button>`,
       });
@@ -402,7 +447,7 @@ function handleAction(el) {
       const input = document.getElementById("rename-tag");
       const next = String(input?.value ?? "").trim();
       if (!cat) break;
-      if (!next) { toast("标签名称不能为空"); break; }
+      if (!next) { toast("二级标签名称不能为空"); break; }
       if (next !== oldName && cat.tags.includes(next)) { toast(`「${cat.name}」下已有标签「${next}」`); break; }
       const idx = cat.tags.indexOf(oldName);
       if (idx >= 0) {
@@ -413,7 +458,7 @@ function handleAction(el) {
       }
       closeModal();
       render();
-      toast("标签已改名；课程引用不变（原型）");
+      toast("二级标签已改名；课程引用不变（原型）");
       break;
     }
     case "delete-tag": {
@@ -427,7 +472,7 @@ function handleAction(el) {
       }
       cat.tags = cat.tags.filter((t) => t !== tag);
       render();
-      toast("标签已删除（原型）");
+      toast("二级标签已删除（原型）");
       break;
     }
     default:
@@ -493,6 +538,26 @@ function handleForm(name) {
 
   go("#/learning/manage");
   toast(editing ? "已保存；学员侧立即生效（原型）" : "已保存并发布；范围内学员立即可见（原型）");
+}
+
+/* 重渲染会让指针下的下拉面板丢失 :hover；记住指针所在的面板和列表滚动位置，渲染后补回 */
+let hoverHf = null;
+document.addEventListener("mousemove", (e) => {
+  const h = e.target.closest?.(".hf") ?? null;
+  document.querySelectorAll(".hf.hover-keep").forEach((x) => { if (x !== h) x.classList.remove("hover-keep"); });
+  hoverHf = h?.dataset.hfId ?? null;
+});
+function render() {
+  const scrolls = {};
+  document.querySelectorAll(".hf").forEach((h) => {
+    const l = h.querySelector(".hf-list:not(.hidden)");
+    if (l) scrolls[h.dataset.hfId] = [...h.querySelectorAll(".hf-list")].map((x) => x.scrollTop);
+  });
+  renderRaw();
+  Object.entries(scrolls).forEach(([id, tops]) => {
+    document.querySelectorAll(`.hf[data-hf-id="${id}"] .hf-list`).forEach((x, i) => { x.scrollTop = tops[i] ?? 0; });
+  });
+  if (hoverHf) document.querySelector(`.hf[data-hf-id="${hoverHf}"]`)?.classList.add("hover-keep");
 }
 
 window.addEventListener("hashchange", render);

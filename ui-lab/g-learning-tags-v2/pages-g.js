@@ -9,7 +9,7 @@ import {
 } from "./data.js";
 import {
   icon, esc, badge, renderShell, stateAware, emptyState, deniedState,
-  dataCell, filterToggle,
+  dataCell, filterToggle, hoverFilter, tagPicker,
 } from "./ui.js";
 
 const canManage = (role = state.role) => role === "platform_admin" || role === "hq_manager";
@@ -83,21 +83,23 @@ export function renderCourseList() {
   const all = visibleCourses();
   const query = state.courseQuery.trim();
   const selected = state.courseTags;
-  // 同类取「或」、跨类取「且」
+  // 每个下拉单选；跨下拉取「且」。品牌、课程类型是固定筛选，其余下拉由「标签管理」决定。
   const tagMatch = (c) => TAG_CATEGORIES.every((cat) => {
     const picked = selected.filter((t) => cat.tags.includes(t));
     return picked.length === 0 || c.tags.some((t) => picked.includes(t));
   });
-  let rows = all.filter((c) => tagMatch(c) && (!query || c.title.includes(query)));
+  const brandMatch = (c) => !state.courseBrands.length || c.brandScope === "all" || c.brands.includes(state.courseBrands[0]);
+  const kindMatch = (c) => !state.courseKinds.length || c.kind === state.courseKinds[0];
+  let rows = all.filter((c) => brandMatch(c) && kindMatch(c) && tagMatch(c) && (!query || c.title.includes(query)));
   if (state.onlyInProgress) rows = rows.filter((c) => progressFor(c.id, state.role));
 
   const inProgressCount = all.filter((c) => progressFor(c.id, state.role)).length;
-  const filtersActive = selected.length + (state.onlyInProgress ? 1 : 0) + (query ? 1 : 0);
+  const filtersActive = selected.length + state.courseBrands.length + state.courseKinds.length + (state.onlyInProgress ? 1 : 0) + (query ? 1 : 0);
 
   const empty = emptyState({
-    title: query || selected.length || state.onlyInProgress ? "没有符合条件的课程" : "本品牌还没有课程",
-    text: query || selected.length || state.onlyInProgress
-      ? "换个关键词或标签；也可以清空筛选。"
+    title: filtersActive ? "没有符合条件的课程" : "本品牌还没有课程",
+    text: filtersActive
+      ? "换个关键词或筛选项；也可以清空筛选。"
       : canManage() ? "课程由总部维护；可以先新建一门课。" : "等总部发布课程后会出现在这里。",
     action: canManage() ? '<a class="btn btn-primary" href="#/learning/new">新建课程</a>' : "",
   });
@@ -106,24 +108,27 @@ export function renderCourseList() {
     <div class="page-head">
       <div>
         <h1 class="page-title">学习中心</h1>
-        <p class="page-sub">只显示你品牌范围内的已发布课程；可以按分类标签筛选或搜索标题。</p>
+        <p class="page-sub">只显示你品牌范围内的已发布课程；可以按品牌、课程类型、标签筛选或搜索课程名。</p>
       </div>
     </div>
     ${learningTabs("center")}
     ${filterToggle(filtersActive)}
     <section class="filter-card learning-filter ${state.filtersOpen ? "open" : ""}" aria-label="课程筛选">
-      <div class="filter-line">
-        <label class="course-search">${icon("search")}<input type="search" placeholder="搜索课程标题" aria-label="搜索课程标题" data-course-search value="${esc(state.courseQuery)}" /></label>
-        <button type="button" class="chip ${state.onlyInProgress ? "active" : ""}" data-action="toggle-in-progress">只看在学${inProgressCount ? ` · ${inProgressCount}` : ""}</button>
-        ${filtersActive ? `<button type="button" class="btn btn-sm btn-ghost" data-action="clear-course-filter">清空</button>` : ""}
+      <div class="hf-row">
+        ${hoverFilter({ id: "f-brand", label: "品牌", key: "courseBrands", mode: "single", options: ROLE_BRANDS[state.role].map((b) => ({ value: b, label: b })), selected: state.courseBrands })}
+        ${hoverFilter({ id: "f-kind", label: "课程类型", key: "courseKinds", mode: "single", options: [{ value: "video", label: "视频" }, { value: "document", label: "资料" }], selected: state.courseKinds })}
+        ${TAG_CATEGORIES.map((cat) => hoverFilter({ id: `f-cat-${cat.id}`, label: cat.name, key: "courseTags", mode: "single", set: cat.tags, options: cat.tags.map((t) => ({ value: t, label: t })), selected: selected.filter((t) => cat.tags.includes(t)) })).join("")}
       </div>
-      ${TAG_CATEGORIES.map((cat) => `
-        <div class="filter-line"><span class="filter-label">${esc(cat.name)}</span>
-          ${cat.tags.map((t) => `<button type="button" class="chip ${selected.includes(t) ? "active" : ""}" data-action="toggle-course-tag" data-tag="${esc(t)}">${esc(t)}</button>`).join("")}
-        </div>`).join("")}
+      <div class="filter-line">
+        <label class="course-search">${icon("search")}<input type="search" placeholder="搜索课程名" aria-label="搜索课程名" data-course-search value="${esc(state.courseDraft)}" /></label>
+        <button type="button" class="btn btn-primary btn-sm" data-action="course-search">检索</button>
+        <button type="button" class="chip ${state.onlyInProgress ? "active" : ""}" data-action="toggle-in-progress">只看在学${inProgressCount ? ` · ${inProgressCount}` : ""}</button>
+        ${filtersActive ? `<button type="button" class="btn btn-sm btn-ghost" data-action="clear-course-filter">清空全部</button>` : ""}
+        <span class="filter-note">品牌、课程类型固定；其余筛选项来自「标签管理」中的一级标签，每个下拉单选。</span>
+      </div>
     </section>
     <div class="result-bar">
-      <span>共 <strong>${state.demoState === "empty" ? 0 : rows.length}</strong> 门课程</span>
+      <span>本页 <strong>${state.demoState === "empty" ? 0 : rows.length}</strong> 门课程</span>
       <span class="hint">按最近更新排序</span>
     </div>
     ${stateAware(rows.length ? `<div class="course-grid">${rows.map(courseCard).join("")}</div>` : empty, { empty })}
@@ -396,17 +401,13 @@ export function renderCourseForm(id) {
             <span class="hint">总部只能选自己授权品牌，或直接选「全部品牌」；不能逐个勾选未授权品牌。</span>
           </div>
           <div class="field span-2">
-            <label>标签 *（按分类多选）</label>
-            <div style="display:grid;gap:10px">
-              ${TAG_CATEGORIES.map((cat) => `
-                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                  <span style="min-width:64px;color:var(--ink-3);font-size:12px">${esc(cat.name)}</span>
-                  <div class="brand-picks">
-                    ${cat.tags.map((t) => `<button type="button" class="chip ${state.formTags.includes(t) ? "active" : ""}" data-action="toggle-tag" data-tag="${esc(t)}">${esc(t)}</button>`).join("")}
-                  </div>
-                </div>`).join("")}
-            </div>
-            <span class="hint">同一分类可多选；整门课至少选 1 个。筛选时同类取「或」、不同类取「且」。</span>
+            <label>标签 *（可多选；学员筛选时单选）</label>
+            ${tagPicker({ id: "form-tags", categories: TAG_CATEGORIES, selected: state.formTags })}
+            ${state.formTags.length ? `<div class="tp-chips">${state.formTags.map((t) => {
+              const cat = TAG_CATEGORIES.find((c) => c.tags.includes(t));
+              return `<button type="button" class="tp-chip" data-action="toggle-tag" data-tag="${esc(t)}" aria-label="移除 ${esc(t)}"><small>${esc(cat?.name ?? "")} /</small>${esc(t)}${icon("x")}</button>`;
+            }).join("")}</div>` : `<span class="hint">还没选择标签。</span>`}
+            <span class="hint">标签集合由平台管理员维护；这里只能选择，不能新建。整门课至少选 1 个。</span>
           </div>
           <div class="field">
             <label>封面 *</label>
@@ -505,55 +506,57 @@ export function renderTags() {
     return shell("tags", ["标签管理"], deniedPage("标签管理", "标签集合只有平台超管可以维护；请联系平台管理员处理。"));
   }
   const used = (tag) => COURSES.filter((c) => c.tags.includes(tag)).length;
+  const usedCat = (cat) => COURSES.filter((c) => c.tags.some((t) => cat.tags.includes(t))).length;
+  const rows = TAG_CATEGORIES.map((cat) => {
+    const n = Math.max(1, cat.tags.length);
+    const head = `
+      <td class="merged" rowspan="${n}">
+        <div class="cell-main">${esc(cat.name)}</div>
+        <div class="cell-sub">${cat.tags.length} 个二级标签 · 引用 ${usedCat(cat)} 门课程</div>
+        <div class="row-actions">
+          <button type="button" class="btn btn-sm" data-action="rename-category" data-category="${cat.id}">改名</button>
+          <button type="button" class="btn btn-sm" data-action="delete-category" data-category="${cat.id}" ${cat.tags.length ? "disabled" : ""}>删除</button>
+        </div>
+      </td>`;
+    if (!cat.tags.length) return `<tr>${head}<td colspan="3"><span class="hint">还没有二级标签；在上面选择这个一级标签后新建。</span></td></tr>`;
+    return cat.tags.map((t, i) => `
+      <tr>
+        ${i === 0 ? head : ""}
+        <td><span class="tag">${esc(t)}</span></td>
+        <td class="right num">${used(t)}</td>
+        <td class="right nowrap">
+          <button type="button" class="btn btn-sm" data-action="rename-tag" data-tag="${esc(t)}" data-category="${cat.id}">改名</button>
+          <button type="button" class="btn btn-sm" data-action="delete-tag" data-tag="${esc(t)}" data-category="${cat.id}">删除</button>
+        </td>
+      </tr>`).join("");
+  }).join("");
   const content = `
     <div class="page-head">
       <div>
         <h1 class="page-title">标签管理</h1>
-        <p class="page-sub">两级标签：分类由超管维护，课程只能选择；被引用的标签不能删除。</p>
+        <p class="page-sub">两级标签：一级标签、二级标签都由超管维护，课程只能选择；被引用的二级标签不能删除。</p>
       </div>
     </div>
     ${learningTabs("tags")}
-    <div class="filter-bar">
-      <label class="course-search">${icon("tag")}<input type="text" id="new-category" placeholder="新分类名称，最多 32 字" maxlength="32" aria-label="新分类名称" /></label>
-      <button type="button" class="btn btn-primary btn-sm" data-action="add-category">${icon("plus")} 新建分类</button>
-      <span class="filter-note">分类下有标签时不能删除；改名不影响课程引用。</span>
+    <div class="tag-add-row">
+      <label class="course-search">${icon("tag")}<input type="text" id="new-category" placeholder="新标签名称，最多 32 字" maxlength="32" aria-label="新一级标签名称" /></label>
+      <button type="button" class="btn btn-primary btn-sm" data-action="add-category">${icon("plus")} 新建一级标签</button>
+    </div>
+    <div class="tag-add-row">
+      <select class="select" id="new-tag-cat" aria-label="所属一级标签" style="width:auto;min-width:160px">
+        ${TAG_CATEGORIES.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}
+      </select>
+      <label class="course-search">${icon("tag")}<input type="text" id="new-tag-name" placeholder="新标签名称，最多 32 字" maxlength="32" aria-label="新二级标签名称" /></label>
+      <button type="button" class="btn btn-primary btn-sm" data-action="add-tag">${icon("plus")} 新建二级标签</button>
     </div>
     ${state.tagError ? `<div class="callout warn" style="margin:12px 0">${icon("alert")}<span>${esc(state.tagError)}</span></div>` : ""}
-    ${TAG_CATEGORIES.map((cat) => `
-      <section class="card" style="margin-bottom:14px">
-        <div class="card-pad">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-            <div class="card-title">${esc(cat.name)}</div>
-            <span class="cell-sub">${cat.tags.length} 个标签</span>
-            <div style="margin-left:auto;display:flex;gap:8px">
-              <button type="button" class="btn btn-sm" data-action="rename-category" data-category="${cat.id}">改名分类</button>
-              <button type="button" class="btn btn-sm" data-action="delete-category" data-category="${cat.id}" ${cat.tags.length ? "disabled" : ""}>删除分类</button>
-            </div>
-          </div>
-          <div class="filter-bar" style="margin-bottom:12px">
-            <label class="course-search">${icon("tag")}<input type="text" id="new-tag-${cat.id}" placeholder="在「${esc(cat.name)}」下新建标签" maxlength="32" aria-label="新标签名称" /></label>
-            <button type="button" class="btn btn-primary btn-sm" data-action="add-tag" data-category="${cat.id}">${icon("plus")} 新建标签</button>
-          </div>
-          ${cat.tags.length ? `
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>标签</th><th class="right">引用课程</th><th class="right">操作</th></tr></thead>
-                <tbody>
-                  ${cat.tags.map((t) => `
-                    <tr>
-                      <td><span class="tag">${esc(t)}</span></td>
-                      <td class="right num">${used(t)}</td>
-                      <td class="right nowrap">
-                        <button type="button" class="btn btn-sm" data-action="rename-tag" data-tag="${esc(t)}" data-category="${cat.id}">改名</button>
-                        <button type="button" class="btn btn-sm" data-action="delete-tag" data-tag="${esc(t)}" data-category="${cat.id}">删除</button>
-                      </td>
-                    </tr>`).join("")}
-                </tbody>
-              </table>
-            </div>` : `<p class="hint">这个分类还没有标签；先在上面新建一个。</p>`}
-        </div>
-      </section>`).join("")}
-    <div class="callout" style="margin-top:14px">${icon("shield")}<span>同一分类内标签名唯一，不同分类可以同名；课程至少选 1 个标签才能保存。</span></div>
+    <div class="table-wrap">
+      <table class="tag-table">
+        <thead><tr><th>一级标签</th><th>二级标签</th><th class="right">引用课程数</th><th class="right">操作</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="callout" style="margin-top:14px">${icon("shield")}<span>同一一级标签下二级标签名唯一；一级标签下还有二级标签时不能删除；改名不影响课程引用。学习中心的筛选项按这里的一级标签生成。</span></div>
   `;
   return shell("tags", ["标签管理"], content);
 }

@@ -10,9 +10,9 @@
 | 目录 | 内容 | 状态 | 实现 / 备注 |
 |---|---|---|---|
 | [`hbecho-ui/`](hbecho-ui/README.md) | A / B 页面 v1（2026-11-08） | 对照 | 被 v2 取代 |
-| [`hbecho-ui-v2/`](hbecho-ui-v2/README.md) | A / B 页面界面基线（2026-11-10） | 已确认；已实现，归档 | 活动计划、账号与监控、主数据导入、用户与权限、审计已在 `src/app/` 落地。其中**主数据浏览**页原型（2026-11-16 新增）待刘学奎走查确认；店面标准下拉与经销商搜索尚未实现 |
+| [`hbecho-ui-v2/`](hbecho-ui-v2/README.md) | A / B 页面界面基线（2026-11-10） | 已确认；已实现，归档 | 活动计划、账号与监控、主数据导入、用户与权限、审计已在 `src/app/` 落地。**主数据浏览**页（2026-11-16 第二次确认：悬停多选下拉、新增大区、搜索含经销商）已实现，待合并部署 |
 | [`g-learning-min/`](g-learning-min/README.md) | 学习平台 1.0（2026-11-10） | 已确认；已实现，归档 | 同目录的 Echo 登录页原型（`#/login`，2026-11-12）为品牌草稿，待调整 |
-| [`g-learning-tags-v2/`](g-learning-tags-v2/README.md) | 学习平台两级标签（2026-11-16） | **待确认** | spec 草稿 `.kiro/specs/g-learning-tags-v2/`；未实现、无迁移 |
+| [`g-learning-tags-v2/`](g-learning-tags-v2/README.md) | 学习平台两级标签（2026-11-16） | 已确认（2026-11-16）；已实现，待合并部署 | `.kiro/specs/g-learning-tags-v2/`；迁移 `0013`；学习中心、新建课程、标签管理三处页面已落地 |
 | [`d-rule-engine/`](d-rule-engine/README.md) | 判定计划：`precision/`（v15，2026-11-13 确认）；根目录 v1 与 `explore/` | `precision/` 已确认；已实现，归档 | 任务 13–16 于 2026-11-16 合并并部署到测试 ECS；截图存档 `app-shots/`。v1 与 `explore/` 为对照 |
 | [`e-metrics/`](e-metrics/README.md) | 指标与看板（2026-11-16） | 已确认 | 页面代码等查询 / 导出接口落地后再写 |
 

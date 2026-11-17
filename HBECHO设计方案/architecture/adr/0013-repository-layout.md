@@ -1,6 +1,8 @@
 # ADR-0013 · 仓库目录约定
 
 > **修订（2026-11-05，刘学奎）**：增补 `ui-lab/` 一级目录，见「决定」。
+>
+> **修订（2026-11-16，刘学奎）**：`tests/` 下增补 `demo/`（本机预览造数与启动，配合 `scripts/preview.sh`；不进 CI、不进镜像），见 `.kiro/steering/ui-workflow.md`。
 
 - **状态**：accepted
 - **日期**：2026-11-04
@@ -24,6 +26,7 @@ drizzle/                 drizzle-kit 生成的迁移 SQL（只走 db:migrate）
 services/capability/     Python 能力服务（ADR-0012），自带 pyproject 与离线测试
 tests/fixtures/          离线 fixture：供应商原始响应的脱敏副本
 ui-lab/                  可点击界面原型（2026-11-05 增补）：不进生产构建，不属于 tsconfig 的 include
+tests/demo/              本机预览造数与启动（2026-11-16 增补）：不是测试、不进 CI、不进镜像；由 scripts/preview.sh 调用
 ```
 
 规则：

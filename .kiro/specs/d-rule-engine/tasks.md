@@ -260,7 +260,7 @@
 
 **2026-11-16（任务 14–16：向导、执行记录、证据抽屉；尚未推送，页面这一批做完后推第三次）**：
 - 新增：`views.wizard / executions / executionDetail / participants / staffEvidence`（页面只经它们取数）；15 个服务端动作都经 `run()`；`trialReport` 的授权从「管理」改为「读取」（只读角色也能看试跑结果，试跑本身仍是管理）。
-- 本机演示环境：`./scripts/demo-judgement.sh`（一次性 MySQL + 假的 C 端口 + 同进程 Next dev，种子在 `tests/demo/judgement-demo.ts`）。**对 C 的端口是 FakeSignals，没有任何真实采集 / 识别 / 付费调用；`judgement serve` 由进程内小循环代替**。
+- 本机演示环境（2026-11-16 已并入统一预览：`./scripts/preview.sh`，一次性 MySQL + 假的 C 端口 + 同进程 Next dev，造数在 `tests/demo/preview.ts`；原 `demo-judgement.sh` / `judgement-demo.ts` 已改名）。**对 C 的端口是 FakeSignals，没有任何真实采集 / 识别 / 付费调用；`judgement serve` 由进程内小循环代替**。
 - 浏览器走通的流程：新建 → 第 1 页加文本能力 / 关键词 / N（自动保存）→ 确认圈定 → 删最后一张文本卡（圈定结果与 N 一并清掉）→ 加话题 → 第 2 页加整张图片对比 → 上传标准图 → 试跑（后台领取，页面轮询）→ 分布与样例 → 第 3 页确认执行 → 发布 v1 并开始执行 → 执行完成；回退预览、新建草稿、取消执行弹窗；总部非创建者与分公司只读。
 - 本机 `./scripts/verify.sh` OK：unit 1175、db 1687（1 skipped）；Python 侧未验证。自动检查：`views.db` 9 例、静态护栏（动作都经 run、页面先 requireUser 再判 Capability、页面不碰数据库表、界面无内部字段名）、`judgement-labels` 单测；`next build` 通过。
 - **没有证明的**：没有页面渲染测试（仓库无 jsdom），交互只在本机演示环境用 puppeteer 走过，没有写成可重复的自动化；演示环境用假的 C，真实 C 的图片上传 / 评分 / 可执行性在页面里没有验证；审计里页面动作的 `actor` 与脱敏、`explain` 的真实数据量（单专员内容 > 200 条时只显示前 200 条）没有压测；MAN-1～MAN-6 业务走查没做。

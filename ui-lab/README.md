@@ -1,42 +1,24 @@
 # ui-lab · 界面原型
-
-> **本地入口与修改指引**：[`LOCAL-UI.md`](LOCAL-UI.md)（4175 静态原型 / 3202 真实应用、代码位置、启动命令、预设账号、给 AI 的复制说明）。
+> **本地入口与修改指引**：[`LOCAL-UI.md`](LOCAL-UI.md)（4175 原型 / 3202 完整应用的启动命令、预设账号、与 ECS 的差异、给 AI 的复制说明）。
 >
-> **状态**：已有四个已确认原型：[`hbecho-ui/`](hbecho-ui/README.md)（2026-11-08，v1，保留作对照）、[`hbecho-ui-v2/`](hbecho-ui-v2/README.md)（2026-11-10，**已由刘学奎确认**为 A/B 页面界面基线；其中「主数据浏览」页为 2026-11-16 新增，**待刘学奎走查确认**）、[`g-learning-min/`](g-learning-min/README.md)（2026-11-10，学习平台 1.0，**已由刘学奎确认**）。域 D 的 [`d-rule-engine/`](d-rule-engine/README.md) 原型 v1 为 2026-11-12 新增，**待刘学奎走查确认**；域 E 的 [`e-metrics/`](e-metrics/README.md) 原型 v1 为 2026-11-16 新增，**已由刘学奎确认**；其余 spec 的原型仍未开始。
+> **协作规则**：[`.kiro/steering/ui-workflow.md`](../.kiro/steering/ui-workflow.md)（改动分类、原型到线上的流转、原型与真实页面的关系）。2026-11-16 起，4175 与 3202 来自**同一个预览工作树**（`~/Documents/hbecho-preview`），用 `./scripts/preview.sh` 一条命令起。
+
+## 原型状态表
+
+新增或归档原型时先改这张表，再放文件。状态含义：**已确认**（刘学奎确认过的设计）、**待确认**、**已实现，归档**（页面已在 `src/app/` 落地并部署，以真实页面为准，原型不再维护）、**对照**（只保留作比较）。
+
+| 目录 | 内容 | 状态 | 实现 / 备注 |
+|---|---|---|---|
+| [`hbecho-ui/`](hbecho-ui/README.md) | A / B 页面 v1（2026-11-08） | 对照 | 被 v2 取代 |
+| [`hbecho-ui-v2/`](hbecho-ui-v2/README.md) | A / B 页面界面基线（2026-11-10） | 已确认；已实现，归档 | 活动计划、账号与监控、主数据导入、用户与权限、审计已在 `src/app/` 落地。其中**主数据浏览**页原型（2026-11-16 新增）待刘学奎走查确认；店面标准下拉与经销商搜索尚未实现 |
+| [`g-learning-min/`](g-learning-min/README.md) | 学习平台 1.0（2026-11-10） | 已确认；已实现，归档 | 同目录的 Echo 登录页原型（`#/login`，2026-11-12）为品牌草稿，待调整 |
+| [`g-learning-tags-v2/`](g-learning-tags-v2/README.md) | 学习平台两级标签（2026-11-16） | **待确认** | spec 草稿 `.kiro/specs/g-learning-tags-v2/`；未实现、无迁移 |
+| [`d-rule-engine/`](d-rule-engine/README.md) | 判定计划：`precision/`（v15，2026-11-13 确认）；根目录 v1 与 `explore/` | `precision/` 已确认；已实现，归档 | 任务 13–16 于 2026-11-16 合并并部署到测试 ECS；截图存档 `app-shots/`。v1 与 `explore/` 为对照 |
+| [`e-metrics/`](e-metrics/README.md) | 指标与看板（2026-11-16） | 已确认 | 页面代码等查询 / 导出接口落地后再写 |
 
 ## 本地总览（4175）
 
-[`index.html`](index.html) 是本目录的**唯一本地入口**：`python3 -m http.server 4175 --directory ui-lab` 后打开 <http://localhost:4175/>。它列出：
-
-- **完整应用**：<http://localhost:3202/> —— 用与 `main` 同源的 `a-activity-plan` 工作树启动的真实页面（活动计划、账号与监控、主数据、学习、用户与权限、审计日志）；需要登录，和 ECS 上的版本同源；
-- **可点击原型**：A/B v2、学习平台 1.0、A/B v1 对照、域 D（进行中）、域 E（已确认）。
-
-完整应用的启动命令：
-
-```bash
-pnpm --dir ~/Documents/hbecho-a-activity-plan exec next dev -p 3202
-```
-
-当前分支 `c-signals` 尚未包含 `main` 上的活动计划与主数据页面，所以本地完整应用从 `main` 工作树启动，不在本仓库的工作区里合并。
-
-## 本地预设账号（仅本机测试库）
-
-完整应用 `http://localhost:3202/` 的本地账号，密码均为 `Hbecho@2026`，登录时选「密码」页签：
-
-| 手机号 | 姓名 | 角色 |
-|---|---|---|
-| `13800002041` | 刘学奎 | 平台超管 |
-| `13800002042` | 王敏 | 总部人员 |
-| `13800002043` | 李静 | 分公司人员 |
-| `13800002044` | 张伟 | 门店专员 |
-
-这些账号种在本地库 `hbecho_local`（Docker 容器 `hbecho-smoke-mysql`，端口 3307），**不是 ECS 或生产数据**。若登录失败，先确认容器在运行：
-
-```bash
-docker start hbecho-smoke-mysql
-```
-
-种子脚本只在本地执行过，没有提交；账号仅用于本机界面走查。
+[`index.html`](index.html) 是本目录的**唯一本地入口**：`./scripts/preview.sh` 起来后打开 <http://localhost:4175/>。它列出：**完整应用**（<http://localhost:3202/>，真实 Next 应用，造好的数据）和上表里的**可点击原型**。
 
 ## 作用
 

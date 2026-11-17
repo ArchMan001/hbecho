@@ -16,3 +16,4 @@ inclusion: always
 - 代码与文档中的领域命名优先采用 `CONTEXT.md`：例如 `MediaStaff`、`ExternalAccount`、`AccountAssignment`、`ContentDiscovery`，不得退回平行的 `Staff` 或“Dealer 是 Branch 子节点”等旧模型。
 - 推翻或修订一条已编号决策（如 `D-18`、`B-D07`）时，同一次改动里必须：① 原决策行保留，加删除线并写「由 X 于某日修订」；② 全仓库搜索该编号，逐处更新或标注；③ 被改文档补版本记录；④ 跑 `./scripts/verify.sh`。
 - 带页面的 spec 必须先做界面设计，并**经刘学奎明确确认**后才能写页面相关的 tasks.md 条目或页面代码：① design.md 写「界面」一节（页面清单、流程、线框链接、状态矩阵、字段可见性），按 `HBECHO设计方案/ui/ui-foundation.md` §8 的模板；② 规则复杂的页面先在 `ui-lab/` 做可点击原型并请业务走一遍；③ 在界面一节末尾的「N.6 界面设计确认」写明确认人、日期、范围、原型链接。AI 不得把「用户没有反对」当作确认；界面改动超出已确认范围要重新确认。没有页面的 spec（只交付 CLI / Module）要在 design 里写明「本 spec 没有页面」及页面进入条件。
+- 界面预览与协作：4175 原型、3202 完整应用、ECS 的关系，改动分类（新页面 / 小改 / 带迁移）与「原型 → 代码」单向流转，见 `.kiro/steering/ui-workflow.md`；本机启动与账号见 `ui-lab/LOCAL-UI.md`。

@@ -1,8 +1,10 @@
 # 指标与看板 · 可点击原型（域 E）
 
-> **状态**：`原型 v1 · 已由刘学奎确认（2026-11-16）`。本目录只用于界面走查，**不进生产构建，不被 `src/` 引用**；界面确认记录在 [`design.md` §20.6](../../.kiro/specs/e-metrics/design.md)，页面任务见 `tasks.md` 的「页面任务」一节；页面代码仍要等查询 / 导出接口（任务 6–9、10a）落地。
+> **注意（2026-11-16）**：E 的 spec 与 PRD 修订目前只在主目录 `c-signals` 工作区里（未提交），本仓库还没有 `.kiro/specs/e-metrics/`，所以下面对它的引用暂时是纯文本；入库后恢复成链接。
+
+> **状态**：`原型 v1 · 已由刘学奎确认（2026-11-16）`。本目录只用于界面走查，**不进生产构建，不被 `src/` 引用**；界面确认记录在 ``design.md` §20.6`（`.kiro/specs/e-metrics/design.md`），页面任务见 `tasks.md` 的「页面任务」一节；页面代码仍要等查询 / 导出接口（任务 6–9、10a）落地。
 >
-> **依据**：`HBECHO设计方案/ui/ui-foundation.md`（2026-11-10 v2 视觉基线）、[`e-metrics` design §20](../../.kiro/specs/e-metrics/design.md)、[`prd-domain-e-metrics.md`](../../HBECHO设计方案/prd-domain-e-metrics.md) v1.1（定稿候选）、`CONTEXT.md`。
+> **依据**：`HBECHO设计方案/ui/ui-foundation.md`（2026-11-10 v2 视觉基线）、``e-metrics` design §20`（`.kiro/specs/e-metrics/design.md`）、[`prd-domain-e-metrics.md`](../../HBECHO设计方案/prd-domain-e-metrics.md) v1.1（定稿候选）、`CONTEXT.md`。
 >
 > **上游状态**：E 的 PRD 为 **v1.1 定稿候选**（仍是 `draft`，未宣布定稿）；`e-metrics` spec 四件套已建（2026-11-12，`draft`、未实施）；界面设计已于 2026-11-16 确认（§20.6），页面任务 P1–P6 已列，页面代码仍等任务 6–9、10a。
 

@@ -119,31 +119,32 @@
     <div class="intro">
       <div>
         <h1>一个入口看全部界面</h1>
-        <p>完整应用已按 <code>main</code> 的代码启动，包含已确认并上线的六个模块；下面是可点击原型，供评审与后续 spec 对照。</p>
+        <p>上面是<strong>完整应用</strong>（真实页面、造好的数据），下面是<strong>可点击原型</strong>。两者来自同一个预览工作树，由 <code>./scripts/preview.sh</code> 一起起；新页面在原型里确认，确认并实现后以完整应用为准。</p>
       </div>
-      <div class="stamp">本地 · 2026-11-12</div>
+      <div class="stamp">本地预览 · 2026-11-16</div>
     </div>
 
     <section class="section">
       <div class="section-head">
         <h2>完整应用</h2>
-        <span>真实页面 · 需要登录 · 与 ECS 上的版本同源</span>
+        <span>真实页面 · 需要登录 · 代码与预览工作树当前分支一致（页脚显示版本号）</span>
       </div>
       <a class="card" href="http://localhost:3202" target="_blank" rel="noreferrer">
         <div class="card-main">
           <div>
             <h3>hbecho 管理端</h3>
-            <p>活动计划、名单导入、账号与监控、主数据（浏览 / 导入）、学习、用户与权限、审计日志。登录后按当前账号的 Capability 显示导航。</p>
+            <p>活动计划、名单导入、账号与监控、判定计划、主数据（浏览 / 导入）、学习、用户与权限、审计日志。登录后按当前账号的 Capability 显示导航。</p>
             <div class="chips">
               <span class="chip on">活动计划</span>
               <span class="chip on">账号与监控</span>
+              <span class="chip on">判定计划</span>
               <span class="chip on">主数据</span>
               <span class="chip on">学习</span>
               <span class="chip on">用户与权限</span>
               <span class="chip on">审计日志</span>
             </div>
-            <p class="small muted" style="margin-top:10px">本地预设账号（仅本机测试库，勿用于 ECS / 生产）：平台超管 <code>13800002041</code> · 总部 <code>13800002042</code> · 分公司 <code>13800002043</code> · 门店 <code>13800002044</code>；密码均为 <code>Hbecho@2026</code>。登录时选「密码」页签。</p>
-            <p class="small muted" style="margin-top:4px">若登录失败，先确认本机 MySQL 容器在运行：<code>docker start hbecho-smoke-mysql</code>。</p>
+            <p class="small muted" style="margin-top:10px">预设账号（仅本机预览数据，勿用于 ECS / 生产）：平台超管 <code>13800002041</code> · 总部（创建者）<code>13800002042</code> · 分公司 <code>13800002043</code> · 门店 <code>13800002044</code> · 总部（非创建者，只读）<code>13800002045</code>；密码均为 <code>Hbecho@2026</code>。登录时选「密码」页签。</p>
+            <p class="small muted" style="margin-top:4px">数据每次启动都重置成同一份。打不开时确认 <code>./scripts/preview.sh</code> 还在运行（需要 Docker）。</p>
           </div>
           <span class="btn">打开应用</span>
         </div>
@@ -162,7 +163,7 @@
               <h3>活动计划 / 访问控制 · v2</h3>
               <p>2026-11-10 确认的 A / B 视觉基线；计划、名单、账号、用户、审计的完整走查。</p>
             </div>
-            <span class="badge ok">已确认</span>
+            <span class="badge ok">已确认 · 已实现</span>
           </div>
           <div class="chips"><span class="chip">A 活动计划</span><span class="chip">B 访问控制</span></div>
         </a>
@@ -171,20 +172,30 @@
           <div class="card-main">
             <div>
               <h3>学习平台 1.0</h3>
-              <p>2026-11-10 确认：学习中心、课程详情、课程管理、学习汇总、标签管理。</p>
+              <p>2026-11-10 确认：学习中心、课程详情、课程管理、学习汇总、标签管理。含 Echo 登录页草稿（待调整）。</p>
             </div>
-            <span class="badge ok">已确认</span>
+            <span class="badge ok">已确认 · 已实现</span>
           </div>
           <div class="chips"><span class="chip">G 学习</span></div>
         </a>
 
+        <a class="card" href="./g-learning-tags-v2/" target="_blank" rel="noreferrer">
+          <div class="card-main">
+            <div>
+              <h3>学习平台 · 两级标签</h3>
+              <p>一级分类 + 二级标签值；标签管理、新建 / 编辑课程、学习中心筛选按分类分组。2026-11-16 原型，spec 草稿在 <code>.kiro/specs/g-learning-tags-v2/</code>；未实现、无迁移。</p>
+            </div>
+            <span class="badge todo">待确认</span>
+          </div>
+          <div class="chips"><span class="chip">G 学习</span><span class="chip">标签管理</span><span class="chip">课程</span></div>
+        </a>
         <a class="card" href="./d-rule-engine/" target="_blank" rel="noreferrer">
           <div class="card-main">
             <div>
               <h3>判定计划（域 D）</h3>
-              <p>三页阻塞式向导、执行记录与专员证据。原型 v1，待刘学奎走查确认；界面草案在 <code>d-rule-engine/design.md</code> §15。</p>
+              <p>三页阻塞式向导、执行记录与专员证据的第一版原型。已被下面的精密版取代，保留作对照。</p>
             </div>
-            <span class="badge todo">待确认</span>
+            <span class="badge ref">对照</span>
           </div>
           <div class="chips"><span class="chip">圈定</span><span class="chip">比对</span><span class="chip">理解与执行</span></div>
         </a>
@@ -193,9 +204,9 @@
           <div class="card-main">
             <div>
               <h3>判定计划 · 精密版（A）</h3>
-              <p>按选定的 A 方向重做三页向导：能力名胶囊、上传与可拖动阈值、试跑五槽样例。2026-11-13 已由刘学奎确认。</p>
+              <p>按选定的 A 方向重做三页向导：能力名胶囊、上传与可拖动阈值、试跑五槽样例。2026-11-13 已由刘学奎确认；页面已实现并部署（以完整应用的「判定计划」为准，原型归档）。</p>
             </div>
-            <span class="badge ok">已确认</span>
+            <span class="badge ok">已确认 · 已实现</span>
           </div>
           <div class="chips"><span class="chip">A 精密</span><span class="chip">第 1–3 页</span><span class="chip">可点击</span></div>
         </a>
@@ -206,7 +217,7 @@
               <h3>D 风格对比 · 三版</h3>
               <p>同一页第 2 页能力配置的三种视觉方向：精密工作台、柔和层叠、编辑台式。用于挑选按钮、选择器、上传框与阈值框的关系。</p>
             </div>
-            <span class="badge todo">待选择</span>
+            <span class="badge ref">对照（已选 A 精密）</span>
           </div>
           <div class="chips"><span class="chip">A 精密</span><span class="chip">B 柔和</span><span class="chip">C 编辑</span></div>
         </a>
@@ -236,11 +247,9 @@
     </section>
 
     <div class="note">
-      <p><strong>关于「完整应用」：</strong>它由与 <code>main</code> 同源的 <code>a-activity-plan</code> 工作树在 3202 端口启动，与本仓库当前分支（<code>c-signals</code>）的页面集合不是同一份；<code>c-signals</code> 还没有 rebase 到包含活动计划与主数据页面的 <code>main</code>。本入口的服务命令：</p>
-      <p style="margin-top:6px"><code>pnpm --dir ~/Documents/hbecho-a-activity-plan exec next dev -p 3202</code></p>
-      <p style="margin-top:6px"><strong>关于原型：</strong>本目录（<code>ui-lab/</code>）由 4175 端口提供；原型只用于走查，不进生产构建。域 D 的界面设计确认后，再写页面任务与 <code>src/app/</code> 代码。</p>
+      <p><strong>怎么用：</strong>新页面或复杂流程先在<strong>原型</strong>里确认，写成代码后在<strong>完整应用</strong>（3202）验收，最后部署到 ECS；已有页面上的小改动直接在完整应用里改和确认，不做原型。原型和完整应用只单向流转（原型 → 代码），页面实现后以完整应用为准，对应原型归档。</p>
+      <p style="margin-top:6px"><strong>起服务：</strong><code>cd ~/Documents/hbecho-preview &amp;&amp; ./scripts/preview.sh</code>（一次起 4175 与 3202，Ctrl-C 一起退出）。规则见 <code>.kiro/steering/ui-workflow.md</code>，本机说明见 <code>ui-lab/LOCAL-UI.md</code>。</p>
     </div>
-
     <div class="footer">hbecho · ui-lab · 本页只用于本地评审，不进入生产构建。</div>
   </div>
 </body>

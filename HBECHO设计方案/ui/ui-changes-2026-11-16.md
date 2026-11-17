@@ -1,6 +1,6 @@
 # 2026-11-16 三处界面改动说明
 
-> **状态**：原型 / 本地已更新，生产未部署；部分改动尚未实施（见第 4 节）
+> **状态**：2026-11-16 已并入批次分支 `fix/ui-batch-2026-11-16`（预览工作树 `~/Documents/hbecho-preview`，未推送、未部署）；效果待刘学奎调整，部分改动尚未实施（见第 4、7 节）
 >
 > **决策人**：刘学奎
 >
@@ -12,7 +12,7 @@
 
 | # | 改动 | 影响页面 | 当前状态 | 页面地址 |
 |---:|---|---|---|---|
-| 1 | 登录页 / 首页 Echo 品牌与文案 | 登录页、管理端侧栏 | 本地 3202 已改，未提交 / 未推送 | `http://localhost:3202/login`；原型 `http://localhost:4175/g-learning-tags-v2/#/login` |
+| 1 | 登录页 / 首页 Echo 品牌与文案 | 登录页、管理端侧栏 | 已改并提交到批次分支（草稿提交 `wip(ui)`），效果待调整，未推送 | `http://localhost:3202/login`（预览）；原型 `http://localhost:4175/g-learning-tags-v2/#/login` |
 | 2 | 主数据浏览：店面标准改下拉、搜索加经销商名称 / 编码 | 主数据浏览 `/master-data` | **未实施**（原型仍为胶囊；真实页为上一版） | 原型 `http://localhost:4175/hbecho-ui-v2/#/master`；测试 ECS `/master-data` 为上一版 |
 | 3 | 学习平台两级标签 | 标签管理、新建 / 编辑课程、学习中心 | 原型已出，待界面确认；生产未实施 | `http://localhost:4175/g-learning-tags-v2/#/learning`、`/learning/tags`、`/learning/new` |
 
@@ -50,9 +50,9 @@
 
 ### 1.4 地址与状态
 
-- 本地真实应用：<http://localhost:3202/login>（已改）
+- 本地完整应用：<http://localhost:3202/login>（`./scripts/preview.sh` 启动，已改）
 - 原型：<http://localhost:4175/g-learning-tags-v2/#/login>（独立目录，避免缓存）
-- 代码位置：`~/Documents/hbecho-a-activity-plan` 工作区（未提交）；同一份改动也在 `fix/small-batch-2026-11-16` 分支的工作区
+- 代码位置：预览工作树 `~/Documents/hbecho-preview` 的批次分支 `fix/ui-batch-2026-11-16`（原先分散在 `hbecho-a-activity-plan` 与 `fix/small-batch-2026-11-16` 两个工作区的未提交改动，补丁内容一致，已合成一份并提交；原目录未改动）
 - 品牌文档：[`brand-language.md`](brand-language.md) 已记录中文名、Logo、固定事实区与变更记录
 
 ## 2. 主数据浏览：店面标准下拉 + 经销商搜索
@@ -150,3 +150,15 @@
 - 主数据浏览：[`a-master-data-browse`](../../.kiro/specs/a-master-data-browse/requirements.md)
 - 两级标签：[`g-learning-tags-v2`](../../.kiro/specs/g-learning-tags-v2/change-summary.md)
 - 小改动批规则：[`dev-ci-cadence.md`](../../.kiro/steering/dev-ci-cadence.md) 的「小改动批」一节
+- 界面预览与协作规则：[`ui-workflow.md`](../../.kiro/steering/ui-workflow.md)；本机入口：[`LOCAL-UI.md`](../../ui-lab/LOCAL-UI.md)
+## 7. 批次 `fix/ui-batch-2026-11-16` 当前内容（2026-11-16）
+一次验证、一次 CI、一次合并、一次部署（`dev-ci-cadence.md`「小改动批」）。
+| # | 内容 | 状态 |
+|---:|---|---|
+| 1 | 并入 `a-activity-plan` 的 5 个提交：总部提交名单**自动加入分公司**、预检 / 确认弹窗提示「将自动加入」、production capability 按批准名单放行、运维手册记录 | 已并入（merge `7b825ff`）；部署时 web / sync-worker / learning-worker 要换成同一个标签，`sync-worker` 需要其中的 capability 放行 |
+| 2 | 登录页 `e=scope` 时不再回跳 `/`（避免与 `/` 之间的刷新循环） | 已提交 |
+| 3 | 第 1 项 Echo 品牌（登录页 / 侧栏 / 站点标题 / 品牌语言文档） | 草稿已提交，**待刘学奎调整** |
+| 4 | 第 2 项主数据浏览（店面标准下拉、搜索加经销商）；`/master-data` 面包屑补全 | 面包屑已改；其余待刘学奎确认界面后实现 |
+| 5 | 第 3 项两级标签 | **不进本批的实现**（带迁移与新表，走 spec；迁移号要从 `0012` 改成 `0013`，`0012` 已被判定计划占用）；原型与 spec 草稿已纳入版本管理 |
+| 6 | 预览统一：`./scripts/preview.sh`、预览造数、4175 总览页与 `LOCAL-UI.md` 改写、页脚与 `/api/health` 显示提交号（镜像构建传入 `GIT_SHA`） | 已提交 |
+| 7 | `ui-lab/` 里散在主目录工作区的原型（e-metrics、g-learning-tags-v2、index.html 等）纳入版本管理 | 已提交 |

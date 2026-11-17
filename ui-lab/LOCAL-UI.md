@@ -1,99 +1,83 @@
 # 本地 UI 入口与修改指引
 
-> **用途**：给本机开发和新会话的 AI 说明「两个本地地址分别是什么、代码在哪、怎么改、什么不能动」。
+> **用途**：给本机开发和新会话的 AI 说明「两个本地地址分别是什么、代码在哪、怎么起、怎么改、什么不能动」。
 >
-> **状态**：本机说明，不是生产文档；不进入生产构建。
+> **状态**：本机说明，不是生产文档；不进入生产构建。**协作规则以 [`.kiro/steering/ui-workflow.md`](../.kiro/steering/ui-workflow.md) 为准**，本文只写本机怎么操作。
+>
+> **2026-11-16 重写**：原来的 3202 来自 `hbecho-a-activity-plan` 工作树（落后 `main` 61 个提交、数据库基本为空），4175 来自主目录 `c-signals` 工作树，两处代码和数据都不一致；现统一为一个预览工作树，两个入口同一来源。
 
-## 两个入口
+## 两个入口（来自同一个工作树）
 
 | 地址 | 是什么 | 代码在哪 | 怎么改 |
 |---|---|---|---|
-| <http://localhost:4175/> | **静态 UI 原型总览**：A/B v2、学习、域 D 判定计划、域 E 指标与看板等可点击原型 | 当前仓库的 [`ui-lab/`](README.md) | 直接改 HTML / CSS / JS，无构建；刷新浏览器 |
-| <http://localhost:3202/login> | **真实 Next.js 应用**：活动计划、账号与监控、主数据、学习、用户与权限、审计日志 | **不在当前 checkout**，在 `~/Documents/hbecho-a-activity-plan`（`a-activity-plan` 工作树，与 `main` 同源） | 改工作树里的 `src/app/` 等，Next dev 自动重载 |
+| <http://localhost:4175/> | **可点击原型总览**：完整应用入口 + 各 spec 的静态原型 | 预览工作树的 [`ui-lab/`](README.md) | 直接改 HTML / CSS / JS，无构建，刷新浏览器 |
+| <http://localhost:3202/login> | **完整应用**：真实 Next 应用（与线上同一套代码），数据是造好的 | 预览工作树的 `src/app/` 等 | 改代码，Next dev（webpack）自动重载 |
 
-> `http://localhost:3201` 是当前 `c-signals` checkout 的旧应用，页面不全、数据库也旧，**不要用它看完整 UI**。
+预览工作树：`~/Documents/hbecho-preview`（分支为当前批次分支，如 `fix/ui-batch-2026-11-16`）。
 
-## 4175：静态原型
+> 不要再用：3201（主目录旧应用）、3411（判定计划的一次性演示）、`hbecho-a-activity-plan` 里的 3202。端口被占用时 `scripts/preview.sh` 会点名占用者并退出。
 
-入口文件是 [`ui-lab/index.html`](index.html)，由 Python 静态服务器提供：
-
-```bash
-python3 -m http.server 4175 --directory ui-lab
-```
-
-目录：
-
-- [`ui-lab/hbecho-ui-v2/`](hbecho-ui-v2/README.md)：A 活动计划 / B 访问控制，已确认的视觉基线；
-- [`ui-lab/g-learning-min/`](g-learning-min/README.md)：G 学习平台；
-- [`ui-lab/d-rule-engine/`](d-rule-engine/README.md)：D 判定计划，原型 v1，**待刘学奎确认**；
-- [`ui-lab/e-metrics/`](e-metrics/README.md)：E 指标与看板，原型 v1，**已由刘学奎确认（2026-11-16）**；
-- [`ui-lab/hbecho-ui/`](hbecho-ui/README.md)：v1，仅作对照。
-
-规则：
-
-- 原型只用于走查，**不进生产构建，不被 `src/` 引用**；
-- 视觉遵循 [`HBECHO设计方案/ui/ui-foundation.md`](../HBECHO设计方案/ui/ui-foundation.md)（2026-11-10 v2 基线）；
-- 域 D 的界面在 [`design.md` §15](../.kiro/specs/d-rule-engine/design.md) 有草案；**§15.6 确认表为空时，不写 D 的页面任务、不写 `src/app/` 页面代码**。
-- 域 E 的界面在 [`design.md` §20](../.kiro/specs/e-metrics/design.md)；**已于 2026-11-16 由刘学奎确认（§20.6）**，超出确认范围的改动要重新确认；页面代码仍要等查询 / 导出接口（任务 6–9、10a）落地。
-
-## 3202：真实应用
-
-### 代码位置
-
-```text
-~/Documents/hbecho-a-activity-plan   # a-activity-plan 工作树，与 main 同源
-```
-
-**不是**当前仓库 `/Users/liuxuekui/Documents/hbecho`（当前分支 `c-signals`，缺少活动计划、账号、主数据页面）。
-
-### 启动
+## 一条命令
 
 ```bash
-set -a; . ~/Documents/hbecho-a-activity-plan/.env; set +a
-pnpm --dir ~/Documents/hbecho-a-activity-plan exec next dev --webpack -p 3202
+cd ~/Documents/hbecho-preview
+./scripts/preview.sh        # 前台运行；Ctrl-C 退出，并清理容器与静态服务
 ```
 
-- 必须用 **webpack**，不要用默认 Turbopack：Turbopack dev 在登录页会反复整页重载（HMR 问题）；
-- 不要用 `next start`：本地 `.env` 是 `HBECHO_SMS_MODE=fake`、`http://`，生产模式下访问控制配置会拒绝启动；
-- 数据库容器：`docker start hbecho-smoke-mysql`（本机 3307，库 `hbecho_local`；**不是 ECS**）。
+它做三件事：① 起一个**一次性**本机 MySQL 8.4 容器并迁移（库名以 `_test` 结尾，用完即删）；② 在 4175 起静态服务；③ 清库、造数、在 3202 起 Next。**每次启动都重置成同一份预览数据**，想长期保留的东西不要放在这里。前提：Docker 在运行。
 
-### 预设账号（仅本机测试库）
+启动完成后终端会打印版本号（工作树提交号，末尾「+未提交改动」表示有没提交的修改），页面页脚与 `/api/health` 显示同一个号，和 ECS 对照用。
 
-密码均为 `Hbecho@2026`，登录时选「密码」页签：
+## 预设账号（仅本机预览数据）
 
-| 手机号 | 姓名 | 角色 |
+密码都是 `Hbecho@2026`，登录页选「密码」页签。
+
+| 手机号 | 姓名 | 角色 | 用来看 |
+|---|---|---|---|
+| `13800002041` | 刘学奎 | 平台超管 | 全部页面 |
+| `13800002042` | 王敏 | 总部人员（日立）、活动计划与判定计划的**创建者** | 总部视角、可写 |
+| `13800002043` | 李静 | 分公司人员（日立 · 北京分公司） | 分公司视角、只读 |
+| `13800002044` | 张伟 | 门店专员 | 门店端（无管理端入口） |
+| `13800002045` | 周总部 | 总部人员（日立），**非创建者** | 同品牌只读 |
+
+## 预览数据里有什么
+
+组织（42 个分公司、两个品牌、几十家门店与经销商）、4 个状态不同的活动计划与名单、账号与同步记录、内容、6 门学习课程与标签、6 个处于不同阶段的判定计划（已执行 / 失败 / 等待采集 / 第 2 页已试跑 / 第 3 页 / 刚创建 / 已归档）。造数脚本是 [`tests/demo/preview.ts`](../tests/demo/preview.ts)。
+
+## 与 ECS 不同的地方（预览验收不能代替 ECS 走查）
+
+| 方面 | 预览（3202） | ECS |
 |---|---|---|
-| `13800002041` | 刘学奎 | 平台超管 |
-| `13800002042` | 王敏 | 总部人员 |
-| `13800002043` | 李静 | 分公司人员 |
-| `13800002044` | 张伟 | 门店专员 |
+| 数据 | 造的，每次重置 | 真实数据 |
+| 短信 / 协议 | 假短信、http | 真短信、https |
+| 付费采集的 capability | 不涉及 | production 门控（按批准名单放行） |
+| 对 C 的端口 | 假的（程序化分数，没有任何采集 / 识别 / 付费调用） | 真实的 C（图像比对未接通） |
+| 学习课程封面 / 文件 | 打不开（OSS 配置是占位值，链接指向一个不存在的桶；列表、标签、筛选可用） | 正常 |
+| `judgement serve` | 进程内一个小循环代替 | 独立容器 |
 
-本地库只有最小组织和这几个用户，**业务数据基本为空**；页面会显示空状态，富数据看 4175 的原型。
+## 改什么、在哪里改
+
+- **新页面 / 复杂流程（A 类）**：在 `ui-lab/<spec>/` 做静态原型，4175 看，刘学奎确认后再写代码；
+- **已有页面上的小改（B 类）**：直接改 `src/app/`，3202 看、截图、确认，不做静态原型；
+- 分类、流转与原型的归档规则见 [`ui-workflow.md`](../.kiro/steering/ui-workflow.md)；视觉与交互基线见 [`ui-foundation.md`](../HBECHO设计方案/ui/ui-foundation.md)。
 
 ## 给新会话 AI 的说明（可直接复制）
 
 **只改 4175 的静态原型时：**
-
-> 只改 `ui-lab/` 下的静态原型（HTML/CSS/JS），不要动 `src/app`，不要跑构建；用 `http://localhost:4175/` 验证。视觉遵循 `HBECHO设计方案/ui/ui-foundation.md` 的 v2 基线。域 D 的原型在 `ui-lab/d-rule-engine/`，界面确认在 `design.md` §15.6 填好之前不要写页面任务或 `src/app` 代码。域 E 的原型在 `ui-lab/e-metrics/`，界面已于 2026-11-16 确认（§20.6）；页面任务已列，但页面代码要等查询 / 导出接口（任务 6–9、10a）落地。
+> 只改预览工作树 `~/Documents/hbecho-preview` 下 `ui-lab/` 里的静态原型（HTML/CSS/JS），不要动 `src/app`，不要跑构建；用 `http://localhost:4175/` 验证。视觉遵循 `HBECHO设计方案/ui/ui-foundation.md`。新增原型目录前先在 `ui-lab/README.md` 的状态表登记。带页面的 spec，界面确认（design 的「N.6」）填好之前不写页面任务、不写 `src/app` 页面代码。
 
 **改 3202 的真实页面时：**
-
-> 3202 的代码在 `~/Documents/hbecho-a-activity-plan`（`a-activity-plan` 工作树），**不在当前 checkout**。改那里的 `src/app/`，用 `pnpm --dir ~/Documents/hbecho-a-activity-plan exec next dev --webpack -p 3202` 启动并验证；不要改 `.env`、数据库容器、端口，不要提交或推送，除非我明确要求。当前 checkout 里其它会话的未提交文件也不要动。
+> 代码在预览工作树 `~/Documents/hbecho-preview`（当前批次分支）。改那里的 `src/app/`，用 `./scripts/preview.sh` 启动并验证；不要改 `.env`、数据库容器、端口；不要提交或推送，除非我明确要求。开始前先看 `git status`，别人的未提交文件不要动。
 
 **两个都别动的东西：**
-
 - `~/.workbench` / `.env` / 数据库凭证；
-- ECS 或生产环境；
-- 当前 checkout 的未跟踪文件（D spec、`ui-lab/`、其它会话的文档移动），除非我要求；
-- 域 D 的页面任务与 `src/app` D 页面代码（§15.6 未确认）。
+- ECS 或生产环境（部署要先说明、得到同意，走 Workbench）；
+- 主目录 `~/Documents/hbecho`（分支 `c-signals`）里别的会话的未提交文件，除非我要求。
 
 ## 已知坑
 
-- 4175 的 Python 静态服务器可能被应用停掉；重新运行上面的 `python3 -m http.server` 即可。
-- 3202 用了 webpack dev 之后，登录页不再重载；如果又出现「一直刷新」，先确认命令里带了 `--webpack`，并硬刷新浏览器。
-- 当前仓库 `c-signals` 的 `src/app` 不完整；在它里面改页面，3202 不会生效。
-- 本机 `gh` 直连 GitHub 会超时，需要代理：
-  ```bash
-  HTTPS_PROXY=http://127.0.0.1:7890 HTTP_PROXY=http://127.0.0.1:7890 gh ...
-  ```
-- 本机 UI 相关文件目前是未跟踪状态（`ui-lab/index.html`、`ui-lab/d-rule-engine/`、D spec），不要顺手提交或删除。
+- 预览 Next 必须用 **webpack**（`preview.ts` 已设置）：Turbopack dev 在登录页会反复整页重载；
+- 不要用 `next start`：本地是假短信 + http，生产模式下访问控制配置会拒绝启动；
+- 4175 的静态服务随 `preview.sh` 一起退出；单独起一个：`python3 -m http.server 4175 --directory ui-lab`（会和 `preview.sh` 抢端口）；
+- 本机 `gh` 直连 GitHub 会超时，需要代理：`HTTPS_PROXY=http://127.0.0.1:7890 HTTP_PROXY=http://127.0.0.1:7890 gh ...`；
+- 旧的 `hbecho-smoke-mysql` 容器（3307，库 `hbecho_local`）不再被预览使用，可以保留或自行清理，别和预览数据混用。

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AccountMenu, Crumbs, MobileTabs, SidebarNav, type NavGroup } from "../_components/shell";
+import { EchoMark } from "../_components/echo-mark";
 import { IcpFooter } from "../_components/icp";
 import { ROLE_LABEL } from "../_lib/labels";
 import { requireUser, web } from "../_lib/session";
@@ -29,10 +30,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <div className="shell">
         <aside className="sidebar" aria-label="主导航">
           <div className="brand-block">
-            <div className="brand-mark">H</div>
+            <div className="brand-mark"><EchoMark size={22} /></div>
             <div>
-              <div className="brand-name">hbecho</div>
-              <div className="brand-sub">新媒体运营平台</div>
+              <div className="brand-name">Echo</div>
+              <div className="brand-sub">新媒体营销平台</div>
             </div>
           </div>
           <SidebarNav groups={groups} />

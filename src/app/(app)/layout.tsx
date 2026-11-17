@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { AccountMenu, Crumbs, MobileTabs, SidebarNav, type NavGroup } from "../_components/shell";
 import { EchoMark } from "../_components/echo-mark";
-import { IcpFooter } from "../_components/icp";
+import { BuildStamp, IcpFooter } from "../_components/icp";
 import { ROLE_LABEL } from "../_lib/labels";
 import { requireUser, web } from "../_lib/session";
 
@@ -67,6 +67,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </header>
           <main className="page">{children}</main>
           <IcpFooter />
+          <BuildStamp />
         </div>
       </div>
       <MobileTabs items={groups.flatMap((g) => g.items)} />

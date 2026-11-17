@@ -2,4 +2,4 @@
 import { healthResponse } from "../../../modules/access-control/http";
 
 export const dynamic = "force-dynamic";
-export const GET = (): Response => healthResponse();
+export const GET = (): Response => healthResponse(process.env.HBECHO_BUILD_SHA);

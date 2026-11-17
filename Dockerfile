@@ -32,6 +32,9 @@ COPY drizzle ./drizzle
 COPY src ./src
 COPY --from=build /app/.next ./.next
 # 备案号等运行期配置全部来自环境变量，不烘焙进镜像
+# 构建时传入提交号（CI：--build-arg GIT_SHA=<短 sha>），页脚与 /api/health 显示它；本机 docker build 不传则显示 unknown
+ARG GIT_SHA=unknown
+ENV HBECHO_BUILD_SHA=$GIT_SHA
 ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000
 EXPOSE 3000
 USER node

@@ -168,7 +168,10 @@ describe("健康检查", () => {
   it("200 且不读不写数据库", async () => {
     const res = healthResponse();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    expect(await res.json()).toEqual({ ok: true, build: "unknown" }); // 没有传提交号时是 unknown
+  });
+  it("带 build 时原样返回提交号（核对线上跑的是哪一版）", async () => {
+    expect(await healthResponse(" 9bb35b580bc5 ").json()).toEqual({ ok: true, build: "9bb35b580bc5" });
   });
 });
 

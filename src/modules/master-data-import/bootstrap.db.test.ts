@@ -158,9 +158,9 @@ describe("bootstrap（任务 2）", () => {
     const { runMigrations } = await import("../../db/client");
     const { createDb } = await import("../../db/client");
     await runMigrations(createDb(t.pool));
-    // v2 的 35 张表（29 张数据底座 + 6 张活动计划）；b-access-control 的 11 张（auth_* / access_* / audit_events）、g-learning-min 的 6 张、c-signals 的 9 张、d-rule-engine 的 5 张不属于 v2，单独不计
+    // v2 的 35 张表（29 张数据底座 + 6 张活动计划）；b-access-control 的 11 张（auth_* / access_* / audit_events）、g-learning-min 的 6 张 + g-learning-tags-v2 的 1 张、c-signals 的 9 张、d-rule-engine 的 5 张不属于 v2，单独不计
     const [tables] = await t.pool.query(
-      "SELECT COUNT(*) n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type='BASE TABLE' AND table_name <> '__drizzle_migrations' AND table_name NOT LIKE 'auth\\_%' AND table_name NOT LIKE 'access\\_%' AND table_name <> 'audit_events' AND table_name NOT IN ('courses','course_brand_scopes','tags','course_tags','learning_progress','course_media_deletions','content_features','comment_features','signal_history','signal_results','monitoring_segments','segment_images','signal_tasks','signal_cursors','signal_recompute_runs','judgement_plans','judgement_plan_versions','judgement_runs','run_participants','run_contents')",
+      "SELECT COUNT(*) n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type='BASE TABLE' AND table_name <> '__drizzle_migrations' AND table_name NOT LIKE 'auth\\_%' AND table_name NOT LIKE 'access\\_%' AND table_name <> 'audit_events' AND table_name NOT IN ('courses','course_brand_scopes','tag_categories','tags','course_tags','learning_progress','course_media_deletions','content_features','comment_features','signal_history','signal_results','monitoring_segments','segment_images','signal_tasks','signal_cursors','signal_recompute_runs','judgement_plans','judgement_plan_versions','judgement_runs','run_participants','run_contents')",
     );
     expect(Number((tables as Array<{ n: string }>)[0]!.n)).toBe(35);
   });

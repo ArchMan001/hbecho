@@ -14,7 +14,7 @@ export default async function NewCoursePage() {
       <PageHead title="新建课程" sub="保存即发布，没有草稿与审核；品牌范围、人员级别、标签、封面与文件决定学员能否看到。" />
       <LearningTabs caps={ctx.capabilities} active="manage" />
       <div className="wizard-layout">
-        <CourseForm brands={o.brands} tags={o.tags} limits={o.limits} />
+        <CourseForm brands={o.brands} categories={o.categories} limits={o.limits} />
         <aside className="wizard-rail" aria-label="发布说明">
           {RAIL.map((r) => (
             <div key={r.kicker} className="rail-card"><div className="rail-kicker">{r.kicker}</div><div className="rail-title">{r.title}</div><div className="rail-text">{r.text}</div></div>

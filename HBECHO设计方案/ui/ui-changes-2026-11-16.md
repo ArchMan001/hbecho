@@ -13,8 +13,8 @@
 | # | 改动 | 影响页面 | 当前状态 | 页面地址 |
 |---:|---|---|---|---|
 | 1 | 登录页 / 首页 Echo 品牌与文案 | 登录页、管理端侧栏 | 已改并提交到批次分支（草稿提交 `wip(ui)`），效果待调整，未推送 | `http://localhost:3202/login`（预览）；原型 `http://localhost:4175/g-learning-tags-v2/#/login` |
-| 2 | 主数据浏览：店面标准改下拉、搜索加经销商名称 / 编码 | 主数据浏览 `/master-data` | **未实施**（原型仍为胶囊；真实页为上一版） | 原型 `http://localhost:4175/hbecho-ui-v2/#/master`；测试 ECS `/master-data` 为上一版 |
-| 3 | 学习平台两级标签 | 标签管理、新建 / 编辑课程、学习中心 | 原型已出，待界面确认；生产未实施 | `http://localhost:4175/g-learning-tags-v2/#/learning`、`/learning/tags`、`/learning/new` |
+| 2 | 主数据浏览：店面标准改下拉、搜索加经销商名称 / 编码 | 主数据浏览 `/master-data` | 已实现（悬停多选下拉、大区、经销商搜索），待合并部署 | 原型 `http://localhost:4175/hbecho-ui-v2/#/master`；测试 ECS `/master-data` 为上一版 |
+| 3 | 学习平台两级标签 | 标签管理、新建 / 编辑课程、学习中心 | 界面已确认（2026-11-16）；已实现（迁移 `0013`），待合并部署 | `http://localhost:4175/g-learning-tags-v2/#/learning`、`/learning/tags`、`/learning/new` |
 
 ## 1. 登录页 / 首页：Echo 品牌与文案
 
@@ -158,7 +158,7 @@
 | 1 | 并入 `a-activity-plan` 的 5 个提交：总部提交名单**自动加入分公司**、预检 / 确认弹窗提示「将自动加入」、production capability 按批准名单放行、运维手册记录 | 已并入（merge `7b825ff`）；部署时 web / sync-worker / learning-worker 要换成同一个标签，`sync-worker` 需要其中的 capability 放行 |
 | 2 | 登录页 `e=scope` 时不再回跳 `/`（避免与 `/` 之间的刷新循环） | 已提交 |
 | 3 | 第 1 项 Echo 品牌（登录页 / 侧栏 / 站点标题 / 品牌语言文档） | 草稿已提交，**待刘学奎调整** |
-| 4 | 第 2 项主数据浏览（店面标准下拉、搜索加经销商）；`/master-data` 面包屑补全 | 面包屑已改；其余待刘学奎确认界面后实现 |
-| 5 | 第 3 项两级标签 | **不进本批的实现**（带迁移与新表，走 spec；迁移号要从 `0012` 改成 `0013`，`0012` 已被判定计划占用）；原型与 spec 草稿已纳入版本管理 |
+| 4 | 第 2 项主数据浏览（悬停多选下拉、大区、搜索含经销商）；`/master-data` 面包屑补全 | 已实现（界面 2026-11-16 确认，见 a-master-data-browse design §16.6.1） |
+| 5 | 第 3 项两级标签 | **进本批**（刘学奎 2026-11-16 决定与 5 个 a-activity-plan 提交同批提交推送；带迁移与新表，走 `g-learning-tags-v2` spec，迁移号 `0013`）；部署前须在 ECS 库只读核对标签名，确认拆分后不会重名 |
 | 6 | 预览统一：`./scripts/preview.sh`、预览造数、4175 总览页与 `LOCAL-UI.md` 改写、页脚与 `/api/health` 显示提交号（镜像构建传入 `GIT_SHA`） | 已提交 |
 | 7 | `ui-lab/` 里散在主目录工作区的原型（e-metrics、g-learning-tags-v2、index.html 等）纳入版本管理 | 已提交 |

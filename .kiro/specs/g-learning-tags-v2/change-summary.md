@@ -79,7 +79,7 @@
 | `tags` | 新增 `category_id NOT NULL` FK；唯一键从 `name` 改为 `(category_id, name)` |
 | `course_tags` | 不变，仍为课程与标签的多对多 |
 
-### 4.2 迁移 `0012`
+### 4.2 迁移 `0013`
 
 1. 建 `tag_categories`，种子分类：平台 / 板块 / 阶段 / 课程类型 + 未分类；
 2. `tags` 加可空 `category_id`，按标签名的**第一个** `-` 拆分并回填；

@@ -50,7 +50,7 @@ export default async function EditCoursePage({ params }: { params: Promise<{ id:
         <div>
           <CourseForm
             brands={o.brands}
-            tags={o.tags}
+            categories={o.categories}
             limits={o.limits}
             initial={{ courseId: c.courseId, kind: c.kind, title: c.title, description: c.description ?? "", brandScope: c.brandScope, brandIds: c.brandIds, audienceLevel: c.audienceLevel, tagIds: c.tagIds, coverUrl: c.coverUrl }}
           />

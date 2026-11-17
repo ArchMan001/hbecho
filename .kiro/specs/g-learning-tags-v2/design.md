@@ -22,7 +22,7 @@
 |---|---|---|
 | 新表 | `tag_categories` | 分类可新增、可改名，需要独立身份与排序 |
 | 改表 | `tags` 增加 `category_id`；唯一键改为 `(category_id, name)` | 同名标签只在同分类内冲突 |
-| 迁移 | 新增 `0012_learning_tag_categories.sql` | 建表、回填、加约束；保留现有 `tag_id` |
+| 迁移 | 新增 `0013_learning_tag_categories.sql` | 建表、回填、加约束；保留现有 `tag_id` |
 | 新 Capability | 不新增 | 沿用 `learning.read` / `learning.manage` / `learning.tag.manage` |
 | Module | 改 `learning/tags.ts`、`read.ts`、`manage.ts`、`course-common.ts`、`index.ts` | 分类 CRUD、多标签筛选、标签分组合法性 |
 | 页面 | 改 3 处（标签管理、课程表单、学习中心） | 需求 TL-6 |
@@ -44,7 +44,6 @@
 |---|---|---|
 | `category_id` | BIGINT | PK，自增 |
 | `name` | VARCHAR(32) | NOT NULL，`UQ(name)` |
-| `sort_order` | INT | NOT NULL；新分类 = 当前最大值 + 10 |
 | `created_at` | DATETIME(6) | NOT NULL |
 
 不加 `updated_at`：分类只改显示名，审计已记录变更；需要时再加。删除语义：分类下有标签 → 拒绝（应用 409；FK RESTRICT 兜底）。
@@ -54,27 +53,24 @@
 | 变更 | 内容 |
 |---|---|
 | 新增列 | `category_id BIGINT NOT NULL`，`FK → tag_categories(category_id)` RESTRICT |
-| 唯一键 | 删除 `UQ(name)`；新增 `UQ(category_id, name)` |
-| 索引 | `IDX(category_id)` |
+| 唯一键 | **本版保留 `UQ(name)`（暂时全局唯一）**，新增 `UQ(category_id, name)`；删 `UQ(name)` 放到下一个发布（扩展 → 部署 → 收缩，runbook §7.2） |
+| 索引 | 外键自带索引；`UQ(category_id, name)` 的前导列即 `category_id`，不另建 |
 | 既有列 | `name` 仍是 VARCHAR(32)，规则不变 |
 
 `course_tags` 不变：`(course_id, tag_id)` 复合 PK，FK RESTRICT。
 
-### 4.3 迁移 `0012_learning_tag_categories.sql`
+### 4.3 迁移 `0013_learning_tag_categories.sql`
 
-顺序：
+顺序（以 `drizzle/0013_learning_tag_categories.sql` 为准）：
 
 1. 建 `tag_categories`；
-2. 插入种子分类：平台 / 板块 / 阶段 / 课程类型（`sort_order` 10/20/30/40），以及「未分类」（90）；使用 `INSERT … ON DUPLICATE KEY UPDATE name=name` 保证幂等；
-3. `tags` 增加可空 `category_id`；
-4. 回填：`prefix = TRIM(SUBSTRING_INDEX(name, '-', 1))`，`value = TRIM(SUBSTRING(name, LOCATE('-', name) + 1))`；
-   - 有 `-` 且 prefix 非空 → 建或取该分类，标签名改为 `value`；
-   - 无 `-` 或 prefix 为空 → 归「未分类」，标签名保持不变；
-   - **保留 `tag_id`**，只改 `name` / `category_id`，`course_tags` 不动；
-5. 把 `category_id` 改为 `NOT NULL`，加外键与索引；
-6. 删除旧唯一键 `uq_tags_name`，加 `uq_tags_category_name(category_id, name)`。
+2. `tags` 增加**可空** `category_id`；
+3. 一级标签取自现有标签名的前缀：`prefix = TRIM(SUBSTRING_INDEX(name, '-', 1))`，`value = TRIM(SUBSTRING(name, LOCATE('-', name) + 1))`；前缀与值都非空且 `-` 不在开头才算「可拆分」；按首个标签的创建顺序建一级标签；**不写死种子**；
+4. 有不可拆分的标签时才建「未分类」（`INSERT IGNORE`）；
+5. 回填：可拆分的标签设 `category_id`、`name = value`，其余归「未分类」；**保留 `tag_id`**，`course_tags` 不动；
+6. `category_id` 改 `NOT NULL`，加 `UQ(category_id, name)` 与外键；**不删 `uq_tags_name`**。
 
-**重复冲突**：如果拆分后在同一分类出现同名（例如 `平台-抖音` 与 `平台-抖音` 的变体），第 6 步唯一键会让迁移失败；这是预期行为——先在库副本上查重复并人工处理，不静默合并。
+**重复冲突**：拆分后的名字与别的标签重名（例如 `平台-直播` 与 `板块-直播` 都拆成「直播」；本版标签名全局唯一），第 5 步会因 `uq_tags_name` 失败；这是预期行为——先在库副本上查重复并人工处理，不静默合并。
 
 ## 5. 接口与算法
 
@@ -139,7 +135,7 @@ export interface TagView { tagId: string; name: string; categoryId: string; cate
 
 ## 6. 界面
 
-> **状态：未确认。** 本节是提案；§6.6 为空时页面任务与页面代码不得开工。
+> **状态：已确认（2026-11-16，刘学奎）。** 以确认的原型为准：[`ui-lab/g-learning-tags-v2/`](../../../ui-lab/g-learning-tags-v2/README.md)；与下列提案不一致处见 requirements §3.1。
 
 ### 6.1 页面清单
 
@@ -207,14 +203,14 @@ export interface TagView { tagId: string; name: string; categoryId: string; cate
 
 | 确认人 | 日期 | 确认的页面范围 | 原型 / 线框链接 | 备注 |
 |---|---|---|---|---|
-| （待确认） | | | | |
+| 刘学奎 | 2026-11-16 | 学习中心筛选（品牌、课程类型、一级标签下拉，单选）、新建 / 编辑课程的两栏标签选择、标签管理（一级 / 二级合并行表格）；另含主数据浏览的多选筛选（见 [a-master-data-browse](../a-master-data-browse/design.md)） | `ui-lab/g-learning-tags-v2/`、`ui-lab/hbecho-ui-v2/`（4175） | 同意：「标贴行」按一级标签纵向合并；一级「引用课程数」去重、有二级时删除置灰；保留「只看在学」「清空全部」；品牌、课程类型也做单选；主数据各下拉多选，下拉内「或」、下拉间「且」；两级标签随同批一起提交推送 |
 
 ## 7. 对既有代码的改动
 
 | 文件 | 改动 | 为什么不是放宽 |
 |---|---|---|
 | `src/db/schema/learning.ts` | 新增 `tagCategories`；`tags` 加 `categoryId`、换唯一键 | 收紧结构；旧 `name` 全局唯一被分类内唯一取代 |
-| `drizzle/0012_learning_tag_categories.sql` | 新迁移 | 只增表/列并回填；保留 `tag_id` |
+| `drizzle/0013_learning_tag_categories.sql` | 新迁移 | 只增表/列并回填；保留 `tag_id` |
 | `src/modules/learning/tags.ts` | 分类 CRUD；标签带分类；审计事件 | 权限不变；分类写操作仅超管 |
 | `src/modules/learning/read.ts` | 多 `tag` 参数、按分类 AND/OR | 原先拒绝多标签；这是需求变更，不是静默放宽 |
 | `src/modules/learning/course-common.ts` | `resolveTags` 返回分类 | 校验仍要求标签存在、至少 1 个 |
@@ -224,7 +220,7 @@ export interface TagView { tagId: string; name: string; categoryId: string; cate
 | `src/app/(app)/learning/manage/new/page.tsx`、`[id]/page.tsx`、`_components/learning/course-form.tsx` | 分组多选 | 至少一个标签的校验不变 |
 | `src/app/(app)/learning/page.tsx` | 多选筛选；URL 重复 `tag` | 新组件只做展示与提交 |
 | `src/app/_actions/learning.ts` | 分类动作；标签动作带分类 | 仍经 `run()` 与 Capability |
-| `src/app/_components/learning/tag-filter.tsx` | 新增多选浮层 | 原生 select 不支持多选 |
+| `src/app/_components/hover-filter.tsx`、`learning/tag-picker.tsx` | 新增悬停下拉（服务端链接）与两栏标签选择 | 原生 select 不支持多选与两栏 |
 | 测试 | `tags.db.test.ts`、`read.db.test.ts`、`manage.db.test.ts` 扩展 | 覆盖新语义 |
 
 ## 8. 测试策略
@@ -254,3 +250,6 @@ export interface TagView { tagId: string; name: string; categoryId: string; cate
 | TLD-05 | 旧标签按第一个 `-` 拆分，无前缀归「未分类」 | 现有标签命名已带维度前缀；保留 `tag_id` | 2026-11-16 |
 | TLD-06 | 分类删除只允许空分类 | 避免标签被级联删除或悬空 | 2026-11-16 |
 | TLD-07 | 分类改名不迁移课程引用 | 引用的是 `tag_id`，与分类名无关 | 2026-11-16 |
+| TLD-08 | 本版只扩展：保留 `uq_tags_name`，标签名暂时全局唯一；收缩放下一个发布 | 一个发布里只加不删，应用回滚不用回滚结构（runbook §7.2）；代价是暂时不能跨一级标签同名 | 2026-11-16 |
+| TLD-09 | 学习中心每个下拉单选；品牌、课程类型是固定下拉 | 刘学奎 2026-11-16（原型确认）；后端仍支持同一一级标签内多值取「或」 | 2026-11-16 |
+| TLD-10 | 迁移不写死种子分类，一级标签取自现有标签名前缀 | 不猜测生产库里的标签长什么样；没有前缀的才归「未分类」 | 2026-11-16 |

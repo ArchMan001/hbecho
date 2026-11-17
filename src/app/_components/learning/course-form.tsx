@@ -17,10 +17,10 @@ import { AUDIENCE_LABEL, AUDIENCE_OPTIONS } from "../../_lib/learning-labels";
 import type { ActionResult } from "../../_lib/result";
 import { Icon } from "../icon";
 import { useToast } from "../toast";
+import { TagPicker, type TagCategoryOption } from "./tag-picker";
 import { putToOss, uploadToVod } from "./upload";
 
 export interface BrandOption { id: string; name: string; allowed: boolean }
-export interface TagOption { id: string; name: string }
 export interface CourseFormInitial {
   courseId: string;
   kind: "video" | "document";
@@ -84,7 +84,7 @@ const call = async <T,>(fn: () => Promise<ActionResult<T>>): Promise<ActionResul
   }
 };
 
-export function CourseForm({ brands, tags, limits, initial }: { brands: BrandOption[]; tags: TagOption[]; limits: { docMaxBytes: number; coverMaxBytes: number; videoMaxBytes: number; videoMaxMinutes: number }; initial?: CourseFormInitial }) {
+export function CourseForm({ brands, categories, limits, initial }: { brands: BrandOption[]; categories: TagCategoryOption[]; limits: { docMaxBytes: number; coverMaxBytes: number; videoMaxBytes: number; videoMaxMinutes: number }; initial?: CourseFormInitial }) {
   const editing = initial !== undefined;
   const router = useRouter();
   const toast = useToast();
@@ -283,11 +283,11 @@ export function CourseForm({ brands, tags, limits, initial }: { brands: BrandOpt
         </div>
         <div className="field span-2">
           <label>标签 *（可多选；学员筛选时单选）</label>
-          <div className="brand-picks">
-            {tags.length === 0 ? <span className="hint">还没有标签，请联系平台管理员先创建。</span> : tags.map((t) => (
-              <Chip key={t.id} active={tagIds.includes(t.id)} onClick={() => toggle(tagIds, setTagIds, t.id)}>{t.name}</Chip>
-            ))}
-          </div>
+          {categories.every((c) => c.tags.length === 0) ? (
+            <span className="hint">还没有标签，请联系平台管理员先创建。</span>
+          ) : (
+            <TagPicker categories={categories} selected={tagIds} onToggle={(id) => toggle(tagIds, setTagIds, id)} />
+          )}
           <span className="hint">标签集合由平台管理员维护；这里只能选择，不能新建。</span>
         </div>
         <div className="field">

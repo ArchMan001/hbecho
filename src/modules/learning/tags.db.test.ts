@@ -1,11 +1,11 @@
-// g-learning-min 任务 2（G-3，acceptance C2/C3）：标签集合管理。
+// g-learning-min 任务 2（G-3，acceptance C2/C3）+ g-learning-tags-v2：两级标签集合管理。
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { useTestDb } from "../../../tests/harness/db";
 import { auditOf, learningEnv, type LearningEnv } from "../../../tests/harness/learning";
-import { courseTags, tags } from "../../db/schema";
+import { courseTags, tagCategories, tags } from "../../db/schema";
 import { LearningError } from "./errors";
-import { createTag, deleteTag, listTags, renameTag } from "./tags";
+import { createTag, createTagCategory, deleteTag, deleteTagCategory, listTagTree, renameTag, renameTagCategory } from "./tags";
 
 const t = useTestDb();
 let e: LearningEnv;
@@ -27,9 +27,13 @@ const fails = async (p: Promise<unknown>, status: number, code?: string) => {
 describe("写操作只给 learning.tag.manage", () => {
   it("hq_manager / branch_manager / store_staff 新建、改名、删除全部 403（C2）", async () => {
     const id = await e.insertTag("已有");
+    const cat = (await e.insertCategory("测试分类")).toString();
     for (const role of ["hq_manager", "branch_manager", "store_staff"] as const) {
       const ctx = await e.actor(role, { brandIds: [e.org.hisense], branchIds: [e.org.bj], ...(role === "store_staff" ? { staff: e.org.staffA } : {}) });
-      await fails(createTag(e.deps, ctx, "新标签"), 403);
+      await fails(createTag(e.deps, ctx, cat, "新标签"), 403);
+      await fails(createTagCategory(e.deps, ctx, "新一级"), 403);
+      await fails(renameTagCategory(e.deps, ctx, cat, "改名"), 403);
+      await fails(deleteTagCategory(e.deps, ctx, cat), 403);
       await fails(renameTag(e.deps, ctx, id.toString(), "改名"), 403);
       await fails(deleteTag(e.deps, ctx, id.toString()), 403);
     }
@@ -38,15 +42,19 @@ describe("写操作只给 learning.tag.manage", () => {
 
   it("服务身份不能管理标签", async () => {
     const ctx = { ...(await e.actor("platform_admin")), kind: "service" as const, actor: "service:plan-worker", userId: null, role: null };
-    await fails(createTag(e.deps, ctx, "x"), 403, "service_principal_forbidden");
+    await fails(createTag(e.deps, ctx, "1", "x"), 403, "service_principal_forbidden");
+    await fails(createTagCategory(e.deps, ctx, "x"), 403, "service_principal_forbidden");
   });
 
   it("超管新建、改名、删除，并留下审计", async () => {
     const admin = await e.actor("platform_admin");
-    const created = await createTag(e.deps, admin, "  新员工  ");
+    const cat = await createTagCategory(e.deps, admin, "  阶段  ");
+    expect(cat.name).toBe("阶段");
+    const created = await createTag(e.deps, admin, cat.categoryId, "  新员工  ");
     expect(created.name).toBe("新员工"); // 首尾空白去掉
     const renamed = await renameTag(e.deps, admin, created.tagId, "新人培训");
     expect(renamed).toEqual({ tagId: created.tagId, name: "新人培训" });
+    expect(await renameTagCategory(e.deps, admin, cat.categoryId, "培训阶段")).toEqual({ categoryId: cat.categoryId, name: "培训阶段" });
     await deleteTag(e.deps, admin, created.tagId);
     expect(await t.db.select().from(tags)).toHaveLength(0);
 
@@ -60,25 +68,33 @@ describe("写操作只给 learning.tag.manage", () => {
 describe("名称规则", () => {
   it("空、过长、含控制字符被拒；重名 409（大小写不敏感）", async () => {
     const admin = await e.actor("platform_admin");
-    await fails(createTag(e.deps, admin, "   "), 400, "tag_name_invalid");
-    await fails(createTag(e.deps, admin, "字".repeat(33)), 400, "tag_name_invalid");
-    await fails(createTag(e.deps, admin, "a\u0000b"), 400, "tag_name_invalid");
-    await fails(createTag(e.deps, admin, 42), 400, "tag_name_invalid");
-    await createTag(e.deps, admin, "字".repeat(32)); // 32 个字符恰好可以
-    await createTag(e.deps, admin, "AI");
-    await fails(createTag(e.deps, admin, "ai"), 409, "tag_exists");
-    const other = await createTag(e.deps, admin, "合规");
+    const cat = (await createTagCategory(e.deps, admin, "分类")).categoryId;
+    await fails(createTag(e.deps, admin, cat, "   "), 400, "tag_name_invalid");
+    await fails(createTag(e.deps, admin, cat, "字".repeat(33)), 400, "tag_name_invalid");
+    await fails(createTag(e.deps, admin, cat, "a\u0000b"), 400, "tag_name_invalid");
+    await fails(createTag(e.deps, admin, cat, 42), 400, "tag_name_invalid");
+    await createTag(e.deps, admin, cat, "字".repeat(32)); // 32 个字符恰好可以
+    await createTag(e.deps, admin, cat, "AI");
+    await fails(createTag(e.deps, admin, cat, "ai"), 409, "tag_exists");
+    const other = await createTag(e.deps, admin, cat, "合规");
     await fails(renameTag(e.deps, admin, other.tagId, "AI"), 409, "tag_exists");
+    await fails(createTagCategory(e.deps, admin, "  "), 400, "category_name_invalid");
+    await fails(createTagCategory(e.deps, admin, "字".repeat(33)), 400, "category_name_invalid");
+    await fails(createTagCategory(e.deps, admin, "分类"), 409, "category_exists");
+    const second = await createTagCategory(e.deps, admin, "第二类");
+    await fails(renameTagCategory(e.deps, admin, second.categoryId, "分类"), 409, "category_exists");
   });
-
-  it("不存在的标签：改名 / 删除 404；非法 ID 400", async () => {
+  it("不存在的标签 / 一级标签：404；非法 ID 400", async () => {
     const admin = await e.actor("platform_admin");
     await fails(renameTag(e.deps, admin, "99999", "x"), 404, "tag_not_found");
     await fails(deleteTag(e.deps, admin, "99999"), 404, "tag_not_found");
     await fails(deleteTag(e.deps, admin, "abc"), 400, "invalid_id");
+    await fails(createTag(e.deps, admin, "99999", "x"), 404, "category_not_found");
+    await fails(renameTagCategory(e.deps, admin, "99999", "x"), 404, "category_not_found");
+    await fails(deleteTagCategory(e.deps, admin, "99999"), 404, "category_not_found");
+    await fails(createTag(e.deps, admin, "abc", "x"), 400, "invalid_id");
   });
 });
-
 describe("删除与引用", () => {
   it("C3：被引用的标签删除 409 并带引用数（含已下架课程），标签与引用都还在", async () => {
     const admin = await e.actor("platform_admin");
@@ -102,23 +118,48 @@ describe("删除与引用", () => {
   });
 });
 
-describe("列表", () => {
-  it("所有持有 learning.read 的人可读名称（筛选要用），按名称排序；不含引用数", async () => {
-    await e.insertTag("b-合规");
-    await e.insertTag("a-新人");
-    const staff = await e.actor("store_staff", { brandIds: [e.org.hisense], branchIds: [e.org.bj], staff: e.org.staffA });
-    const list = await listTags(e.deps, staff);
-    expect(list.map((x) => x.name)).toEqual(["a-新人", "b-合规"]);
-    expect(list[0]).not.toHaveProperty("courseCount");
-  });
-
-  it("引用数只给标签管理者：withCounts 需要 learning.tag.manage", async () => {
-    const tagId = await e.insertTag("安全");
-    await e.insertCourse({ tagIds: [tagId] });
-    await e.insertTag("空标签");
+describe("一级标签的删除", () => {
+  it("下面还有二级标签：409 并给出数量，一级与二级都还在；空了才能删", async () => {
     const admin = await e.actor("platform_admin");
-    expect((await listTags(e.deps, admin, { withCounts: true })).map((x) => [x.name, x.courseCount])).toEqual([["安全", 1], ["空标签", 0]]);
+    const cat = await e.insertCategory("阶段");
+    const tagId = await e.insertTag("入门", cat);
+    await e.insertTag("进阶", cat);
+    const err = await fails(deleteTagCategory(e.deps, admin, cat.toString()), 409, "category_not_empty");
+    expect(err.detail).toEqual({ tagCount: 2 });
+    expect(await t.db.select().from(tagCategories)).toHaveLength(1);
+    expect(await auditOf(t, "learning_tag_category_deleted")).toHaveLength(0);
+    await deleteTag(e.deps, admin, tagId.toString());
+    await t.db.delete(tags).where(eq(tags.categoryId, cat));
+    await deleteTagCategory(e.deps, admin, cat.toString());
+    expect(await t.db.select().from(tagCategories)).toHaveLength(0);
+  });
+});
+describe("列表", () => {
+  it("所有持有 learning.read 的人可读：一级标签按创建顺序，空的也列出；二级标签按名称排；不含引用数", async () => {
+    const b = await e.insertCategory("板块");
+    const a = await e.insertCategory("阶段");
+    await e.insertCategory("空的一级");
+    await e.insertTag("水机", b);
+    await e.insertTag("入门", a);
+    await e.insertTag("进阶", a);
+    const staff = await e.actor("store_staff", { brandIds: [e.org.hisense], branchIds: [e.org.bj], staff: e.org.staffA });
+    const tree = await listTagTree(e.deps, staff);
+    expect(tree.map((c) => [c.name, c.tags.map((x) => x.name)])).toEqual([["板块", ["水机"]], ["阶段", ["进阶", "入门"]], ["空的一级", []]]);
+    expect(tree[0]).not.toHaveProperty("courseCount");
+    expect(tree[0]!.tags[0]).not.toHaveProperty("courseCount");
+  });
+  it("引用数只给标签管理者：withCounts 需要 learning.tag.manage；一级标签的数是去重的课程数", async () => {
+    const cat = await e.insertCategory("阶段");
+    const a = await e.insertTag("入门", cat);
+    const b = await e.insertTag("进阶", cat);
+    await e.insertTag("空标签", cat);
+    await e.insertCourse({ tagIds: [a, b] }); // 同一门课引用同一一级标签下的两个二级标签
+    await e.insertCourse({ tagIds: [a] });
+    const admin = await e.actor("platform_admin");
+    const [c] = await listTagTree(e.deps, admin, { withCounts: true });
+    expect(c!.courseCount).toBe(2);
+    expect(c!.tags.map((x) => [x.name, x.courseCount])).toEqual([["进阶", 1], ["空标签", 0], ["入门", 2]]);
     const hq = await e.actor("hq_manager", { brandIds: [e.org.hisense] });
-    await fails(listTags(e.deps, hq, { withCounts: true }), 403);
+    await fails(listTagTree(e.deps, hq, { withCounts: true }), 403);
   });
 });

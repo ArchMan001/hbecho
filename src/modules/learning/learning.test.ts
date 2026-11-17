@@ -77,12 +77,21 @@ describe("ID 与列表查询串", () => {
     expect(parseId("9223372036854775807", "x")).toBe(9223372036854775807n);
     for (const bad of ["0", "-1", "01", "1.5", "9223372036854775808", "", 12, null, "1e3"]) expect(() => parseId(bad, "x")).toThrow(LearningError);
   });
-  it("多个 tag 参数被拒绝（不静默取第一个）", () => {
-    expect(() => parseListQuery(new URLSearchParams("tag=1&tag=2"))).toThrow(/单个标签/);
+  it("tag 参数可重复：去重，最多 20 个，任何一个非法都报错（不静默忽略）", () => {
+    expect(parseListQuery(new URLSearchParams("tag=1&tag=2&tag=1")).tagIds).toEqual([1n, 2n]);
+    expect(() => parseListQuery(new URLSearchParams("tag=1&tag=x"))).toThrow(LearningError);
+    const many = Array.from({ length: 21 }, (_, i) => `tag=${i + 1}`).join("&");
+    expect(() => parseListQuery(new URLSearchParams(many))).toThrow(/最多按 20 个标签/);
+    expect(parseListQuery(new URLSearchParams(many.split("&").slice(0, 20).join("&"))).tagIds).toHaveLength(20);
+  });
+  it("brand 与 kind 筛选", () => {
+    expect(parseListQuery(new URLSearchParams("brand=9&kind=video"))).toMatchObject({ brandId: 9n, kind: "video" });
+    expect(() => parseListQuery(new URLSearchParams("brand=abc"))).toThrow(LearningError);
+    expect(() => parseListQuery(new URLSearchParams("kind=audio"))).toThrow(LearningError);
   });
   it("缺省值与上限", () => {
-    expect(parseListQuery(new URLSearchParams(""))).toEqual({ limit: 20, offset: 0 });
-    expect(parseListQuery(new URLSearchParams("q= 安全 &tag=7&inProgress=1&limit=100&offset=40"))).toEqual({ q: "安全", tagId: 7n, inProgress: true, limit: 100, offset: 40 });
+    expect(parseListQuery(new URLSearchParams(""))).toEqual({ tagIds: [], limit: 20, offset: 0 });
+    expect(parseListQuery(new URLSearchParams("q= 安全 &tag=7&inProgress=1&limit=100&offset=40"))).toEqual({ q: "安全", tagIds: [7n], inProgress: true, limit: 100, offset: 40 });
     expect(() => parseListQuery(new URLSearchParams("limit=101"))).toThrow(LearningError);
     expect(() => parseListQuery(new URLSearchParams("limit=0"))).toThrow(LearningError);
     expect(() => parseListQuery(new URLSearchParams("inProgress=yes"))).toThrow(LearningError);

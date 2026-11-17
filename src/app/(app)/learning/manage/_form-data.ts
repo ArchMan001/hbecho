@@ -1,17 +1,18 @@
 // 新建 / 编辑页共用的表单选项：品牌（标注哪些是自己授权的）、标签、上传上限。
 import type { AuthContext } from "../../../../modules/access-control";
-import { listTags } from "../../../../modules/learning";
-import type { BrandOption, TagOption } from "../../../_components/learning/course-form";
+import { listTagTree } from "../../../../modules/learning";
+import type { BrandOption } from "../../../_components/learning/course-form";
+import type { TagCategoryOption } from "../../../_components/learning/tag-picker";
 import { learning } from "../../../_lib/learning";
 import { web } from "../../../_lib/session";
 
-export async function formOptions(ctx: AuthContext): Promise<{ brands: BrandOption[]; tags: TagOption[]; limits: { docMaxBytes: number; coverMaxBytes: number; videoMaxBytes: number; videoMaxMinutes: number } }> {
+export async function formOptions(ctx: AuthContext): Promise<{ brands: BrandOption[]; categories: TagCategoryOption[]; limits: { docMaxBytes: number; coverMaxBytes: number; videoMaxBytes: number; videoMaxMinutes: number } }> {
   const deps = learning();
-  const [org, tags] = await Promise.all([web().directory(), listTags(deps, ctx)]);
+  const [org, tree] = await Promise.all([web().directory(), listTagTree(deps, ctx)]);
   const c = deps.config;
   return {
     brands: org.brands.map((b) => ({ id: b.id, name: b.name, allowed: ctx.scope.brands === "all" || ctx.scope.brands.has(BigInt(b.id)) })),
-    tags: tags.map((t) => ({ id: t.tagId, name: t.name })),
+    categories: tree.map((c) => ({ id: c.categoryId, name: c.name, tags: c.tags.map((t) => ({ id: t.tagId, name: t.name })) })),
     limits: { docMaxBytes: c.docMaxBytes, coverMaxBytes: c.coverMaxBytes, videoMaxBytes: c.videoMaxBytes, videoMaxMinutes: Math.round(c.videoMaxSeconds / 60) },
   };
 }

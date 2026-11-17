@@ -3,11 +3,14 @@
 import {
   createDocumentCourse,
   createTag,
+  createTagCategory,
   createVideoCourse,
   deleteTag,
+  deleteTagCategory,
   downloadDocument,
   getPlayback,
   renameTag,
+  renameTagCategory,
   replaceDocumentFile,
   replaceVideoFile,
   republishCourse,
@@ -51,8 +54,17 @@ export async function replaceDocumentAction(courseId: string, input: unknown): P
 export async function replaceVideoAction(courseId: string, input: unknown): Promise<ActionResult<undefined>> {
   return run(async (ctx) => void (await replaceVideoFile(learning(), ctx, courseId, input)));
 }
-export async function createTagAction(name: string): Promise<ActionResult<{ tagId: string; name: string }>> {
-  return run((ctx) => createTag(learning(), ctx, name));
+export async function createTagCategoryAction(name: string): Promise<ActionResult<{ categoryId: string; name: string }>> {
+  return run((ctx) => createTagCategory(learning(), ctx, name));
+}
+export async function renameTagCategoryAction(categoryId: string, name: string): Promise<ActionResult<{ categoryId: string; name: string }>> {
+  return run((ctx) => renameTagCategory(learning(), ctx, categoryId, name));
+}
+export async function deleteTagCategoryAction(categoryId: string): Promise<ActionResult<undefined>> {
+  return run(async (ctx) => void (await deleteTagCategory(learning(), ctx, categoryId)));
+}
+export async function createTagAction(categoryId: string, name: string): Promise<ActionResult<{ tagId: string; name: string }>> {
+  return run((ctx) => createTag(learning(), ctx, categoryId, name));
 }
 export async function renameTagAction(tagId: string, name: string): Promise<ActionResult<{ tagId: string; name: string }>> {
   return run((ctx) => renameTag(learning(), ctx, tagId, name));

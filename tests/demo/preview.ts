@@ -13,7 +13,7 @@ import { execSync } from "node:child_process";
 import { createServer } from "node:http";
 import { eq } from "drizzle-orm";
 import { createDb, createPool } from "../../src/db/client";
-import { activityPlans, authAccounts, courses, courseTags, dealers, judgementRuns, stores, tags } from "../../src/db/schema";
+import { activityPlans, authAccounts, courses, courseTags, dealers, judgementRuns, stores, tagCategories, tags } from "../../src/db/schema";
 import { accessEnv, insertAccessUser } from "../harness/access";
 import { resetData } from "../harness/db";
 import { addContent, addListTask, addParticipant, judgementEnv, judgementWorld, type JudgementEnv } from "../harness/judgement";
@@ -207,9 +207,13 @@ for (const [i, who] of ["老蒋", "老沈", "老韩", "老杨"].entries()) {
 
 // ---- 学习平台：标签与课程（列表、筛选、已下架）-------------------------------------------------------------------------
 const tagIds: Record<string, bigint> = {};
-for (const name of ["平台-抖音", "平台-小红书", "板块-水机", "板块-家装", "阶段-入门", "阶段-进阶", "类型-话术", "类型-案例"]) {
-  const [r] = await db.insert(tags).values({ name, createdAt: T0 });
-  tagIds[name] = BigInt(r.insertId);
+const TAG_TREE: Record<string, string[]> = { 平台: ["抖音", "小红书"], 板块: ["水机", "家装"], 阶段: ["入门", "进阶"], 类型: ["话术", "案例"] };
+for (const [category, names] of Object.entries(TAG_TREE)) {
+  const [c] = await db.insert(tagCategories).values({ name: category, createdAt: T0 });
+  for (const name of names) {
+    const [r] = await db.insert(tags).values({ categoryId: BigInt(c.insertId), name, createdAt: T0 });
+    tagIds[`${category}-${name}`] = BigInt(r.insertId);
+  }
 }
 const COURSES: Array<{ title: string; tags: string[]; status?: string }> = [
   { title: "抖音短视频开场 3 秒法则", tags: ["平台-抖音", "阶段-入门", "类型-话术"] },

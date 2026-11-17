@@ -155,6 +155,7 @@ describe("可见范围（B4–B10）", () => {
   });
 });
 
+const sorted4 = (xs: bigint[]) => xs.map(String).sort();
 describe("列表筛选与排序", () => {
   it("标题子串搜索：大小写不敏感，% 和 _ 按字面处理", async () => {
     const w = await people();
@@ -168,20 +169,36 @@ describe("列表筛选与排序", () => {
     expect(await ids(w.admin, "q=a_b")).toHaveLength(1);
   });
 
-  it("单标签筛选；多标签参数被拒（C4）", async () => {
+  it("标签筛选：同一一级标签内取「或」，不同一级标签之间取「且」；不存在的标签不命中（g-learning-tags-v2 TLD-03）", async () => {
     const w = await people();
-    const safe = await e.insertTag("安全");
-    const newbie = await e.insertTag("新人");
+    const safe = await e.insertTag("安全", "主题");
+    const newbie = await e.insertTag("新人", "主题");
+    const water = await e.insertTag("水机", "板块");
     const c1 = await e.insertCourse({ tagIds: [safe] });
-    const c2 = await e.insertCourse({ tagIds: [safe, newbie] });
+    const c2 = await e.insertCourse({ tagIds: [safe, newbie, water] });
+    const c3 = await e.insertCourse({ tagIds: [newbie] });
     await e.insertCourse({});
-    expect((await ids(w.admin, `tag=${safe}`)).sort()).toEqual([c1, c2].map(String).sort());
-    expect(await ids(w.admin, `tag=${newbie}`)).toEqual([c2.toString()]);
-    expect(() => q(`tag=${safe}&tag=${newbie}`)).toThrow(/单个标签/);
-    const item = (await listCourses(e.deps, w.admin, q(`tag=${newbie}`))).items[0]!;
-    expect(item.tags.map((x) => x.name)).toEqual(["安全", "新人"]); // 标签展示的是课程全部标签，不只是筛选项
+    const sorted = (xs: bigint[]) => xs.map(String).sort();
+    expect((await ids(w.admin, `tag=${safe}`)).sort()).toEqual(sorted([c1, c2]));
+    expect(await ids(w.admin, `tag=${water}`)).toEqual([c2.toString()]);
+    expect((await ids(w.admin, `tag=${safe}&tag=${newbie}`)).sort()).toEqual(sorted([c1, c2, c3])); // 同一一级：或
+    expect(await ids(w.admin, `tag=${newbie}&tag=${water}`)).toEqual([c2.toString()]); // 跨一级：且
+    expect(await ids(w.admin, `tag=${safe}&tag=${newbie}&tag=${water}`)).toEqual([c2.toString()]);
+    expect(await ids(w.admin, "tag=99999")).toEqual([]);
+    expect(await ids(w.admin, `tag=${safe}&tag=99999`)).toEqual([]);
+    const item = (await listCourses(e.deps, w.admin, q(`tag=${water}`))).items[0]!;
+    expect(item.tags.map((x) => x.name).sort()).toEqual(["安全", "新人", "水机"]); // 标签展示的是课程全部标签，不只是筛选项
   });
-
+  it("品牌筛选：全部品牌的课程与指定了该品牌的课程；课程类型筛选", async () => {
+    const w = await people();
+    const all = await e.insertCourse({ title: "全品牌课" });
+    const hisense = await e.insertCourse({ title: "海信课", brandIds: [e.org.hisense] });
+    await e.insertCourse({ title: "约克课", brandIds: [e.org.york] });
+    const video = await e.insertCourse({ title: "视频课", kind: "video", vodVideoId: "v1", vodVideoStatus: "normal", coverKey: "cover/v1.jpg", fileKey: null, fileMime: null, fileSize: null });
+    expect((await ids(w.admin, `brand=${e.org.hisense}`)).sort()).toEqual(sorted4([all, hisense, video]));
+    expect(await ids(w.admin, `kind=video`)).toEqual([video.toString()]);
+    expect((await ids(w.admin, `kind=document&brand=${e.org.hisense}`)).sort()).toEqual(sorted4([all, hisense]));
+  });
   it("E4 / E5：在学标记只看本人的进度；inProgress 筛选只返回有进度的课程", async () => {
     const w = await people();
     const a = await e.insertCourse({ title: "有进度" });

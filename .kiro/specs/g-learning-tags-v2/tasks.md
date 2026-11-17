@@ -1,8 +1,8 @@
 # G 学习平台 · 两级标签（g-learning-tags-v2）· 实施计划
 
-> **状态**：`draft`
+> **状态**：`implemented-pending-deploy`
 >
-> **执行状态**：未实施。界面设计（design §6.6）未确认，页面任务不得开工；Module 与迁移可先做。
+> **执行状态**：任务 0–5 已完成并通过离线测试（2026-11-16）；界面于同日经刘学奎确认（design §6.6）。待 CI、合并、部署后做任务 6。
 >
 > **需求**：[`requirements.md`](requirements.md) · **设计**：[`design.md`](design.md) · **验收**：[`acceptance.md`](acceptance.md)
 >
@@ -10,12 +10,12 @@
 
 ## 进度
 
-- [ ] 任务 0 · 文档前置与闸门（G PRD §3.3 / G-D14 修订、旧 spec 标注、INDEX 登记、界面确认）
-- [ ] 任务 1 · `tag_categories` 表、`tags.category_id` 与迁移 `0012`（含库副本演练）
-- [ ] 任务 2 · Module：分类 CRUD、标签带分类、审计
-- [ ] 任务 3 · 课程标签校验与多选保存
-- [ ] 任务 4 · 学习中心多标签筛选（同类 OR、跨类 AND）
-- [ ] 任务 5 · 三处页面（依赖任务 0 的界面确认）
+- [x] 任务 0 · 文档前置与闸门（G PRD §3.3 / G-D14 修订、旧 spec 标注、INDEX 登记、界面确认）
+- [x] 任务 1 · `tag_categories` 表、`tags.category_id` 与迁移 `0013`（含库副本演练）
+- [x] 任务 2 · Module：分类 CRUD、标签带分类、审计
+- [x] 任务 3 · 课程标签校验与多选保存
+- [x] 任务 4 · 学习中心多标签筛选（同类 OR、跨类 AND）
+- [x] 任务 5 · 三处页面（依赖任务 0 的界面确认）
 - [ ] 任务 6 · 验收回填、INDEX 状态与实施记录
 
 ## 依赖图
@@ -44,12 +44,12 @@ T0 ──► T1 ──► T2 ──► T3 ──► T5 ──► T6
 ## 任务 1 · 表结构与迁移
 
 - 修改 `src/db/schema/learning.ts`：`tagCategories`、`tags.categoryId`、唯一键与索引。
-- 新增 `drizzle/0012_learning_tag_categories.sql`：建表、种子分类、回填、约束切换。
+- 新增 `drizzle/0013_learning_tag_categories.sql`：建表、种子分类、回填、约束切换。
 - 迁移脚本必须保留 `tag_id`；回填规则按 design §4.3。
 
 **测试/验证**：
 
-- 在一次性 MySQL 容器里对**迁移前的库副本**执行 0012，核对标签数、`course_tags` 行数、`tag_id` 集合不变；重复执行幂等。
+- 在一次性 MySQL 容器里对**迁移前的库副本**执行 0013，核对标签数、`course_tags` 行数、`tag_id` 集合不变；重复执行幂等。
 - `drizzle-kit generate` 不产生额外迁移（verify 第 4 步）。
 
 **对应**：TL-5；design §4。
@@ -118,7 +118,7 @@ T0 ──► T1 ──► T2 ──► T3 ──► T5 ──► T6
 | 文件 | 改动 | 任务 |
 |---|---|---|
 | `src/db/schema/learning.ts` | 分类表、`tags.categoryId`、唯一键 | T1 |
-| `drizzle/0012_learning_tag_categories.sql` | 新迁移 | T1 |
+| `drizzle/0013_learning_tag_categories.sql` | 新迁移 | T1 |
 | `src/modules/learning/tags.ts` / `index.ts` / `_actions/learning.ts` | 分类 CRUD、标签带分类 | T2 |
 | `src/modules/learning/course-common.ts` / `manage.ts` | 多选校验与保存 | T3 |
 | `src/modules/learning/read.ts` | 多标签筛选 | T4 |

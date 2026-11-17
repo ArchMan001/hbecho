@@ -88,14 +88,32 @@ export const courseBrandScopes = mysqlTable(
   ],
 );
 
+// 一级标签（g-learning-tags-v2）：由超管维护，课程只能选择它下面的二级标签。
+export const tagCategories = mysqlTable(
+  "tag_categories",
+  {
+    categoryId: id("category_id").primaryKey().autoincrement(),
+    name: varchar("name", { length: 32 }).notNull(),
+    createdAt: utc("created_at").notNull(),
+  },
+  (t) => [uniqueIndex("uq_tag_categories_name").on(t.name)],
+);
+
+// 二级标签。本版只「扩展」：保留 uq_tags_name（标签名暂时全局唯一），下一版再收缩为只剩 (category_id, name)——
+// 一个发布里只加不删，应用回滚时不用回滚结构（dev-test-deploy-workflow §7.2）。
 export const tags = mysqlTable(
   "tags",
   {
     tagId: id("tag_id").primaryKey().autoincrement(),
+    categoryId: id("category_id").notNull(),
     name: varchar("name", { length: 32 }).notNull(),
     createdAt: utc("created_at").notNull(),
   },
-  (t) => [uniqueIndex("uq_tags_name").on(t.name)],
+  (t) => [
+    uniqueIndex("uq_tags_name").on(t.name),
+    uniqueIndex("uq_tags_category_name").on(t.categoryId, t.name),
+    foreignKey({ name: "fk_tags_category", columns: [t.categoryId], foreignColumns: [tagCategories.categoryId] }),
+  ],
 );
 
 export const courseTags = mysqlTable(

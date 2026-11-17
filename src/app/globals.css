@@ -3298,7 +3298,7 @@ td.num {
   width: 240px;
   padding: 10px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-card);
   background: #fff;
   box-shadow: 0 22px 48px -28px rgba(23, 32, 42, 0.5);
 }
@@ -3348,9 +3348,6 @@ td.num {
   color: #fff;
 }
 
-.hf-opt.radio .hf-box {
-  border-radius: 50%;
-}
 
 .hf-opt.on .hf-box {
   border-color: transparent;
@@ -3461,7 +3458,7 @@ td.num {
   min-height: 26px;
   padding: 0 8px 0 10px;
   border: 1px solid rgba(15, 163, 168, 0.35);
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   background: var(--tint);
   color: var(--brand-deep);
   font-size: 12px;

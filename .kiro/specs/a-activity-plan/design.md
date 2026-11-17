@@ -109,6 +109,7 @@
 ```text
 create(plan) → status=collecting；sectors 写入；change: plan_created
 branch join  → participation joined（幂等）
+roster.confirm（总部提交）→ 本批涉及且未加入的分公司自动 join（变更记录 detail: auto_by_roster + 批次 + 提交人；幂等）
 owner       → 提交时占用；创建者 / 超管可 replace
 pause/archive → 冻结名单；引用重算（timer）
 resume       → 解冻；引用重算（gained → 重开）
@@ -263,7 +264,7 @@ daily scan                   → 补记起点；满 15 天关闭
 | 4 | 门店 `status='active'` | `store_closed` |
 | 5 | 门店板块种类 ∈ 计划板块 | `store_sector_not_in_plan` |
 | 6 | 门店所属分公司 ∈ 操作者分公司范围（范围为「全部」则通过） | `store_branch_not_authorized`（提示联系管理员） |
-| 7 | 该分公司在本计划为 `joined` | `branch_not_joined` |
+| 7 | 该分公司在本计划为 `joined`。**总部提交（`branchScope === "all"`）时豁免**：不判错，由确认写入按批次实际涉及的分公司自动加入（刘学奎 2026-11-12） | 分公司范围提交：`branch_not_joined`；总部提交且分公司已停用：`branch_inactive` |
 | 8 | 手机号在有效专员中：属于**另一**门店 | `phone_belongs_to_other_store`（提示联系超管） |
 | 9 | 同门店存在同号**已停用**专员 | `staff_inactive_restore_needed`（提示联系总部或超管恢复原专员；本 spec 不新建第二条） |
 | 10 | 链接是视频 / 笔记：`classifyLocator`（纯函数，复用 tracer）返回 `reject` | `non_home_locator`（回流文案：不是主页链接） |

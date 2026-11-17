@@ -586,3 +586,17 @@
 **本机验证**：`./scripts/verify.sh` 通过（数据库测试 95 个文件 1,247 通过 / 1 个既有 skip；类型检查、迁移一致、密钥、链接、文档登记通过；Python 侧未验证）；`next build` 通过。
 
 **没有做的验证**：没有页面自动化测试（仓库无 jsdom / testing-library，引入需先登记 ADR）；手机端、真实供应商、测试 ECS 部署未做。
+
+## 2026-11-13 · 总部提交名单时自动加入分公司（刘学奎 2026-11-12 决策）
+
+- **决策**：总部（`branchScope === "all"`，含超管）提交名单时，文件中出现的、同品牌合资格且未加入计划的分公司，在**确认写入**时自动加入；分公司范围的操作者行为不变。推翻 PRD A「参与关系只能由分公司加入时产生」的绝对写法（PRD 已加删除线并注明修订）。
+- **实现**：`classify.ts` 增加 `ClassifyCtx.autoJoinBranches`（第 7 步豁免；分公司停用仍判 `branch_inactive`）；`refs.ts` 加 `branchActive`；`precheck.ts` 预检摘要新增 `auto_join_branches` / `auto_join_branch_codes`；`confirm.ts` 在块事务里按本块可写入行的分公司调用 `participation.joinBranchInTx`（detail 标 `auto_by_roster` + 批次 + 提交人，幂等）；`participation.ts` 抽出 `joinBranchInTx`，手动加入与自动加入共用一套写库逻辑。
+- **测试**：`classify.test.ts` 3 例（总部豁免 / 分公司仍拒绝 / 停用分公司）；`confirm.db.test.ts` 3 例（预检标记与确认自动加入 / 分公司提交零写入 / 重复确认幂等）；既有混合样例与 precheck 预期按新行为更新。
+- **未做**：页面预检报告尚未展示「将自动加入 N 家」计数与分公司列表——按 `structure.md`，页面文案与交互需要刘学奎先确认，页面代码未改。
+
+## 2026-11-13 · production capability 放行（刘学奎 2026-11-12 批准）
+
+- **批准记录**：刘学奎，2026-11-12，范围＝**抖音与小红书的全部 action**，预算上限 1 万元，有效期一年。证据沿用 2026-11-04 的批准式 smoke（a-data-foundation-tracer acceptance ENV-2）。
+- **实现**：`capability.ts` 把 production 行从「全部 disabled」改为按显式批准名单 `PRODUCTION_APPROVAL` 放行——平台在名单内且 `observedOutcome === "succeeded"` 才 `approved`，并带 `approval { by, at, ref }`；快手与 `provider_failed` 的 tuple 仍 `disabled`（gate 另行拒绝 `provider_failed`）。`a-full-sync/requirements.md` FS-16.2 已按修订规则加删除线并注明。
+- **测试**：`capability.test.ts` 改为断言批准名单放行、快手与 provider_failed 拒绝；`sync-runner-wiring.test.ts` 改为「已批准允许启动 / 全未批准仍拒绝」；原「生产全 disabled」的集成断言改用未登记的 staging 或改为正向验证（拒绝路径由 capability 单测覆盖）。
+- **未做**：sync worker 只在 runbook §10.3 写了部署步骤（独立 `sync.env`、预算与回滚），**没有在测试 ECS 上实际部署**，也没有发起任何真实付费调用。

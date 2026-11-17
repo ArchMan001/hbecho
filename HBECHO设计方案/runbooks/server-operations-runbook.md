@@ -2161,6 +2161,36 @@ docker image prune -f
 ```
 每分钟一轮（转码回填、待删除媒体重试），每小时加一轮归档与残渣清理；日志在容器 stderr（JSON）。有步骤失败时日志级别是 error，消息 `learning_maintenance_errors`——**这是 VOD / OSS 不可用的唯一信号，需要接日志告警**。回滚 = 改回上一个 `WEB_TAG`。
 
+#### 同步 worker（sync-worker，2026-11-13 增补）
+
+名单「确认写入」只落 `resolve_account` 根任务；真正调 AI Master 的是 sync worker。**没有这个进程，确认后的账号会一直 pending**。它在 production 运行，启动守卫 `assertWorkerCanRun` 要求至少一个已批准的 capability（2026-11-12 起抖音 / 小红书已批准，见 `capability.ts` 的 `PRODUCTION_APPROVAL`）。
+
+```yaml
+  sync-worker:
+    image: hbecho-registry-registry-vpc.cn-beijing.cr.aliyuncs.com/hbecho/app:${WEB_TAG}
+    container_name: hbecho-sync-worker
+    restart: unless-stopped
+    env_file: /data/app/sync.env          # 独立环境文件：需要 AIMASTER_* 与 OSS 写权限，不复用 web.env
+    command: ["./node_modules/.bin/tsx", "src/worker/sync-main.ts", "worker"]   # 缺子命令只会打印用法；常驻必须显式 worker
+    depends_on: [mysql]
+```
+
+`/data/app/sync.env`（root 600）至少包含：`HBECHO_DATABASE_URL`、`HBECHO_ENV=production`、`AIMASTER_BASE_URL`、`AIMASTER_API_KEY`、`AIMASTER_ENABLED=true`、`OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET` / `OSS_REGION` / `OSS_BUCKET_ODS` / `OSS_BUCKET_MEDIA`、`HBECHO_MEDIA_MAX_BYTES`，以及 tracer 的 modes / 并发 / 批次预算配置（键名见 `.env.example`）。**`HBECHO_ENV=test` 会被启动守卫拒绝**。
+
+**预算**：`AIMASTER_ENABLED=true` 后每个 provider 调用都计费；批次上限由 tracer 配置的 `batchBudget`（调用数 / 点数）与 `breaker` 控制，需与批准预算（刘学奎 2026-11-12：上限 1 万元、有效期一年）一致。**回滚**：从 compose 中去掉 `sync-worker` 并 `docker compose up -d`，任务停在 pending，不产生调用。
+
+**2026-11-13 部署状态**：镜像 `6368b94798ef` 已推送 ACR 并在测试 ECS 拉取；`/data/app/sync.env`（root 600）已建，含数据库 URL、`HBECHO_ENV=production`、四个模式（均 synchronous）、并发 / QPS / 熔断 / 批次预算、媒体上限与能力服务地址；`docker-compose.yml` 已追加 `sync-worker`（原文件备份 `/data/backup/docker-compose.yml.bak-20261113`，`docker compose config` 通过）。**未启动**：试运行报 `环境变量 AIMASTER_API_KEY 缺失`，另外还缺 `AIMASTER_BASE_URL`、`OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET` / `OSS_REGION` / `OSS_BUCKET_ODS` / `OSS_BUCKET_MEDIA`，以及 Python 能力服务（`HBECHO_CAPABILITY_URL` 指向的 `capability` 容器尚未部署）。这些配好后 `docker compose up -d sync-worker` 即可。
+
+**2026-11-13 启动完成**：sync-worker 已启动并稳定（容器 Up，最近 2 分钟 0 条 `level=50`）。启动时补齐了三项：
+
+1. **`sync_settings` 必须手工初始化**：迁移 `0001` 明确不种入（「由运维显式配置」）。已插入 `settings_id=1`、`Asia/Shanghai`、`schedule_slots=[{"weekday":1,"time":"02:00"}]`、`initial_content_limit=20`、`list_safety_page_limit=5`、`comment_page_limit=5`、`account_resolve_max_attempts=3`、`task_max_attempts=3`、`config_version=1`；
+2. **`OSS_ENDPOINT=oss-cn-beijing-internal.aliyuncs.com` 必须写进 sync.env**：不写时 ali-oss 会拼公网域名，维护任务的 `sweep_orphans` 因 DNS 失败；`docker restart` 不会重读 `env_file`，改完要用 `docker compose up -d --no-deps --force-recreate sync-worker`；
+3. **sync-worker 的 image 临时固定为 `6368b94798ef`**（含 capability 放行），因为 `/data/app/.env` 的 `WEB_TAG` 仍是 `69595423c6d3`；web 升级后改回 `${WEB_TAG}`。
+
+维护任务已验证成功：`orphans["smoke/ods/"]` 删除 14 个孤儿对象，`failedSteps` 为空。
+
+**2026-11-13 web 与 learning-worker 同步升级**：两者也临时固定到 `6368b94798ef`（含 capability 放行与「将自动加入分公司」页面文案），`docker compose up -d web learning-worker` 完成。验证：`/api/health` 返回 `{"ok":true}`，`/login` 本机 200、公网 200，Next.js Ready。三个服务现在同镜像；`/data/app/.env` 的 `WEB_TAG` 仍是 `69595423c6d3`，升级到新 sha 后把三个服务的 image 改回 `${WEB_TAG}`。
+
 ### 10.4 部署后必检
 
 1. 服务健康：`curl -s http://127.0.0.1:3000/api/health` 返回 `{"ok":true}`；公网 `https://echo.hbmarketer.com/login` 200 且页脚有备案号；`/users` 未登录 307 到 `/login`

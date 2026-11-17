@@ -10,7 +10,7 @@ import { insertPlan, insertStaff, planActor, T0 } from "../../../../tests/harnes
 import { businessCounts, rosterWorld, type RosterWorld } from "../../../../tests/harness/roster";
 import { seedSyncSettings } from "../../../../tests/harness/seed";
 import { MemoryAuditSink } from "../../../../tests/harness/audit";
-import { activityPlanOwners, activityPlanRoster, activityPlans, authUsers, accessUsers, importBatches, importRowResults, mediaStaff, staffAccountAssignments as aa, syncBatches, syncTasks } from "../../../db/schema";
+import { activityPlanBranches, activityPlanOwners, activityPlanRoster, activityPlans, authUsers, accessUsers, importBatches, importRowResults, mediaStaff, staffAccountAssignments as aa, syncBatches, syncTasks } from "../../../db/schema";
 import { createTracerCommands, DEFAULT_CONFIG } from "../../tracer-command";
 import { ROSTER_HEADER } from "../constants";
 import { confirm, type ConfirmDeps } from "./confirm";
@@ -52,7 +52,7 @@ describe("混合样例", () => {
     const batchId = await pre(deps, fx("mixed.utf8.csv"));
     const before = await businessCounts(t);
     const r = await confirm(deps, batchId, hq);
-    expect(r).toMatchObject({ status: "resolving", alreadyConfirmed: false, confirm: { pending_account: 2, unchanged: 2, staff_created: 1, conflict: 0, owner_claimed: false } });
+    expect(r).toMatchObject({ status: "resolving", alreadyConfirmed: false, confirm: { pending_account: 3, unchanged: 2, staff_created: 2, conflict: 0, owner_claimed: false } });
     const rows = await rowsOf(batchId);
     expect(rows.map((x) => [x.rowNo, x.precheckClass, x.outcome, x.reasonCode])).toEqual([
       [2, "new_staff", "pending_account", null],
@@ -63,21 +63,21 @@ describe("混合样例", () => {
       [7, "error", null, "phone_invalid"],
       [8, "error", null, "non_home_locator"],
       [9, "error", null, "platform_mismatch"],
-      [10, "error", null, "branch_not_joined"],
+      [10, "new_staff", "pending_account", null], // 总部提交：S-H2 所属分公司未加入 → 自动加入后按可写入处理（2026-11-12）
     ]);
     // 新专员：门店 S-W1，姓名取文件原文，没有创建任何登录账号
     const [made] = await t.db.select().from(mediaStaff).where(eq(mediaStaff.phone, "13800020001"));
     expect(made).toMatchObject({ staffName: "新人甲", storeId: w.stores.sW1, status: "active" });
     expect(rows[0]?.staffId).toBe(made?.staffId);
     expect((await t.db.select().from(authUsers)).length + (await t.db.select().from(accessUsers)).length).toBe(0);
-    expect((await businessCounts(t)).media_staff).toBe(before.media_staff! + 1);
+    expect((await businessCounts(t)).media_staff).toBe(before.media_staff! + 2);
     // 根任务数 = 需要解析的行数，全部挂在一个 intake 同步批次下，profile_only，幂等键 roster:<批次>:<行号>
     const tasks = await rosterTasks();
-    expect(tasks).toHaveLength(2);
+    expect(tasks).toHaveLength(3);
     expect(new Set(tasks.map((x) => x.batchId)).size).toBe(1);
     const [sb] = await t.db.select().from(syncBatches).where(eq(syncBatches.batchId, tasks[0]!.batchId));
-    expect(sb).toMatchObject({ purpose: "intake", plannedTaskCount: 2 });
-    expect(tasks.map((x) => (x.taskParameters as { profile_only: boolean }).profile_only)).toEqual([true, true]);
+    expect(sb).toMatchObject({ purpose: "intake", plannedTaskCount: 3 });
+    expect(tasks.map((x) => (x.taskParameters as { profile_only: boolean }).profile_only)).toEqual([true, true, true]);
     expect(tasks.map((x) => x.taskId).sort()).toEqual(rows.filter((x) => x.outcome === "pending_account").map((x) => x.resolveTaskId!).sort());
     expect(tasks.every((x) => x.status === "pending" && x.subjectType === "media_staff" && x.submittedByActor === "user:hq")).toBe(true);
     // 恢复的名单项回到 in_roster，没有新增第二行
@@ -86,8 +86,8 @@ describe("混合样例", () => {
     expect(entries[0]).toMatchObject({ entryState: "in_roster", removedAt: null, removedReason: null });
     // 批次
     const b = await batchOf(batchId);
-    expect(b).toMatchObject({ status: "resolving", writingToken: null, heartbeatAt: null, confirmedByActor: "user:hq", newRows: 0, skippedRows: 2, errorRows: 5 });
-    expect(w.audit.of("staff_created")).toHaveLength(1);
+    expect(b).toMatchObject({ status: "resolving", writingToken: null, heartbeatAt: null, confirmedByActor: "user:hq", newRows: 0, skippedRows: 2, errorRows: 4 });
+    expect(w.audit.of("staff_created")).toHaveLength(2);
     expect(w.audit.of("staff_created")[0]).toMatchObject({ batch_id: batchId, after: { phone: "13800020001" } });
     expect(w.audit.of("roster_batch_confirmed")).toHaveLength(1);
   });
@@ -99,7 +99,7 @@ describe("混合样例", () => {
     const again = await confirm(deps, batchId, hq);
     expect(again).toMatchObject({ alreadyConfirmed: true, status: "resolving", confirm: first.confirm });
     expect(await businessCounts(t)).toEqual(counts);
-    expect(w.audit.of("staff_created")).toHaveLength(1);
+    expect(w.audit.of("staff_created")).toHaveLength(2);
   });
   it("没有任何需要解析的行 → 批次直接 completed，并触发 onCompleted", async () => {
     const done: bigint[] = [];
@@ -143,16 +143,13 @@ describe("入口本地命中：不调供应商", () => {
 });
 
 describe("前置检查：任一失败整条命令零写入", () => {
-  it("capability 未放行（生产环境全部 disabled）", async () => {
+  it("capability 已放行：生产环境抖音 media_user_info 允许确认（2026-11-12 批准；拒绝路径见 capability.test.ts）", async () => {
     const { deps, hq } = await setup();
     const batchId = await pre(deps, fx("mixed.utf8.csv"));
     const prod = { ...deps, tracerConfig: { ...DEFAULT_CONFIG, environment: "production" as const } };
-    const before = await businessCounts(t);
-    expect(await code(confirm(prod, batchId, hq))).toBe("conflict/unsupported_capability");
-    expect(await businessCounts(t)).toEqual(before);
-    expect((await batchOf(batchId)).status).toBe("awaiting_confirm");
-    expect((await rowsOf(batchId)).every((x) => x.outcome === null)).toBe(true);
-    expect(w.audit.of("roster_confirmation_rejected")).toHaveLength(1);
+    const r = await confirm(prod, batchId, hq);
+    expect(r.status).toBe("resolving");
+    expect(w.audit.of("roster_confirmation_rejected")).toHaveLength(0);
   });
   it("预检后计划被暂停 → plan_not_collecting", async () => {
     const { deps, hq } = await setup();
@@ -407,5 +404,51 @@ describe("分块、续跑、租约", () => {
     expect(all.every((x) => x.outcome === "pending_account" && x.resolveTaskId !== null)).toBe(true);
     expect(await rosterTasks()).toHaveLength(2000);
     expect((await batchOf(batchId)).summary).toMatchObject({ confirm: r.confirm });
+  });
+});
+
+describe("总部提交名单时自动加入分公司（刘学奎 2026-11-12 决策）", () => {
+  const exitBranch = async () =>
+    t.db
+      .update(activityPlanBranches)
+      .set({ status: "exited", exitedAt: T0 })
+      .where(and(eq(activityPlanBranches.planId, w.planId), eq(activityPlanBranches.branchId, w.bj)));
+
+  it("未加入的分公司：预检标记将自动加入，确认后 joined 并有 branch_joined 审计（detail 标 auto_by_roster）", async () => {
+    const { deps, hq } = await setup();
+    await exitBranch();
+    const batchId = await pre(deps, csv("S-W1,新人甲,13800010009,https://www.douyin.com/user/NEW1"));
+    const sum = (await batchOf(batchId)).summary as { precheck: { auto_join_branches: number; auto_join_branch_codes: string[] } };
+    expect(sum.precheck.auto_join_branches).toBe(1);
+    expect(sum.precheck.auto_join_branch_codes).toHaveLength(1);
+    expect((await rowsOf(batchId))[0]).toMatchObject({ precheckClass: "new_staff" });
+
+    const r = await confirm(deps, batchId, hq);
+    expect(r.status).toBe("resolving");
+    const [p] = await t.db.select().from(activityPlanBranches).where(and(eq(activityPlanBranches.planId, w.planId), eq(activityPlanBranches.branchId, w.bj)));
+    expect(p!.status).toBe("joined");
+    const ev = w.audit.events.find((e) => e.event_type === "branch_joined" && e.target_id === w.bj.toString());
+    expect(ev).toBeDefined();
+    expect((ev!.after as { auto_by_roster?: boolean }).auto_by_roster).toBe(true);
+  });
+
+  it("分公司范围的操作者上传同一文件：仍然整批拒绝 branch_not_joined，零写入", async () => {
+    const { deps, branch } = await setup();
+    await exitBranch();
+    const before = await businessCounts(t);
+    await expect(precheck(deps, { planId: w.planId, fileName: "x.csv", bytes: csv("S-W1,新人甲,13800010009,https://www.douyin.com/user/NEW1") }, branch)).rejects.toMatchObject({ code: "branch_not_joined" });
+    expect(await businessCounts(t)).toEqual(before);
+  });
+
+  it("重复确认同一批次：自动加入幂等，不重复写参与关系", async () => {
+    const { deps, hq } = await setup();
+    await exitBranch();
+    const batchId = await pre(deps, csv("S-W1,新人甲,13800010009,https://www.douyin.com/user/NEW1"));
+    await confirm(deps, batchId, hq);
+    const again = await confirm(deps, batchId, hq);
+    expect(again.alreadyConfirmed).toBe(true);
+    const rows = await t.db.select().from(activityPlanBranches).where(and(eq(activityPlanBranches.planId, w.planId), eq(activityPlanBranches.branchId, w.bj)));
+    expect(rows).toHaveLength(1);
+    expect(w.audit.events.filter((e) => e.event_type === "branch_joined").length).toBe(1);
   });
 });

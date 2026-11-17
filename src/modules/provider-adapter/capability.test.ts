@@ -24,16 +24,25 @@ const reasonOf = (fn: () => unknown) => {
 };
 
 describe("默认 capability 表（R13.7：按 raw4/raw5/raw8 固化）", () => {
-  it("production 环境：抖音 / 小红书 × 主页 / 列表 的 8 个 tuple 全部拒绝（R13.5/R13.6）", () => {
+  it("production 环境：只有批准名单（抖音 / 小红书）里 smoke 成功的 tuple 放行（2026-11-12 刘学奎批准，R13.5/R13.6）", () => {
     for (const platform of PLATFORMS)
       for (const action of ACTIONS)
         for (const mode of MODES) {
-          const isAsyncList = action === "user_video_list" && mode === "asynchronous";
-          expect(reasonOf(() => capabilityGate.require({ platform, action, mode, environment: "production" }))).toBe(
-            isAsyncList ? "provider_failed" : "disabled",
+          const key = { platform, action, mode, environment: "production" } as CapabilityKey;
+          const reason = reasonOf(() => capabilityGate.require(key));
+          const profile = CAPABILITY_PROFILES.find(
+            (p) => p.platform === platform && p.action === action && p.mode === mode && p.environment === "production",
           );
+          if (!profile) expect(reason, `${platform}/${action}/${mode}`).toBe("unregistered");
+          else if (profile.observedOutcome === "provider_failed") expect(reason, `${platform}/${action}/${mode}`).toBe("provider_failed");
+          else if (profile.approval) expect(reason, `${platform}/${action}/${mode}`).toBeNull();
+          else expect(reason, `${platform}/${action}/${mode}`).toBe("disabled");
         }
-    expect(CAPABILITY_PROFILES.filter((p) => p.environment === "production").every((p) => p.activation === "disabled")).toBe(true);
+    // 批准只覆盖抖音与小红书；快手 production 一条都不放
+    const approved = CAPABILITY_PROFILES.filter((p) => p.environment === "production" && p.activation === "approved");
+    expect(approved.length).toBeGreaterThan(0);
+    expect(approved.every((p) => p.platform === "douyin" || p.platform === "xiaohongshu")).toBe(true);
+    expect(approved.every((p) => p.approval?.by === "刘学奎" && p.approval.at === "2026-11-12")).toBe(true);
   });
 
   it("test 环境：同步主页/列表、异步主页可用", () => {
@@ -109,7 +118,7 @@ describe("默认 capability 表（R13.7：按 raw4/raw5/raw8 固化）", () => {
   });
 });
 
-// requirements FS-16.1 逐行：platform × action × mode → 结果。production 一律 disabled / provider_failed，没有任何放行。
+// requirements FS-16.1 逐行：platform × action × mode → 结果。production 按 2026-11-12 批准名单（抖音 / 小红书）放行，其余 disabled / provider_failed。
 describe("a-full-sync 扩展后的 capability 表（FS-16.1、FS-7.1、FS-7.7）", () => {
   type Expect = "approved" | "provider_failed" | "disabled" | "unregistered";
   const table: Array<[string, string, string, Expect]> = [
@@ -141,11 +150,14 @@ describe("a-full-sync 扩展后的 capability 表（FS-16.1、FS-7.1、FS-7.7）
     if (expected === "approved") expect(reason).toBeNull();
     else expect(reason).toBe(expected);
   });
-  it("production 环境：所有已登记 tuple 都拒绝（disabled 或 provider_failed），FS-16.2", () => {
+  it("production 环境：抖音 / 小红书 的 smoke 成功 tuple 放行，快手与 provider_failed 仍拒绝（FS-16.2 + 2026-11-12 批准）", () => {
+    const approvedPlatforms = new Set(["douyin", "xiaohongshu"]);
     for (const [platform, action, mode, expected] of table) {
       const key = { platform, action, mode, environment: "production" } as CapabilityKey;
       const reason = reasonOf(() => capabilityGate.require(key));
-      expect(reason, `${platform}/${action}/${mode}`).toBe(expected === "unregistered" ? "unregistered" : expected === "provider_failed" ? "provider_failed" : "disabled");
+      const want =
+        expected === "unregistered" ? "unregistered" : expected === "provider_failed" ? "provider_failed" : approvedPlatforms.has(platform) ? null : "disabled";
+      expect(reason, `${platform}/${action}/${mode}`).toBe(want);
     }
   });
   it("快手详情：同步、异步都已用规范 URL 经真实 smoke 验证（test 环境放行）", () => {

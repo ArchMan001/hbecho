@@ -36,6 +36,8 @@ export interface RosterRefs {
   /** 同编码但属于其他品牌的门店：返回它们的品牌编码 */
   otherBrandCodes(code: string): string[];
   participation(branchId: bigint): "joined" | "exited" | undefined;
+  /** 分公司是否有效（active）；批量预加载，未知按 false。 */
+  branchActive(branchId: bigint): boolean;
   staffByPhone(phone: string): StaffRef[];
   /** 入口文本命中已有归属（哈希命中后已复核原文） */
   matchAccount(original: string, cleaned: string): LocalAccountRef | undefined;
@@ -45,6 +47,11 @@ export interface ClassifyCtx {
   plan: { platform: Platform; sectors: ReadonlySet<string> };
   actor: Pick<PlanActor, "brandScope" | "branchScope">;
   refs: RosterRefs;
+  /**
+   * 总部提交（`branchScope === "all"`）时为 true：未加入计划的分公司不判 `branch_not_joined`，
+   * 由确认写入阶段按批次实际涉及的分公司自动加入（刘学奎 2026-11-12 决策）。分公司提交仍为 false。
+   */
+  autoJoinBranches?: boolean;
 }
 export interface Classified {
   cls: RosterPrecheckClass;
@@ -105,8 +112,11 @@ function stage1(row: RosterRow, ctx: ClassifyCtx): Stage1 {
   if (!store.sectorKey || !ctx.plan.sectors.has(store.sectorKey)) return fail("store_sector_not_in_plan", "门店所属板块不在本计划的板块范围内", where);
   // 6. 门店所属分公司在操作者范围
   if (!branchInScope(ctx.actor, store.branchId)) return fail("store_branch_not_authorized", "门店不属于你的分公司，请联系管理员", where);
-  // 7. 分公司已加入计划
-  if (ctx.refs.participation(store.branchId) !== "joined") return fail("branch_not_joined", "该门店所属分公司还没有加入本计划", where);
+  // 7. 分公司已加入计划；总部提交时豁免（确认写入阶段自动加入），但分公司必须有效
+  if (ctx.refs.participation(store.branchId) !== "joined") {
+    if (!ctx.autoJoinBranches) return fail("branch_not_joined", "该门店所属分公司还没有加入本计划", where);
+    if (!ctx.refs.branchActive(store.branchId)) return fail("branch_inactive", "该门店所属分公司已停用", where);
+  }
   // 8–9. 手机号对应的专员
   const staffRows = ctx.refs.staffByPhone(phone);
   const active = staffRows.find((s) => s.status === "active");

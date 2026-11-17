@@ -2,7 +2,7 @@
 // 退出在一个事务里：参与关系置 exited → 该分公司全部「在名单」项置 removed(branch_exit) → 释放全部名额 → 立即重算引用。
 // 重新加入只恢复参与关系，名单项保持 removed，直到该分公司重新提交到对应账号（走名单导入的 update 路径）。
 import { and, eq, sql } from "drizzle-orm";
-import type { Db } from "../../db/client";
+import type { Db, DbTx } from "../../db/client";
 import { activityPlanBranches, activityPlanRoster, branches } from "../../db/schema";
 import { bjtDate, EVENTS, reconcileAccounts } from "../plan-references";
 import type { Clock } from "../raw-capture";
@@ -14,6 +14,42 @@ import { ownersOf, releaseAll } from "./owners";
 import { assertCollecting } from "./plans";
 import { loadPlanFor } from "./visibility";
 
+export interface JoinInTxInput {
+  actor: PlanActor;
+  planId: bigint;
+  branchId: bigint;
+  now: Date;
+  /** 额外写进变更记录 / 审计事件的 detail（例如总部名单自动加入的 auto_by_roster / batch_id / submitter）。 */
+  detail?: Record<string, unknown>;
+}
+export interface JoinInTxResult {
+  kind: "joined" | "rejoined" | "noop";
+  branchId: string;
+  event?: PlanAuditEvent;
+}
+
+/**
+ * 在调用方的事务里加入分公司（AP-3 的写库语义，只此一份）。
+ * confirm 的「总部提交名单时自动加入」复用它，不允许另写一套；调用方负责 assertCollecting 与 plan 锁。
+ */
+export async function joinBranchInTx(tx: DbTx, input: JoinInTxInput): Promise<JoinInTxResult> {
+  const { actor, planId, branchId, now } = input;
+  const [br] = await tx.select().from(branches).where(eq(branches.branchId, branchId));
+  if (!br) throw new PlanError("not_found", "branch_not_found", "分公司不存在");
+  if (br.status !== "active") throw new PlanError("input", "branch_inactive", "分公司已停用");
+  const [cur] = await tx.select().from(activityPlanBranches).where(and(eq(activityPlanBranches.planId, planId), eq(activityPlanBranches.branchId, branchId))).for("update");
+  if (cur?.status === "joined") return { kind: "noop", branchId: branchId.toString() };
+  if (cur) await tx.update(activityPlanBranches).set({ status: "joined", joinedAt: now, joinedByActor: actor.actor, exitedAt: null, exitedByActor: null, updatedAt: now }).where(and(eq(activityPlanBranches.planId, planId), eq(activityPlanBranches.branchId, branchId)));
+  else await tx.insert(activityPlanBranches).values({ planId, branchId, status: "joined", joinedAt: now, joinedByActor: actor.actor, updatedAt: now });
+  const detail = { rejoin: !!cur, ...(input.detail ?? {}) };
+  await recordChange(tx, { planId, branchId, eventType: "branch_joined", actor: actor.actor, now, detail });
+  return {
+    kind: cur ? "rejoined" : "joined",
+    branchId: branchId.toString(),
+    event: { event_type: "branch_joined", actor: actor.actor, occurred_at: now.toISOString(), plan_id: planId.toString(), target_type: "branch", target_id: branchId.toString(), target_code: br.branchCode, after: detail },
+  };
+}
+
 export function createParticipation(deps: { db: Db; clock: Clock; audit: PlanAuditSink }) {
   const { db, clock, audit } = deps;
 
@@ -24,16 +60,9 @@ export function createParticipation(deps: { db: Db; clock: Clock; audit: PlanAud
     const out = await db.transaction(async (tx) => {
       const plan = await loadPlanFor(tx, actor, CAP_PLAN_JOIN, planId, { lock: "share" });
       assertCollecting(plan);
-      const [br] = await tx.select().from(branches).where(eq(branches.branchId, branchId));
-      if (!br) throw new PlanError("not_found", "branch_not_found", "分公司不存在");
-      if (br.status !== "active") throw new PlanError("input", "branch_inactive", "分公司已停用");
-      const [cur] = await tx.select().from(activityPlanBranches).where(and(eq(activityPlanBranches.planId, planId), eq(activityPlanBranches.branchId, branchId))).for("update");
-      if (cur?.status === "joined") return { kind: "noop" as const, branchId: branchId.toString() };
-      if (cur) await tx.update(activityPlanBranches).set({ status: "joined", joinedAt: now, joinedByActor: actor.actor, exitedAt: null, exitedByActor: null, updatedAt: now }).where(and(eq(activityPlanBranches.planId, planId), eq(activityPlanBranches.branchId, branchId)));
-      else await tx.insert(activityPlanBranches).values({ planId, branchId, status: "joined", joinedAt: now, joinedByActor: actor.actor, updatedAt: now });
-      await recordChange(tx, { planId, branchId, eventType: "branch_joined", actor: actor.actor, now, detail: { rejoin: !!cur } });
-      events.push({ event_type: "branch_joined", actor: actor.actor, occurred_at: now.toISOString(), plan_id: planId.toString(), target_type: "branch", target_id: branchId.toString(), target_code: br.branchCode, after: { rejoin: !!cur } });
-      return { kind: cur ? ("rejoined" as const) : ("joined" as const), branchId: branchId.toString() };
+      const r = await joinBranchInTx(tx, { actor, planId, branchId, now });
+      if (r.event) events.push(r.event);
+      return { kind: r.kind, branchId: r.branchId };
     });
     events.forEach((e) => audit(e));
     return out;

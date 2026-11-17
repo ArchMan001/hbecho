@@ -213,7 +213,7 @@ describe("A4 预检：授权、范围、capability（R1.4、R1.5）——任何�
     expect(audit.events.map((e) => e.code)).toEqual(["forbidden", "forbidden", "out_of_scope", "out_of_scope"]);
   });
 
-  it("未登记的平台（视频号；快手自 a-full-sync 起已登记）、production 环境（没有任何已批准的 tuple）→ unsupported_capability", async () => {
+  it("未登记的平台（视频号；快手自 a-full-sync 起已登记）、未登记的环境（staging）→ unsupported_capability", async () => {
     const { commands, org } = await setup();
     expect(await codeOf(commands.submit(input(org, { platform: "wechat_channels" }), serviceActor()))).toBe("unsupported_capability");
     expect(await counts()).toEqual({ batches: 0, tasks: 0, calls: 0 });
@@ -222,7 +222,7 @@ describe("A4 预检：授权、范围、capability（R1.4、R1.5）——任何�
       db: t.db,
       clock: new FakeClock(START),
       audit: new MemoryAuditSink(),
-      config: { environment: "production", modes: { media_user_info: "synchronous", user_video_list: "synchronous" } },
+      config: { environment: "staging", modes: { media_user_info: "synchronous", user_video_list: "synchronous" } },
     });
     expect(await codeOf(prod.submit(input(org), serviceActor()))).toBe("unsupported_capability");
     expect(await counts()).toEqual({ batches: 0, tasks: 0, calls: 0 });

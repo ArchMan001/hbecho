@@ -485,7 +485,7 @@
 #### 验收标准
 
 1. capability 表 SHALL 扩展到：`media_stats_number`（抖音 / 小红书 / 快手，同步与异步）、`post_comments_list`（抖音 / 小红书，同步与异步）、快手 `media_user_info` / `user_video_list`。证据等级 SHALL 按 §1.1 第 5 项与 A §6.3 登记：同步与已验证的异步 tuple 为 `smoke_verified`，抖音评论异步、三平台列表异步 SHALL 登记为 provider-failed 且保持 disabled；快手评论 SHALL 不登记。
-2. 全部 `production` activation SHALL 保持 `disabled`，直到对应 tuple 的批准式 smoke 完成（FS-19）；`fixture_observed` 与 `smoke_verified` SHALL NOT 自动启用 production。
+2. ~~全部 `production` activation SHALL 保持 `disabled`，直到对应 tuple 的批准式 smoke 完成（FS-19）~~ **由刘学奎于 2026-11-12 修订**：production 放行只按显式批准名单（`capability.ts` 的 `PRODUCTION_APPROVAL`）——首批批准范围是**抖音与小红书的全部 action**（其中 smoke 结果为 `succeeded` 的 tuple），快手与 `provider_failed` 的 tuple 仍 `disabled`；`fixture_observed` 与 `smoke_verified` SHALL NOT 自动启用 production，批准名单的变更需要人工；
 3. 点数表 SHALL 扩展为 A §6.2 的 1.0 数值（抖音：主页 10 / 列表 10 页 / 详情 10 条 / 评论 5 页；小红书：15 / 15 / 15 / 15；快手：10 / 10 / 10 / 不支持），单价 0.02 元 / 点；失败、超时、429、异步轮询 SHALL 不计点。
 4. 每个批次 SHALL 有调用数与点数硬上限（运行时配置，无默认值）；达到上限 SHALL 在**下一次调用前**停止，后续任务以 `budget_exhausted` 终态，批次如实标记，SHALL NOT 告警后继续。
 5. 同步 / 异步 SHALL 按 capability 与配置选择，SHALL NOT 把任一种写死为生产总策略；异步时提交与每次轮询分别是 ProviderCall。

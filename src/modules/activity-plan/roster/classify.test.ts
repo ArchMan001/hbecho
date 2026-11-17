@@ -13,6 +13,7 @@ interface World {
   stores?: Record<string, StoreRef>;
   other?: Record<string, string[]>;
   participation?: Record<string, "joined" | "exited">;
+  branchStatus?: Record<string, "active" | "inactive">;
   staff?: Record<string, StaffRef[]>;
   accounts?: Record<string, LocalAccountRef>;
   roster?: Record<string, { state: "in_roster" | "removed"; staffId: bigint }>;
@@ -24,6 +25,7 @@ function refs(w: World = {}): RosterRefs {
     store: (c) => stores[c],
     otherBrandCodes: (c) => w.other?.[c] ?? [],
     participation: (b) => participation[b.toString()],
+    branchActive: (b) => (w.branchStatus?.[b.toString()] ?? "active") === "active",
     staffByPhone: (p) => w.staff?.[p] ?? [],
     matchAccount: (o, c) => w.accounts?.[o] ?? w.accounts?.[c],
     rosterEntry: (a) => w.roster?.[a.toString()],
@@ -176,5 +178,24 @@ describe("纯函数：同一输入重复分类结果相同", () => {
   it("两次调用相等", () => {
     const rows = [row(good(), 1), row(good({ 0: "NOPE", 2: "13800000002" }), 2)];
     expect(classifyRows(rows, ctx())).toEqual(classifyRows(rows, ctx()));
+  });
+});
+
+describe("总部提交的自动加入（刘学奎 2026-11-12 决策）", () => {
+  const notJoined = { participation: {} as Record<string, "joined" | "exited"> };
+  it("总部提交（autoJoinBranches）：未加入的分公司不判 branch_not_joined，按可写入处理", () => {
+    const [r] = classifyRows([row(good())], ctx(notJoined, { autoJoinBranches: true }));
+    expect(r!.cls).toBe("new_staff");
+    expect(r!.branchId).toBe(BJ);
+  });
+  it("分公司范围提交（缺省）：仍然 branch_not_joined", () => {
+    const [r] = classifyRows([row(good())], ctx(notJoined));
+    expect(r!.cls).toBe("error");
+    expect(r!.reason).toBe("branch_not_joined");
+  });
+  it("总部提交、但分公司已停用 → branch_inactive，不自动加入", () => {
+    const [r] = classifyRows([row(good())], ctx({ ...notJoined, branchStatus: { [BJ.toString()]: "inactive" } }, { autoJoinBranches: true }));
+    expect(r!.cls).toBe("error");
+    expect(r!.reason).toBe("branch_inactive");
   });
 });

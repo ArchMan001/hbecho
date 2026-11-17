@@ -30,26 +30,31 @@ describe("normalizeFilter：非法筛选一律报错，不静默退化", () => {
     expect(PAGE_SIZES).toEqual([20, 50, 100]);
   });
 
-  it("状态只接受 active / closed", () => {
-    reject({ status: "deleted" as never });
-    expect(normalizeFilter({ ...base, status: "closed" }).status).toBe("closed");
+  it("状态只接受 active / closed，可多选并去重", () => {
+    reject({ statuses: ["deleted" as never] });
+    expect(normalizeFilter({ ...base, statuses: ["closed"] }).statuses).toEqual(["closed"]);
+    expect(normalizeFilter({ ...base, statuses: ["closed", "active", "closed"] }).statuses).toEqual(["closed", "active"]);
+    expect(normalizeFilter({ ...base, statuses: [] }).statuses).toBeUndefined();
   });
 
-  it("品牌 / 分公司 ID 必须是十进制且为正", () => {
-    reject({ brandId: "abc" });
-    reject({ brandId: "0" });
-    reject({ brandId: "-1" });
-    reject({ brandId: "1.5" });
-    reject({ branchId: "x" });
-    expect(normalizeFilter({ ...base, brandId: "9007199254740993" }).brandId).toBe("9007199254740993");
+  it("品牌 / 大区 / 分公司 ID 必须是十进制且为正，可多选", () => {
+    reject({ brandIds: ["abc"] });
+    reject({ brandIds: ["0"] });
+    reject({ brandIds: ["-1"] });
+    reject({ brandIds: ["1.5"] });
+    reject({ branchIds: ["1", "x"] });
+    reject({ regionIds: ["x"] });
+    expect(normalizeFilter({ ...base, brandIds: ["9007199254740993"] }).brandIds).toEqual(["9007199254740993"]);
+    expect(normalizeFilter({ ...base, regionIds: ["1", "2", "1"] }).regionIds).toEqual(["1", "2"]);
   });
 
-  it("板块 / 店面标准长度与互斥", () => {
-    reject({ sectorName: "板".repeat(129) });
-    reject({ tier: "级".repeat(65) });
-    reject({ tier: "旗舰店", tierMissing: true });
-    expect(normalizeFilter({ ...base, sectorName: "水机", tier: "旗舰店" })).toMatchObject({ sectorName: "水机", tier: "旗舰店" });
-    expect(normalizeFilter({ ...base, sectorName: "水机", tier: "旗舰店" }).tierMissing).toBeUndefined();
+  it("板块 / 店面标准长度与数量上限；「未设置」与具体值可同时选", () => {
+    reject({ sectorNames: ["板".repeat(129)] });
+    reject({ tiers: ["级".repeat(65)] });
+    reject({ brandIds: Array.from({ length: 101 }, (_, i) => String(i + 1)) });
+    expect(normalizeFilter({ ...base, sectorNames: ["水机"], tiers: ["旗舰店"] })).toMatchObject({ sectorNames: ["水机"], tiers: ["旗舰店"] });
+    expect(normalizeFilter({ ...base, tiers: ["旗舰店"], tierMissing: true })).toMatchObject({ tiers: ["旗舰店"], tierMissing: true });
+    expect(normalizeFilter({ ...base, tierMissing: false }).tierMissing).toBeUndefined();
   });
 
   it("关键字超长报错；空白视为未指定", () => {
@@ -59,7 +64,7 @@ describe("normalizeFilter：非法筛选一律报错，不静默退化", () => {
   });
 
   it("板块 / 店面标准空白视为未指定", () => {
-    expect(normalizeFilter({ ...base, sectorName: "  " }).sectorName).toBeUndefined();
-    expect(normalizeFilter({ ...base, tier: "  " }).tier).toBeUndefined();
+    expect(normalizeFilter({ ...base, sectorNames: ["  "] }).sectorNames).toBeUndefined();
+    expect(normalizeFilter({ ...base, tiers: ["  ", " 旗舰店 "] }).tiers).toEqual(["旗舰店"]);
   });
 });

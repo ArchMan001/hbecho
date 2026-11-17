@@ -68,22 +68,34 @@ describe("门店读口", () => {
     expect((await env.md.browse.stores({ ...page }, actor([]))).total).toBe(0);
   });
 
-  it("六项筛选：品牌 / 分公司 / 板块 / 状态 / 店面标准 / 关键字，可组合", async () => {
+  it("七项筛选：品牌 / 大区 / 分公司 / 板块 / 状态 / 店面标准 / 关键字，各项多选，可组合", async () => {
     const env = await fixture();
     const [hitachi] = await t.db.select().from(brands).where(eq(brands.brandCode, "hitachi"));
+    const [hisense] = await t.db.select().from(brands).where(eq(brands.brandCode, "hisense"));
     const [shanghai] = await t.db.select().from(branches).where(eq(branches.branchCode, "110"));
     const q = (f: Partial<BrowseFilter>) => env.md.browse.stores({ ...page, ...f }, adminActor());
-
-    expect((await q({ brandId: String(hitachi!.brandId) })).total).toBe(2);
-    expect((await q({ branchId: String(shanghai!.branchId) })).items.map((s) => s.storeCode)).toEqual(["S-1", "S-2", "S-4"]);
-    expect((await q({ sectorName: "水机" })).items.map((s) => s.storeCode)).toEqual(["S-5", "S-2"]);
-    expect((await q({ tier: "旗舰店" })).items.map((s) => s.storeCode)).toEqual(["S-1"]);
-    expect((await q({ tierMissing: true })).items.map((s) => s.storeCode)).toEqual(["S-2"]);
-    expect((await q({ status: "closed" })).items.map((s) => s.storeCode)).toEqual(["S-5"]);
-    expect((await q({ keyword: "S-1" })).items.map((s) => s.storeCode)).toEqual(["S-1"]);
-    expect((await q({ branchId: String(shanghai!.branchId), sectorName: "水机", status: "active" })).items.map((s) => s.storeCode)).toEqual(["S-2"]);
+    const codes = async (f: Partial<BrowseFilter>) => (await q(f)).items.map((s) => s.storeCode);
+    expect((await q({ brandIds: [String(hitachi!.brandId)] })).total).toBe(2);
+    expect((await q({ brandIds: [String(hitachi!.brandId), String(hisense!.brandId)] })).total).toBe(4); // 同一项内「或」
+    expect(await codes({ branchIds: [String(shanghai!.branchId)] })).toEqual(["S-1", "S-2", "S-4"]);
+    expect(await codes({ regionIds: [String(shanghai!.regionId)] })).toEqual(["S-1", "S-2", "S-4"]); // 大区经分公司生效
+    expect((await q({ regionIds: ["999999"] })).total).toBe(0);
+    expect(await codes({ sectorNames: ["水机"] })).toEqual(["S-5", "S-2"]);
+    expect(await codes({ tiers: ["旗舰店"] })).toEqual(["S-1"]);
+    expect(await codes({ tierMissing: true })).toEqual(["S-2"]);
+    expect(await codes({ tiers: ["旗舰店"], tierMissing: true })).toEqual(["S-1", "S-2"]); // 「未设置」并入「或」
+    expect(await codes({ statuses: ["closed"] })).toEqual(["S-5"]);
+    expect((await q({ statuses: ["closed", "active"] })).total).toBe(5);
+    expect(await codes({ keyword: "S-1" })).toEqual(["S-1"]);
+    expect(await codes({ branchIds: [String(shanghai!.branchId)], sectorNames: ["水机"], statuses: ["active"] })).toEqual(["S-2"]); // 不同项之间「且」
   });
-
+  it("关键字也搜经销商编码与名称", async () => {
+    const env = await fixture();
+    const q = (keyword: string) => env.md.browse.stores({ ...page, keyword }, adminActor());
+    expect((await q("9000001")).total).toBeGreaterThan(0);
+    expect((await q("商家甲")).items.every((s) => s.dealerName.includes("商家甲"))).toBe(true);
+    expect((await q("商家甲")).total).toBeGreaterThan(0);
+  });
   it("关键字里的 LIKE 元字符按字面处理，不命中全表", async () => {
     const env = await fixture();
     expect((await env.md.browse.stores({ ...page, keyword: "%" }, adminActor())).total).toBe(0);
@@ -92,8 +104,7 @@ describe("门店读口", () => {
 
   it("非法筛选报 invalid_filter，不退化为全部", async () => {
     const env = await fixture();
-    await expect(env.md.browse.stores({ ...page, status: "deleted" as never }, adminActor())).rejects.toMatchObject({ category: "input", code: "invalid_filter" });
-    await expect(env.md.browse.stores({ ...page, tier: "旗舰店", tierMissing: true }, adminActor())).rejects.toMatchObject({ category: "input", code: "invalid_filter" });
+    await expect(env.md.browse.stores({ ...page, statuses: ["deleted" as never] }, adminActor())).rejects.toMatchObject({ category: "input", code: "invalid_filter" });
     await expect(env.md.browse.stores({ ...page, pageSize: 10 as never }, adminActor())).rejects.toMatchObject({ category: "input", code: "invalid_filter" });
     const r = await env.md.browse.stores({ ...page, keyword: "  " }, adminActor());
     expect(r.total).toBe(5); // 空白关键字 = 未指定
@@ -201,6 +212,10 @@ describe("筛选选项", () => {
     expect(all.hasMissingTier).toBe(true);
     expect(all.storeCount).toBe(5);
     expect(all.branchCount).toBe(42);
+    expect(all.branches).toHaveLength(42);
+    expect(all.regions.length).toBeGreaterThan(0);
+    expect(all.branches.every((b) => all.regions.some((r) => r.id === b.regionId))).toBe(true);
+    expect(all.branches.find((b) => b.name === "上海分公司")?.regionId).toBe(all.regions.find((r) => r.name === "华东")?.id);
 
     const hitachi = await env.md.browse.filterOptions(actor(["hitachi"]));
     expect(hitachi.storeTiers).toEqual(["旗舰店"]);

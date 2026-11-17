@@ -24,7 +24,14 @@ export const LEVELS = {
   hq_and_above: { label: "总部及以上", allowed: ["hq_manager", "platform_admin"] },
 };
 
-export const TAGS = ["产品培训", "销售话术", "安装规范", "安全", "家装", "水机"];
+// 两级标签：一级分类可新增；同一门课在同一分类下可多选。
+export const TAG_CATEGORIES = [
+  { id: "platform", name: "平台", tags: ["抖音", "小红书", "视频号", "GEO"] },
+  { id: "sector", name: "板块", tags: ["账号", "短视频", "直播", "投流"] },
+  { id: "stage", name: "阶段", tags: ["基础", "进阶"] },
+  { id: "type", name: "课程类型", tags: ["课件", "视频", "图片"] },
+];
+export const TAGS = TAG_CATEGORIES.flatMap((c) => c.tags);
 
 // kind: video | document；status: published | unpublished | archived
 // brandScope: specified | all；vodStatus: normal | transcoding | failed
@@ -38,7 +45,7 @@ export const COURSES = [
     brandScope: "specified",
     brands: ["日立"],
     level: "all",
-    tags: ["安装规范", "水机"],
+    tags: ["抖音", "短视频", "基础", "视频"],
     coverTone: "teal",
     duration: "18:24",
     durationSec: 1104,
@@ -55,7 +62,7 @@ export const COURSES = [
     brandScope: "specified",
     brands: ["日立", "海信"],
     level: "branch_and_above",
-    tags: ["销售话术", "家装"],
+    tags: ["抖音", "小红书", "直播", "进阶", "视频"],
     coverTone: "blue",
     duration: "42:10",
     durationSec: 2530,
@@ -72,7 +79,7 @@ export const COURSES = [
     brandScope: "all",
     brands: [],
     level: "all",
-    tags: ["安全"],
+    tags: ["视频号", "账号", "基础", "课件"],
     coverTone: "slate",
     fileType: "PDF",
     fileSize: "3.8 MB",
@@ -88,7 +95,7 @@ export const COURSES = [
     brandScope: "specified",
     brands: ["海信"],
     level: "all",
-    tags: ["产品培训", "水机"],
+    tags: ["抖音", "短视频", "基础", "视频"],
     coverTone: "indigo",
     duration: "27:35",
     durationSec: 1655,
@@ -105,7 +112,7 @@ export const COURSES = [
     brandScope: "specified",
     brands: ["约克VRF"],
     level: "hq_and_above",
-    tags: ["产品培训"],
+    tags: ["小红书", "账号", "进阶", "视频"],
     coverTone: "green",
     duration: "33:02",
     durationSec: 1982,
@@ -122,7 +129,7 @@ export const COURSES = [
     brandScope: "specified",
     brands: ["日立"],
     level: "all",
-    tags: ["销售话术"],
+    tags: ["小红书", "短视频", "基础", "图片"],
     coverTone: "amber",
     fileType: "PNG",
     fileSize: "1.2 MB",
@@ -138,7 +145,7 @@ export const COURSES = [
     brandScope: "specified",
     brands: ["日立"],
     level: "all",
-    tags: ["产品培训"],
+    tags: ["抖音", "直播", "进阶", "视频"],
     coverTone: "slate",
     duration: "55:12",
     durationSec: 3312,
@@ -155,7 +162,7 @@ export const COURSES = [
     brandScope: "specified",
     brands: ["日立"],
     level: "all",
-    tags: ["安装规范"],
+    tags: ["抖音", "短视频", "基础", "视频"],
     coverTone: "teal",
     duration: "—",
     durationSec: 0,
@@ -172,7 +179,7 @@ export const COURSES = [
     brandScope: "specified",
     brands: ["海信"],
     level: "all",
-    tags: ["产品培训"],
+    tags: ["视频号", "账号", "基础", "课件"],
     coverTone: "slate",
     fileType: "PDF",
     fileSize: "—",
@@ -188,7 +195,7 @@ export const COURSES = [
     brandScope: "specified",
     brands: ["海信"],
     level: "all",
-    tags: ["产品培训"],
+    tags: ["小红书", "短视频", "进阶", "视频"],
     coverTone: "slate",
     duration: "—",
     durationSec: 0,

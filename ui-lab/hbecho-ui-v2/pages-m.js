@@ -66,6 +66,15 @@ function steps(current) {
   return `<div class="steps" aria-label="导入步骤">${defs.map((l, i) => `<div class="step ${i + 1 < current ? "done" : ""} ${i + 1 === current ? "active" : ""}"><span class="step-num">${i + 1}</span>${esc(l)}</div>`).join("")}</div>`;
 }
 
+/** 主数据区的两个页面之间的切换（2026-11-16 刘学奎要求）。active = "browse" | "import"。 */
+export function masterTabs(active) {
+  const tab = (key, label, href) => `<a class="chip ${active === key ? "active" : ""}" href="${href}">${esc(label)}</a>`;
+  return `<div class="md-tabs" role="tablist" aria-label="主数据视图">
+    ${tab("browse", "主数据浏览", "#/master")}
+    ${tab("import", "主数据导入", "#/master/import")}
+  </div>`;
+}
+
 /* ---------- 导入向导 ---------- */
 
 export function renderMasterImport() {
@@ -73,6 +82,7 @@ export function renderMasterImport() {
   const step = state.mdStep;
   const body = step === 1 ? modeStep() : step === 2 ? uploadStep() : step === 3 ? reportStep() : confirmStep();
   const content = `
+    ${masterTabs("import")}
     <div class="page-head">
       <div><h1 class="page-title">主数据导入</h1><p class="page-sub">导入权威主档导出（门店信息）；预检只读，确认后才写入业务表。</p></div>
       <div class="page-actions"><a class="btn" href="#/master/batches">${icon("file")} 导入记录</a></div>
@@ -227,7 +237,7 @@ export function renderMasterBatches() {
   if (!allowed()) return denied(["导入记录"]);
   const rows = Object.entries(BATCHES).filter(([, b]) => state.role === "platform_admin" || b.by !== "刘学奎" || b.mode === "import");
   const content = `
-    <a class="back-link" href="#/master">${icon("arrowLeft")} 返回主数据导入</a>
+    <a class="back-link" href="#/master/import">${icon("arrowLeft")} 返回主数据导入</a>
     <div class="page-head"><div><h1 class="page-title">导入记录</h1><p class="page-sub">批次与行结果是历史事实，长期保留；只显示你授权品牌内的批次。</p></div></div>
     ${stateAware(rows.length ? `
       <div class="table-wrap"><table>
@@ -237,7 +247,7 @@ export function renderMasterBatches() {
           <td>${dataCell(b.by, b.at)}</td><td>${badge(STATUS[b.status][0], STATUS[b.status][1])}</td>
           <td class="right"><span class="num">${num(b.imported + b.unchanged)}</span><br /><span class="cell-sub">错误 ${b.error} / 需超管 ${b.needs}</span></td>
           <td class="right"><a class="btn btn-sm" href="#/master/batches/${k}">查看</a></td></tr>`).join("")}</tbody>
-      </table></div>` : emptyState({ title: "还没有导入记录", text: "上传第一份门店信息后，记录会出现在这里。", action: '<a class="btn btn-primary" href="#/master">去导入</a>' }))}`;
+      </table></div>` : emptyState({ title: "还没有导入记录", text: "上传第一份门店信息后，记录会出现在这里。", action: '<a class="btn btn-primary" href="#/master/import">去导入</a>' }))}`;
   return renderShell({ activeNav: "master", breadcrumb: ["工作区", "主数据", "导入记录"], content });
 }
 
@@ -253,7 +263,7 @@ export function renderMasterBatchDetail(key) {
       <div class="page-actions">${badge(STATUS[b.status][0], STATUS[b.status][1])}<button class="btn" data-action="md-download">${icon("download")} 回流文件</button></div>
     </div>
     ${stateAware(`
-      ${done ? "" : `<div class="callout warn" style="margin-bottom:14px">${icon("clock")}<span>这个批次预检完成但还没有确认写入。<a class="cell-main" href="#/master">回到预检报告</a></span></div>`}
+      ${done ? "" : `<div class="callout warn" style="margin-bottom:14px">${icon("clock")}<span>这个批次预检完成但还没有确认写入。<a class="cell-main" href="#/master/import">回到预检报告</a></span></div>`}
       <div class="section-note">行结果 · 共 ${num(b.rows)} 行</div>
       <div class="stat-grid five" style="margin-bottom:14px">
         ${[["已写入", b.imported], ["未变", b.unchanged], ["错误", b.error], ["需超管处理", b.needs], ["已关闭门店", b.closed]].map(([l, v]) => `<div class="stat"><div class="stat-label">${l}</div><div class="stat-value">${num(v)}</div></div>`).join("")}

@@ -122,6 +122,11 @@ function userName(role) {
   return "张三";
 }
 
+// Echo 标记：一个声源点 + 三条向右上扩散的弧。只在原型里用。
+export function echoMark(size = 22) {
+  return `<svg viewBox="0 0 64 64" width="${size}" height="${size}" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="13" y="16" width="28" height="6.6" rx="3.3" fill="currentColor"/><rect x="13" y="28.7" width="20" height="6.6" rx="3.3" fill="currentColor"/><rect x="13" y="41.4" width="28" height="6.6" rx="3.3" fill="currentColor"/><circle cx="49" cy="32" r="4.6" fill="currentColor"/></svg>`;
+}
+
 export function renderShell({ activeNav, breadcrumb, content }) {
   return `
     <div class="shell" data-role="${esc(state.role)}">
@@ -140,10 +145,10 @@ function renderSidebar(activeNav) {
   return `
     <aside class="sidebar" aria-label="主导航">
       <div class="brand-block">
-        <div class="brand-mark">H</div>
+        <div class="brand-mark">${echoMark(18)}</div>
         <div>
-          <div class="brand-name">hbecho</div>
-          <div class="brand-sub">新媒体运营平台</div>
+          <div class="brand-name">Echo</div>
+          <div class="brand-sub">新媒体营销平台</div>
         </div>
       </div>
       ${navGroupsFor(state.role).map((group) => `

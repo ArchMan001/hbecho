@@ -21,6 +21,7 @@ export const state = {
   mdMode: "import",
   mdUploaded: false,
   mdClose: [],
+  mdBrowse: { view: "stores", brand: "all", branch: "all", sector: "all", tier: "all", status: "all", kw: "", page: 1, size: 20 },
   userImportStep: 1,
   userImportUploaded: false,
   batchView: "rows",

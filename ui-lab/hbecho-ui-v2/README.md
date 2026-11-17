@@ -59,8 +59,14 @@ python3 -m http.server 4174 --directory ui-lab/hbecho-ui-v2
 ## 仍未做
 
 - 真实登录、真实 API、真实文件上传与导出；
-- 判定计划、报表、主数据、学习、系统等页面仍只有外壳；
+- 判定计划、报表、学习、系统等页面仍只有外壳；
 - 管理端按桌面优先，手机端只保留基础响应式与底部 Tab；
 - 页面实现仍待各 spec 另行排期；实现时按 `ui-foundation.md` 的 token 在 `src/app/` 重建，**不复制本目录代码**。
 ## 2026-11-12 增补：主数据导入页（已确认）
 `#/master`（导入向导）、`#/master/batches`（导入记录）、`#/master/batches/M1`（批次详情）。属于 a-master-data-import 的界面提案（[design §15](../../.kiro/specs/a-master-data-import/design.md)），**已于 2026-11-12 经刘学奎确认**，真实页面已在 `src/app/(app)/master-data/` 实现；A / B 已确认的页面未改动。演示数据为虚构。
+
+## 2026-11-16 增补：主数据浏览页（待确认）
+- `#/master`：**主数据浏览**（门店 / 分公司两个视图、品牌 / 分公司 / 板块 / 状态 / 店面标准 / 关键字筛选、分页）；`#/master/import`：上面那一版主数据导入（路由由 `#/master` 移到此处）。
+- 两页顶部共用「主数据浏览 ⇄ 主数据导入」切换（`masterTabs`，2026-11-16 刘学奎要求）。
+- 属于 [`a-master-data-browse`](../../.kiro/specs/a-master-data-browse/design.md) 的界面提案（design §16），**待刘学奎走查确认**；确认前不写页面任务、不写 `src/app/` 页面代码。
+- 演示数据：8,327 家门店、42 个分公司，按角色收窄（总部人员只看日立、海信）；门店与商家名称为虚构。

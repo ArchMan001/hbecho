@@ -9,6 +9,7 @@ import {
   renderBatchList, renderBatchDetail, renderAccounts, accountModalHtml,
 } from "./pages-a.js";
 import { renderMasterImport, renderMasterBatches, renderMasterBatchDetail } from "./pages-m.js";
+import { renderMasterBrowse } from "./pages-m-browse.js";
 import {
   renderAuth, renderUsers, renderUserNew, renderUserDetail, renderUserImport,
   renderAudit, renderPlaceholder, renderStoreHome,
@@ -43,6 +44,7 @@ function parseRoute() {
     return { name: "user-detail", id: second };
   }
   if (head === "master") {
+    if (second === "import") return { name: "master-import" };
     if (second === "batches") return third ? { name: "master-batch", id: third } : { name: "master-batches" };
     return { name: "master" };
   }
@@ -87,7 +89,8 @@ function render() {
     case "user-import": html = renderUserImport(); break;
     case "audit": html = renderAudit(); break;
     case "store": html = renderStoreHome(); break;
-    case "master": html = renderMasterImport(); break;
+    case "master": html = renderMasterBrowse(); break;
+    case "master-import": html = renderMasterImport(); break;
     case "master-batches": html = renderMasterBatches(); break;
     case "master-batch": html = renderMasterBatchDetail(route.id); break;
     case "judgement":
@@ -176,6 +179,13 @@ document.addEventListener("click", (event) => {
     render();
     return;
   }
+  const mdFilter = event.target.closest("[data-md-filter]");
+  if (mdFilter) {
+    state.mdBrowse[mdFilter.dataset.mdFilter] = mdFilter.dataset.value;
+    state.mdBrowse.page = 1;
+    render();
+    return;
+  }
   const planTab = event.target.closest("[data-plan-tab]");
   if (planTab) {
     state.planTab = planTab.dataset.planTab;
@@ -212,7 +222,27 @@ document.addEventListener("change", (event) => {
   if (el.matches("[data-audit-filter]")) {
     state.auditFilter[el.dataset.auditFilter] = el.value;
     render();
+    return;
   }
+  if (el.matches("[data-md-size]")) {
+    state.mdBrowse.size = Number(el.value) || 20;
+    state.mdBrowse.page = 1;
+    render();
+    return;
+  }
+  if (el.matches("[data-md-branch]")) {
+    state.mdBrowse.branch = el.value;
+    state.mdBrowse.page = 1;
+    render();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || !event.target.matches("[data-md-kw]")) return;
+  event.preventDefault();
+  state.mdBrowse.kw = event.target.value.trim();
+  state.mdBrowse.page = 1;
+  render();
 });
 
 document.addEventListener("submit", (event) => {
@@ -398,6 +428,32 @@ function handleAction(el) {
       break;
     case "md-mode":
       state.mdMode = el.dataset.mode;
+      render();
+      break;
+    case "md-view":
+      state.mdBrowse.view = el.dataset.view;
+      state.mdBrowse.page = 1;
+      render();
+      break;
+    case "md-search": {
+      const input = document.querySelector("[data-md-kw]");
+      state.mdBrowse.kw = (input?.value ?? "").trim();
+      state.mdBrowse.page = 1;
+      render();
+      break;
+    }
+    case "md-clear":
+      state.mdBrowse = { ...state.mdBrowse, brand: "all", branch: "all", sector: "all", tier: "all", status: "all", kw: "", page: 1 };
+      render();
+      break;
+    case "md-page":
+      state.mdBrowse.page = Math.max(1, Number(el.dataset.page) || 1);
+      render();
+      break;
+    case "md-open-branch":
+      state.mdBrowse.view = "stores";
+      state.mdBrowse.branch = el.dataset.id;
+      state.mdBrowse.page = 1;
       render();
       break;
     case "md-next":

@@ -1048,7 +1048,31 @@ code {
   color: var(--ink-2);
   font-size: 12px;
   white-space: nowrap;
+  text-decoration: none;
   transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+/* 主数据区：浏览 ⇄ 导入 切换（a-master-data-browse 原型） */
+.md-tabs {
+  display: inline-flex;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 4px;
+  border: 1px solid #e6ecf3;
+  border-radius: 999px;
+  background: #f8fafc;
+}
+
+.md-tabs .chip {
+  border-color: transparent;
+  background: transparent;
+}
+
+.md-tabs .chip.active {
+  background: #fff;
+  border-color: #cfdce5;
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .chip:hover {

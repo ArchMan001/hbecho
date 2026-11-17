@@ -5,7 +5,7 @@ export const state = {
   demoState: "normal",
   demoOpen: false,
   courseQuery: "",
-  courseTag: "all",
+  courseTags: [],
   onlyInProgress: false,
   filtersOpen: false,
   manageFilter: { status: "all", kind: "all" },

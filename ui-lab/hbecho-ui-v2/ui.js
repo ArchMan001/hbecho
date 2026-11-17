@@ -257,6 +257,8 @@ export function renderDemoPanel() {
           <a class="demo-link" href="#/plans/p1/import">名单导入</a>
           <a class="demo-link" href="#/batches/b1">批次详情</a>
           <a class="demo-link" href="#/accounts">账号与监控</a>
+          <a class="demo-link" href="#/master">主数据浏览</a>
+          <a class="demo-link" href="#/master/import">主数据导入</a>
           <a class="demo-link" href="#/trash">回收站</a>
           <a class="demo-link" href="#/users">用户列表</a>
           <a class="demo-link" href="#/users/u2">用户详情</a>

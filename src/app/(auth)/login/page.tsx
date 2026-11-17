@@ -10,7 +10,10 @@ const NOTICE: Record<string, string> = {
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ notice?: string; e?: string }> }) {
   const q = await searchParams;
-  if ((await currentSession()).ok) redirect("/");
+  // requireUser 以 e=scope 送回登录页时，即使会话仍可认证，也不能再回跳 /：
+  // 否则会在 / 与 /login 之间形成刷新循环（门店专员绑定失效等范围无法解释的场景）。
+  const session = await currentSession();
+  if (session.ok && q.e !== "scope") redirect("/");
   return (
     <AuthShell kind="login">
       <LoginForm notice={q.notice ? NOTICE[q.notice] : undefined} scopeError={q.e === "scope"} />

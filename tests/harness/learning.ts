@@ -5,7 +5,7 @@ import type { TestDb } from "./db";
 import { accessEnv, insertAccessUser, seedAccessOrg, type AccessEnv, type AccessOrg, type UserSpec } from "./access";
 import { FakeCourseStore } from "./fake-course-store";
 import { FakeVod } from "./fake-vod";
-import { auditEvents, courseBrandScopes, courses, courseTags, tags } from "../../src/db/schema";
+import { auditEvents, courseBrandScopes, courses, courseTags, tagCategories, tags } from "../../src/db/schema";
 import {
   buildDataScope,
   capabilitiesOf,
@@ -29,7 +29,10 @@ export interface LearningEnv {
   actor(role: RoleCode, over?: { brandIds?: bigint[]; branchIds?: bigint[]; staff?: bigint }): Promise<AuthContext>;
   /** 直接插一门课（绕过服务层），返回 ID。 */
   insertCourse(over?: Partial<typeof courses.$inferInsert> & { brandIds?: bigint[]; tagIds?: bigint[] }): Promise<bigint>;
-  insertTag(name: string): Promise<bigint>;
+  /** 取或建一个一级标签。 */
+  insertCategory(name: string): Promise<bigint>;
+  /** 直接插一个二级标签；一级标签按名字取或建，默认「测试分类」。 */
+  insertTag(name: string, category?: string | bigint): Promise<bigint>;
 }
 
 export async function learningEnv(t: TestDb, over: { config?: Partial<LearningConfig> } = {}): Promise<LearningEnv> {
@@ -83,11 +86,18 @@ export async function learningEnv(t: TestDb, over: { config?: Partial<LearningCo
     if (tagIds?.length) await t.db.insert(courseTags).values(tagIds.map((tagId) => ({ courseId, tagId })));
     return courseId;
   }
-  async function insertTag(name: string): Promise<bigint> {
-    const [r] = await t.db.insert(tags).values({ name, createdAt: env.clock.now() });
+  async function insertCategory(name: string): Promise<bigint> {
+    const [cur] = await t.db.select({ id: tagCategories.categoryId }).from(tagCategories).where(eq(tagCategories.name, name));
+    if (cur) return cur.id;
+    const [r] = await t.db.insert(tagCategories).values({ name, createdAt: env.clock.now() });
     return BigInt(r.insertId);
   }
-  return { env, org, store, vod, deps, actor, insertCourse, insertTag };
+  async function insertTag(name: string, category: string | bigint = "测试分类"): Promise<bigint> {
+    const categoryId = typeof category === "bigint" ? category : await insertCategory(category);
+    const [r] = await t.db.insert(tags).values({ categoryId, name, createdAt: env.clock.now() });
+    return BigInt(r.insertId);
+  }
+  return { env, org, store, vod, deps, actor, insertCourse, insertCategory, insertTag };
 }
 
 export const auditOf = (t: TestDb, eventType: string) => t.db.select().from(auditEvents).where(eq(auditEvents.eventType, eventType));

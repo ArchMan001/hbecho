@@ -147,12 +147,12 @@ describe("故障注入", () => {
     expect(await snaps()).toHaveLength(0);
   });
 
-  it("production 的 capability 全部 disabled：capability_disabled，零调用", async () => {
+  it("未登记的环境（staging）不放行：capability_disabled，零调用", async () => {
     const env = await setupSync(t);
     const a = await env.addAccount("douyin", env.org.staffA, { identifier: "HITACHI1" });
     env.routeList(() => page(syn("a", 5), false, 0));
     await env.scheduler.tick(SLOT);
-    await env.worker({ fetch_content_list: createListWalker({ ...env.deps, environment: "production" }) }).run({ untilIdle: true });
+    await env.worker({ fetch_content_list: createListWalker({ ...env.deps, environment: "staging" }) }).run({ untilIdle: true });
     expect(env.transport.calls).toHaveLength(0);
     expect(await listTask(env, a.accountId)).toMatchObject({ status: "failed", lastErrorCode: "capability_disabled" });
   });

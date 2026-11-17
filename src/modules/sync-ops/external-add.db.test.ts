@@ -77,11 +77,16 @@ describe("external add", () => {
     expect(await code(ops.externalAdd({ platform: "douyin", locator: "", key: "K9" }, adminActor()))).toBe("invalid_input");
     expect(await env.tasks()).toHaveLength(0);
   });
-  it("capability 门控：生产（全部 disabled）下被拒，不建根任务", async () => {
+  it("capability 门控：生产下抖音 media_user_info 已批准（2026-11-12），不再被拒；未批准 tuple 的拒绝见 capability.test.ts", async () => {
     const env = await setupSync(t);
     const tracer = createTracerCommands({ db: t.db, clock: env.clock, audit: { record: () => {} }, config: { environment: "production", modes: { media_user_info: "synchronous", user_video_list: "synchronous" } } });
     const ops = createSyncOps({ db: t.db, clock: env.clock, audit: memorySyncAuditSink(), tracer });
-    expect(await code(ops.externalAdd({ platform: "douyin", locator: LOCATOR, key: "K1" }, adminActor()))).toBe("unsupported_capability");
-    expect(await env.tasks()).toHaveLength(0);
+    let err: { code?: string } | undefined;
+    try {
+      await ops.externalAdd({ platform: "douyin", locator: LOCATOR, key: "K1" }, adminActor());
+    } catch (e) {
+      err = e as { code?: string };
+    }
+    expect(err?.code).not.toBe("unsupported_capability");
   });
 });

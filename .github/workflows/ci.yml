@@ -99,7 +99,7 @@ jobs:
           set -euo pipefail
           sha="$(git rev-parse --short=12 HEAD)"
           image="$REGISTRY/$NAMESPACE/$REPO"
-          docker build -t "$image:$sha" .
+          docker build --build-arg GIT_SHA="$sha" -t "$image:$sha" .
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then docker tag "$image:$sha" "$image:main-latest"; fi
           echo "IMAGE=$image" >> "$GITHUB_ENV"; echo "SHA=$sha" >> "$GITHUB_ENV"
       - name: 冒烟：以生产配置路径启动容器（不连数据库，不发短信）

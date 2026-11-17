@@ -11,3 +11,14 @@ export function IcpFooter({ light = false }: { light?: boolean }) {
     </p>
   );
 }
+
+/** 版本标识：显示「这一页跑的是哪一版代码」。预览（3202）显示工作树提交号，ECS 显示镜像标签对应的提交号，两边一眼能核对是否同一版。 */
+export function BuildStamp() {
+  const build = process.env.HBECHO_BUILD_SHA?.trim();
+  if (!build) return null;
+  return (
+    <p className="site-foot" title="页面代码对应的提交号；与 /api/health 返回的 build 相同">
+      版本 {build}
+    </p>
+  );
+}

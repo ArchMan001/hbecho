@@ -1,5 +1,6 @@
 // 登录 / 激活 / 找回密码 / 修改密码共用的整屏品牌渐变 + 白色大卡（ui-foundation §4「登录」骨架）。
 import type { ReactNode } from "react";
+import { EchoMark } from "./echo-mark";
 import { IcpFooter } from "./icp";
 
 export type AuthKind = "login" | "activate" | "forgot" | "change-password";
@@ -9,9 +10,9 @@ const META: Record<AuthKind, { eyebrow: string; title: string; sub: string; h1: 
     eyebrow: "登录",
     title: "欢迎回来",
     sub: "使用公司登记的手机号",
-    h1: ["一个入口，", "管好账号、内容", "与活动计划。"],
-    lead: "账号采集、活动计划、名单与监控在同一条链路上。账号由管理员开通；绑定哪些品牌，就只能看到哪些品牌的数据。",
-    facts: [["4", "类", "角色"], ["15", "天", "滑动会话"], ["2", "种", "登录方式"]],
+    h1: ["内容有标准，", "发布有回响，", "增长有数据。"],
+    lead: "从内容生产到效果度量的一站式智能体，让每个账号，都成为品牌的发声场。",
+    facts: [["1,286", "家", "参与门店"], ["24,830", "条", "发布视频"], ["320.4", "万", "用户互动"]],
   },
   activate: {
     eyebrow: "激活",
@@ -46,10 +47,13 @@ export function AuthShell({ kind, children }: { kind: AuthKind; children: ReactN
       <div className="auth-grid">
         <section className="auth-hero">
           <div className="auth-logo">
-            <div className="auth-logo-mark">H</div>
+            <span className="auth-logo-mark"><EchoMark size={52} /></span>
             <div>
-              <div className="auth-logo-name">hbecho 新媒体运营平台</div>
-              <div className="auth-logo-sub">HISENSE · HITACHI · YORK</div>
+              <div className="auth-logo-line">
+                <span className="auth-logo-name">Echo</span>
+                <span className="auth-logo-sub">新媒体营销平台</span>
+              </div>
+              <div className="auth-logo-brands">HISENSE · HITACHI · YORK · KELON</div>
             </div>
           </div>
           <h1 className="auth-h1">

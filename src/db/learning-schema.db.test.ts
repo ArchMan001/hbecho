@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { accessEnv, insertAccessUser, seedAccessOrg } from "../../tests/harness/access";
 import { expectRejected, useTestDb } from "../../tests/harness/db";
 import { runMigrations } from "./client";
-import { courseBrandScopes, courseMediaDeletions, courses, courseTags, learningProgress, tags } from "./schema";
+import { courseBrandScopes, courseMediaDeletions, courses, courseTags, learningProgress, tagCategories, tags } from "./schema";
 
 const NOW = new Date("2026-11-11T02:00:00.000000Z");
 const t = useTestDb();
@@ -119,7 +119,8 @@ describe("关联表与外键", () => {
   it("A3：被引用的课程 / 标签 / 品牌删不掉（RESTRICT），且没有任何 CASCADE", async () => {
     const { org, userId } = await setup();
     const courseId = await insertId(doc(userId, { brandScope: "specified" }));
-    const [tg] = await t.db.insert(tags).values({ name: "新员工", createdAt: NOW });
+    const [cat] = await t.db.insert(tagCategories).values({ name: "阶段", createdAt: NOW });
+    const [tg] = await t.db.insert(tags).values({ categoryId: BigInt(cat.insertId), name: "新员工", createdAt: NOW });
     const tagId = BigInt(tg.insertId);
     await t.db.insert(courseTags).values({ courseId, tagId });
     await t.db.insert(courseBrandScopes).values({ courseId, brandId: org.york });
@@ -145,10 +146,21 @@ describe("关联表与外键", () => {
     await expectRejected(t.db.insert(courseBrandScopes).values({ courseId: 424242n, brandId: 1n }), "fk_course_brand_scopes_course");
   });
 
-  it("标签名唯一", async () => {
+  it("标签名暂时全局唯一；一级标签名唯一", async () => {
     await setup();
-    await t.db.insert(tags).values({ name: "合规", createdAt: NOW });
-    await expectRejected(t.db.insert(tags).values({ name: "合规", createdAt: NOW }), "uq_tags_name");
+    const [a] = await t.db.insert(tagCategories).values({ name: "阶段", createdAt: NOW });
+    const [b] = await t.db.insert(tagCategories).values({ name: "板块", createdAt: NOW });
+    await expectRejected(t.db.insert(tagCategories).values({ name: "阶段", createdAt: NOW }), "uq_tag_categories_name");
+    await t.db.insert(tags).values({ categoryId: BigInt(a.insertId), name: "合规", createdAt: NOW });
+    await expectRejected(t.db.insert(tags).values({ categoryId: BigInt(a.insertId), name: "合规", createdAt: NOW }), "uq_tags_");
+    await expectRejected(t.db.insert(tags).values({ categoryId: BigInt(b.insertId), name: "合规", createdAt: NOW }), "uq_tags_name"); // 下一版收缩后才允许跨一级标签重名
+  });
+  it("二级标签必须挂在存在的一级标签下；有二级标签的一级标签删不掉（RESTRICT）", async () => {
+    await setup();
+    await expectRejected(t.db.insert(tags).values({ categoryId: 424242n, name: "孤儿", createdAt: NOW }), "fk_tags_category");
+    const [cat] = await t.db.insert(tagCategories).values({ name: "阶段", createdAt: NOW });
+    await t.db.insert(tags).values({ categoryId: BigInt(cat.insertId), name: "入门", createdAt: NOW });
+    await expectRejected(t.db.execute(sql`DELETE FROM tag_categories WHERE category_id = ${BigInt(cat.insertId)}`), "fk_tags_category");
   });
 });
 

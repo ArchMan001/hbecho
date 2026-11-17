@@ -21,6 +21,7 @@ import { recordChange } from "../changes";
 import { CONFIRM_CHUNK, CONFIRM_TIME_LIMIT_MS, LEASE_STALE_MS, ROSTER_HEADER } from "../constants";
 import { PlanError } from "../errors";
 import { claimIfNeeded } from "../owners";
+import { joinBranchInTx } from "../participation";
 import { assertCollecting } from "../plans";
 import { loadPlanFor, sectorsOf, type PlanRow } from "../visibility";
 import { classifyRows, isPossiblyNew, type Classified, type RosterRow } from "./classify";
@@ -223,7 +224,7 @@ export async function countOutcomes(tx: Db | DbTx, batchId: bigint): Promise<Con
 
 async function processChunk(deps: ConfirmDeps, batchId: bigint, token: string, planId: bigint, actor: PlanActor, limit: number, events: PlanAuditEvent[]): Promise<number> {
   return deps.db.transaction(async (tx) => {
-    const [b] = await tx.select({ token: importBatches.writingToken }).from(importBatches).where(eq(importBatches.importBatchId, batchId)).for("update");
+    const [b] = await tx.select({ token: importBatches.writingToken, submitterBranchId: importBatches.submitterBranchId }).from(importBatches).where(eq(importBatches.importBatchId, batchId)).for("update");
     if (!b || b.token !== token) throw new PlanError("conflict", "lease_lost", "写入租约已被其他进程接手");
     // 暂停 / 删除会等本块提交；下一块即看到并中止（批次停在 writing，恢复计划后可续跑）
     const plan = await loadPlanFor(tx, actor, CAP_PLAN_JOIN, planId, { lock: "share" });
@@ -244,7 +245,18 @@ async function processChunk(deps: ConfirmDeps, batchId: bigint, token: string, p
       locators: rosterRows.map((r) => (r.cells[3] ?? "").trim()).filter(Boolean).map((original) => ({ original, cleaned: classifyLocator(original).cleaned })),
     };
     const refs = await loadRosterRefs(tx, plan, keys, { lockParticipation: true });
-    const fresh = classifyRows(rosterRows, { plan: { platform: plan.platformCode as Platform, sectors: new Set(await sectorsOf(tx, planId)) }, actor, refs });
+    // 总部提交（批次 submitterBranchId 为空）：预检时已宽限未加入的分公司，这里按本块实际可写入的分公司自动加入
+    // （刘学奎 2026-11-12 决策；停用分公司已被 classify 判为 error/branch_inactive，不会进入这里）
+    const autoJoinBranches = b.submitterBranchId === null;
+    const fresh = classifyRows(rosterRows, { plan: { platform: plan.platformCode as Platform, sectors: new Set(await sectorsOf(tx, planId)) }, actor, refs, autoJoinBranches });
+    if (autoJoinBranches) {
+      const involved = [...new Set(fresh.flatMap((f) => (f.cls !== "error" && f.branchId !== undefined ? [f.branchId] : [])))];
+      for (const branchId of involved) {
+        if (refs.participation(branchId) === "joined") continue;
+        const joined = await joinBranchInTx(tx, { actor, planId, branchId, now, detail: { auto_by_roster: true, batch_id: batchId.toString(), submitter: actor.actor } });
+        if (joined.event) events.push(joined.event);
+      }
+    }
 
     const touched = new Set<bigint>();
     const pending: Array<{ rowNo: number; staffId: bigint; locator: string; rowId: bigint; storeId: bigint | null; accountId: bigint | null; note: Classified }> = [];

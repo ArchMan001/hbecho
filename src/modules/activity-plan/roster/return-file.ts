@@ -27,6 +27,7 @@ export const REASON_TEXT: Record<string, string> = {
   store_sector_not_in_plan: "门店所属板块不在本计划的板块范围内",
   store_branch_not_authorized: "门店不属于你的分公司，请联系管理员",
   branch_not_joined: "该门店所属分公司还没有加入本计划",
+  branch_inactive: "该门店所属分公司已停用",
   phone_belongs_to_other_store: "该手机号属于其他门店的有效专员，请联系超管",
   staff_inactive_restore_needed: "该门店有同手机号的已停用专员，请联系总部或超管恢复原专员",
   non_home_locator: "这是视频或笔记链接，不是主页链接，请换成账号主页链接",

@@ -1,9 +1,9 @@
 // 名单预检（requirements AP-6；design §5.2）：计划与分公司前置检查 → 文件级校验 → 内存里分类全部行 → 将新建专员 ≤ 1,000 →
 // 单次写入批次与行结果。只写 import_batches / import_row_results：不写专员、账号、归属、名单项、负责人，不调供应商。
 // 文件级 / 前置检查 / 超限任一失败都不建批次。
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import type { Db } from "../../../db/client";
-import { activityPlanBranches, activityPlanRoster, importBatches, importRowResults } from "../../../db/schema";
+import { activityPlanBranches, activityPlanRoster, branches, importBatches, importRowResults } from "../../../db/schema";
 import { classifyLocator, type Platform } from "../../provider-adapter";
 import { normalizePhone } from "../../phone";
 import type { Clock } from "../../raw-capture";
@@ -47,6 +47,9 @@ export interface PrecheckSummary {
     plan_entries_after: number;
     soft_cap_exceeded: boolean;
     example_rows: number[];
+    /** 总部提交时，文件中出现但尚未加入计划的分公司数（确认写入阶段自动加入，刘学奎 2026-11-12）。 */
+    auto_join_branches: number;
+    auto_join_branch_codes: string[];
   };
   confirm: Record<string, never>;
 }
@@ -90,8 +93,17 @@ export async function precheck(deps: RosterDeps, input: PrecheckInput, actor: Pl
     locators: rows.map((r) => (r.cells[3] ?? "").trim()).filter(Boolean).map((original) => ({ original, cleaned: classifyLocator(original).cleaned })),
   };
   const refs = await loadRosterRefs(db, plan, keys);
-  const results: Classified[] = classifyRows(rows, { plan: { platform: plan.platformCode as Platform, sectors }, actor, refs });
+  // 总部提交（范围 all）时，未加入的分公司不判错，由确认写入阶段自动加入（刘学奎 2026-11-12 决策）
+  const autoJoinBranches = submitterBranchId === null;
+  const results: Classified[] = classifyRows(rows, { plan: { platform: plan.platformCode as Platform, sectors }, actor, refs, autoJoinBranches });
   const count_ = (k: Classified["cls"]) => results.filter((c) => c.cls === k).length;
+  const autoJoinIds = autoJoinBranches
+    ? [...new Set(results.flatMap((r) => (r.cls !== "error" && r.branchId !== undefined ? [r.branchId] : [])))].filter((id) => refs.participation(id) !== "joined")
+    : [];
+  const autoJoinCodes =
+    autoJoinIds.length === 0
+      ? []
+      : (await db.select({ code: branches.branchCode }).from(branches).where(inArray(branches.branchId, autoJoinIds))).map((r) => r.code).sort();
   const newStaff = count_("new_staff");
   if (newStaff > MAX_NEW_STAFF) {
     throw new PlanError("limit", "too_many_new_staff", `一次最多新建 ${MAX_NEW_STAFF} 位专员，本文件需要新建 ${newStaff} 位，请拆分文件`, { new_staff: newStaff, limit: MAX_NEW_STAFF });
@@ -117,6 +129,8 @@ export async function precheck(deps: RosterDeps, input: PrecheckInput, actor: Pl
       plan_entries_after: entriesAfter,
       soft_cap_exceeded: entriesAfter > SOFT_CAP_ACCOUNTS,
       example_rows: parsed.exampleRowNos,
+      auto_join_branches: autoJoinIds.length,
+      auto_join_branch_codes: autoJoinCodes,
     },
     confirm: {},
   };

@@ -41,9 +41,13 @@ const counting = () => {
 };
 
 describe("worker 启动守卫", () => {
-  it("当前真实登记表：production 全部 disabled → 拒绝启动，说明原因（不是静默起一个只会写 failed 的 worker）", () => {
-    expect(() => assertWorkerCanRun(cfg())).toThrow(WorkerNotRunnableError);
-    expect(() => assertWorkerCanRun(cfg())).toThrow(/没有任何已批准的 capability/);
+  it("当前真实登记表：抖音 / 小红书 已批准（2026-11-12）→ 允许启动", () => {
+    expect(() => assertWorkerCanRun(cfg())).not.toThrow();
+  });
+
+  it("没有任何已批准的 capability → 拒绝启动，说明原因（不是静默起一个只会写 failed 的 worker）", () => {
+    expect(() => assertWorkerCanRun(cfg(), approveNone)).toThrow(WorkerNotRunnableError);
+    expect(() => assertWorkerCanRun(cfg(), approveNone)).toThrow(/没有任何已批准的 capability/);
   });
 
   it("HBECHO_ENV=test：capability 只对应 fixture transport，真实装配拒绝（避免未经批准的付费调用）", () => {

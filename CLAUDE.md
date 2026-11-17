@@ -11,6 +11,7 @@
 @.kiro/steering/server-access.md
 @.kiro/steering/no-reinventing-wheels.md
 @.kiro/steering/dev-ci-cadence.md
+@.kiro/steering/ui-workflow.md
 
 ## 权威顺序
 
@@ -36,8 +37,8 @@
 - `src/modules/activity-plan/`：活动计划（计划生命周期与回收站、分公司参与、负责人名额、名单导入 `roster/`：模板 → 预检 → 确认 → 解析驱动 → 归并，名单维护、查询与综合状态、`reader.rosterSnapshot` 给 D / E、每日维护 `maintenance.ts`）；`src/modules/plan-references/`：**引用计数与监控联动的唯一实现**（`reconcileAccounts`；只有它写 `unreferenced_since` 与 `unreferenced_15d`，静态护栏守护）；CLI 是 `pnpm run plan ...`（`src/worker/plan-*.ts`），解析驱动与每日维护由 sync worker 装配（`sync-main.ts`）；页面在 `src/app/(app)/{plans,batches,accounts,master-data}/`，服务端动作 `src/app/_actions/{plans,accounts,master-data}.ts`，页面进程装配 `src/app/_lib/plan.ts`（不装配付费网关）
 - `.kiro/steering/`：自动加载的精简规则
 - `aimaster接口文档/`：供应商合同、探针脚本与 raw3 证据
-- `ui-lab/`：可点击界面原型（不进生产构建、不进 `src/app/`；ADR-0013）
-- `scripts/`：`verify.sh`（唯一验证入口）与文档/密钥门禁
+- `ui-lab/`：可点击界面原型（不进生产构建、不进 `src/app/`；ADR-0013）；本机入口与账号见 [`ui-lab/LOCAL-UI.md`](ui-lab/LOCAL-UI.md)，协作规则见 `.kiro/steering/ui-workflow.md`；`./scripts/preview.sh` 一条命令起 4175（原型）与 3202（造好数据的完整应用）
+- `scripts/`：`verify.sh`（唯一验证入口）、文档/密钥门禁与 `preview.sh`（本机预览；造数在 `tests/demo/`，不进 CI、不进镜像）
 - `.github/workflows/ci.yml`：CI
 - `.githooks/pre-commit`：提交前密钥扫描
 

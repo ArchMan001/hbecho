@@ -9,6 +9,7 @@ import {
   renderBatchList, renderBatchDetail, renderAccounts, accountModalHtml,
 } from "./pages-a.js";
 import { renderMasterImport, renderMasterBatches, renderMasterBatchDetail } from "./pages-m.js";
+import { renderMasterBrowse } from "./pages-m-browse.js";
 import {
   renderAuth, renderUsers, renderUserNew, renderUserDetail, renderUserImport,
   renderAudit, renderPlaceholder, renderStoreHome,
@@ -43,6 +44,7 @@ function parseRoute() {
     return { name: "user-detail", id: second };
   }
   if (head === "master") {
+    if (second === "import") return { name: "master-import" };
     if (second === "batches") return third ? { name: "master-batch", id: third } : { name: "master-batches" };
     return { name: "master" };
   }
@@ -50,7 +52,7 @@ function parseRoute() {
   return { name: head, id: second, sub: third };
 }
 
-function render() {
+function renderRaw() {
   const route = parseRoute();
   const authRoutes = ["login", "activate", "forgot", "change-password"];
   if (authRoutes.includes(route.name)) {
@@ -87,7 +89,8 @@ function render() {
     case "user-import": html = renderUserImport(); break;
     case "audit": html = renderAudit(); break;
     case "store": html = renderStoreHome(); break;
-    case "master": html = renderMasterImport(); break;
+    case "master": html = renderMasterBrowse(); break;
+    case "master-import": html = renderMasterImport(); break;
     case "master-batches": html = renderMasterBatches(); break;
     case "master-batch": html = renderMasterBatchDetail(route.id); break;
     case "judgement":
@@ -152,6 +155,10 @@ function go(hash) {
 /* ---------- 事件 ---------- */
 
 document.addEventListener("click", (event) => {
+  if (state.openPanel && !event.target.closest(".hf")) {
+    state.openPanel = null;
+    render();
+  }
   const actionEl = event.target.closest("[data-action]");
   if (actionEl) {
     event.preventDefault();
@@ -212,7 +219,22 @@ document.addEventListener("change", (event) => {
   if (el.matches("[data-audit-filter]")) {
     state.auditFilter[el.dataset.auditFilter] = el.value;
     render();
+    return;
   }
+  if (el.matches("[data-md-size]")) {
+    state.mdBrowse.size = Number(el.value) || 20;
+    state.mdBrowse.page = 1;
+    render();
+    return;
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || !event.target.matches("[data-md-kw]")) return;
+  event.preventDefault();
+  state.mdBrowse.kw = event.target.value.trim();
+  state.mdBrowse.page = 1;
+  render();
 });
 
 document.addEventListener("submit", (event) => {
@@ -398,6 +420,54 @@ function handleAction(el) {
       break;
     case "md-mode":
       state.mdMode = el.dataset.mode;
+      render();
+      break;
+    case "hf-pin":
+      // 桌面端靠悬停/聚焦展开；只有触屏（无 hover）才用点击固定展开
+      if (window.matchMedia("(hover: none)").matches) {
+        state.openPanel = state.openPanel === el.dataset.id ? null : el.dataset.id;
+        render();
+      }
+      break;
+    case "hf-toggle": {
+      const field = el.dataset.key.replace("mdBrowse.", "");
+      const cur = state.mdBrowse[field];
+      state.mdBrowse[field] = cur.includes(el.dataset.value) ? cur.filter((v) => v !== el.dataset.value) : [...cur, el.dataset.value];
+      state.mdBrowse.page = 1;
+      render();
+      break;
+    }
+    case "hf-clear": {
+      const field = el.dataset.key.replace("mdBrowse.", "");
+      state.mdBrowse[field] = [];
+      state.mdBrowse.page = 1;
+      render();
+      break;
+    }
+    case "md-view":
+      state.mdBrowse.view = el.dataset.view;
+      state.mdBrowse.page = 1;
+      render();
+      break;
+    case "md-search": {
+      const input = document.querySelector("[data-md-kw]");
+      state.mdBrowse.kw = (input?.value ?? "").trim();
+      state.mdBrowse.page = 1;
+      render();
+      break;
+    }
+    case "md-clear":
+      state.mdBrowse = { ...state.mdBrowse, brand: [], region: [], branch: [], sector: [], tier: [], status: [], kw: "", page: 1 };
+      render();
+      break;
+    case "md-page":
+      state.mdBrowse.page = Math.max(1, Number(el.dataset.page) || 1);
+      render();
+      break;
+    case "md-open-branch":
+      state.mdBrowse.view = "stores";
+      state.mdBrowse = { ...state.mdBrowse, brand: [], region: [], branch: [el.dataset.id], sector: [], tier: [], status: [], kw: "" };
+      state.mdBrowse.page = 1;
       render();
       break;
     case "md-next":
@@ -652,6 +722,26 @@ function handleForm(name, form) {
     default:
       toast("原型：表单已提交");
   }
+}
+
+/* 重渲染会让指针下的下拉面板丢失 :hover；记住指针所在的面板和列表滚动位置，渲染后补回 */
+let hoverHf = null;
+document.addEventListener("mousemove", (e) => {
+  const h = e.target.closest?.(".hf") ?? null;
+  document.querySelectorAll(".hf.hover-keep").forEach((x) => { if (x !== h) x.classList.remove("hover-keep"); });
+  hoverHf = h?.dataset.hfId ?? null;
+});
+function render() {
+  const scrolls = {};
+  document.querySelectorAll(".hf").forEach((h) => {
+    const l = h.querySelector(".hf-list:not(.hidden)");
+    if (l) scrolls[h.dataset.hfId] = [...h.querySelectorAll(".hf-list")].map((x) => x.scrollTop);
+  });
+  renderRaw();
+  Object.entries(scrolls).forEach(([id, tops]) => {
+    document.querySelectorAll(`.hf[data-hf-id="${id}"] .hf-list`).forEach((x, i) => { x.scrollTop = tops[i] ?? 0; });
+  });
+  if (hoverHf) document.querySelector(`.hf[data-hf-id="${hoverHf}"]`)?.classList.add("hover-keep");
 }
 
 window.addEventListener("hashchange", render);

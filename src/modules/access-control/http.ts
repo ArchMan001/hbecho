@@ -31,7 +31,7 @@ export function createAuthRouteHandlers(getAuth: () => AccessAuth | Promise<Acce
   return { GET: handle, POST: handle };
 }
 
-/** 健康检查：只证明进程在、路由通；不读不写数据库。 */
-export function healthResponse(): Response {
-  return json(200, { ok: true });
+/** 健康检查：只证明进程在、路由通；不读不写数据库。`build` 是镜像对应的提交号（构建时传入），用来核对「线上跑的是哪一版」。 */
+export function healthResponse(build?: string): Response {
+  return json(200, { ok: true, build: build?.trim() || "unknown" });
 }

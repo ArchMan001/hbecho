@@ -101,6 +101,7 @@
 | 46 | ✅ Kiro | 2026-11-12 经刘学奎同意上线：镜像标签 `69595423c6d3`（main 合并提交，CI run 43160976258 verify + image 全绿；含活动计划页面 P1–P5 与主数据导入页面）。`pull` → 迁移（无新迁移，`migrations applied`）→ `WEB_TAG` 切换并 `docker compose up -d web learning-worker`；`/api/health` 正常，`/plans`、`/accounts`、`/master-data/import`、`/batches` 未登录 307 到 `/login`，公网 `/login` 200 且页脚有备案号，除 22/80/443 外无公网监听。回滚 = `WEB_TAG` 改回 `718a8a4bfef3`。页面进程默认 `HBECHO_ENV=production`，名单确认的 `media_user_info` capability 未放行，所以真实环境里「确认写入」会被拒绝并说明原因，直到 capability 获批 | §10.3 |
 | 47 | ✅ Claude（刘学奎 2026-11-16 同意） | 部署主数据浏览 `…/hbecho/app:8c6b2ff9e9a6`（main 合并提交 `8c6b2ff`；CI run 43803345217 的 image job 已推 ACR）：内网拉取 → 迁移无新增（`__drizzle_migrations` 仍 12）→ 只重启 `web`。健康 `{"ok":true}`、公网 `/login` 200、`/users` 307，`.next/server/app/(app)/master-data` 在新镜像中。`learning-worker` / `sync-worker` 仍为 `6368b94798ef`。**发现**：`/data/app/docker-compose.yml` 的镜像标签写死、不读 `.env` 的 `WEB_TAG`，与 §10.3 不一致；本次备份 `/data/backup/docker-compose.yml.bak-20261116` 后只改 web 行，待后续统一改成 `${WEB_TAG}` | §10.3 / §10.4 |
 | 48 | ✅ Claude（刘学奎 2026-11-16 同意） | 部署判定计划 `…/hbecho/app:9bb35b580bc5`（main 合并提交 `9bb35b5`；CI run 43839201580 的 image job 已推 ACR）：内网拉取 → 逻辑备份 `/data/backup/pre-d-judgement-20261116.sql.gz`（62 张表，`gzip -t` 通过）→ 迁移账号应用 `0012_d_judgement_schema`（`__drizzle_migrations` 12 → 13，新增 5 张判定表；运行账号对 `hbecho.*` 已有 SELECT/INSERT/UPDATE/DELETE，无需另授权）→ 新增 `/data/app/judgement.env`（root 600：`HBECHO_JP_*` 14 项 + `HBECHO_SIGNALS_*` 12 项的起始值，`HBECHO_JP_ACTOR=user:1`；同步 / 评论模式与 `HBECHO_MEDIA_MAX_BYTES` 从 `sync.env` 复制，值不回显）→ compose 备份 `/data/backup/docker-compose.yml.bak-20261116b`，`web` 升到新标签并加载 `judgement.env`，新增 `judgement-worker`（`judgement-main.ts serve`）→ 只重起这两个容器。健康 `{"ok":true}`、`/login` 200、`/judgement` 307（未登录跳登录）；`learning-worker` / `sync-worker` 仍为 `6368b94798ef`。**C 的文本信号**：`signals scan --once` 一次性容器算完 798 条（`signals run` 常驻需要 `hbecho-signals` 桶与能力服务，都还没有，所以没有起常驻 worker；新同步的内容要再扫一次，命令见 `man-walkthrough.md` §5）。**真实栈冒烟**（计划「部署冒烟（验证后归档）」，已归档）：建计划 → 配置 → 圈定（70 人 / 247 条 / C1 90，1.2 秒）→ 确认执行 → worker 约 15 秒完成（成功 21 / 不达标 14 / 未获取成功 35，全部 `sync_failed`）；没有任何付费调用 | `.kiro/specs/d-rule-engine/man-walkthrough.md` |
+| 49 | ✅ Claude（刘学奎 2026-11-16 同意） | 新增 `signals-scan` 容器（过渡方案，只改 `/data/app/docker-compose.yml`，镜像仍是 `9bb35b580bc5`，没有代码与镜像变更）：循环执行 `signals-main.ts scan --once`，间隔 30 秒；游标增量，单次约 1.3 秒，空闲时 CPU 0%；只在有新内容或失败时写日志。ECS 为 8 核 / 31 GB。compose 备份 `/data/backup/docker-compose.yml.bak-20261116c`。**删除条件**：`signals run` 能起来（有 `hbecho-signals` 桶与能力服务），或 D 的运行入口自己触发扫描 | `man-walkthrough.md` §0、§5 |
 
 ### 待触发（有前置条件，暂不做）
 
@@ -2160,6 +2161,36 @@ docker image prune -f
     depends_on: [mysql]
 ```
 每分钟一轮（转码回填、待删除媒体重试），每小时加一轮归档与残渣清理；日志在容器 stderr（JSON）。有步骤失败时日志级别是 error，消息 `learning_maintenance_errors`——**这是 VOD / OSS 不可用的唯一信号，需要接日志告警**。回滚 = 改回上一个 `WEB_TAG`。
+
+#### 同步 worker（sync-worker，2026-11-13 增补）
+
+名单「确认写入」只落 `resolve_account` 根任务；真正调 AI Master 的是 sync worker。**没有这个进程，确认后的账号会一直 pending**。它在 production 运行，启动守卫 `assertWorkerCanRun` 要求至少一个已批准的 capability（2026-11-12 起抖音 / 小红书已批准，见 `capability.ts` 的 `PRODUCTION_APPROVAL`）。
+
+```yaml
+  sync-worker:
+    image: hbecho-registry-registry-vpc.cn-beijing.cr.aliyuncs.com/hbecho/app:${WEB_TAG}
+    container_name: hbecho-sync-worker
+    restart: unless-stopped
+    env_file: /data/app/sync.env          # 独立环境文件：需要 AIMASTER_* 与 OSS 写权限，不复用 web.env
+    command: ["./node_modules/.bin/tsx", "src/worker/sync-main.ts", "worker"]   # 缺子命令只会打印用法；常驻必须显式 worker
+    depends_on: [mysql]
+```
+
+`/data/app/sync.env`（root 600）至少包含：`HBECHO_DATABASE_URL`、`HBECHO_ENV=production`、`AIMASTER_BASE_URL`、`AIMASTER_API_KEY`、`AIMASTER_ENABLED=true`、`OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET` / `OSS_REGION` / `OSS_BUCKET_ODS` / `OSS_BUCKET_MEDIA`、`HBECHO_MEDIA_MAX_BYTES`，以及 tracer 的 modes / 并发 / 批次预算配置（键名见 `.env.example`）。**`HBECHO_ENV=test` 会被启动守卫拒绝**。
+
+**预算**：`AIMASTER_ENABLED=true` 后每个 provider 调用都计费；批次上限由 tracer 配置的 `batchBudget`（调用数 / 点数）与 `breaker` 控制，需与批准预算（刘学奎 2026-11-12：上限 1 万元、有效期一年）一致。**回滚**：从 compose 中去掉 `sync-worker` 并 `docker compose up -d`，任务停在 pending，不产生调用。
+
+**2026-11-13 部署状态**：镜像 `6368b94798ef` 已推送 ACR 并在测试 ECS 拉取；`/data/app/sync.env`（root 600）已建，含数据库 URL、`HBECHO_ENV=production`、四个模式（均 synchronous）、并发 / QPS / 熔断 / 批次预算、媒体上限与能力服务地址；`docker-compose.yml` 已追加 `sync-worker`（原文件备份 `/data/backup/docker-compose.yml.bak-20261113`，`docker compose config` 通过）。**未启动**：试运行报 `环境变量 AIMASTER_API_KEY 缺失`，另外还缺 `AIMASTER_BASE_URL`、`OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET` / `OSS_REGION` / `OSS_BUCKET_ODS` / `OSS_BUCKET_MEDIA`，以及 Python 能力服务（`HBECHO_CAPABILITY_URL` 指向的 `capability` 容器尚未部署）。这些配好后 `docker compose up -d sync-worker` 即可。
+
+**2026-11-13 启动完成**：sync-worker 已启动并稳定（容器 Up，最近 2 分钟 0 条 `level=50`）。启动时补齐了三项：
+
+1. **`sync_settings` 必须手工初始化**：迁移 `0001` 明确不种入（「由运维显式配置」）。已插入 `settings_id=1`、`Asia/Shanghai`、`schedule_slots=[{"weekday":1,"time":"02:00"}]`、`initial_content_limit=20`、`list_safety_page_limit=5`、`comment_page_limit=5`、`account_resolve_max_attempts=3`、`task_max_attempts=3`、`config_version=1`；
+2. **`OSS_ENDPOINT=oss-cn-beijing-internal.aliyuncs.com` 必须写进 sync.env**：不写时 ali-oss 会拼公网域名，维护任务的 `sweep_orphans` 因 DNS 失败；`docker restart` 不会重读 `env_file`，改完要用 `docker compose up -d --no-deps --force-recreate sync-worker`；
+3. **sync-worker 的 image 临时固定为 `6368b94798ef`**（含 capability 放行），因为 `/data/app/.env` 的 `WEB_TAG` 仍是 `69595423c6d3`；web 升级后改回 `${WEB_TAG}`。
+
+维护任务已验证成功：`orphans["smoke/ods/"]` 删除 14 个孤儿对象，`failedSteps` 为空。
+
+**2026-11-13 web 与 learning-worker 同步升级**：两者也临时固定到 `6368b94798ef`（含 capability 放行与「将自动加入分公司」页面文案），`docker compose up -d web learning-worker` 完成。验证：`/api/health` 返回 `{"ok":true}`，`/login` 本机 200、公网 200，Next.js Ready。三个服务现在同镜像；`/data/app/.env` 的 `WEB_TAG` 仍是 `69595423c6d3`，升级到新 sha 后把三个服务的 image 改回 `${WEB_TAG}`。
 
 ### 10.4 部署后必检
 

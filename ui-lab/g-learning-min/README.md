@@ -2,6 +2,8 @@
 
 > **状态**：`原型 v1 · 已确认`（2026-11-10，刘学奎）。`g-learning-min` design §11.6 已按本版填写；只用于界面评审与业务走查，**不进生产构建**，不被 `src/` 引用。
 >
+> **2026-11-12 增补**：本目录临时承载 **Echo 品牌语言体系**的登录页原型（`#/login`）与品牌区改版（`hbecho` → `Echo / 新媒体营销平台`）。文案依据 [`brand-language.md`](../../HBECHO设计方案/ui/brand-language.md)；该变更**尚未经刘学奎确认**，确认后才进 `src/app/`。2026-11-16 按刘学奎的选择改用 17 号「E + 声源点」标记，并把中文名改为「新媒体营销平台」。学习平台页面的业务内容不变。
+>
 > **依据**：[`g-learning-min` design §11 界面](../../.kiro/specs/g-learning-min/design.md)、[`requirements.md`](../../.kiro/specs/g-learning-min/requirements.md)、G 域 PRD（`prd-domain-g-learning.md` v1.0.1）；视觉沿用 2026-11-10 确认的 v2 基线（[`../hbecho-ui-v2/`](../hbecho-ui-v2/README.md)）。
 >
 > **后续**：页面实现仍待排期；实现时按 `ui-foundation.md` 的 token 在 `src/app/` 重建，不复制本目录代码。
@@ -10,6 +12,7 @@
 
 | 页面 | 角色 | 说明 |
 |---|---|---|
+| 登录页（`#/login`） | 未登录 | Echo 品牌语言体系 B 版：三段排比 + 定位副题 + 三个业务数字；点「登录」进入学习中心（原型） |
 | 学习中心（课程列表） | 四类角色 | 标题搜索、单标签筛选、只看在学；卡片显示在学与续播位置 |
 | 课程详情 · 视频 | 四类角色 | 播放器与续播、进度栏；转码中显示「暂不可播放」 |
 | 课程详情 · 资料 | 四类角色 | PDF / 图片预览；下载原件（记审计）；微信内改为复制链接提示 |
@@ -29,6 +32,8 @@ python3 -m http.server 4175 --directory ui-lab/g-learning-min
 ```
 
 然后打开 <http://localhost:4175/>。A/B 基线原型在 `4174`（[`../hbecho-ui-v2/`](../hbecho-ui-v2/README.md)），可以同时开。
+
+Echo 登录页：<http://localhost:4175/#/login>。
 
 ## 原型控制
 

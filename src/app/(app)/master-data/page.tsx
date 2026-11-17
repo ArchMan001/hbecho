@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { ClickRow } from "../../_components/click-row";
 import { FilterCard } from "../../_components/filter-card";
+import { HoverFilter } from "../../_components/hover-filter";
+import { Icon } from "../../_components/icon";
 import { MasterTabs } from "../../_components/master/tabs";
 import { Pager } from "../../_components/plans/pager";
 import { Badge, Callout, DeniedState, EmptyState, PageHead } from "../../_components/ui";
@@ -10,11 +12,13 @@ import { MasterDataError, type BranchListItem, type BrowseFilter, type PageResul
 import { STORE_STATUS } from "../../_lib/master-labels";
 import { masterData, mdActorOf } from "../../_lib/master-data";
 import { bjt, n } from "../../_lib/plan-labels";
-import { hrefWith, pageOf } from "../../_lib/plan-page";
+import { hrefMulti, toggled, valuesOf, type Params } from "../../_lib/multi-url";
+import { pageOf } from "../../_lib/plan-page";
 import { requireUser, web } from "../../_lib/session";
 
-type Q = { view?: string | undefined; brand?: string | undefined; branch?: string | undefined; sector?: string | undefined; tier?: string | undefined; status?: string | undefined; kw?: string | undefined; page?: string | undefined; size?: string | undefined };
+type Q = Params;
 const SIZES = [20, 50, 100] as const;
+const NO_TIER = "__none__";
 
 export default async function MasterBrowsePage({ searchParams }: { searchParams: Promise<Q> }) {
   const ctx = await requireUser();
@@ -22,26 +26,40 @@ export default async function MasterBrowsePage({ searchParams }: { searchParams:
     return <DeniedState text="主数据浏览只对超管与总部人员开放。" />;
   }
   const q = await searchParams;
-  const view = q.view === "branches" ? "branches" : "stores";
-  const size = SIZES.find((s) => String(s) === q.size) ?? 20;
-  const wantPage = Math.max(1, Number(q.page) || 1);
-  const tierMissing = q.tier === "__none__";
-  const href = (patch: Record<string, string | undefined>) => hrefWith("/master-data", q as Record<string, string | undefined>, patch);
-  const clearHref = href({ brand: undefined, branch: undefined, sector: undefined, tier: undefined, status: undefined, kw: undefined, page: undefined });
+  const view = valuesOf(q.view)[0] === "branches" ? "branches" : "stores";
+  const size = SIZES.find((s) => String(s) === valuesOf(q.size)[0]) ?? 20;
+  const wantPage = Math.max(1, Number(valuesOf(q.page)[0]) || 1);
+  const kw = valuesOf(q.kw)[0] ?? "";
+  const href = (patch: Params) => hrefMulti("/master-data", q, patch);
+  const FILTER_KEYS = ["brand", "region", "branch", "sector", "tier", "status", "kw", "page"] as const;
+  const clearHref = href(Object.fromEntries(FILTER_KEYS.map((k) => [k, undefined])));
 
   const actor = await mdActorOf(ctx);
   const md = masterData();
   const [directory, options] = await Promise.all([web().directory(), md.browse.filterOptions(actor)]);
   const visibleBrands = directory.brands.filter((b) => ctx.scope.brands === "all" || ctx.scope.brands.has(BigInt(b.id)));
 
+  const picked = {
+    brand: valuesOf(q.brand),
+    region: valuesOf(q.region),
+    sector: valuesOf(q.sector),
+    tier: valuesOf(q.tier),
+    status: valuesOf(q.status),
+  };
+  // 选了大区，分公司只列这些大区下的；不在其中的已选分公司丢弃
+  const branchOptions = options.branches.filter((b) => picked.region.length === 0 || picked.region.includes(b.regionId));
+  const pickedBranch = valuesOf(q.branch).filter((id) => branchOptions.some((b) => b.id === id));
+
   const filter: BrowseFilter = { page: wantPage, pageSize: size };
-  if (q.brand) filter.brandId = q.brand;
-  if (q.branch) filter.branchId = q.branch;
-  if (q.sector) filter.sectorName = q.sector;
-  if (!tierMissing && q.tier) filter.tier = q.tier;
-  if (tierMissing) filter.tierMissing = true;
-  if (q.status) filter.status = q.status as StoreStatus;
-  if (q.kw) filter.keyword = q.kw;
+  if (picked.brand.length) filter.brandIds = picked.brand;
+  if (picked.region.length) filter.regionIds = picked.region;
+  if (pickedBranch.length) filter.branchIds = pickedBranch;
+  if (picked.sector.length) filter.sectorNames = picked.sector;
+  const tierValues = picked.tier.filter((t) => t !== NO_TIER);
+  if (tierValues.length) filter.tiers = tierValues;
+  if (picked.tier.includes(NO_TIER)) filter.tierMissing = true;
+  if (picked.status.length) filter.statuses = picked.status as StoreStatus[];
+  if (kw) filter.keyword = kw;
 
   let storesResult: PageResult<StoreListItem> | null = null;
   let branchesResult: PageResult<BranchListItem> | null = null;
@@ -65,12 +83,19 @@ export default async function MasterBrowsePage({ searchParams }: { searchParams:
   const total = storesResult?.total ?? branchesResult?.total ?? 0;
   const page = storesResult?.page ?? branchesResult?.page ?? 1;
   const pg = pageOf(String(page), total, size);
-  const activeFilters = [q.brand, q.branch, q.sector, q.tier, q.status, q.kw].filter(Boolean).length;
-  const chip = (label: string, target: string, current: string | undefined, patch: Record<string, string | undefined>, key?: string) => (
-    <Link key={key} className={`chip${current === target ? " active" : ""}`} href={href({ ...patch, page: undefined })} scroll={false}>
-      {label}
-    </Link>
+  const activeFilters = picked.brand.length + picked.region.length + pickedBranch.length + picked.sector.length + picked.tier.length + picked.status.length + (kw ? 1 : 0);
+  /** 一个多选下拉：选项链接 = 在当前已选里加入 / 去掉该值；额外的 patch 用来联动其他参数。 */
+  const dropdown = (label: string, key: "brand" | "region" | "branch" | "sector" | "tier" | "status", opts: Array<{ value: string; label: string }>, current: string[], extra?: (next: string[]) => Params) => (
+    <HoverFilter
+      label={label}
+      options={opts.map((o) => {
+        const next = toggled(current, o.value);
+        return { value: o.value, label: o.label, selected: current.includes(o.value), href: href({ [key]: next, ...extra?.(next), page: undefined }) };
+      })}
+      clearHref={href({ [key]: undefined, ...extra?.([]), page: undefined })}
+    />
   );
+  const names = (list: string[]) => list.map((v) => ({ value: v, label: v }));
 
   const filters = (
     <FilterCard activeCount={activeFilters}>
@@ -79,44 +104,33 @@ export default async function MasterBrowsePage({ searchParams }: { searchParams:
         <Link className={`chip${view === "branches" ? " active" : ""}`} href={href({ view: "branches", page: undefined })} scroll={false}>分公司 · {n(options.branchCount)}</Link>
       </div>
       {view === "stores" ? (
-        <>
-          <div className="filter-line"><span className="filter-label">品牌</span>
-            {chip("全部品牌", "all", q.brand ?? "all", { brand: undefined })}
-            {visibleBrands.map((b) => chip(b.name, b.id, q.brand, { brand: b.id }, b.id))}
-          </div>
-          <div className="filter-line"><span className="filter-label">板块</span>
-            {chip("全部板块", "all", q.sector ?? "all", { sector: undefined })}
-            {options.sectorNames.map((s) => chip(s, s, q.sector, { sector: s }, s))}
-          </div>
-          <div className="filter-line"><span className="filter-label">店面标准</span>
-            {chip("全部", "all", q.tier ?? "all", { tier: undefined })}
-            {options.storeTiers.map((t) => chip(t, t, q.tier, { tier: t }, t))}
-            {options.hasMissingTier ? chip("未设置", "__none__", q.tier, { tier: "__none__" }) : null}
-          </div>
-          <div className="filter-line"><span className="filter-label">状态</span>
-            {chip("全部", "all", q.status ?? "all", { status: undefined })}
-            {chip("在用", "active", q.status, { status: "active" })}
-            {chip("已撤店", "closed", q.status, { status: "closed" })}
-          </div>
-        </>
+        <div className="hf-row">
+          {dropdown("品牌", "brand", visibleBrands.map((b) => ({ value: b.id, label: b.name })), picked.brand)}
+          {dropdown("板块", "sector", names(options.sectorNames), picked.sector)}
+          {dropdown("门店标准", "tier", [...names(options.storeTiers), ...(options.hasMissingTier ? [{ value: NO_TIER, label: "未设置" }] : [])], picked.tier)}
+          {dropdown("状态", "status", [{ value: "active", label: "在用" }, { value: "closed", label: "已撤店" }], picked.status)}
+          {dropdown(
+            "大区",
+            "region",
+            options.regions.map((r) => ({ value: r.id, label: r.name })),
+            picked.region,
+            // 大区收窄后，不在这些大区里的已选分公司一并去掉
+            (nextRegions) => ({ branch: pickedBranch.filter((id) => nextRegions.length === 0 || nextRegions.includes(options.branches.find((b) => b.id === id)?.regionId ?? "")) }),
+          )}
+          {dropdown("分公司", "branch", branchOptions.map((b) => ({ value: b.id, label: b.name })), pickedBranch)}
+        </div>
       ) : null}
       <form method="get" action="/master-data" className="filter-line">
         <input type="hidden" name="view" value={view} />
-        {q.brand ? <input type="hidden" name="brand" value={q.brand} /> : null}
-        {q.sector ? <input type="hidden" name="sector" value={q.sector} /> : null}
-        {q.tier ? <input type="hidden" name="tier" value={q.tier} /> : null}
-        {q.status ? <input type="hidden" name="status" value={q.status} /> : null}
-        {view === "stores" ? (
-          <label className="filter-select"><span>分公司</span>
-            <select name="branch" defaultValue={q.branch ?? ""}>
-              <option value="">全部分公司</option>
-              {directory.branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-          </label>
-        ) : null}
-        <input className="input" name="kw" defaultValue={q.kw ?? ""} placeholder={view === "stores" ? "门店编码或名称" : "分公司编码或名称"} aria-label="搜索关键字" />
-        <button className="btn btn-sm" type="submit">搜索</button>
-        <Link className="btn btn-sm" href={clearHref}>清空</Link>
+        {(["brand", "region", "sector", "tier", "status"] as const).flatMap((k) => picked[k].map((v) => <input key={`${k}-${v}`} type="hidden" name={k} value={v} />))}
+        {pickedBranch.map((v) => <input key={`branch-${v}`} type="hidden" name="branch" value={v} />)}
+        <label className="course-search" style={{ maxWidth: 340 }}>
+          <Icon name="search" />
+          <input type="search" name="kw" defaultValue={kw} placeholder={view === "stores" ? "门店编码或名称、经销商编码或名称" : "分公司编码或名称"} aria-label="搜索关键字" />
+        </label>
+        <button className="btn btn-primary btn-sm" type="submit">检索</button>
+        {activeFilters ? <Link className="btn btn-sm btn-ghost" href={clearHref}>清空全部</Link> : null}
+        {view === "stores" ? <span className="filter-note">分公司跨品牌共享，选了大区后只列该大区的分公司；门店计数只含授权品牌内的门店</span> : null}
       </form>
     </FilterCard>
   );
@@ -180,7 +194,7 @@ export default async function MasterBrowsePage({ searchParams }: { searchParams:
               <thead><tr><th>分公司编码</th><th>分公司名称</th><th>大区</th><th className="right">在用门店</th><th className="right">已撤门店</th><th>更新时间</th></tr></thead>
               <tbody>
                 {branchesResult.items.map((b) => (
-                  <ClickRow key={b.branchId} href={href({ view: "stores", branch: b.branchId, page: undefined })}>
+                  <ClickRow key={b.branchId} href={href({ view: "stores", brand: undefined, region: undefined, branch: b.branchId, sector: undefined, tier: undefined, status: undefined, kw: undefined, page: undefined })}>
                     <td className="num">{b.branchCode}</td>
                     <td><div className="cell-main">{b.branchName}</div><div className="cell-sub">点击查看这个分公司的门店</div></td>
                     <td>{b.regionName}</td>

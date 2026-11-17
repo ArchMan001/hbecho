@@ -252,7 +252,7 @@ describe("归并的保护与幂等", () => {
     let ran = false;
     const e = await env({ runRoot: async () => ((ran = true), { kind: "succeeded" }) });
     const batchId = await e.submit(csv(staffLine(1, URL("G1"))));
-    const prod = createRosterResolver({ db: t.db, clock, audit: w.audit.sink, runRoot: async () => ((ran = true), { kind: "succeeded" }), finalize: async () => ({ requested: 0, queued: 0, notDue: 0 }), tracerConfig: { ...DEFAULT_CONFIG, environment: "production" } });
+    const prod = createRosterResolver({ db: t.db, clock, audit: w.audit.sink, runRoot: async () => ((ran = true), { kind: "succeeded" }), finalize: async () => ({ requested: 0, queued: 0, notDue: 0 }), tracerConfig: { ...DEFAULT_CONFIG, environment: "staging" } });
     const r = await prod.runOnce();
     expect(r).toMatchObject({ examined: 1, gated: 1, settled: 0, failed: [] });
     expect(ran).toBe(false);

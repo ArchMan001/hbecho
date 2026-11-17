@@ -170,6 +170,10 @@ export interface ConfirmFacts {
   ownerNote: string;
   /** 名额已满：确认会被拒绝。 */
   ownerBlocked: boolean;
+  /** 总部提交时，本次确认将自动加入的分公司数（分公司提交为 0）。 */
+  autoJoinBranches: number;
+  /** 将自动加入的分公司编码。 */
+  autoJoinCodes: string[];
 }
 
 /** 预检报告上方的操作：下载回流文件、确认写入（第 4 步：弹窗里核对后才写入）。 */
@@ -237,6 +241,12 @@ export function RosterReportActions({ planId, facts, canConfirm, hasReturnRows }
           <div><div className="info-label">计划</div><div className="info-value">{facts.planName}</div></div>
           <div><div className="info-label">批次</div><div className="info-value num">{facts.batchId}</div></div>
           <div><div className="info-label">提交分公司</div><div className="info-value">{facts.branchName}</div></div>
+          {facts.autoJoinBranches > 0 ? (
+            <div>
+              <div className="info-label">将自动加入分公司</div>
+              <div className="info-value">{facts.autoJoinBranches} 家（{facts.autoJoinCodes.join("、")}）</div>
+            </div>
+          ) : null}
           <div><div className="info-label">将新建专员</div><div className="info-value num">{facts.newStaff.toLocaleString("en-US")}</div></div>
           <div><div className="info-label">名单写入 / 恢复</div><div className="info-value num">{facts.writable.toLocaleString("en-US")}</div></div>
           <div><div className="info-label">账号解析任务</div><div className="info-value num">{facts.resolveTasks.toLocaleString("en-US")}</div></div>

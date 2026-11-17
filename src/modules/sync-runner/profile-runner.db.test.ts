@@ -192,12 +192,12 @@ describe("RESULT_VALIDATION_FAILED 耗尽（D5、D6）", () => {
 });
 
 describe("前置门禁（不发请求）", () => {
-  it("production 的 capability 全部 disabled：任务 failed/capability_disabled，零调用，不消耗额度", async () => {
+  it("未登记的环境（staging）不放行：任务 failed/capability_disabled，零调用，不消耗额度", async () => {
     const env = await setupSync(t);
     const d = await env.addAccount("douyin", env.org.staffA);
     env.routeBy(PROFILE_PATH, { [env.locatorOf(d.accountId)]: "raw3.douyin.media_user_info" });
     await env.scheduler.tick(SLOT);
-    await env.worker({ fetch_profile: createProfileRunner({ ...env.deps, environment: "production" }) }).run({ untilIdle: true });
+    await env.worker({ fetch_profile: createProfileRunner({ ...env.deps, environment: "staging" }) }).run({ untilIdle: true });
     expect(env.transport.calls).toHaveLength(0);
     expect(await profileTask(env, d.accountId)).toMatchObject({ status: "failed", lastErrorCode: "capability_disabled", attemptCount: 0 });
   });

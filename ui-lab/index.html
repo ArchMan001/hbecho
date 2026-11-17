@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>hbecho · 本地界面总览</title>
+  <style>
+    :root {
+      --canvas: #f2f5f9;
+      --card: #ffffff;
+      --ink: #17202a;
+      --ink-2: #566070;
+      --ink-3: #66707f;
+      --line: #e4e9f0;
+      --brand: #0fa3a8;
+      --brand-2: #2b7db6;
+      --brand-ink: #0b7f84;
+      --tint: #e9f5f6;
+      --brand-gradient: linear-gradient(135deg, #0fa3a8 0%, #2b7db6 100%);
+      --success: #17724c;
+      --success-bg: #e8f6ef;
+      --warning: #b45309;
+      --warning-bg: #fff4e5;
+      --muted-bg: #eef1f5;
+      --radius-card: 12px;
+      --radius-control: 10px;
+      --radius-chip: 8px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+      font-size: 13.5px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    h1, h2, h3, p, ul, ol { margin: 0; }
+    ul, ol { padding: 0; list-style: none; }
+
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 28px 64px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center;
+      background: var(--brand-gradient); color: #fff; font-size: 17px; font-weight: 700;
+      box-shadow: 0 10px 20px -12px rgba(15, 163, 168, 0.7);
+    }
+    .brand-name { font-size: 17px; font-weight: 650; letter-spacing: -0.02em; }
+    .brand-sub { margin-top: 1px; font-size: 11px; letter-spacing: 0.16em; color: var(--ink-3); }
+
+    .intro { margin-top: 26px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+    h1 { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; }
+    .intro p { margin-top: 6px; color: var(--ink-2); max-width: 640px; }
+    .stamp { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
+
+    .section { margin-top: 32px; }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+    h2 { font-size: 15.5px; font-weight: 650; }
+    .section-head span { font-size: 12.5px; color: var(--ink-3); }
+
+    .card {
+      background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-card);
+      padding: 18px 20px; display: block; transition: border-color .15s ease, transform .15s ease;
+    }
+    a.card:hover { border-color: rgba(15, 163, 168, 0.45); transform: translateY(-1px); }
+    .card-main { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+    .card h3 { font-size: 14.5px; font-weight: 650; }
+    .card p { margin-top: 4px; color: var(--ink-2); font-size: 13px; max-width: 720px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .wrap { padding: 28px 18px 48px; } }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .chip {
+      display: inline-flex; align-items: center; height: 26px; padding: 0 10px;
+      border-radius: var(--radius-chip); background: var(--muted-bg); color: var(--ink-2); font-size: 12px;
+    }
+    .chip.on { background: var(--tint); color: var(--brand-ink); }
+
+    .badge {
+      display: inline-flex; align-items: center; height: 24px; padding: 0 9px;
+      border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+    }
+    .badge.ok { background: var(--success-bg); color: var(--success); }
+    .badge.todo { background: var(--warning-bg); color: var(--warning); }
+    .badge.ref { background: var(--muted-bg); color: var(--ink-2); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 16px;
+      border-radius: var(--radius-control); background: var(--brand-gradient); color: #fff;
+      font-size: 13px; font-weight: 600; white-space: nowrap;
+    }
+    .btn.small { height: 30px; padding: 0 12px; font-size: 12.5px; }
+    .btn.ghost { background: #fff; color: var(--brand-ink); border: 1px solid rgba(15, 163, 168, 0.35); }
+
+    .note {
+      margin-top: 28px; padding: 14px 16px; border-radius: var(--radius-card);
+      background: #fff; border: 1px solid var(--line); color: var(--ink-2); font-size: 12.5px;
+    }
+    .note strong { color: var(--ink); font-weight: 600; }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px; background: var(--muted-bg); padding: 1px 5px; border-radius: 5px;
+    }
+    .footer { margin-top: 26px; font-size: 11.5px; color: var(--ink-3); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark">H</div>
+      <div>
+        <div class="brand-name">hbecho</div>
+        <div class="brand-sub">本地界面总览</div>
+      </div>
+    </div>
+
+    <div class="intro">
+      <div>
+        <h1>一个入口看全部界面</h1>
+        <p>上面是<strong>完整应用</strong>（真实页面、造好的数据），下面是<strong>可点击原型</strong>。两者来自同一个预览工作树，由 <code>./scripts/preview.sh</code> 一起起；新页面在原型里确认，确认并实现后以完整应用为准。</p>
+      </div>
+      <div class="stamp">本地预览 · 2026-11-16</div>
+    </div>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>完整应用</h2>
+        <span>真实页面 · 需要登录 · 代码与预览工作树当前分支一致（页脚显示版本号）</span>
+      </div>
+      <a class="card" href="http://localhost:3202" target="_blank" rel="noreferrer">
+        <div class="card-main">
+          <div>
+            <h3>hbecho 管理端</h3>
+            <p>活动计划、名单导入、账号与监控、判定计划、主数据（浏览 / 导入）、学习、用户与权限、审计日志。登录后按当前账号的 Capability 显示导航。</p>
+            <div class="chips">
+              <span class="chip on">活动计划</span>
+              <span class="chip on">账号与监控</span>
+              <span class="chip on">判定计划</span>
+              <span class="chip on">主数据</span>
+              <span class="chip on">学习</span>
+              <span class="chip on">用户与权限</span>
+              <span class="chip on">审计日志</span>
+            </div>
+            <p class="small muted" style="margin-top:10px">预设账号（仅本机预览数据，勿用于 ECS / 生产）：平台超管 <code>13800002041</code> · 总部（创建者）<code>13800002042</code> · 分公司 <code>13800002043</code> · 门店 <code>13800002044</code> · 总部（非创建者，只读）<code>13800002045</code>；密码均为 <code>Hbecho@2026</code>。登录时选「密码」页签。</p>
+            <p class="small muted" style="margin-top:4px">数据每次启动都重置成同一份。打不开时确认 <code>./scripts/preview.sh</code> 还在运行（需要 Docker）。</p>
+          </div>
+          <span class="btn">打开应用</span>
+        </div>
+      </a>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>可点击原型</h2>
+        <span>静态演示 · 不连真实接口</span>
+      </div>
+      <div class="grid">
+        <a class="card" href="./hbecho-ui-v2/" target="_blank" rel="noreferrer">
+          <div class="card-main">
+            <div>
+              <h3>活动计划 / 访问控制 · v2</h3>
+              <p>2026-11-10 确认的 A / B 视觉基线；计划、名单、账号、用户、审计的完整走查。</p>
+            </div>
+            <span class="badge ok">已确认 · 已实现</span>
+          </div>
+          <div class="chips"><span class="chip">A 活动计划</span><span class="chip">B 访问控制</span></div>
+        </a>
+
+        <a class="card" href="./g-learning-min/" target="_blank" rel="noreferrer">
+          <div class="card-main">
+            <div>
+              <h3>学习平台 1.0</h3>
+              <p>2026-11-10 确认：学习中心、课程详情、课程管理、学习汇总、标签管理。含 Echo 登录页草稿（待调整）。</p>
+            </div>
+            <span class="badge ok">已确认 · 已实现</span>
+          </div>
+          <div class="chips"><span class="chip">G 学习</span></div>
+        </a>
+
+        <a class="card" href="./g-learning-tags-v2/" target="_blank" rel="noreferrer">
+          <div class="card-main">
+            <div>
+              <h3>学习平台 · 两级标签</h3>
+              <p>一级分类 + 二级标签值；标签管理、新建 / 编辑课程、学习中心筛选按分类分组。2026-11-16 原型，spec 草稿在 <code>.kiro/specs/g-learning-tags-v2/</code>；未实现、无迁移。</p>
+            </div>
+            <span class="badge todo">待确认</span>
+          </div>
+          <div class="chips"><span class="chip">G 学习</span><span class="chip">标签管理</span><span class="chip">课程</span></div>
+        </a>
+        <a class="card" href="./d-rule-engine/" target="_blank" rel="noreferrer">
+          <div class="card-main">
+            <div>
+              <h3>判定计划（域 D）</h3>
+              <p>三页阻塞式向导、执行记录与专员证据的第一版原型。已被下面的精密版取代，保留作对照。</p>
+            </div>
+            <span class="badge ref">对照</span>
+          </div>
+          <div class="chips"><span class="chip">圈定</span><span class="chip">比对</span><span class="chip">理解与执行</span></div>
+        </a>
+
+        <a class="card" href="./d-rule-engine/precision/" target="_blank" rel="noreferrer">
+          <div class="card-main">
+            <div>
+              <h3>判定计划 · 精密版（A）</h3>
+              <p>按选定的 A 方向重做三页向导：能力名胶囊、上传与可拖动阈值、试跑五槽样例。2026-11-13 已由刘学奎确认；页面已实现并部署（以完整应用的「判定计划」为准，原型归档）。</p>
+            </div>
+            <span class="badge ok">已确认 · 已实现</span>
+          </div>
+          <div class="chips"><span class="chip">A 精密</span><span class="chip">第 1–3 页</span><span class="chip">可点击</span></div>
+        </a>
+
+        <a class="card" href="./d-rule-engine/explore/style-explorer.html" target="_blank" rel="noreferrer">
+          <div class="card-main">
+            <div>
+              <h3>D 风格对比 · 三版</h3>
+              <p>同一页第 2 页能力配置的三种视觉方向：精密工作台、柔和层叠、编辑台式。用于挑选按钮、选择器、上传框与阈值框的关系。</p>
+            </div>
+            <span class="badge ref">对照（已选 A 精密）</span>
+          </div>
+          <div class="chips"><span class="chip">A 精密</span><span class="chip">B 柔和</span><span class="chip">C 编辑</span></div>
+        </a>
+
+        <a class="card" href="./e-metrics/" target="_blank" rel="noreferrer">
+          <div class="card-main">
+            <div>
+              <h3>指标与看板（域 E）</h3>
+              <p>组织点检表、专员明细、命中内容、计划看板、指标字典与下载中心；覆盖四类角色的数据范围与加载 / 空 / 错误 / 无权 / 重算 / stale。原型 v1，2026-11-16 已由刘学奎确认；界面依据见 <code>e-metrics</code> spec 的 design §20。</p>
+            </div>
+            <span class="badge ok">已确认</span>
+          </div>
+          <div class="chips"><span class="chip">点检表</span><span class="chip">专员明细</span><span class="chip">命中内容</span><span class="chip">看板</span><span class="chip">指标字典</span><span class="chip">下载中心</span></div>
+        </a>
+
+        <a class="card" href="./hbecho-ui/" target="_blank" rel="noreferrer">
+          <div class="card-main">
+            <div>
+              <h3>活动计划 / 访问控制 · v1</h3>
+              <p>保留作对照的上一版视觉，不作为实现依据。</p>
+            </div>
+            <span class="badge ref">对照</span>
+          </div>
+          <div class="chips"><span class="chip">A / B</span></div>
+        </a>
+      </div>
+    </section>
+
+    <div class="note">
+      <p><strong>怎么用：</strong>新页面或复杂流程先在<strong>原型</strong>里确认，写成代码后在<strong>完整应用</strong>（3202）验收，最后部署到 ECS；已有页面上的小改动直接在完整应用里改和确认，不做原型。原型和完整应用只单向流转（原型 → 代码），页面实现后以完整应用为准，对应原型归档。</p>
+      <p style="margin-top:6px"><strong>起服务：</strong><code>cd ~/Documents/hbecho-preview &amp;&amp; ./scripts/preview.sh</code>（一次起 4175 与 3202，Ctrl-C 一起退出）。规则见 <code>.kiro/steering/ui-workflow.md</code>，本机说明见 <code>ui-lab/LOCAL-UI.md</code>。</p>
+    </div>
+    <div class="footer">hbecho · ui-lab · 本页只用于本地评审，不进入生产构建。</div>
+  </div>
+</body>
+</html>

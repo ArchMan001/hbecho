@@ -257,6 +257,8 @@ export function renderDemoPanel() {
           <a class="demo-link" href="#/plans/p1/import">名单导入</a>
           <a class="demo-link" href="#/batches/b1">批次详情</a>
           <a class="demo-link" href="#/accounts">账号与监控</a>
+          <a class="demo-link" href="#/master">主数据浏览</a>
+          <a class="demo-link" href="#/master/import">主数据导入</a>
           <a class="demo-link" href="#/trash">回收站</a>
           <a class="demo-link" href="#/users">用户列表</a>
           <a class="demo-link" href="#/users/u2">用户详情</a>
@@ -370,3 +372,32 @@ export function brandPill(name) {
 export function timeCell(value) {
   return `<span class="num" style="font-size:11px;color:var(--ink-3)">${esc(value)}</span>`;
 }
+/* ---------- 悬停下拉筛选（借鉴 hbdam 素材库）：悬停/聚焦展开，移开收起；触屏点击固定展开 ---------- */
+
+function hfBox(on) {
+  return `<span class="hf-box">${on ? icon("check") : ""}</span>`;
+}
+
+/** options: [{value,label}]；mode: multi 复选 / single 单选（再点一次取消）；set 用于单选时限定同组取值。 */
+export function hoverFilter({ id, label, options, selected, key, mode = "multi", align = "", set = null }) {
+  const picked = options.filter((o) => selected.includes(o.value));
+  const n = picked.length;
+  const btnText = mode === "single" && n ? `${label} · ${picked[0].label}` : label;
+  const groupAttr = set ? ` data-set="${esc(set.join("|"))}"` : "";
+  return `
+    <div class="hf ${align} ${state.openPanel === id ? "pinned" : ""}" data-hf-id="${esc(id)}">
+      <button type="button" class="hf-btn ${n ? "on" : ""}" data-action="hf-pin" data-id="${esc(id)}" aria-haspopup="true" aria-expanded="${state.openPanel === id}">
+        <span>${esc(btnText)}</span>${mode === "multi" && n ? `<span class="hf-count">${n}</span>` : ""}${icon("chevron")}
+      </button>
+      <div class="hf-pop"><div class="hf-panel" role="group" aria-label="${esc(label)}">
+        <div class="hf-list">
+          ${options.map((o) => {
+            const on = selected.includes(o.value);
+            return `<button type="button" class="hf-opt ${mode === "single" ? "radio" : ""} ${on ? "on" : ""}" role="${mode === "single" ? "radio" : "checkbox"}" aria-checked="${on}" data-action="hf-toggle" data-key="${esc(key)}" data-mode="${mode}" data-value="${esc(o.value)}"${groupAttr}>${hfBox(on)}<span>${esc(o.label)}</span></button>`;
+          }).join("")}
+        </div>
+        <div class="hf-foot"><span>移开鼠标收起</span>${n ? `<button type="button" class="hf-clear" data-action="hf-clear" data-key="${esc(key)}" data-set="${esc(options.map((o) => o.value).join("|"))}">清空</button>` : ""}</div>
+      </div></div>
+    </div>`;
+}
+

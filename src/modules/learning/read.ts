@@ -13,16 +13,25 @@ const RESOURCE = "learning_course";
 
 export interface ListQuery {
   q?: string;
-  tagId?: bigint;
+  /** 二级标签：同一一级标签内取「或」，不同一级标签之间取「且」（g-learning-tags-v2 TLD-03）；空 = 不筛。 */
+  tagIds: bigint[];
+  /** 品牌：全部品牌课程，或指定了该品牌的课程。 */
+  brandId?: bigint;
+  kind?: "video" | "document";
   inProgress?: boolean;
   limit: number;
   offset: number;
 }
 
-/** 解析列表查询串。多个 tag 参数一律拒绝（G-D14 单标签；多标签不静默取第一个）。 */
+const MAX_FILTER_TAGS = 20;
+
+/** 解析列表查询串。`tag` 可重复（最多 20 个，去重）；非法 ID 一律报错，不静默忽略。 */
 export function parseListQuery(params: URLSearchParams): ListQuery {
-  const tagParams = params.getAll("tag");
-  if (tagParams.length > 1) throw new LearningError("input", "multiple_tags", "只支持按单个标签筛选");
+  const tagIds = [...new Set(params.getAll("tag").map((v) => parseId(v, "tag")))];
+  if (tagIds.length > MAX_FILTER_TAGS) throw new LearningError("input", "too_many_tags", `最多按 ${MAX_FILTER_TAGS} 个标签筛选`);
+  const kind = params.get("kind");
+  if (kind !== null && kind !== "video" && kind !== "document") throw new LearningError("input", "invalid_filter", "kind 只能是 video 或 document");
+  const brand = params.get("brand");
   const q = params.get("q")?.trim();
   if (q !== undefined && [...q].length > 100) throw new LearningError("input", "query_too_long", "搜索词最长 100 个字符");
   const num = (name: string, def: number, min: number, max: number): number => {
@@ -35,7 +44,9 @@ export function parseListQuery(params: URLSearchParams): ListQuery {
   if (ip !== null && ip !== "1" && ip !== "true" && ip !== "0" && ip !== "false") throw new LearningError("input", "invalid_filter", "inProgress 只能是 1 / true / 0 / false");
   return {
     ...(q ? { q } : {}),
-    ...(tagParams[0] !== undefined ? { tagId: parseId(tagParams[0], "tag") } : {}),
+    tagIds,
+    ...(brand ? { brandId: parseId(brand, "brand") } : {}),
+    ...(kind ? { kind } : {}),
     ...(ip === "1" || ip === "true" ? { inProgress: true } : {}),
     limit: num("limit", 20, 1, 100),
     offset: num("offset", 0, 0, 100_000),
@@ -43,6 +54,19 @@ export function parseListQuery(params: URLSearchParams): ListQuery {
 }
 
 const escapeLike = (s: string): string => s.replace(/[\\%_]/g, (c) => `\\${c}`);
+
+/** 按一级标签分组：每组一个 EXISTS（组内 IN = 或），组与组 AND。不存在的标签 ID 不属于任何一级标签，单独成组且永不命中。 */
+async function tagConditions(deps: LearningDeps, tagIds: bigint[]): Promise<SQL[]> {
+  if (tagIds.length === 0) return [];
+  const found = await deps.db.select({ tagId: tags.tagId, categoryId: tags.categoryId }).from(tags).where(inArray(tags.tagId, tagIds));
+  const byCategory = new Map<bigint, bigint[]>();
+  for (const r of found) byCategory.set(r.categoryId, [...(byCategory.get(r.categoryId) ?? []), r.tagId]);
+  const conds: SQL[] = [...byCategory.values()].map((ids) =>
+    exists(deps.db.select({ one: sql`1` }).from(courseTags).where(and(eq(courseTags.courseId, courses.courseId), inArray(courseTags.tagId, ids)))),
+  );
+  if (found.length < tagIds.length) conds.push(sql`1 = 0`);
+  return conds;
+}
 
 export interface CourseListItem {
   courseId: string;
@@ -68,7 +92,9 @@ export async function listCourses(deps: LearningDeps, ctx: AuthContext, q: ListQ
     sql`(${courses.kind} = 'document' OR ${courses.vodVideoStatus} = 'normal')`,
   ];
   if (q.q) conds.push(like(courses.title, `%${escapeLike(q.q)}%`));
-  if (q.tagId !== undefined) conds.push(exists(deps.db.select({ one: sql`1` }).from(courseTags).where(and(eq(courseTags.courseId, courses.courseId), eq(courseTags.tagId, q.tagId)))));
+  conds.push(...(await tagConditions(deps, q.tagIds)));
+  if (q.kind) conds.push(eq(courses.kind, q.kind));
+  if (q.brandId !== undefined) conds.push(sql`(${courses.brandScope} = 'all' OR EXISTS (SELECT 1 FROM ${courseBrandScopes} WHERE ${and(eq(courseBrandScopes.courseId, courses.courseId), eq(courseBrandScopes.brandId, q.brandId))}))`);
   if (q.inProgress) conds.push(sql`${learningProgress.progressId} IS NOT NULL`);
 
   const rows = await deps.db

@@ -2,12 +2,13 @@
 // 只用于 ui-lab，不进生产构建。
 
 import { state } from "./store.js";
-import { COURSES, TAGS, TAG_USAGE, getCourse, ROLE_BRANDS } from "./data.js";
+import { COURSES, TAGS, TAG_CATEGORIES, getCourse, ROLE_BRANDS } from "./data.js";
 import { esc, icon } from "./ui.js";
 import {
   renderCourseList, renderCourseDetail, renderCourseManage, renderCourseForm,
   renderSummary, renderTags, renderPlaceholder,
 } from "./pages-g.js";
+import { renderLogin } from "./pages-auth.js";
 
 const app = document.getElementById("app");
 const modal = document.getElementById("modal");
@@ -24,6 +25,7 @@ function parseRoute() {
   const parts = raw.split("/").filter(Boolean);
   if (!parts.length) return { name: "learning" };
   const [head, second, third] = parts;
+  if (head === "login") return { name: "login" };
   if (head === "learning") {
     if (!second) return { name: "learning" };
     if (second === "course") return { name: "course", id: third ?? "c1" };
@@ -74,6 +76,7 @@ function render() {
 
   let html = "";
   switch (route.name) {
+    case "login": html = renderLogin(); break;
     case "learning": html = renderCourseList(); break;
     case "course": html = renderCourseDetail(route.id); break;
     case "course-manage": html = renderCourseManage(); break;
@@ -174,11 +177,6 @@ document.addEventListener("change", (event) => {
     render();
     return;
   }
-  if (el.matches("[data-course-tag]")) {
-    state.courseTag = el.value;
-    render();
-    return;
-  }
   if (el.matches("[data-form-level]")) {
     state.formLevel = el.value;
     render();
@@ -186,6 +184,11 @@ document.addEventListener("change", (event) => {
 });
 
 document.addEventListener("submit", (event) => {
+  if (event.target.closest("[data-login-form]")) {
+    event.preventDefault();
+    go("#/learning");
+    return;
+  }
   const form = event.target.closest("form[data-form]");
   if (!form) return;
   event.preventDefault();
@@ -240,7 +243,7 @@ function handleAction(el) {
       break;
     case "clear-course-filter":
       state.courseQuery = "";
-      state.courseTag = "all";
+      state.courseTags = [];
       state.onlyInProgress = false;
       render();
       break;
@@ -297,16 +300,81 @@ function handleAction(el) {
       state.summaryBrand = el.dataset.brand;
       render();
       break;
+    case "toggle-course-tag": {
+      const tag = el.dataset.tag;
+      state.courseTags = state.courseTags.includes(tag)
+        ? state.courseTags.filter((t) => t !== tag)
+        : [...state.courseTags, tag];
+      render();
+      break;
+    }
+    case "add-category": {
+      const input = document.getElementById("new-category");
+      const name = String(input?.value ?? "").trim();
+      if (!name) {
+        state.tagError = "分类名称不能为空。";
+      } else if (TAG_CATEGORIES.some((c) => c.name === name)) {
+        state.tagError = `分类「${name}」已存在。`;
+      } else {
+        TAG_CATEGORIES.push({ id: `cat-${Date.now()}`, name, tags: [] });
+        state.tagError = null;
+        render();
+        toast(`已新建分类「${name}」（原型）`);
+        break;
+      }
+      render();
+      break;
+    }
+    case "rename-category": {
+      const cat = TAG_CATEGORIES.find((c) => c.id === el.dataset.category);
+      if (!cat) break;
+      openModal({
+        title: "重命名分类",
+        body: `
+          <div class="field"><label for="rename-category">分类名称</label><input class="input" id="rename-category" maxlength="32" value="${esc(cat.name)}" /></div>
+          <p class="hint" style="margin-top:10px">只改显示名，不影响分类下的标签与课程引用。</p>
+        `,
+        foot: `<button class="btn" data-action="close-modal">取消</button><button class="btn btn-primary" data-action="confirm-rename-category" data-category="${cat.id}">保存</button>`,
+      });
+      break;
+    }
+    case "confirm-rename-category": {
+      const cat = TAG_CATEGORIES.find((c) => c.id === el.dataset.category);
+      const input = document.getElementById("rename-category");
+      const next = String(input?.value ?? "").trim();
+      if (!cat) break;
+      if (!next) { toast("分类名称不能为空"); break; }
+      if (TAG_CATEGORIES.some((c) => c !== cat && c.name === next)) { toast(`分类「${next}」已存在`); break; }
+      cat.name = next;
+      closeModal();
+      render();
+      toast("分类已改名；标签与课程引用不变（原型）");
+      break;
+    }
+    case "delete-category": {
+      const idx = TAG_CATEGORIES.findIndex((c) => c.id === el.dataset.category);
+      if (idx < 0) break;
+      const cat = TAG_CATEGORIES[idx];
+      if (cat.tags.length) {
+        toast(`分类下还有 ${cat.tags.length} 个标签，不能删除`);
+        break;
+      }
+      TAG_CATEGORIES.splice(idx, 1);
+      render();
+      toast("空分类已删除（原型）");
+      break;
+    }
     case "add-tag": {
-      const input = document.getElementById("new-tag");
+      const cat = TAG_CATEGORIES.find((c) => c.id === el.dataset.category);
+      if (!cat) break;
+      const input = document.getElementById(`new-tag-${cat.id}`);
       const name = String(input?.value ?? "").trim();
       if (!name) {
         state.tagError = "标签名称不能为空。";
-      } else if (TAGS.includes(name)) {
-        state.tagError = `标签「${name}」已存在。`;
+      } else if (cat.tags.includes(name)) {
+        state.tagError = `「${cat.name}」下已有标签「${name}」。`;
       } else {
-        TAGS.push(name);
-        TAG_USAGE[name] = 0;
+        cat.tags.push(name);
         state.tagError = null;
         render();
         toast(`已新建标签「${name}」（原型）`);
@@ -317,33 +385,28 @@ function handleAction(el) {
     }
     case "rename-tag": {
       const tag = el.dataset.tag;
+      const categoryId = el.dataset.category;
       openModal({
         title: "重命名标签",
         body: `
           <div class="field"><label for="rename-tag">标签名称</label><input class="input" id="rename-tag" maxlength="32" value="${esc(tag)}" /></div>
-          <p class="hint" style="margin-top:10px">改名原地生效，不需要迁移课程引用；名称不能与现有标签重复。</p>
+          <p class="hint" style="margin-top:10px">改名原地生效，不需要迁移课程引用；同一分类内不能重名。</p>
         `,
-        foot: `<button class="btn" data-action="close-modal">取消</button><button class="btn btn-primary" data-action="confirm-rename-tag" data-tag="${esc(tag)}">保存</button>`,
+        foot: `<button class="btn" data-action="close-modal">取消</button><button class="btn btn-primary" data-action="confirm-rename-tag" data-tag="${esc(tag)}" data-category="${esc(categoryId)}">保存</button>`,
       });
       break;
     }
     case "confirm-rename-tag": {
       const oldName = el.dataset.tag;
+      const cat = TAG_CATEGORIES.find((c) => c.id === el.dataset.category);
       const input = document.getElementById("rename-tag");
       const next = String(input?.value ?? "").trim();
-      if (!next) {
-        toast("标签名称不能为空");
-        break;
-      }
-      if (next !== oldName && TAGS.includes(next)) {
-        toast(`标签「${next}」已存在`);
-        break;
-      }
-      const idx = TAGS.indexOf(oldName);
+      if (!cat) break;
+      if (!next) { toast("标签名称不能为空"); break; }
+      if (next !== oldName && cat.tags.includes(next)) { toast(`「${cat.name}」下已有标签「${next}」`); break; }
+      const idx = cat.tags.indexOf(oldName);
       if (idx >= 0) {
-        TAGS[idx] = next;
-        TAG_USAGE[next] = TAG_USAGE[oldName] ?? 0;
-        delete TAG_USAGE[oldName];
+        cat.tags[idx] = next;
         COURSES.forEach((c) => {
           c.tags = c.tags.map((t) => (t === oldName ? next : t));
         });
@@ -355,14 +418,14 @@ function handleAction(el) {
     }
     case "delete-tag": {
       const tag = el.dataset.tag;
-      const used = TAG_USAGE[tag] ?? 0;
+      const cat = TAG_CATEGORIES.find((c) => c.id === el.dataset.category);
+      if (!cat) break;
+      const used = COURSES.filter((c) => c.tags.includes(tag)).length;
       if (used > 0) {
         toast(`被 ${used} 门课程引用，不能删除`);
         break;
       }
-      const idx = TAGS.indexOf(tag);
-      if (idx >= 0) TAGS.splice(idx, 1);
-      delete TAG_USAGE[tag];
+      cat.tags = cat.tags.filter((t) => t !== tag);
       render();
       toast("标签已删除（原型）");
       break;

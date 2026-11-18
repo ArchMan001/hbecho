@@ -28,12 +28,12 @@
 在仓库根目录运行：
 
 ```bash
-python3 -m http.server 4175 --directory ui-lab/g-learning-min
+python3 -m http.server 4100 --directory ui-lab/g-learning-min
 ```
 
-然后打开 <http://localhost:4175/>。A/B 基线原型在 `4174`（[`../hbecho-ui-v2/`](../hbecho-ui-v2/README.md)），可以同时开。
+然后打开 <http://localhost:4100/>。A/B 基线原型在 `4174`（[`../hbecho-ui-v2/`](../hbecho-ui-v2/README.md)），可以同时开。
 
-Echo 登录页：<http://localhost:4175/#/login>。
+Echo 登录页：<http://localhost:4100/#/login>。
 
 ## 原型控制
 

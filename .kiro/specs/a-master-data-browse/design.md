@@ -387,7 +387,7 @@ LIMIT ? OFFSET ?;
 分公司视图的表格：分公司编码 | 分公司名称 | 大区 | 在用门店 | 已撤门店 | 更新时间（行可点击）
 ```
 
-可点击原型：`ui-lab/hbecho-ui-v2/pages-m-browse.js`（2026-11-16 新增，路由 `#/master`；导入移到 `#/master/import`），已在 `ui-lab/hbecho-ui-v2/README.md` 登记。**待刘学奎走查确认**。走查地址：<http://localhost:4175/hbecho-ui-v2/#/master>（4175 是 `ui-lab/` 的静态服务，与 `ui-lab/LOCAL-UI.md` 一致）。
+可点击原型：`ui-lab/hbecho-ui-v2/pages-m-browse.js`（2026-11-16 新增，路由 `#/master`；导入移到 `#/master/import`），已在 `ui-lab/hbecho-ui-v2/README.md` 登记。**待刘学奎走查确认**。走查地址：<http://localhost:4100/hbecho-ui-v2/#/master>（4100 是 `ui-lab/` 的静态服务，与 `ui-lab/LOCAL-UI.md` 一致）。
 
 ### 16.4 状态矩阵
 

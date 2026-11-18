@@ -4,7 +4,7 @@
 >
 > **依据**：`HBECHO设计方案/ui/ui-foundation.md`（2026-11-10 v2 视觉基线）、`.kiro/specs/d-rule-engine/design.md` §15、`HBECHO设计方案/prd-domain-d-rule-engine.md` v1.1。
 >
-> **打开方式**：在仓库根目录 `python3 -m http.server 4175 --directory ui-lab`，打开 <http://localhost:4175/d-rule-engine/>；也可以从 ui-lab 总览页进入。
+> **打开方式**：在仓库根目录 `python3 -m http.server 4100 --directory ui-lab`，打开 <http://localhost:4100/d-rule-engine/>；也可以从 ui-lab 总览页进入。
 
 ## 走查任务
 
@@ -77,7 +77,7 @@
 
 刘学奎选定 A 方向后，按同一套组件语言把三页向导重做了一版可点击原型：
 
-- 打开 <http://localhost:4175/d-rule-engine/precision/>；
+- 打开 <http://localhost:4100/d-rule-engine/precision/>；
 - 目录 `precision/`，是 v1 的完整拷贝 + 精密主题样式；v1 仍保留在 `../` 便于对照；
 - 第 1 页：时间窗改为「起 / 止」一体化日期范围组件；计划级条件 + 行式能力条（序号 / 能力名 / 能力别名 / 删除）；文本能力一行三列：文本位置、组合方式、数量要求；话题能力一行两列：组合方式、数量要求，话题在下一行。**数量 N 是整层共享值**；原型演示仍显示 6 / 4 两个值，正式实现按 spec 同步为同一个 N，同层文本 / 话题条件 AND 后按点赞取前 N 条进入下一层；
 - 第 2 页：原型展示三类能力——整张图片对比 / 图片元素对比 / 图片文字对比；**1.0 只启用前两类，图片文字对比（OCR）是 2.0，正式实现要置灰或不出现在添加菜单**；每个能力先选「对比元素」（头像 / 封面 / 主页背景），再上传标准图 / 元素图或填写文字；阈值支持「数字步进 + 可拖动刻度尺 + 直接输入」；**原来的「内容达标方式（计划级）」已从第 2、3 页移除**，数量要求并入第 1 层能力；
@@ -91,7 +91,7 @@
 
 同一页「第 2 页 · 比对」的能力配置，做了三种视觉方向，用于挑选按钮、选择器、上传框与阈值框的关系：
 
-- 打开 <http://localhost:4175/d-rule-engine/explore/style-explorer.html>，可并排、单张、按桌面 / 手机视口查看；
+- 打开 <http://localhost:4100/d-rule-engine/explore/style-explorer.html>，可并排、单张、按桌面 / 手机视口查看；
 - 候选文件在 `explore/`：`a-precision.html`、`b-soft.html`、`c-ledger.html`，方向信息在 `manifest.json`；
 - **A · 精密工作台**：紧凑行式能力条，上传在左、数字步进 + 刻度尺在右；细线分隔、弱阴影、高密度；
 - **B · 柔和层叠**：大圆角卡片，上传预览与阈值滑杆合在一张素材卡内；暖色底、柔和阴影；

@@ -1,6 +1,6 @@
-// 本机预览环境（3202 完整应用）。仅本机，不进 CI、不进生产镜像。协作规则见 .kiro/steering/ui-workflow.md 与 ui-lab/LOCAL-UI.md。
+// 本机预览环境（4400 完整应用）。仅本机，不进 CI、不进生产镜像。协作规则见 .kiro/steering/ui-workflow.md 与 ui-lab/LOCAL-UI.md。
 //
-//   scripts/preview.sh 做的事：起一次性本机 MySQL 容器并迁移 → 运行本文件 → 同时提供 4175 的静态原型
+//   scripts/preview.sh 做的事：起一次性本机 MySQL 容器并迁移 → 运行本文件 → 同时提供 4100 的静态原型
 //   本文件做的事：清库 → 造数（用户 / 组织 / 门店 / 活动计划与名单 / 内容 / 学习课程 / 多个阶段的判定计划与执行）→ 在同一进程里启动 Next（dev + webpack）
 //
 // 与 ECS 的差别（预览用，不要当成验收）：
@@ -23,7 +23,7 @@ import { insertSector } from "../harness/roster";
 
 const url = process.env.HBECHO_PREVIEW_DATABASE_URL;
 if (!url) throw new Error("缺少 HBECHO_PREVIEW_DATABASE_URL（请用 scripts/preview.sh 启动）");
-const port = Number(process.env.PORT ?? 3202);
+const port = Number(process.env.PORT ?? 4400);
 const buildSha = (() => {
   try {
     const sha = execSync("git rev-parse --short=12 HEAD", { encoding: "utf8" }).trim();

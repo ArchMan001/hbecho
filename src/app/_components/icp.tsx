@@ -12,7 +12,7 @@ export function IcpFooter({ light = false }: { light?: boolean }) {
   );
 }
 
-/** 版本标识：显示「这一页跑的是哪一版代码」。预览（3202）显示工作树提交号，ECS 显示镜像标签对应的提交号，两边一眼能核对是否同一版。 */
+/** 版本标识：显示「这一页跑的是哪一版代码」。预览（4400）显示工作树提交号，ECS 显示镜像标签对应的提交号，两边一眼能核对是否同一版。 */
 export function BuildStamp() {
   const build = process.env.HBECHO_BUILD_SHA?.trim();
   if (!build) return null;

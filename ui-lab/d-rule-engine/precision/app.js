@@ -1077,7 +1077,7 @@ function resultsPlaceholder(executionId) {
       ${e ? `<div class="overview" style="margin:20px auto 0;max-width:720px">${stat("执行", `#${e.id}`, `v${e.version}`)}${stat("参与专员", e.participants, "冻结名单")}${stat("成功", e.counts?.success ?? "—", "点检表分子", "green")}${stat("未获取成功", e.counts?.unobtained ?? "—", "单独统计", "gray")}</div>` : ""}
       <div class="inline-actions" style="justify-content:center;margin-top:18px">
         <a class="btn" href="#/executions/${executionId}">${icon("arrowLeft", 15)}回到 D 的执行记录</a>
-        <a class="btn primary" href="http://localhost:3202" target="_blank" rel="noreferrer">${icon("external", 15)}打开完整应用</a>
+        <a class="btn primary" href="http://localhost:4400" target="_blank" rel="noreferrer">${icon("external", 15)}打开完整应用</a>
       </div>
     </div></div>`, crumbs(["工作台", "判定计划", "报表与看板", "点检表（E）"]), "reports");
 }
@@ -1419,7 +1419,7 @@ function onClick(event) {
   if (action === "nav") return;
   if (action === "toast-module") {
     event.preventDefault();
-    toast("本原型只覆盖判定计划；其他模块见完整应用 http://localhost:3202");
+    toast("本原型只覆盖判定计划；其他模块见完整应用 http://localhost:4400");
     return;
   }
   if (action === "open-participant") {

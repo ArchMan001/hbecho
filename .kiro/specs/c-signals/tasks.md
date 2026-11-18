@@ -245,3 +245,11 @@
 ## 实施记录
 
 （任务执行时回填：日期、分支、`verify.sh` 结果、测试 ECS 运行记录、规模演练数字、与 design 的偏差。）
+
+- **2026-11-12 · 验收补做**（刘学奎同意在测试 ECS 的 `hbecho` 库建 C 的表，并做 MAN-1 / MAN-4 / ENV-6）：
+  - **测试 ECS 迁移**：`hbecho` 库从 11 条迁移补到 12 条（0011），9 张表与 `contents` 上的 `idx_contents_current_selected` 均已建；迁移前备份 `/data/backup/pre-c-signals-20261112.sql.gz`（22 KB）。做法：ACR 里没有含 0011 的镜像（CI 的 image job 在 `48c8850` 上因「应用路径没有变化」跳过构建），把 `main` 的 `drizzle/` 目录打包上传到 `/tmp/c-signals-drizzle` 并只读挂载进既有镜像跑 `src/db/migrate.ts`；`__drizzle_migrations` 现为 12 条，以后的正规部署会从同一版本继续。
+  - **数据位置**：该库 `contents = 0`（上线以来没有真实同步写入），真实同步数据只在 2026-11-06 本机 smoke 的一次性库里。按 `server-access.md`「测试机不放未脱敏生产数据」，没有导入 ECS；MAN-1 / MAN-4 / ENV-6 在本机副本 `hbecho_c_verify`（391 内容 / 68 评论，迁到 0011）上做，acceptance 已注明位置偏离。
+  - **MAN-4**：391 条用项目自己的 `normalizeText` / `extractHashtags` 重算，与特征行 0 差异；另抽样 12 条（每平台 4 条）人工对照全部对得上。小红书 title 自带的 `## 标题` / `## 正文` 标记与 `#茶知识[话题]#` 后缀均按规则正确处置。
+  - **MAN-1**：plan 901 v1，用 content 2 的真实封面作标准图；`show --content 2 --plan 901 --version 1` 输出能力 `image.template@1`、`producedAt`、`score 10`、`evidence.raw.inliers 1502`、`inlier_ratio 1`、`low_features false`；同时算的无关图得 0.09 / 0.17。
+  - **ENV-6**：真实 391 条的批次 `logical_at` → current 推进延迟最大 221 秒、平均 85 秒，0 条超过 600 秒；受控实验确认窗口内迟到由扫描补回、窗口外由 `reconcile` 兜底。多批次真并发的乱序未验证（真实 worker 在 test 环境被 `assertWorkerCanRun` 拒绝）。
+  - **清理**：`segment purge --plan 901 --apply` 删除 1 个标准图对象，桶内 `segments/901/` 残留 0；本机能力服务已停止；临时脚本已删除，未进仓库。

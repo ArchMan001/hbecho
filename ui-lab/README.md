@@ -15,6 +15,7 @@
 | [`g-learning-tags-v2/`](g-learning-tags-v2/README.md) | 学习平台两级标签（2026-11-16） | 已确认（2026-11-16）；已实现，待合并部署 | `.kiro/specs/g-learning-tags-v2/`；迁移 `0013`；学习中心、新建课程、标签管理三处页面已落地 |
 | [`d-rule-engine/`](d-rule-engine/README.md) | 判定计划：`precision/`（v15，2026-11-13 确认）；根目录 v1 与 `explore/` | `precision/` 已确认；已实现，归档 | 任务 13–16 于 2026-11-16 合并并部署到测试 ECS；截图存档 `app-shots/`。v1 与 `explore/` 为对照 |
 | [`e-metrics/`](e-metrics/README.md) | 指标与看板（2026-11-16） | 已确认 | 页面代码等查询 / 导出接口落地后再写 |
+| [`f-video-square/`](f-video-square/README.md) | 经销商视频广场与 AI分析界面示意（2026-11-18，以 `hbecho-ui-v2` 当前版为底） | 待确认 | `.kiro/specs/f-video-square/`；确认（design §10.6）前不写页面任务与页面代码 |
 
 ## 本地总览（4175）
 

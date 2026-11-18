@@ -347,7 +347,7 @@
 
 **1.0 的 E3 只做固定模板**，不做自由配置器；E5 不做。
 
-**详见**：[`prd-domain-e-metrics.md`](prd-domain-e-metrics.md)、`.kiro/specs/metrics-and-dashboard/design.md`。
+**详见**：[`prd-domain-e-metrics.md`](prd-domain-e-metrics.md)、[`.kiro/specs/e-metrics/`](../.kiro/specs/e-metrics/design.md)。
 
 #### F 业务应用
 

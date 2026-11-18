@@ -13,7 +13,7 @@
 3. 理解产品目标、模块地图和阶段：[`prd-platform.md`](prd-platform.md)；已开写的子 PRD：[A 数据底座](prd-domain-a-data-foundation.md)、[B 访问控制](prd-domain-b-access-control.md)、[C 识别能力](prd-domain-c-signals.md)、[D 规则与考核](prd-domain-d-rule-engine.md)、[E 指标与看板](prd-domain-e-metrics.md)、[F 业务应用](prd-domain-f-business-apps.md)、[G 学习平台](prd-domain-g-learning.md)、[H AI 能力](prd-domain-h-ai.md)、[I 运维与成本](prd-domain-i-ops.md)
 4. 实现数据获取与资产域：[`database-design-v2.md`](domains/data-foundation/database-design-v2.md)
 5. 实现当前纵向切片：[`a-data-foundation-tracer`](../.kiro/specs/a-data-foundation-tracer/)
-6. 评审后续模块设计：[`b-access-control`](../.kiro/specs/b-access-control/design.md)、[`a-activity-plan`](../.kiro/specs/a-activity-plan/design.md)、[`d-rule-engine`](../.kiro/specs/d-rule-engine/design.md)、[`metrics-and-dashboard`](../.kiro/specs/metrics-and-dashboard/design.md)
+6. 评审后续模块设计：[`b-access-control`](../.kiro/specs/b-access-control/design.md)、[`a-activity-plan`](../.kiro/specs/a-activity-plan/design.md)、[`d-rule-engine`](../.kiro/specs/d-rule-engine/design.md)、[`e-metrics`](../.kiro/specs/e-metrics/design.md)
 7. 配置 hbecho 的服务器、OSS、密钥、Git 与部署：[`server-operations-runbook.md`](runbooks/server-operations-runbook.md)
 8. 开发、验证、CI、测试 ECS 与生产发布：[`dev-test-deploy-workflow.md`](runbooks/dev-test-deploy-workflow.md)
 9. 从 0 配置一台新服务器（hbdam 或其他项目）：[`new-server-bootstrap-checklist.md`](runbooks/new-server-bootstrap-checklist.md)
@@ -89,7 +89,7 @@
 | B | 访问控制（User、Session、Capability、DataScope） | `prd-domain-b-access-control.md` + `b-access-control` spec |
 | C | 识别能力（文本信号、视觉模板匹配、特征存储） | `prd-domain-c-signals.md`（草稿） |
 | D | 规则与考核 | `prd-domain-d-rule-engine.md` + `d-rule-engine` spec |
-| E | 指标、报表与看板 | `prd-domain-e-metrics.md`（定稿候选） + `metrics-and-dashboard` design |
+| E | 指标、报表与看板 | `prd-domain-e-metrics.md`（定稿候选） + `e-metrics` spec |
 | F | 业务应用（点检、账号档案、内容库、任务闭环） | `prd-domain-f-business-apps.md`（草稿） |
 | G | 学习平台 | `prd-domain-g-learning.md`（草稿） |
 | H | AI 能力 | PRD 初稿（v0.2，1.0 收窄） |
@@ -109,7 +109,7 @@
 | 域 B 产品需求 | [`prd-domain-b-access-control.md`](prd-domain-b-access-control.md) | current（v1.21 定稿） | 访问控制：开户与激活、登录会话、生命周期、Capability、DataScope、管理范围、10 个出口、审计 |
 | 域 C 产品需求 | [`prd-domain-c-signals.md`](prd-domain-c-signals.md) | draft（v1.3 定稿候选；2026-11-12 `c-signals` spec 评审订正：触发点、不做 pHash 预筛、标点方向、小红书账号图片、瞬时 / 确定性失败、评论 NULL，见 C-D15～C-D20） | 识别能力：文本信号、素材比对（图片一致 / 元素 / 文字）、音频 ASR + 大模型判定（1.0）、图片/视频理解（2.0）、特征存储、信号五态；拥有监控判定计划的监控段 |
 | 域 D 产品需求 | [`prd-domain-d-rule-engine.md`](prd-domain-d-rule-engine.md) | draft（v1.2 定稿候选，第 1 层数量与第 2 层能力修订；2026-11-16 补订内容要求启用规则、N 依附文本 / 话题能力） | 规则与考核：计划/考核项模型、专员级达标、三层漏斗、三值逻辑、版本与执行、监控判定计划的判定段与生命周期 |
-| 域 E 产品需求 | [`prd-domain-e-metrics.md`](prd-domain-e-metrics.md) | draft（v1.0 定稿候选，第二轮盘问完成） | 指标、报表与看板：唯一口径、投影与原子切换、三张视图、一张计划看板、唯一导出出口；计划级四列 + 分项率（分母=到达人数）；1.0 不做全量内容明细、自助分析、个人视图与 n_day |
+| 域 E 产品需求 | [`prd-domain-e-metrics.md`](prd-domain-e-metrics.md) | draft（v1.1 定稿候选；随 D-71 修订：不设分项率、看板不加分项卡、命中内容 = 通过全部内容层） | 指标、报表与看板：唯一口径、活动级投影与原子切换、三张视图、一张计划看板、唯一导出出口；计划组四列（考核人数 / 完成人数 / 完成率 / 未获取成功）；1.0 不做全量内容明细、自助分析、个人视图、`n_day` 与 `interactions_total` |
 | 域 F 产品需求 | [`prd-domain-f-business-apps.md`](prd-domain-f-business-apps.md) | draft（v1.0 定稿候选，第二轮盘问完成） | 业务应用：F 域边界（只编排不复制）、1.0 只做 F5 导入中心（平台级主数据 + 分公司活动名单），F1–F4／F6–F9 仅简版场景；路径 1 upsert、路径 2 只新增；批量导入与 structure 精确分层 |
 | 域 G 产品需求 | [`prd-domain-g-learning.md`](prd-domain-g-learning.md) | draft（v1.0 定稿候选，第二轮盘问完成） | 学习平台：1.0 只做 G1 内容管理 + G2 学习中心 + 进度记录 + 总部总量；视频走 VOD、资料走 hbecho-course、可见性=品牌×人员级别；换店删旧建新不迁移进度 |
 | 域 H 产品需求 | [`prd-domain-h-ai.md`](prd-domain-h-ai.md) | draft（v0.2 初稿，1.0 收窄） | AI 能力：H1 网关、H2 Prompt、H5 单条脚本分析（仅超管/总部）；H8 规则辅助移 2.0；业务 AI 只保留 D 第三层 ASR + 大模型 |
@@ -138,7 +138,7 @@
 | 访问控制 | [requirements](../.kiro/specs/b-access-control/requirements.md) · [design](../.kiro/specs/b-access-control/design.md) · [tasks](../.kiro/specs/b-access-control/tasks.md) · [acceptance](../.kiro/specs/b-access-control/acceptance.md) | draft（2026-11-06 初建；2026-11-10 任务 1–12 实施完成，逐条结果见 acceptance，仍待的人工 / 环境项与待你确认的取舍见 tasks 实施记录；待确认闸门已通过（2026-11-06）；better-auth 兼容性验证已通过，[ADR-0015](architecture/adr/0015-auth-boundary-and-disabled-phone.md) 已接受（2026-11-10）；页面 P1–P5（9 页）2026-11-11 实施并合并 `main`（测试 ECS 已运行）；界面设计已确认（2026-11-10，[`ui-lab/hbecho-ui-v2/`](../ui-lab/hbecho-ui-v2/README.md)）；2026-11-11 独立审查的核实与处理见 tasks 实施记录） | 路线图第 4 位；better-auth 认证（手机号密码 / 短信、15 天滑动会话）+ 自建授权：29 项 Capability 矩阵、DataScope（品牌 ∩ 组织）与「未注册即拒绝」的策略注册表、严格下级的用户管理与导入、`MediaStaff` 联动、持久审计、出口守卫；B 域的表以本 spec design §6 为准（不入 v2）；旧 design 已归档；design §14 的 15 项已于 2026-11-06 全部按建议采纳；阿里云短信签名与模板已申请 |
 | 识别能力 | [requirements](../.kiro/specs/c-signals/requirements.md) · [design](../.kiro/specs/c-signals/design.md) · [tasks](../.kiro/specs/c-signals/tasks.md) · [acceptance](../.kiro/specs/c-signals/acceptance.md) | draft（2026-11-11 初建；2026-11-12 经三轮审查修订并通过任务 0 闸门；**任务 0–13 已实现并离线验证**（分支 `c-signals`，逐条结果见 acceptance；`hbecho-signals` 桶 2026-11-12 已创建；规模演练与测试 ECS 运行结果见 design §12.1）；design §14 第 11、12、16 项留给 D / `h-ai-min`，第 14 项数值起始值待继续实测；**匹配分标定缺业务样本，`image.template` / `image.element` 不进生产启用集**；D 尚未消费；无页面） | 路线图第 6 位；12 个 1.0 信号（文本、评论文本、模板 / 元素匹配分、ASR 文本、音频判定）、特征行与结果行与历史表（9 张新表，不入 v2）、监控段与标准图（新增 `hbecho-signals` 桶，已创建）、五态读取口与补算请求（面向 D）、`stale` 与显式重算、保留期；触发点是内容 current 指针（`contents` 加一条索引）；C 自建任务表；Python 新增 `/v1/image/match`；第 3 层经 `AiGatewayPort`，H1 落地前默认 disabled；图像匹配分需真实样本标定后才可进生产启用集 |
 | 规则与考核 | [requirements](../.kiro/specs/d-rule-engine/requirements.md) · [design](../.kiro/specs/d-rule-engine/design.md) · [tasks](../.kiro/specs/d-rule-engine/tasks.md) · [MAN 走查记录单](../.kiro/specs/d-rule-engine/man-walkthrough.md) · [acceptance](../.kiro/specs/d-rule-engine/acceptance.md) | draft（2026-11-12 初建，2026-11-16 随 PRD D v1.2 与已确认界面（2026-11-13，`precision/` v15）修订并经审查补订；**任务 0–12（引擎、CLI、下游端口、离线验收）已在分支 `d-rule-engine` 实现，本机与测试 ECS 全量测试通过；页面任务 13–16 未开始**；design §14 各项已答复（第 31 项 `toDemandActor` 窄适配待确认）；**界面设计已确认**，全量视频明细归 E；取代旧 `.kiro/specs/rule-engine/design.md`，旧文件文首已标注，待任务 0 归档） | 路线图第 7 位；按 PRD D v1.2 的内容逐层过滤 + 专员级聚合（第 1 层按专员取点赞前 N 条、N 同时是门槛；内容要求启用规则；第 2 层 abilities[]）：判定计划与草稿 / 版本（与 C 监控段同 ID 同版本，第 3 页确认执行即发布）、圈定 / 试跑 / 执行共用一个引擎、执行时一次冻结名单 / 当前归属 / 组织链 / 内容快照、三值与 AND3、四种达标方式、零内容与同步完整、评论与账号要求、自包含证据；5 张新表（不入 v2）；对 E 提供 `JudgementOutcomeReader` 并承担归属快照；实现 A 的 `PlanDownstream`；后台运行继承提交人身份（B 零改动）；含第 2、3 层的计划在 C 的图像标定与 H1 落地前无法发布 |
-| 指标与看板 | [`design.md`](../.kiro/specs/metrics-and-dashboard/design.md) | draft | 依赖规则 outcome；统一口径、投影、报表、看板与导出 |
+| 指标与看板 | [requirements](../.kiro/specs/e-metrics/requirements.md) · [design](../.kiro/specs/e-metrics/design.md) · [tasks](../.kiro/specs/e-metrics/tasks.md) · [acceptance](../.kiro/specs/e-metrics/acceptance.md) | draft（2026-11-12 初建；旧 `metrics-and-dashboard/design.md` 已删除；未实施；待确认 16 项见 design §18，其中投影范围、导出桶、上限初值、自定义指标绑定规则与界面设计需先答（节点级求值已采纳）；2026-11-12 经评审修订（范围收窄、回收站不依赖通知、冻结输入、as-of 观测）；**只有任务 5b（D 真实适配器与跨域契约）等 D 闸门通过、JP-16 冻结后才开工**，其余任务对 fake 端口开发；**界面设计已于 2026-11-16 由刘学奎确认**（design §20.6，原型 [`ui-lab/e-metrics/`](../ui-lab/e-metrics/README.md)），页面任务 P1–P6 已列，页面代码依赖任务 6–9、10a） | 路线图第 8 位；按 E 域 PRD v1.1：4 个内置 + 每判定计划 4 个派生 + 受限自定义指标、`last_observed`、活动级冻结投影与自动激活、三张视图共用 `projectionId`、一张计划看板、5 类 Excel 导出与下载中心；15 张新表（不入 v2）；`report` / `metric_config` 范围策略注册；与 D 共用 `PlanDownstream`；D 的 `JudgementOutcomeReader` 未实施，离线用 fake |
 | 学习平台 | [requirements](../.kiro/specs/g-learning-min/requirements.md) · [design](../.kiro/specs/g-learning-min/design.md) · [tasks](../.kiro/specs/g-learning-min/tasks.md) · [acceptance](../.kiro/specs/g-learning-min/acceptance.md) | draft（1.0 课程 / 资料上传即发布、VOD 视频、进度与续播、总部汇总；新增 6 张表；2026-11-10 补 design §11 界面与 [`ui-lab/g-learning-min/`](../ui-lab/g-learning-min/README.md) 原型，**界面设计已确认**；2026-11-11 任务 1–12 与页面 P1–P4 已实现，分支 `g-learning-min`） | 1.0 学习平台：课程与资料、品牌 × 人员级别可见性、进度与续播、总部累计汇总；不做考试、积分、任务与效果分析 |
 | 服务器与部署运维 | [`server-operations-runbook.md`](runbooks/server-operations-runbook.md) | current | hbecho 专属：ECS/OSS 资产、系统与 MySQL 配置、密钥、Git、部署、备份、监控与验收。文档顶部 §待办清单 是搭建期待办的唯一入口 |
 | 新服务器从 0 配置 | [`new-server-bootstrap-checklist.md`](runbooks/new-server-bootstrap-checklist.md) | current | 项目无关的可复用清单，供 hbdam 或任何新项目使用。内容来自 hbecho 一次实际执行，每条经过验证 |
@@ -198,10 +198,10 @@ flowchart LR
 | `b-access-control` | B | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | B v1.21（current） | 2026-11-06 初建；替代并归档旧 `access-control/design.md`（继承与舍弃见 design §2.3）；仓库里 Next.js 只有无页面的 Route Handler 入口（`src/app`，`next build` 已一次性验证）；better-auth 已于 2026-11-10 锁定 1.7.18 并完成任务 1 验证（S1–S9 全部通过，认证表 ID 自增 BIGINT 通过，天花板与五处库外补丁见 [ADR-0015](architecture/adr/0015-auth-boundary-and-disabled-phone.md)，accepted，2026-11-10）；要求 `import_batches.import_kind` 增加 `user_import`；ADR-0005 已知坑 5 已订正为 B-D14 口径；页面任务 P1–P5 于 2026-11-11 实施并合并 `main`（Dockerfile、CI image job、测试 ECS 部署见 tasks 与运维手册 P6）；任务 1–12 于 2026-11-10 实施完成（本机 `verify.sh`、测试 ECS 运行记录见 tasks 实施记录）|
 | `c-signals` | C | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | C v1.3（定稿候选） | 2026-11-11 初建，2026-11-12 经三轮审查修订并通过任务 0 闸门（13 项采纳），任务 0–13 已实现并离线验证（分支 `c-signals`，待合并 `main`）；与 PRD v1.2 的字面差异（不做 pHash 预筛、标点方向、信号触发点、瞬时 / 确定性失败等）已在 PRD v1.3 订正（C-D15～C-D20，C-D09 前半句按规矩加删除线修订）；handoff 文档已在文首标注过时内容，ADR-0001 / ADR-0012 已增补；路线图排在 H 之前，故第 3 层定义 `AiGatewayPort` 并默认 disabled；标准图桶已创建；匹配分标定（缺业务样本）、监控段 API 与 D 的对齐为外部依赖 |
 | `d-rule-engine` | D | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | D v1.2（定稿候选） | 2026-11-12 初建；2026-11-16 起实现，任务 0–12 完成（引擎、CLI、下游端口、离线验收），页面任务 13–16 未开始；判定模型按 D-71 重写（内容逐层过滤、无考核项 / composite / 分项率）；2026-11-16 同步 v1.2（数量 N、对比元素、别名、内容要求启用规则 D-D21 / D-D22）；C 已合入 `main`，对 C 的复核见 design §10.3，与 E 的对齐请求见 §10.4；界面设计已确认（2026-11-13，§15.6），页面任务 13–16 |
-| `metrics-and-dashboard` | E | 旧名，应为 `e-metrics` | 仅 design | E v1.0（定稿候选） | 已改：`n_day` 降为 2.0、投影自动激活；design 待同步分项列与两层分母 |
+| `e-metrics` | E | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | E v1.1（定稿候选） | 2026-11-12 初建；取代并删除旧 `metrics-and-dashboard/design.md`（2026-11-18）（淘汰项见新 design §1 / §17）；投影按活动级（E-SD-01，待确认）；依赖 D 的 JP-16，D 未实施；界面设计已于 2026-11-16 确认（§20.6，原型 [`ui-lab/e-metrics/`](../ui-lab/e-metrics/README.md)），页面任务 P1–P6 已列，页面代码等任务 6–9、10a |
 | `g-learning-min` | G | 新名，符合 `<代号>-<切片>` | requirements / design / tasks / acceptance | G v1.0（定稿候选） | 已按 ADR-0007 去掉自动截图；spec 已同步 G v1.0.2（2026-11-11） |
 
-> `a-data-foundation-tracer` 已于 2026-11-03 完成重命名并补齐四件套；其余旧名目录（`rule-engine`、`metrics-and-dashboard`）在对应域 spec 开工前按 `<代号>-<切片>` 一次性重命名，并修复全部链接。各文件头已标注所属域与命名状态；偏差只记录在各文件的「已知过时内容」附录，不修改正文。
+> `a-data-foundation-tracer` 已于 2026-11-03 完成重命名并补齐四件套；`metrics-and-dashboard` 已于 2026-11-12 废弃、2026-11-18 删除，改建为 `e-metrics`；其余旧名目录（`rule-engine` 已被 `d-rule-engine` 取代，待归档）在对应域 spec 开工前按 `<代号>-<切片>` 一次性重命名，并修复全部链接。各文件头已标注所属域与命名状态；偏差只记录在各文件的「已知过时内容」附录，不修改正文。
 
 不创建覆盖全项目的巨型 Spec。每个 Spec 必须有独立可验收边界；跨域只通过明确契约连接。
 
@@ -264,6 +264,7 @@ flowchart LR
 | `ui-changes-2026-11-16.md` | `HBECHO设计方案/ui/` | 各 spec 的「界面」一节与 `ui-foundation.md` |
 | `prd-修订清单-2026-11-03.md` | `HBECHO设计方案/` | 当前 `prd-platform.md` 与各 `prd-domain-*.md` |
 | `domain-a-handoff-to-c.md` | `HBECHO设计方案/` | `c-signals` requirements.md 与 C PRD |
+| `design.md`（旧名 `metrics-and-dashboard`） | `.kiro/specs/metrics-and-dashboard/` | `e-metrics` spec 与 `prd-domain-e-metrics.md` |
 
 ## 9. 变更规则
 

@@ -30,7 +30,7 @@ MIN_KEYPOINTS = 8
 MIN_GOOD_MATCHES = 4
 RATIO = 0.75
 RANSAC_PX = 5.0
-R_FULL = 0.30  # template：内点数 / min(两图特征点数) 达到它即满分
+R_FULL = 0.60  # template：内点数 / min(两图特征点数) 达到它即满分（2026-11-12 由 0.30 标定上调，见 c-signals 标定报告 §4.2）
 I_FULL = 25  # element：内点数达到它即满分
 DOWNLOAD_TIMEOUT_SECONDS = 30
 

@@ -1,16 +1,20 @@
 # C 识别能力（c-signals）· 交接说明 B
 
-> **日期**：2026-11-12（接 [`handoff-2026-11-12.md`](handoff-2026-11-12.md)；那份写的是任务 2 开工前的状态，已过时，以本文为准）
-> **用途**：让新会话接着做**任务 11、12、13**。这是进度与注意事项，不是需求；冲突时以 [`requirements.md`](requirements.md)、[`design.md`](design.md)、[`tasks.md`](tasks.md) 为准。
+> **archived**（2026-11-18 文档瘦身归档）：新会话交接说明 B（任务 11–13 开工前），任务 11–13 已完成并合并。
+> **替代**：[`c-signals` tasks.md](../../../.kiro/specs/c-signals/tasks.md) 的完成记录与 [`acceptance.md`](../../../.kiro/specs/c-signals/acceptance.md)。
+> **禁止用途**：不得据此判断当前进度或作为实现依据；只作追溯。
+
+> **日期**：2026-11-12（接 [`handoff-2026-11-12.md`](c-signals-handoff-2026-11-12.md)；那份写的是任务 2 开工前的状态，已过时，以本文为准）
+> **用途**：让新会话接着做**任务 11、12、13**。这是进度与注意事项，不是需求；冲突时以 [`requirements.md`](../../../.kiro/specs/c-signals/requirements.md)、[`design.md`](../../../.kiro/specs/c-signals/design.md)、[`tasks.md`](../../../.kiro/specs/c-signals/tasks.md) 为准。
 > **状态**：`draft`（随任务推进由 tasks.md 的完成记录取代，不必维护本文件）
-> **更新（2026-11-12 晚）**：任务 11、12、13 已全部完成，以 [`tasks.md`](tasks.md) 的完成记录和 [`acceptance.md`](acceptance.md) 的逐条结果为准；§2 以下的“未开始”描述已过时，仅作历史参考。
+> **更新（2026-11-12 晚）**：任务 11、12、13 已全部完成，以 [`tasks.md`](../../../.kiro/specs/c-signals/tasks.md) 的完成记录和 [`acceptance.md`](../../../.kiro/specs/c-signals/acceptance.md) 的逐条结果为准；§2 以下的“未开始”描述已过时，仅作历史参考。
 
 ## 1. 先读什么（按顺序）
 
-1. [`tasks.md`](tasks.md)：进度勾选，**每个已完成任务都有“完成记录”**（做了什么、测了什么、与 design 的偏差、未证明的部分）。任务 11–13 的原文在文末。
+1. [`tasks.md`](../../../.kiro/specs/c-signals/tasks.md)：进度勾选，**每个已完成任务都有“完成记录”**（做了什么、测了什么、与 design 的偏差、未证明的部分）。任务 11–13 的原文在文末。
 2. 本文 §2–§6。
-3. [`design.md`](design.md)：§7.10（重算）、§7.11（保留期）、§9（CLI 命令清单）、§11–§12（测试策略、规模演练）、§14（未决项）。
-4. [`acceptance.md`](acceptance.md)：任务 13 要逐条回填的 `[自动]` 项。
+3. [`design.md`](../../../.kiro/specs/c-signals/design.md)：§7.10（重算）、§7.11（保留期）、§9（CLI 命令清单）、§11–§12（测试策略、规模演练）、§14（未决项）。
+4. [`acceptance.md`](../../../.kiro/specs/c-signals/acceptance.md)：任务 13 要逐条回填的 `[自动]` 项。
 5. `.kiro/steering/`（自动注入）：`data-discipline`、`dev-ci-cadence`、`structure`、`tech`、`server-access`、`no-reinventing-wheels`。
 
 ## 2. 现在的状态
@@ -21,7 +25,7 @@
 | 任务 0–9 | **完成并已提交**（`e6e4a84` … `ffb3973`） |
 | 任务 10 | **完成并已提交**（本机 verify 全绿） |
 | 任务 11、12、13 | **未开始** |
-| 任务 7 的标定 | **未完成**：缺业务提供的约 20 对脱敏样本，工具与报告模板已备好（`services/capability/calibrate.py`、[`calibration-report.md`](calibration-report.md)，状态“未标定”） |
+| 任务 7 的标定 | **未完成**：缺业务提供的约 20 对脱敏样本，工具与报告模板已备好（`services/capability/calibrate.py`、[`calibration-report.md`](../../../.kiro/specs/c-signals/calibration-report.md)，状态“未标定”） |
 
 ### 2.1 开工第一件事：确认工作区干净
 
@@ -79,7 +83,7 @@ unit 994 / db 1399 通过（1 个既有 skip）/ Python 36 通过；`verify: OK`
 
 ### 任务 13 · 全量离线验收、规模演练、测试 ECS 运行与文档收尾
 
-- 逐条完成 [`acceptance.md`](acceptance.md) 的 `[自动]` 项并回填结果（约 240 行表格）。很多条已被任务 2–10 的测试覆盖，回填时写“被哪个测试覆盖”，**没有覆盖的补测试**，不要凭印象打勾。
+- 逐条完成 [`acceptance.md`](../../../.kiro/specs/c-signals/acceptance.md) 的 `[自动]` 项并回填结果（约 240 行表格）。很多条已被任务 2–10 的测试覆盖，回填时写“被哪个测试覆盖”，**没有覆盖的补测试**，不要凭印象打勾。
 - 规模演练（数字回填 design §12.1）：20 万内容的扫描吞吐；`readMany` 5,000 主体的耗时与查询次数（目前只证明了查询次数为常数）；1 万个评分任务（`FakeMatcher`）的领取吞吐。
 - 测试 ECS（`i-2zef8qpi1d2mldntjgrv`，**只用 Workbench，不用 SSH**，见 `server-access.md`）：跑一次全量 `verify.sh`（条件见 `server-access.md` 第 5 条：一次性库容器、不放生产凭证、不连付费开关）与一次真实 Python 匹配 smoke（无付费调用）。smoke 分两档：本地文件档（必做）；Node → 签名 URL → Python 的端到端档需要先创建 `hbecho-signals` 桶——**创建桶、改 RAM 必须先向用户说明并得到同意**，桶未创建就只做前一档并如实记录。
 - 文档收尾：`HBECHO设计方案/INDEX.md` 更新 c-signals 状态（**这个文件里混有别的会话的未提交改动**，只提交自己的那一处：取 `git show HEAD:<path>` 做精确替换，`git hash-object -w --stdin` 得 blob，`git update-index --cacheinfo 100644,<blob>,<path>`，工作区文件保持原样）；`server-operations-runbook.md` 桶清单回填实际状态；C PRD 版本记录补一行实现状态。
@@ -93,7 +97,7 @@ unit 994 / db 1399 通过（1 个既有 skip）/ Python 36 通过；`verify: OK`
 | design §14 第 11、12 项 | 监控段 / 读取口 / 补算请求的 API 形状、关键词归一化出口（`normalizeKeyword(raw, value.normalizerVersion)`） | D 的 spec 开工时对齐；C 用契约测试固定 |
 | 第 14 项 | 数值起始值 | 任务 13 实测后定；只写 `.env.example`，不写代码默认值 |
 | 第 16 项 | `scope_fingerprint` 格式 | `h-ai-min` |
-| 标定 | `image.template` / `image.element` **不进生产启用集**，直到业务提供样本、[`calibration-report.md`](calibration-report.md) 填完并由刘学奎签字 | 业务 + 刘学奎 |
+| 标定 | `image.template` / `image.element` **不进生产启用集**，直到业务提供样本、[`calibration-report.md`](../../../.kiro/specs/c-signals/calibration-report.md) 填完并由刘学奎签字 | 业务 + 刘学奎 |
 | 桶 | `hbecho-signals` **未创建**；不要动服务器、RAM、安全组，除非先说明并得到同意 | 刘学奎 |
 | 付费 | C **不调用 AI Master**；ASR 与大模型只经 `AiGatewayPort`，缺省 `DisabledAiGateway`。不发任何付费调用 | — |
 

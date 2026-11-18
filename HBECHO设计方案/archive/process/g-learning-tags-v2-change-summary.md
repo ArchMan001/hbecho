@@ -1,12 +1,16 @@
 # G 学习平台 · 两级标签改动说明
 
+> **archived**（2026-11-18 文档瘦身归档）：评审与交接用的改动说明，两级标签已实施并于 2026-11-17 部署。
+> **替代**：[`g-learning-tags-v2` requirements / design / tasks](../../../.kiro/specs/g-learning-tags-v2/design.md)。
+> **禁止用途**：不得据此判断当前进度或作为实现依据；只作追溯。
+
 > **状态**：原型已出，界面待刘学奎确认；生产代码未实施
 >
 > **日期**：2026-11-16
 >
 > **决策人**：刘学奎
 >
-> **详细合同**：[`requirements.md`](requirements.md) · [`design.md`](design.md) · [`tasks.md`](tasks.md) · [`acceptance.md`](acceptance.md)
+> **详细合同**：[`requirements.md`](../../../.kiro/specs/g-learning-tags-v2/requirements.md) · [`design.md`](../../../.kiro/specs/g-learning-tags-v2/design.md) · [`tasks.md`](../../../.kiro/specs/g-learning-tags-v2/tasks.md) · [`acceptance.md`](../../../.kiro/specs/g-learning-tags-v2/acceptance.md)
 
 ## 1. 背景
 
@@ -119,6 +123,6 @@
 
 ## 7. 参考
 
-- 现有实现：[`g-learning-min`](../g-learning-min/design.md)（课程、标签、学习中心）
-- 领域 PRD：[`prd-domain-g-learning.md`](../../../HBECHO设计方案/prd-domain-g-learning.md) §3.3
-- 本切片设计：[`design.md`](design.md)（表结构、迁移、筛选算法、状态矩阵）
+- 现有实现：[`g-learning-min`](../../../.kiro/specs/g-learning-min/design.md)（课程、标签、学习中心）
+- 领域 PRD：[`prd-domain-g-learning.md`](../../prd-domain-g-learning.md) §3.3
+- 本切片设计：[`design.md`](../../../.kiro/specs/g-learning-tags-v2/design.md)（表结构、迁移、筛选算法、状态矩阵）

@@ -1,5 +1,9 @@
 # 2026-11-16 三处界面改动说明
 
+> **archived**（2026-11-18 文档瘦身归档）：2026-11-16 批次的评审与交接说明，批次已合并并部署（运维手册第 50、52 项）。
+> **替代**：各 spec 的 design「界面」一节与 [`ui-foundation.md`](../../ui/ui-foundation.md)。
+> **禁止用途**：不得据此判断当前进度或作为实现依据；只作追溯。
+
 > **状态**：2026-11-16 已并入批次分支 `fix/ui-batch-2026-11-16`（预览工作树 `~/Documents/hbecho-preview`，未推送、未部署）；效果待刘学奎调整，部分改动尚未实施（见第 4、7 节）
 >
 > **决策人**：刘学奎
@@ -53,7 +57,7 @@
 - 本地完整应用：<http://localhost:3202/login>（`./scripts/preview.sh` 启动，已改）
 - 原型：<http://localhost:4175/g-learning-tags-v2/#/login>（独立目录，避免缓存）
 - 代码位置：预览工作树 `~/Documents/hbecho-preview` 的批次分支 `fix/ui-batch-2026-11-16`（原先分散在 `hbecho-a-activity-plan` 与 `fix/small-batch-2026-11-16` 两个工作区的未提交改动，补丁内容一致，已合成一份并提交；原目录未改动）
-- 品牌文档：[`brand-language.md`](brand-language.md) 已记录中文名、Logo、固定事实区与变更记录
+- 品牌文档：[`brand-language.md`](../../ui/brand-language.md) 已记录中文名、Logo、固定事实区与变更记录
 
 ## 2. 主数据浏览：店面标准下拉 + 经销商搜索
 
@@ -113,7 +117,7 @@
 - 学习中心：<http://localhost:4175/g-learning-tags-v2/#/learning>
 - 标签管理：<http://localhost:4175/g-learning-tags-v2/#/learning/tags>
 - 新建课程：<http://localhost:4175/g-learning-tags-v2/#/learning/new>
-- 状态：原型已出，**界面待确认**；生产代码与迁移未实施；详细合同见 [`g-learning-tags-v2`](../../.kiro/specs/g-learning-tags-v2/change-summary.md)
+- 状态：原型已出，**界面待确认**；生产代码与迁移未实施；详细合同见 [`g-learning-tags-v2`](g-learning-tags-v2-change-summary.md)
 
 ## 4. 共同状态与下一步
 
@@ -146,11 +150,11 @@
 
 ## 6. 相关文档
 
-- 登录品牌：[`brand-language.md`](brand-language.md)
-- 主数据浏览：[`a-master-data-browse`](../../.kiro/specs/a-master-data-browse/requirements.md)
-- 两级标签：[`g-learning-tags-v2`](../../.kiro/specs/g-learning-tags-v2/change-summary.md)
-- 小改动批规则：[`dev-ci-cadence.md`](../../.kiro/steering/dev-ci-cadence.md) 的「小改动批」一节
-- 界面预览与协作规则：[`ui-workflow.md`](../../.kiro/steering/ui-workflow.md)；本机入口：[`LOCAL-UI.md`](../../ui-lab/LOCAL-UI.md)
+- 登录品牌：[`brand-language.md`](../../ui/brand-language.md)
+- 主数据浏览：[`a-master-data-browse`](../../../.kiro/specs/a-master-data-browse/requirements.md)
+- 两级标签：[`g-learning-tags-v2`](g-learning-tags-v2-change-summary.md)
+- 小改动批规则：[`dev-ci-cadence.md`](../../../.kiro/steering/dev-ci-cadence.md) 的「小改动批」一节
+- 界面预览与协作规则：[`ui-workflow.md`](../../../.kiro/steering/ui-workflow.md)；本机入口：[`LOCAL-UI.md`](../../../ui-lab/LOCAL-UI.md)
 ## 7. 批次 `fix/ui-batch-2026-11-16` 当前内容（2026-11-16）
 一次验证、一次 CI、一次合并、一次部署（`dev-ci-cadence.md`「小改动批」）。
 | # | 内容 | 状态 |

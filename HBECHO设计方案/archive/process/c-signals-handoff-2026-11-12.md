@@ -1,18 +1,22 @@
 # C 识别能力（c-signals）· 交接说明
 
-> **superseded**：任务 2–10 已完成，最新状态与任务 11–13 的交接见 [`handoff-2026-11-12-b.md`](handoff-2026-11-12-b.md)。本文只保留作任务 2 开工前的历史记录；其中“任务 2–13 未开始”“迟到提交的 `25c3a10` 未推”等已过时。禁止据此判断当前进度。
+> **archived**（2026-11-18 文档瘦身归档）：新会话交接说明（任务 2 开工前），任务 0–13 已完成并合并。
+> **替代**：[`c-signals` tasks.md](../../../.kiro/specs/c-signals/tasks.md) 的完成记录与 [`acceptance.md`](../../../.kiro/specs/c-signals/acceptance.md)。
+> **禁止用途**：不得据此判断当前进度或作为实现依据；只作追溯。
+
+> **superseded**：任务 2–10 已完成，最新状态与任务 11–13 的交接见 [`handoff-2026-11-12-b.md`](c-signals-handoff-2026-11-12-b.md)。本文只保留作任务 2 开工前的历史记录；其中“任务 2–13 未开始”“迟到提交的 `25c3a10` 未推”等已过时。禁止据此判断当前进度。
 
 > **日期**：2026-11-12
-> **用途**：让新会话接着做任务 2–13。这是进度与注意事项，不是需求；冲突时以 [`requirements.md`](requirements.md)、[`design.md`](design.md)、[`tasks.md`](tasks.md) 为准。
+> **用途**：让新会话接着做任务 2–13。这是进度与注意事项，不是需求；冲突时以 [`requirements.md`](../../../.kiro/specs/c-signals/requirements.md)、[`design.md`](../../../.kiro/specs/c-signals/design.md)、[`tasks.md`](../../../.kiro/specs/c-signals/tasks.md) 为准。
 > **状态**：`draft`（随任务推进由 tasks.md 的完成记录取代，不必维护本文件）
 
 ## 1. 先读什么（按顺序）
 
-1. [`tasks.md`](tasks.md)：进度勾选、各任务的验证项、已做任务的**完成记录**。接着做的是任务 2。
-2. [`design.md`](design.md)：§4 模块划分、§6 数据模型、§7 算法、§8 失败语义、§13 决策记录、§14 未决项。
-3. [`requirements.md`](requirements.md)：§1.3 R 表（对 PRD 与既有文件的偏差）、§1.4 解释、SG-1～SG-16。
+1. [`tasks.md`](../../../.kiro/specs/c-signals/tasks.md)：进度勾选、各任务的验证项、已做任务的**完成记录**。接着做的是任务 2。
+2. [`design.md`](../../../.kiro/specs/c-signals/design.md)：§4 模块划分、§6 数据模型、§7 算法、§8 失败语义、§13 决策记录、§14 未决项。
+3. [`requirements.md`](../../../.kiro/specs/c-signals/requirements.md)：§1.3 R 表（对 PRD 与既有文件的偏差）、§1.4 解释、SG-1～SG-16。
 4. `.kiro/steering/`（自动注入）：`data-discipline`（六条编码纪律）、`dev-ci-cadence`、`structure`、`tech`、`no-reinventing-wheels`、`server-access`。
-5. 需要时再查：[C PRD v1.3](../../../HBECHO设计方案/prd-domain-c-signals.md)（产品语义的唯一真相源；C-D15～C-D20 是 2026-11-12 订正）、[`acceptance.md`](acceptance.md)（161 余条验收，任务 13 逐条回填）。
+5. 需要时再查：[C PRD v1.3](../../prd-domain-c-signals.md)（产品语义的唯一真相源；C-D15～C-D20 是 2026-11-12 订正）、[`acceptance.md`](../../../.kiro/specs/c-signals/acceptance.md)（161 余条验收，任务 13 逐条回填）。
 
 不要通读 PRD 全文；遇到冲突再查对应章节。
 

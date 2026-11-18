@@ -1,12 +1,16 @@
 # a-full-sync · 交付与审查报告（2026-11-06）
 
+> **archived**（2026-11-18 文档瘦身归档）：交给独立审查者的一次性交付与审查报告，a-full-sync 已实现并部署。
+> **替代**：[`a-full-sync` acceptance.md](../../../.kiro/specs/a-full-sync/acceptance.md) 与 tasks.md 的完成记录。
+> **禁止用途**：不得据此判断当前进度或作为实现依据；只作追溯。
+
 > **状态**：`recorded`（一次性报告，供独立审查；不是合同，不替代 requirements / design）
 >
 > **用途**：交给另一位审查者（DeepSeek）独立核查 `a-full-sync` 的实现、验证证据与已知缺口。报告里每个数字都标了来源，审查者应当复核，而不是采信。
 >
 > **仓库状态**：`main` = `35959a8`（2026-11-06）。CI 最近四次均为 success：`42169820893`（`ba1eb49`）、`42172801179`（`1ea5d20`）、`42178035982`（`35959a8`）。
 >
-> **相关文档**：[requirements](requirements.md) · [design](design.md) · [design-task5](design-task5-account-sync.md) · [tasks](tasks.md) · [acceptance](acceptance.md) · [smoke 报告](smoke-report-2026-11-06.md)
+> **相关文档**：[requirements](../../../.kiro/specs/a-full-sync/requirements.md) · [design](../../../.kiro/specs/a-full-sync/design.md) · [design-task5](../../../.kiro/specs/a-full-sync/design-task5-account-sync.md) · [tasks](../../../.kiro/specs/a-full-sync/tasks.md) · [acceptance](../../../.kiro/specs/a-full-sync/acceptance.md) · [smoke 报告](../../../.kiro/specs/a-full-sync/smoke-report-2026-11-06.md)
 
 ## 1. 这个 spec 要交付什么
 
@@ -64,7 +68,7 @@
 | CI | `main` 最近四次 success（run id 见文首） | `gh run list --branch main` |
 | 测试 ECS（`i-2zef8qpi1d2mldntjgrv`） | 573 通过 / 1 跳过，92.9 秒（最后一次）；含演练的一次 570 通过 | `./scripts/ecs-test.sh start` / `log` |
 | 6,000 账号演练（fake transport） | 本机：规划 1.06 秒，12,000 任务执行 229 秒，RSS 403 MB，零重复；ECS：规划 1.36 秒，执行 253 秒，node 容器峰值约 696 MiB | design §12.1 |
-| 真实 smoke | 见 §5 | [smoke 报告](smoke-report-2026-11-06.md) |
+| 真实 smoke | 见 §5 | [smoke 报告](../../../.kiro/specs/a-full-sync/smoke-report-2026-11-06.md) |
 
 **这些证据证明不了的**（acceptance 的"覆盖不了"章节有完整列表）：真实供应商的 429 / 5xx / 超时行为；视频 URL 有效期、异步任务 TTL、QPS；多 worker 进程（1.0 只支持单进程，限流桶与熔断器都是进程内状态）；真实延迟下的总耗时（演练用零延迟 fake transport，数字只是下限）。
 
@@ -162,4 +166,4 @@ ls /tmp/fullsync-smoke/          # intake-*.json、round.json、probe*.json、re
 docker exec hbecho-fullsync-smoke-mysql ...   # 库 hbecho_fullsync_smoke，表 ods_provider_calls / sync_tasks
 ```
 
-调用级证据已导出到 [`smoke-calls-2026-11-06.tsv`](smoke-calls-2026-11-06.tsv)（249 行，不含 URL / 密钥 / 载荷）。`/tmp/fullsync-smoke/` 与 smoke 数据库仍不进仓库（其中 `.pw`、`db.env` 是一次性本机测试库的口令，清理容器时一并删除）。
+调用级证据已导出到 [`smoke-calls-2026-11-06.tsv`](../../../.kiro/specs/a-full-sync/smoke-calls-2026-11-06.tsv)（249 行，不含 URL / 密钥 / 载荷）。`/tmp/fullsync-smoke/` 与 smoke 数据库仍不进仓库（其中 `.pw`、`db.env` 是一次性本机测试库的口令，清理容器时一并删除）。

@@ -12,7 +12,7 @@
 >
 > **相邻 PRD**：[`prd-domain-d-rule-engine.md`](../../../HBECHO设计方案/prd-domain-d-rule-engine.md) v1.1（信号的消费方与监控段的驱动方）、[`prd-domain-h-ai.md`](../../../HBECHO设计方案/prd-domain-h-ai.md) v0.2（ASR 与大模型调用通道）、[`prd-domain-b-access-control.md`](../../../HBECHO设计方案/prd-domain-b-access-control.md) v1.21（Capability）、[`prd-platform.md`](../../../HBECHO设计方案/prd-platform.md) §6.11（三层对象）
 >
-> **供数说明**：[`domain-a-handoff-to-c.md`](../../../HBECHO设计方案/domain-a-handoff-to-c.md)（draft，部分内容已过时，见 §1.3 R4；**以已合并代码为准**）
+> **供数说明**：[`domain-a-handoff-to-c.md`](../../../HBECHO设计方案/archive/process/domain-a-handoff-to-c.md)（draft，部分内容已过时，见 §1.3 R4；**以已合并代码为准**）
 >
 > **数据基线**：[`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)（draft）。C 域的表**不入 v2**，以本 spec design §6 为准（与 B 域做法一致）；对 A 域表只有一处加索引的修订（§1.3 R1）
 >
@@ -61,7 +61,7 @@
 | R1 | v2 `contents` / `src/db/schema/content.ts` | `current_snapshot_selected_at` 无索引。C 的增量扫描按它排序，不加索引会全表扫描 | 增加 `idx_contents_current_selected (current_snapshot_selected_at, content_id)`。**只增索引**，不改列、不改语义、不改 `selectCurrentContentSnapshot` |
 | R2 | [`ADR-0001`](../../../HBECHO设计方案/architecture/adr/0001-oss-bucket-topology.md) | 五个桶。`hbecho-media` 的 RAM 策略刻意没有 `DeleteObject` | 标准图 / 元素图随监控判定计划物理删除（PRD C §5.5、D PRD §2.0），不能放进 media 桶。增补第六个桶 `hbecho-signals`，做法同 `hbecho-course`（私有、无过期规则、应用角色额外授予 `DeleteObject`、不写 A 域的 `media_assets` / `oss_objects`）。**创建桶与改 RAM 需要刘学奎批准**（`server-access.md`） |
 | R3 | [`ADR-0012`](../../../HBECHO设计方案/architecture/adr/0012-python-capability-service.md) | 契约只列了归一化与音频抽取；OpenCV 已登记，numpy 未提 | 补记：① 新增 `POST /v1/image/match`，请求是 JSON（两个短期签名 URL），响应是 JSON；沿用「Python 不持有 OSS 凭证」；② numpy 是 `opencv-python-headless` 的传递依赖，随它一起采用，不单独选型；③ 匹配的 0–10 分映射在 Python 内，能力版本由它回报（JSON 里的 `capability.version`；响应头 `X-Capability-Version` 仍是服务版本，Node 只校验 JSON 里的）；④ ADR-0012 背景里「pHash 预筛 + SIFT / ORB」改写为「1.0 不做预筛」（见 R5） |
-| R4 | [`domain-a-handoff-to-c.md`](../../../HBECHO设计方案/domain-a-handoff-to-c.md) | ① §一.4 写评论有 `parent_id`；② §二写信号状态为 `ready` / `waiting` / `unavailable` | ① 代码里评论**没有** `parent_id` 与回复树（`comments` 表，`content.ts`），以代码为准；② 以 C PRD §3.3 的五态为准。该文档按 `structure.md` 的做法在文首补「已知过时内容」，不改正文 |
+| R4 | [`domain-a-handoff-to-c.md`](../../../HBECHO设计方案/archive/process/domain-a-handoff-to-c.md) | ① §一.4 写评论有 `parent_id`；② §二写信号状态为 `ready` / `waiting` / `unavailable` | ① 代码里评论**没有** `parent_id` 与回复树（`comments` 表，`content.ts`），以代码为准；② 以 C PRD §3.3 的五态为准。该文档按 `structure.md` 的做法在文首补「已知过时内容」，不改正文 |
 | R5 | C PRD v1.2 §5.1 / §5.2 | pHash 在档 1 里「内部预筛」 | 本 spec 的 `image.template@1` **不实现 pHash 预筛**（理由与上限见 design SG-D07）。PRD 已于 2026-11-12 升 v1.3 订正（C-D16）；ADR-0012 背景同步改写 |
 | R6 | C PRD v1.2 §4.2 | 「中文标点与英文标点统一为中文标点」 | 本 spec 以 NFKC 的方向统一（结果是 ASCII 标点），并只补两个 CJK 字符的映射（design §7.1）。关键词与库内文本走同一函数，**对子串匹配**方向不影响命中；**对 `text.regex`**，正则里写的中文标点匹配不到归一化后的 ASCII 标点，所以 D 的正则规则必须按归一化后的形态书写（design §14 第 4 项）。PRD 已于 2026-11-12 升 v1.3 订正（C-D17） |
 | R7 | `CONTEXT.md` 跨域消费词汇 | 没有 Signal、MonitoringSegment | 增加两条词汇，只写语义（任务 0） |

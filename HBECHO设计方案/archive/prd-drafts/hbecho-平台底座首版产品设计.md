@@ -1,8 +1,12 @@
 # hbecho 平台底座首版产品设计（草案）
 
+> **archived**（2026-11-18 文档瘦身，刘学奎决定）：2026-08 的子 PRD 素材，其中仍成立的内容已被各 `prd-domain-*.md` 与 spec 吸收。
+> **替代**：[`prd-domain-a-data-foundation.md`](../../prd-domain-a-data-foundation.md)、[`prd-domain-b-access-control.md`](../../prd-domain-b-access-control.md)。
+> **禁止用途**：不得作为实现依据，不得照抄旧表名、旧角色矩阵、旧技术选型；只作追溯。
+
 > **状态**：`draft`（2026-10-26 由 liuxuekui 从归档恢复为子 PRD 草案，待复核）  
 > **复核状态**：未复核。此前 2026-09-02 的 `archived` 标记作废。  
-> **权威关系**：与 [`prd-platform.md`](../prd-platform.md) 和 [`b-access-control`](../../.kiro/specs/b-access-control/design.md) 冲突时，以它们为准。  
+> **权威关系**：与 [`prd-platform.md`](../../prd-platform.md) 和 [`b-access-control`](../../../.kiro/specs/b-access-control/design.md) 冲突时，以它们为准。  
 > **用途**：保留首版试点范围与反过度设计原则，作为访问控制子 PRD 的素材。
 
 > **文档状态**：v0.1 业务讨论稿，尚未冻结  
@@ -1019,11 +1023,11 @@ flowchart TD
 
 ## 21. 参考文档
 
-- [hbecho 设计大纲](./hbecho-设计大纲.md)
-- [hbecho 模块设计：权限中心](./hbecho-模块设计-权限中心.md)
-- [hbecho 模块设计：数据供给与资产层（归档）](../archive/data-foundation/data-supply-and-assets.md)
-- [hbecho 模块设计：指标与看板](./hbecho-模块设计-指标与看板.md)
-- [域 E：用户与权限详细设计](../archive/legacy/域E-用户与权限详细设计.md)
+- [hbecho 设计大纲](hbecho-设计大纲.md)
+- [hbecho 模块设计：权限中心](hbecho-模块设计-权限中心.md)
+- [hbecho 模块设计：数据供给与资产层（归档）](../data-foundation/data-supply-and-assets.md)
+- [hbecho 模块设计：指标与看板](hbecho-模块设计-指标与看板.md)
+- [域 E：用户与权限详细设计](../legacy/域E-用户与权限详细设计.md)
 
 ---
 

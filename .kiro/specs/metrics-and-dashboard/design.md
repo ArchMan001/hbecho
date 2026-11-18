@@ -37,7 +37,7 @@ flowchart LR
 3. [`d-rule-engine/design.md`](../d-rule-engine/design.md)（旧 `rule-engine` 已被取代；`OutcomeSet` 等已由 `JudgementOutcomeReader` 取代，见其 §10.4）：OutcomeSet、ParticipantFact、ItemOutcomeFact 和 AttributionSnapshot 契约；
 4. [`b-access-control/design.md`](../b-access-control/design.md)：Capability、DataScope 和异步撤权语义；
 5. 本设计：指标、投影、报表、看板和导出；
-6. 历史输入：[`hbecho-模块设计-指标与看板.md`](../../../HBECHO设计方案/prd-drafts-子PRD草案/hbecho-模块设计-指标与看板.md)。
+6. 历史输入：[`hbecho-模块设计-指标与看板.md`](../../../HBECHO设计方案/archive/prd-drafts/hbecho-模块设计-指标与看板.md)。
 
 ## 3. Goals and Non-goals
 

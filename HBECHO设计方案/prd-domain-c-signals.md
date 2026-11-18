@@ -8,7 +8,7 @@
 >
 > **产品语义的唯一真相源是本文档。** `d-rule-engine` 的 design 与 `database-design-v2.md` 若与本文冲突，以本文为准，并回来修订它们。
 >
-> **来源说明**：本域没有现成的独立 PRD 草稿。素材取自 [`hbecho-设计大纲.md`](prd-drafts-子PRD草案/hbecho-设计大纲.md) §4 分层能力模型、§6.C 识别能力层、§6.D 判定链路，以及 [旧 `rule-engine` 设计](archive/rule-engine-design-2026-09-02.md) §8.2「媒资与特征需求」中仍然有效的部分。
+> **来源说明**：本域没有现成的独立 PRD 草稿。素材取自 [`hbecho-设计大纲.md`](archive/prd-drafts/hbecho-设计大纲.md) §4 分层能力模型、§6.C 识别能力层、§6.D 判定链路，以及 [旧 `rule-engine` 设计](archive/rule-engine-design-2026-09-02.md) §8.2「媒资与特征需求」中仍然有效的部分。
 
 ---
 

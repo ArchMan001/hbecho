@@ -2,7 +2,7 @@
 
 > **状态**：`draft`
 >
-> **执行状态**（2026-11-06）：任务 0–11 已执行并合并 `main`（本机 `verify.sh` 603 单元 / 573 数据库 / 18 Python 全绿，测试 ECS 573 数据库测试通过，CI 绿）。任务 11 的真实 smoke 已执行（[报告](smoke-report-2026-11-06.md)），之后又合并了两项变更：快手详情异步放行、主页与详情同步失败后改走异步兜底（FS-12.7）。**不等于可上线**：真实 worker 在任何环境都不会启动（`assertWorkerCanRun` 拒绝 `HBECHO_ENV=test`，production capability 全部 `disabled`），没有部署形态；快手有 4 项未决问题（见任务 11）。交付审查见 [review-report](../../../HBECHO设计方案/archive/process/a-full-sync-review-report-2026-11-06.md)。以下为早期记录：任务 0、1 已完成（2026-11-05）。任务 0：文档前置、编码命名确认、`a-master-data-import` 已合并 `main`（`fd1dd7d`）、本分支已变基。任务 1：迁移 `0004`、证据登记、本机 `./scripts/verify.sh` 全绿（312 单元 / 330 数据库测试）。任务 2：Adapter 扩展完成。任务 3：监控目标集、批次生命周期、调度、补抓、取消完成。任务 4：worker 运行时完成（Runner 注册表为空，worker 暂不领取任何任务）。下一步任务 5。
+> **执行状态**（2026-11-06）：任务 0–11 已执行并合并 `main`（本机 `verify.sh` 603 单元 / 573 数据库 / 18 Python 全绿，测试 ECS 573 数据库测试通过，CI 绿）。任务 11 的真实 smoke 已执行（[报告](smoke-report-2026-11-06.md)），之后又合并了两项变更：快手详情异步放行、主页与详情同步失败后改走异步兜底（FS-12.7）。**不等于可上线**：真实 worker 在任何环境都不会启动（`assertWorkerCanRun` 拒绝 `HBECHO_ENV=test`，production capability 全部 `disabled`），没有部署形态；快手有 4 项未决问题（见任务 11）。。以下为早期记录：任务 0、1 已完成（2026-11-05）。任务 0：文档前置、编码命名确认、`a-master-data-import` 已合并 `main`（`fd1dd7d`）、本分支已变基。任务 1：迁移 `0004`、证据登记、本机 `./scripts/verify.sh` 全绿（312 单元 / 330 数据库测试）。任务 2：Adapter 扩展完成。任务 3：监控目标集、批次生命周期、调度、补抓、取消完成。任务 4：worker 运行时完成（Runner 注册表为空，worker 暂不领取任何任务）。下一步任务 5。
 >
 > **需求**：[`requirements.md`](requirements.md)
 >

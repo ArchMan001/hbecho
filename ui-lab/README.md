@@ -1,7 +1,7 @@
 # ui-lab · 界面原型
-> **本地入口与修改指引**：[`LOCAL-UI.md`](LOCAL-UI.md)（4175 原型 / 3202 完整应用的启动命令、预设账号、与 ECS 的差异、给 AI 的复制说明）。
+> **本地入口与修改指引**：[`LOCAL-UI.md`](LOCAL-UI.md)（4100 原型 / 4400 完整应用的启动命令、预设账号、与 ECS 的差异、给 AI 的复制说明）。
 >
-> **协作规则**：[`.kiro/steering/ui-workflow.md`](../.kiro/steering/ui-workflow.md)（改动分类、原型到线上的流转、原型与真实页面的关系）。2026-11-16 起，4175 与 3202 来自**同一个预览工作树**（`~/Documents/hbecho-preview`），用 `./scripts/preview.sh` 一条命令起。
+> **协作规则**：[`.kiro/steering/ui-workflow.md`](../.kiro/steering/ui-workflow.md)（改动分类、原型到线上的流转、原型与真实页面的关系）。2026-11-16 起，4100 与 4400 来自**同一个预览工作树**（`~/Documents/hbecho-preview`），用 `./scripts/preview.sh` 一条命令起。
 
 ## 原型状态表
 
@@ -17,9 +17,9 @@
 | [`e-metrics/`](e-metrics/README.md) | 指标与看板（2026-11-16） | 已确认 | 页面代码等查询 / 导出接口落地后再写 |
 | [`f-video-square/`](f-video-square/README.md) | 经销商视频广场与 AI分析界面示意（2026-11-18，以 `hbecho-ui-v2` 当前版为底） | 待确认 | `.kiro/specs/f-video-square/`；确认（design §10.6）前不写页面任务与页面代码 |
 
-## 本地总览（4175）
+## 本地总览（4100）
 
-[`index.html`](index.html) 是本目录的**唯一本地入口**：`./scripts/preview.sh` 起来后打开 <http://localhost:4175/>。它列出：**完整应用**（<http://localhost:3202/>，真实 Next 应用，造好的数据）和上表里的**可点击原型**。
+[`index.html`](index.html) 是本目录的**唯一本地入口**：`./scripts/preview.sh` 起来后打开 <http://localhost:4100/>。它列出：**完整应用**（<http://localhost:4400/>，真实 Next 应用，造好的数据）和上表里的**可点击原型**。
 
 ## 作用
 

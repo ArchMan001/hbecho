@@ -46,7 +46,7 @@ inclusion: always
 **节奏**
 
 1. 一批一条分支：`fix/<主题>-<日期>`（例：`fix/ui-batch-2026-11-16`），不按项开分支；多个提交，每个提交说明逐条列出改动，便于单独 revert。
-2. 本机 `./scripts/verify.sh` 只跑一次（批次边界），UI 改动在预览 3202 上看过、截过图（见 `ui-workflow.md`）。
+2. 本机 `./scripts/verify.sh` 只跑一次（批次边界），UI 改动在预览 4400 上看过、截过图（见 `ui-workflow.md`）。
 3. 推送一次，等 CI 绿；`--no-ff` 合并一次，合并说明写 run id 与 verify 结果。
 4. 部署一次（先说明、得到同意，见 `server-access.md`），部署后按 `ui-workflow.md` §4 第 8 步走查。
 5. **文档与运维记录不单独推送**：只改文档的 push 同样要跑完整 verify（见下），附在下一批里；紧急修复除外，可单独走。

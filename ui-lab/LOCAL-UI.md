@@ -5,13 +5,14 @@
 > **状态**：本机说明，不是生产文档；不进入生产构建。**协作规则以 [`.kiro/steering/ui-workflow.md`](../.kiro/steering/ui-workflow.md) 为准**，本文只写本机怎么操作。
 >
 > **2026-11-16 重写**：原来的 3202 来自 `hbecho-a-activity-plan` 工作树（落后 `main` 61 个提交、数据库基本为空），4175 来自主目录 `c-signals` 工作树，两处代码和数据都不一致；现统一为一个预览工作树，两个入口同一来源。
+> **2026-11-18**：端口改为 **4100（原型）/ 4400（完整应用）**（刘学奎决定）；上面的 4175 / 3202 与下面「不要再用」里的 3202 都是历史写法，以本文表格为准。
 
 ## 两个入口（来自同一个工作树）
 
 | 地址 | 是什么 | 代码在哪 | 怎么改 |
 |---|---|---|---|
-| <http://localhost:4175/> | **可点击原型总览**：完整应用入口 + 各 spec 的静态原型 | 预览工作树的 [`ui-lab/`](README.md) | 直接改 HTML / CSS / JS，无构建，刷新浏览器 |
-| <http://localhost:3202/login> | **完整应用**：真实 Next 应用（与线上同一套代码），数据是造好的 | 预览工作树的 `src/app/` 等 | 改代码，Next dev（webpack）自动重载 |
+| <http://localhost:4100/> | **可点击原型总览**：完整应用入口 + 各 spec 的静态原型 | 预览工作树的 [`ui-lab/`](README.md) | 直接改 HTML / CSS / JS，无构建，刷新浏览器 |
+| <http://localhost:4400/login> | **完整应用**：真实 Next 应用（与线上同一套代码），数据是造好的 | 预览工作树的 `src/app/` 等 | 改代码，Next dev（webpack）自动重载 |
 
 预览工作树：`~/Documents/hbecho-preview`（分支为当前批次分支，如 `fix/ui-batch-2026-11-16`）。
 
@@ -24,7 +25,7 @@ cd ~/Documents/hbecho-preview
 ./scripts/preview.sh        # 前台运行；Ctrl-C 退出，并清理容器与静态服务
 ```
 
-它做三件事：① 起一个**一次性**本机 MySQL 8.4 容器并迁移（库名以 `_test` 结尾，用完即删）；② 在 4175 起静态服务；③ 清库、造数、在 3202 起 Next。**每次启动都重置成同一份预览数据**，想长期保留的东西不要放在这里。前提：Docker 在运行。
+它做三件事：① 起一个**一次性**本机 MySQL 8.4 容器并迁移（库名以 `_test` 结尾，用完即删）；② 在 4100 起静态服务；③ 清库、造数、在 4400 起 Next。**每次启动都重置成同一份预览数据**，想长期保留的东西不要放在这里。前提：Docker 在运行。
 
 启动完成后终端会打印版本号（工作树提交号，末尾「+未提交改动」表示有没提交的修改），页面页脚与 `/api/health` 显示同一个号，和 ECS 对照用。
 
@@ -46,7 +47,7 @@ cd ~/Documents/hbecho-preview
 
 ## 与 ECS 不同的地方（预览验收不能代替 ECS 走查）
 
-| 方面 | 预览（3202） | ECS |
+| 方面 | 预览（4400） | ECS |
 |---|---|---|
 | 数据 | 造的，每次重置 | 真实数据 |
 | 短信 / 协议 | 假短信、http | 真短信、https |
@@ -57,16 +58,16 @@ cd ~/Documents/hbecho-preview
 
 ## 改什么、在哪里改
 
-- **新页面 / 复杂流程（A 类）**：在 `ui-lab/<spec>/` 做静态原型，4175 看，刘学奎确认后再写代码；
-- **已有页面上的小改（B 类）**：直接改 `src/app/`，3202 看、截图、确认，不做静态原型；
+- **新页面 / 复杂流程（A 类）**：在 `ui-lab/<spec>/` 做静态原型，4100 看，刘学奎确认后再写代码；
+- **已有页面上的小改（B 类）**：直接改 `src/app/`，4400 看、截图、确认，不做静态原型；
 - 分类、流转与原型的归档规则见 [`ui-workflow.md`](../.kiro/steering/ui-workflow.md)；视觉与交互基线见 [`ui-foundation.md`](../HBECHO设计方案/ui/ui-foundation.md)。
 
 ## 给新会话 AI 的说明（可直接复制）
 
-**只改 4175 的静态原型时：**
-> 只改预览工作树 `~/Documents/hbecho-preview` 下 `ui-lab/` 里的静态原型（HTML/CSS/JS），不要动 `src/app`，不要跑构建；用 `http://localhost:4175/` 验证。视觉遵循 `HBECHO设计方案/ui/ui-foundation.md`。新增原型目录前先在 `ui-lab/README.md` 的状态表登记。带页面的 spec，界面确认（design 的「N.6」）填好之前不写页面任务、不写 `src/app` 页面代码。
+**只改 4100 的静态原型时：**
+> 只改预览工作树 `~/Documents/hbecho-preview` 下 `ui-lab/` 里的静态原型（HTML/CSS/JS），不要动 `src/app`，不要跑构建；用 `http://localhost:4100/` 验证。视觉遵循 `HBECHO设计方案/ui/ui-foundation.md`。新增原型目录前先在 `ui-lab/README.md` 的状态表登记。带页面的 spec，界面确认（design 的「N.6」）填好之前不写页面任务、不写 `src/app` 页面代码。
 
-**改 3202 的真实页面时：**
+**改 4400 的真实页面时：**
 > 代码在预览工作树 `~/Documents/hbecho-preview`（当前批次分支）。改那里的 `src/app/`，用 `./scripts/preview.sh` 启动并验证；不要改 `.env`、数据库容器、端口；不要提交或推送，除非我明确要求。开始前先看 `git status`，别人的未提交文件不要动。
 
 **两个都别动的东西：**
@@ -78,6 +79,6 @@ cd ~/Documents/hbecho-preview
 
 - 预览 Next 必须用 **webpack**（`preview.ts` 已设置）：Turbopack dev 在登录页会反复整页重载；
 - 不要用 `next start`：本地是假短信 + http，生产模式下访问控制配置会拒绝启动；
-- 4175 的静态服务随 `preview.sh` 一起退出；单独起一个：`python3 -m http.server 4175 --directory ui-lab`（会和 `preview.sh` 抢端口）；
+- 4100 的静态服务随 `preview.sh` 一起退出；单独起一个：`python3 -m http.server 4100 --directory ui-lab`（会和 `preview.sh` 抢端口）；
 - 本机 `gh` 直连 GitHub 会超时，需要代理：`HTTPS_PROXY=http://127.0.0.1:7890 HTTP_PROXY=http://127.0.0.1:7890 gh ...`；
 - 旧的 `hbecho-smoke-mysql` 容器（3307，库 `hbecho_local`）不再被预览使用，可以保留或自行清理，别和预览数据混用。

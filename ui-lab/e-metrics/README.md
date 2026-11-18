@@ -13,10 +13,10 @@
 在仓库根目录：
 
 ```bash
-python3 -m http.server 4175 --directory ui-lab
+python3 -m http.server 4100 --directory ui-lab
 ```
 
-打开 <http://localhost:4175/e-metrics/>；也可以从 ui-lab 总览页 <http://localhost:4175/> 进入。
+打开 <http://localhost:4100/e-metrics/>；也可以从 ui-lab 总览页 <http://localhost:4100/> 进入。
 
 ## 走查任务
 

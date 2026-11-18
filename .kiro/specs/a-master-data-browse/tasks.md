@@ -91,11 +91,11 @@ T2（已完成，2026-11-16 界面确认）
 3. 请刘学奎按「门店视图 → 筛选 → 分公司视图 → 下钻」走一遍，逐条回答 design §16.6 的四个待确认点。
 4. 确认后填写 design §16.6（确认人、日期、范围、原型链接）；未确认则**停在这里**，不写 T3。
 
-**当前状态**：已完成（2026-11-16）。原型入口 <http://localhost:4175/hbecho-ui-v2/#/master>；§16.6 已由刘学奎确认，范围含板块、店面标准两个筛选项。
+**当前状态**：已完成（2026-11-16）。原型入口 <http://localhost:4100/hbecho-ui-v2/#/master>；§16.6 已由刘学奎确认，范围含板块、店面标准两个筛选项。
 
 **文件**：`ui-lab/hbecho-ui-v2/` 下新增与登记；`.kiro/specs/a-master-data-browse/design.md` §16.6。
 
-**验证**：`python3 -m http.server 4175 --directory ui-lab` 打开走查；`./scripts/verify.sh` 第 7、8 步。
+**验证**：`python3 -m http.server 4100 --directory ui-lab` 打开走查；`./scripts/verify.sh` 第 7、8 步。
 
 **对应**：requirements MDB-9；design §16。
 

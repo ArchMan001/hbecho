@@ -2130,7 +2130,7 @@ vi /data/app/.env
 | 4 | 所有业务端口绑 `127.0.0.1`，对外只经反代 | 减少暴露面 |
 | 5 | 数据库结构变更只走版本化迁移脚本，**禁止手工 `ALTER`** | v2 的语义大量落在 CHECK 与唯一键上，手改表会让线上结构与设计文档静默分叉 |
 | 6 | 迁移脚本必须可在空库上从头执行一遍得到相同结构 | 这是"结构以仓库为准"的验证方式 |
-| 7 | `/data/app/web.env`、`/data/app/migrate.env`（root 600）不在仓库里，也不随部署覆盖 | 密钥与代码分离（测试 ECS 的实际文件名；`/data/app/.env` 现在只放 `WEB_TAG`） |
+| 7 | `/data/app/web.env`、`/data/app/migrate.env`（root 600）不在仓库里，也不随部署覆盖 | 密钥与代码分离（测试 ECS 的实际文件名；`/data/app/.env` 里的 `WEB_TAG` 自 2026-11-13 起不再是权威，线上版本以 `docker ps` 与 `/api/health` 的 `build` 为准） |
 | 8 | 部署不触发任何真实付费供应商调用 | `AIMASTER_ENABLED` 默认 `false`（§8.4） |
 
 ### 10.3 部署流程（测试 ECS，2026-11-11 实际跑通的步骤；一律经 Workbench，不用 SSH）
@@ -2141,8 +2141,11 @@ git rev-parse --short=12 HEAD
 workbench exec -P hbecho -i i-2zef8qpi1d2mldntjgrv -c 'docker pull hbecho-registry-registry-vpc.cn-beijing.cr.aliyuncs.com/hbecho/app:<sha>'
 # 2. 迁移（版本化、可在空库重放；用迁移账号，不用运行账号）
 docker run --rm --network app_default --env-file /data/app/migrate.env <镜像> ./node_modules/.bin/tsx src/db/migrate.ts
-# 3. 切换标签并启动（/data/app/.env 里只有 WEB_TAG=<sha>）
-cd /data/app && echo WEB_TAG=<sha> > .env && docker compose up -d web
+# 3. 切换标签并启动：先备份 compose，再把五个应用服务（web / learning-worker / sync-worker / judgement-worker / signals-scan）
+#    的 image 标签统一改成新 sha（compose 里的标签是直接写死的），校验通过后整体重建；mysql 不动
+cp -p /data/app/docker-compose.yml /data/backup/docker-compose.yml.bak-<日期>
+sed -i 's/app:<旧sha>/app:<新sha>/g' /data/app/docker-compose.yml
+cd /data/app && docker compose config -q && docker compose up -d
 # 4. 首个超管（只在空库做一次；运行账号即可）
 docker run --rm --network app_default --env-file /data/app/web.env <镜像> ./node_modules/.bin/tsx src/worker/access-main.ts token create
 docker run --rm --network app_default --env-file /data/app/web.env <镜像> ./node_modules/.bin/tsx src/worker/access-main.ts bootstrap-superadmin --token <t> --phone <p> --name <n>
@@ -2204,7 +2207,7 @@ docker image prune -f
 5. 磁盘水位：`df -hT /data`
 
 ### 10.5 回滚
-- **应用**：把 `/data/app/.env` 的 `WEB_TAG` 改回上一个已知好的 sha，`docker compose up -d web`。
+- **应用**：把 compose 里五个应用服务的 image 标签改回上一个已知好的 sha（上一次部署记录里写明；也可还原 `/data/backup/docker-compose.yml.bak-<日期>`），`docker compose up -d`。
 - **nginx**：还原 `/data/backup/echo.hbmarketer.com.conf.bak-20261111`（静态占位页）并 `systemctl reload nginx`。
 - **数据库**：代码回滚容易，**迁移回滚不容易**。迁移遵守「扩展 → 部署 → 收缩」：能加列不改列，能新增不删除，破坏性变更单独一次上线并提前备份。回滚前先确认目标 sha 对应的结构与当前库结构兼容。
 

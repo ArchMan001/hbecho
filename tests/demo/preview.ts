@@ -215,12 +215,12 @@ for (const [category, names] of Object.entries(TAG_TREE)) {
     tagIds[`${category}-${name}`] = BigInt(r.insertId);
   }
 }
-const COURSES: Array<{ title: string; tags: string[]; status?: string }> = [
+const COURSES: Array<{ title: string; tags: string[]; status?: string; noDownload?: boolean }> = [
   { title: "抖音短视频开场 3 秒法则", tags: ["平台-抖音", "阶段-入门", "类型-话术"] },
   { title: "水机卖点的 5 种讲法", tags: ["板块-水机", "阶段-入门", "类型-话术"] },
   { title: "小红书种草笔记结构拆解", tags: ["平台-小红书", "阶段-进阶", "类型-案例"] },
   { title: "家装场景短视频拍摄清单", tags: ["板块-家装", "平台-抖音", "阶段-进阶"] },
-  { title: "门店直播间话术与节奏", tags: ["平台-抖音", "类型-话术"] },
+  { title: "门店直播间话术与节奏", tags: ["平台-抖音", "类型-话术"], noDownload: true },
   { title: "2025 双十一优秀内容复盘", tags: ["类型-案例", "阶段-进阶"], status: "unpublished" },
 ];
 for (const [i, c] of COURSES.entries()) {
@@ -235,6 +235,7 @@ for (const [i, c] of COURSES.entries()) {
     fileKey: `doc/00000000-0000-0000-0000-${n}.pdf`,
     fileMime: "application/pdf",
     fileSize: 2048 * (i + 1),
+    allowDownload: !c.noDownload,
     createdBy: 1n,
     createdAt: T0,
     updatedAt: T0,

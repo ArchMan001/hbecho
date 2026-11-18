@@ -40,7 +40,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
             {c.kind === "video" ? (
               <CoursePlayer courseId={c.courseId} durationSec={c.durationSec} positionSec={c.positionSec} vodVideoStatus={c.vodVideoStatus} license={license} />
             ) : (
-              <DocumentView courseId={c.courseId} mime={c.fileMime ?? "application/pdf"} title={c.title} />
+              <DocumentView courseId={c.courseId} mime={c.fileMime ?? "application/pdf"} title={c.title} allowDownload={c.allowDownload} />
             )}
             <div className="course-tags" style={{ marginTop: 16 }}>{c.tags.map((t) => <span key={t.tagId} className="tag">{t.name}</span>)}</div>
             <p className="course-detail-desc">{c.description}</p>
@@ -52,7 +52,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
               <div><div className="info-label">适用人员</div><div className="info-value">{AUDIENCE_LABEL[c.audienceLevel]}</div></div>
               <div><div className="info-label">最近更新</div><div className="info-value num">{fmtTime(c.updatedAt)}</div></div>
             </div>
-            {c.kind === "document" ? (
+            {c.kind === "document" && c.allowDownload ? (
               <Callout icon="shield" style={{ marginTop: 14 }}>预览与下载是两个动作：预览不记审计，下载会记录谁、何时、哪门课与文件标识。</Callout>
             ) : null}
           </div>

@@ -8,7 +8,7 @@ import { useToast } from "../toast";
 
 const isWeChat = () => typeof navigator !== "undefined" && /MicroMessenger/i.test(navigator.userAgent);
 
-export function DocumentView({ courseId, mime, title }: { courseId: string; mime: string; title: string }) {
+export function DocumentView({ courseId, mime, title, allowDownload }: { courseId: string; mime: string; title: string; allowDownload: boolean }) {
   const src = `/api/learning/courses/${courseId}/preview`;
   const toast = useToast();
   const [wechat, setWechat] = useState(false);
@@ -49,32 +49,41 @@ export function DocumentView({ courseId, mime, title }: { courseId: string; mime
     <>
       <div className="doc-preview">
         {mime === "application/pdf" ? (
-          <iframe title={`${title} 预览`} src={src} style={{ width: "100%", height: "70vh", border: 0, borderRadius: 10, background: "#fff" }} />
+          <iframe title={`${title} 预览`} src={allowDownload ? src : `${src}#toolbar=0&navpanes=0`} style={{ width: "100%", height: "70vh", border: 0, borderRadius: 10, background: "#fff" }} />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img alt={title} src={src} style={{ maxWidth: "100%", borderRadius: 10 }} />
         )}
       </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-        <a className="btn" href={src} target="_blank" rel="noreferrer">
-          <Icon name="file" /> 在新窗口打开
-        </a>
-        {wechat ? (
-          <button type="button" className="btn" onClick={copy}>
-            <Icon name="download" /> 复制链接，在浏览器打开
-          </button>
-        ) : (
-          <button type="button" className="btn" onClick={download} disabled={busy}>
-            <Icon name="download" /> {busy ? "准备中…" : "下载原件"}
-          </button>
-        )}
-      </div>
-      {wechat ? (
+      {allowDownload ? (
+        <>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+            <a className="btn" href={src} target="_blank" rel="noreferrer">
+              <Icon name="file" /> 在新窗口打开
+            </a>
+            {wechat ? (
+              <button type="button" className="btn" onClick={copy}>
+                <Icon name="download" /> 复制链接，在浏览器打开
+              </button>
+            ) : (
+              <button type="button" className="btn" onClick={download} disabled={busy}>
+                <Icon name="download" /> {busy ? "准备中…" : "下载原件"}
+              </button>
+            )}
+          </div>
+          {wechat ? (
+            <div className="callout" style={{ marginTop: 12 }}>
+              <Icon name="alert" />
+              <span>微信内不能直接下载文件。请复制链接，到手机浏览器里打开后再下载。</span>
+            </div>
+          ) : null}
+        </>
+      ) : (
         <div className="callout" style={{ marginTop: 12 }}>
-          <Icon name="alert" />
-          <span>微信内不能直接下载文件。请复制链接，到手机浏览器里打开后再下载。</span>
+          <Icon name="lock" />
+          <span>这份资料不提供下载，只能在线查看。</span>
         </div>
-      ) : null}
+      )}
       {error ? (
         <div className="callout danger" role="alert" style={{ marginTop: 12 }}>
           <Icon name="alert" />

@@ -2,7 +2,7 @@
 // 约定同 src/db/columns.ts：signed BIGINT、UTC DATETIME(6)、状态 VARCHAR + CHECK、无 ON DELETE CASCADE（全部 RESTRICT）。
 // 课程对象不进 A 域的 media_assets / oss_objects（design §3.6）。
 import { sql } from "drizzle-orm";
-import { check, foreignKey, index, int, mysqlTable, primaryKey, text, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { boolean, check, foreignKey, index, int, mysqlTable, primaryKey, text, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { asciiBin, counter, id, inList, utc } from "../columns";
 import { accessUsers } from "./access";
 import { brands } from "./org";
@@ -29,6 +29,8 @@ export const courses = mysqlTable(
     status: varchar("status", { length: 16 }).notNull(),
     brandScope: varchar("brand_scope", { length: 16 }).notNull(),
     audienceLevel: varchar("audience_level", { length: 24 }).notNull().default("all"),
+    // 资料是否允许下载原件（G-D50）：对所有人一样；关闭后只能在线预览。已有课程默认允许（与现状一致）
+    allowDownload: boolean("allow_download").notNull().default(true),
     // 对象 key 由我们生成，约束为 ASCII；所有课程封面必填（G-D48）
     coverKey: asciiBin("cover_key", { length: 512 }).notNull(),
     vodVideoId: varchar("vod_video_id", { length: 64 }),

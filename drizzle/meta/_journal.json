@@ -99,6 +99,13 @@
       "when": 1794906313540,
       "tag": "0013_learning_tag_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1794964311909,
+      "tag": "0014_learning_allow_download",
+      "breakpoints": true
     }
   ]
 }

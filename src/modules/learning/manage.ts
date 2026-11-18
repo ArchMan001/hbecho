@@ -121,6 +121,7 @@ export interface ManageCourseView {
   brandScope: "all" | "specified";
   brandIds: string[];
   audienceLevel: AudienceLevel;
+  allowDownload: boolean;
   tagIds: string[];
   coverUrl: string;
   fileMime: string | null;
@@ -146,6 +147,7 @@ export async function getManageCourse(deps: LearningDeps, ctx: AuthContext, rawI
     brandScope: c.brandScope as "all" | "specified",
     brandIds: brandIds.map(String),
     audienceLevel: c.audienceLevel as AudienceLevel,
+    allowDownload: c.allowDownload,
     tagIds: tagRows.map((r) => r.t.toString()),
     coverUrl: await deps.store.signedGetUrl(c.coverKey, deps.config.coverUrlTtlSeconds),
     fileMime: c.fileMime,
@@ -181,6 +183,7 @@ const patchInput = z
     title: titleInput.optional(),
     description: descriptionInput.optional(),
     audienceLevel: audienceInput.optional(),
+    allowDownload: z.boolean().optional(),
     brandScope: brandScopeInput.optional(),
     tagIds: tagIdsInput.optional(),
     coverKey: z.string().optional(),
@@ -189,7 +192,7 @@ const patchInput = z
   .refine((p) => Object.keys(p).length > 0, { message: "没有要修改的内容" });
 export type UpdateCourseInput = z.input<typeof patchInput>;
 
-/** 修改标题 / 简介 / 适用级别 / 品牌范围 / 标签 / 封面。直接生效并记审计；品牌减少时已不在范围内的学员立即看不到（进度保留）。 */
+/** 修改标题 / 简介 / 适用级别 / 是否允许下载 / 品牌范围 / 标签 / 封面。直接生效并记审计；品牌减少时已不在范围内的学员立即看不到（进度保留）。 */
 export async function updateCourse(deps: LearningDeps, ctx: AuthContext, rawId: unknown, raw: unknown): Promise<{ changed: string[] }> {
   requireUser(ctx);
   const courseId = parseId(rawId, "courseId");
@@ -232,6 +235,10 @@ export async function updateCourse(deps: LearningDeps, ctx: AuthContext, rawId: 
       if (patch.audienceLevel !== undefined && patch.audienceLevel !== c.audienceLevel) {
         set.audienceLevel = patch.audienceLevel;
         note("audienceLevel", c.audienceLevel, patch.audienceLevel);
+      }
+      if (patch.allowDownload !== undefined && patch.allowDownload !== c.allowDownload) {
+        set.allowDownload = patch.allowDownload;
+        note("allowDownload", c.allowDownload, patch.allowDownload);
       }
       if (scope) {
         const same = (scope.allBrands ? "all" : "specified") === c.brandScope && [...scope.brandIds].sort().join() === [...brandIds].sort().join();

@@ -159,6 +159,7 @@ export interface CourseDetail extends Omit<CourseListItem, "updatedAt"> {
   description: string | null;
   brandScope: "all" | "specified";
   audienceLevel: AudienceLevel;
+  allowDownload: boolean;
   vodVideoStatus: string | null;
   fileMime: string | null;
   fileSize: number | null;
@@ -191,6 +192,7 @@ export async function getCourse(deps: LearningDeps, ctx: AuthContext, rawId: unk
     description: c.description,
     brandScope: ref.brandScope,
     audienceLevel: ref.audienceLevel,
+    allowDownload: c.allowDownload,
     durationSec: c.durationSec,
     vodVideoStatus: c.vodVideoStatus,
     fileMime: c.fileMime,

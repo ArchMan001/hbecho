@@ -52,7 +52,7 @@ export default async function EditCoursePage({ params }: { params: Promise<{ id:
             brands={o.brands}
             categories={o.categories}
             limits={o.limits}
-            initial={{ courseId: c.courseId, kind: c.kind, title: c.title, description: c.description ?? "", brandScope: c.brandScope, brandIds: c.brandIds, audienceLevel: c.audienceLevel, tagIds: c.tagIds, coverUrl: c.coverUrl }}
+            initial={{ courseId: c.courseId, kind: c.kind, title: c.title, description: c.description ?? "", brandScope: c.brandScope, brandIds: c.brandIds, audienceLevel: c.audienceLevel, allowDownload: c.allowDownload, tagIds: c.tagIds, coverUrl: c.coverUrl }}
           />
           <ReplaceFile courseId={c.courseId} kind={c.kind} limits={{ docMaxBytes: o.limits.docMaxBytes, videoMaxBytes: o.limits.videoMaxBytes }} />
         </div>

@@ -29,6 +29,7 @@ export interface CourseFormInitial {
   brandScope: "all" | "specified";
   brandIds: string[];
   audienceLevel: string;
+  allowDownload: boolean;
   tagIds: string[];
   coverUrl: string;
 }
@@ -94,6 +95,7 @@ export function CourseForm({ brands, categories, limits, initial }: { brands: Br
   const [scope, setScope] = useState<"all" | "specified">(initial?.brandScope ?? "specified");
   const [brandIds, setBrandIds] = useState<string[]>(initial?.brandIds ?? []);
   const [level, setLevel] = useState(initial?.audienceLevel ?? "all");
+  const [allowDownload, setAllowDownload] = useState(initial?.allowDownload ?? true);
   const [tagIds, setTagIds] = useState<string[]>(initial?.tagIds ?? []);
   const [cover, setCover] = useState<File | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -146,7 +148,7 @@ export function CourseForm({ brands, categories, limits, initial }: { brands: Br
           key = t.data.key;
           done.current.doc = { file, key };
         }
-        const r = await call(() => createDocumentAction({ title, description, audienceLevel: level, brandScope, tagIds, fileKey: key, coverKey }));
+        const r = await call(() => createDocumentAction({ title, description, audienceLevel: level, allowDownload, brandScope, tagIds, fileKey: key, coverKey }));
         if (!r.ok) {
           if (/^(file_|upload_|invalid_key)/.test(r.code)) done.current = {}; // 服务端已删掉失败的对象，下次重新传
           throw r;
@@ -188,7 +190,7 @@ export function CourseForm({ brands, categories, limits, initial }: { brands: Br
     if (tagIds.length === 0) return fail({ code: "tag_required", message: "请至少选择一个标签" });
     try {
       const coverKey = await uploadCover();
-      const patch: Record<string, unknown> = { title, description, audienceLevel: level, brandScope: scope === "all" ? { all: true } : { brandIds }, tagIds };
+      const patch: Record<string, unknown> = { title, description, audienceLevel: level, brandScope: scope === "all" ? { all: true } : { brandIds }, tagIds, ...(kind === "document" ? { allowDownload } : {}) };
       if (coverKey) patch.coverKey = coverKey;
       const r = await call(() => updateCourseAction(initial.courseId, patch));
       if (!r.ok) {
@@ -270,6 +272,24 @@ export function CourseForm({ brands, categories, limits, initial }: { brands: Br
           </select>
           <span className="hint">与品牌范围取交集；门店专员只能看到「全部人员」的课程。</span>
         </div>
+        {kind === "document" ? (
+          <div className="field">
+            <label>是否允许下载 *</label>
+            <div className="brand-options" role="radiogroup" aria-label="是否允许下载">
+              <button type="button" role="radio" aria-checked={allowDownload} className={`brand-option ${allowDownload ? "active" : ""}`} onClick={() => setAllowDownload(true)}>
+                <strong>允许下载</strong>
+                <span>学员可在线查看，也可下载原件</span>
+                {allowDownload ? <span className="option-check"><Icon name="check" /></span> : null}
+              </button>
+              <button type="button" role="radio" aria-checked={!allowDownload} className={`brand-option ${!allowDownload ? "active" : ""}`} onClick={() => setAllowDownload(false)}>
+                <strong>不允许下载</strong>
+                <span>只能在线查看，没有下载入口</span>
+                {!allowDownload ? <span className="option-check"><Icon name="check" /></span> : null}
+              </button>
+            </div>
+            <span className="hint">对所有人一样。不能阻止截屏或录屏；关闭下载后随时可以改回。</span>
+          </div>
+        ) : null}
         <div className={`field span-2 ${scope === "all" ? "is-muted" : ""}`}>
           <label>指定品牌{scope === "all" ? "（全部品牌不需要选择）" : " *"}</label>
           <div className="brand-picks">

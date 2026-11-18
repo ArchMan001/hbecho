@@ -49,8 +49,8 @@ flowchart LR
 4. 历史输入：
    - [`HBECHO设计方案/archive/legacy/域E-用户与权限详细设计.md`](legacy/域E-用户与权限详细设计.md)
    - [`HBECHO设计方案/archive/legacy/域E-用户与权限详细设计-评审意见.md`](legacy/域E-用户与权限详细设计-评审意见.md)
-   - [`hbecho-模块设计-权限中心.md`](../prd-drafts-子PRD草案/hbecho-模块设计-权限中心.md)
-   - [`平台底座首版产品设计`](../prd-drafts-子PRD草案/hbecho-平台底座首版产品设计.md)
+   - [`hbecho-模块设计-权限中心.md`](prd-drafts/hbecho-模块设计-权限中心.md)
+   - [`平台底座首版产品设计`](prd-drafts/hbecho-平台底座首版产品设计.md)
 
 历史文档只提供候选经验；与前两项冲突的角色、组织或账号模型不被继承。
 

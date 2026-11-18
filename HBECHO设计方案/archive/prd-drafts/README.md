@@ -1,5 +1,9 @@
 # 子 PRD 草案（待复核）
 
+> **archived**（2026-11-18 文档瘦身，刘学奎决定）：2026-08 的子 PRD 素材，其中仍成立的内容已被各 `prd-domain-*.md` 与 spec 吸收。
+> **替代**：[`INDEX.md`](../../INDEX.md) §8.4。
+> **禁止用途**：不得作为实现依据，不得照抄旧表名、旧角色矩阵、旧技术选型；只作追溯。
+
 > **状态**：`draft`
 > **建立日期**：2026-10-26
 > **决定人**：刘学奎
@@ -20,13 +24,13 @@
 ## 使用规则
 
 1. **不是实现依据**。任何建表、接口、权限判断都不得直接照抄，尤其是其中的旧表名、旧角色矩阵、旧技术选型。
-2. **冲突时以当前文档为准**：总 PRD 是 [`../prd-platform.md`](../prd-platform.md)，数据底座是 [`../domains/data-foundation/database-design-v2.md`](../domains/data-foundation/database-design-v2.md)，各域技术设计在 `.kiro/specs/*/design.md`。
+2. **冲突时以当前文档为准**：总 PRD 是 [`../prd-platform.md`](../../prd-platform.md)，数据底座是 [`../domains/data-foundation/database-design-v2.md`](../../domains/data-foundation/database-design-v2.md)，各域技术设计在 `.kiro/specs/*/design.md`。
 3. **逐份复核后升级**：确认通过的内容写进对应的 `prd-domain-<代号>-<slug>.md`，本文档保留原样；不要直接改本文档的结论后当作新版 PRD。
 4. **明确作废的结论要写下来**：复核时发现与当前基线冲突的条目，记录到对应子 PRD 的「不继承」清单，而不是静默删除。
 
 ## 已经知道与当前基线冲突的地方
 
-详见 [`INDEX.md`](../INDEX.md) §8.4。摘要：
+详见 [`INDEX.md`](../../INDEX.md) §8.4。摘要：
 
 - 技术选型（NestJS / Prisma / BullMQ / Redis / Dify）已被 ADR-0004 延迟决定取代；
 - 数据模型（`staffs` / `staff_accounts` / `staff_store_relations`）已被 v2 的 30 表取代；

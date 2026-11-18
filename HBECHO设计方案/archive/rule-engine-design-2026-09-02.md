@@ -58,7 +58,7 @@ flowchart LR
 2. [`database-design-v2.md`](../domains/data-foundation/database-design-v2.md)：数据底座实体、状态、事务和当前接入契约；
 3. [`b-access-control/design.md`](../../.kiro/specs/b-access-control/design.md)：Capability、DataScope、异步范围交集与当前查询授权语义；
 4. 本设计：规则域拥有的规则、运行、证据和 outcome；
-5. 历史输入：[`hbecho-模块设计-规则引擎.md`](../prd-drafts-子PRD草案/hbecho-模块设计-规则引擎.md)。
+5. 历史输入：[`hbecho-模块设计-规则引擎.md`](prd-drafts/hbecho-模块设计-规则引擎.md)。
 
 历史设计中的产品能力可被吸收，但旧 DDL、SQL、表名和组织假设不是实施基线。本文刻意不定义物理 schema。
 

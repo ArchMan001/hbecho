@@ -1,8 +1,12 @@
 # 模块设计 · 指标与看板
 
+> **archived**（2026-11-18 文档瘦身，刘学奎决定）：2026-08 的子 PRD 素材，其中仍成立的内容已被各 `prd-domain-*.md` 与 spec 吸收。
+> **替代**：[`prd-domain-e-metrics.md`](../../prd-domain-e-metrics.md)（E 域 spec 起草中）。
+> **禁止用途**：不得作为实现依据，不得照抄旧表名、旧角色矩阵、旧技术选型；只作追溯。
+
 > **文档状态**：`draft`（2026-10-26 由 liuxuekui 从归档恢复为子 PRD 草案，待复核）  
 > **复核状态**：未复核。此前 2026-09-02 的 `superseded` 标记作废。  
-> **权威关系**：与 [`metrics-and-dashboard/design.md`](../../.kiro/specs/metrics-and-dashboard/design.md) 和 [`prd-platform.md`](../prd-platform.md) 冲突时，以它们为准。  
+> **权威关系**：与 [`metrics-and-dashboard/design.md`](../../../.kiro/specs/metrics-and-dashboard/design.md) 和 [`prd-platform.md`](../../prd-platform.md) 冲突时，以它们为准。  
 > **用途**：作为指标与看板子 PRD 重写的素材。  
 > **禁止用途**：不得作为当前实现合同，不得复用旧 DDL、旧角色授权、旧组织上卷或旧数据源。
 

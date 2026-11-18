@@ -61,6 +61,7 @@ const commonFields = {
   title: titleInput,
   description: descriptionInput,
   audienceLevel: audienceInput.default("all"),
+  allowDownload: z.boolean().default(true),
   brandScope: brandScopeInput,
   tagIds: tagIdsInput,
   coverKey: z.string(),
@@ -70,7 +71,7 @@ const videoInput = z.object({ ...commonFields, videoId: z.string().regex(/^[0-9a
 export type CreateDocumentCourseInput = z.input<typeof documentInput>;
 export type CreateVideoCourseInput = z.input<typeof videoInput>;
 
-type Common = { title: string; description: string; audienceLevel: string; coverKey: string };
+type Common = { title: string; description: string; audienceLevel: string; allowDownload: boolean; coverKey: string };
 
 async function insertCourse(
   deps: LearningDeps,
@@ -90,6 +91,7 @@ async function insertCourse(
       status: "published",
       brandScope: scope.allBrands ? "all" : "specified",
       audienceLevel: c.audienceLevel,
+      allowDownload: c.allowDownload,
       coverKey: c.coverKey,
       createdBy: userId,
       createdAt: now,
@@ -113,6 +115,7 @@ async function insertCourse(
           brandScope: scope.allBrands ? "all" : "specified",
           brandIds: scope.brandIds.map(String),
           audienceLevel: c.audienceLevel,
+          allowDownload: c.allowDownload,
           tagIds: scope.tagIds.map(String),
           coverKey: c.coverKey,
           ...audit,

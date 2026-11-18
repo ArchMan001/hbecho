@@ -72,11 +72,21 @@ describe("取直传地址", () => {
   });
 });
 
+describe("是否允许下载（G-D50）", () => {
+  it("创建时可关闭下载，审计记录该值；不给就是允许；非布尔值被拒", async () => {
+    await createDocumentCourse(e.deps, admin, { ...(await base()), allowDownload: false });
+    const [row] = await t.db.select().from(courses);
+    expect(row!.allowDownload).toBe(false);
+    const [ev] = await auditOf(t, "learning_course_created");
+    expect(ev!.detail).toMatchObject({ allowDownload: false });
+    await fails(createDocumentCourse(e.deps, admin, { ...(await base()), allowDownload: "no" as never }), 400, "invalid_input");
+  });
+});
 describe("创建成功", () => {
   it("C1：保存即发布，学员列表立即可见；全部品牌不写品牌范围行", async () => {
     const { courseId } = await createDocumentCourse(e.deps, admin, await base());
     const [row] = await t.db.select().from(courses);
-    expect(row).toMatchObject({ kind: "document", status: "published", brandScope: "all", audienceLevel: "all", fileMime: "application/pdf", fileSize: SAMPLE.pdf.byteLength, createdBy: admin.userId, unpublishedAt: null });
+    expect(row).toMatchObject({ kind: "document", status: "published", brandScope: "all", audienceLevel: "all", allowDownload: true, fileMime: "application/pdf", fileSize: SAMPLE.pdf.byteLength, createdBy: admin.userId, unpublishedAt: null });
     expect(row!.coverKey).toMatch(/^cover\//);
     expect(row!.courseId.toString()).toBe(courseId);
     expect(await t.db.select().from(courseBrandScopes)).toEqual([]);

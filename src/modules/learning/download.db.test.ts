@@ -2,7 +2,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useTestDb } from "../../../tests/harness/db";
 import { auditOf, learningEnv, type LearningEnv } from "../../../tests/harness/learning";
-import { auditEvents } from "../../db/schema";
+import { eq } from "drizzle-orm";
+import { auditEvents, courses } from "../../db/schema";
 import { MAX_SIGNED_LINK_TTL_SECONDS } from "../access-control";
 import { downloadDocument } from "./download";
 import { LearningError } from "./errors";
@@ -103,6 +104,33 @@ describe("拒绝", () => {
   });
 });
 
+describe("关闭下载（G-D50）", () => {
+  it("对所有人一样：超管、总部、门店专员都拒绝，只记拒绝，没签链接；详情仍可读", async () => {
+    const id = await e.insertCourse({});
+    await t.db.update(courses).set({ allowDownload: false }).where(eq(courses.courseId, id));
+    const staff = await e.actor("store_staff", { staff: e.org.staffA });
+    for (const ctx of [await e.actor("platform_admin"), await e.actor("hq_manager", { brandIds: [e.org.hisense] }), staff]) {
+      await fails(downloadDocument(e.deps, ctx, id.toString()), 403, "download_disabled");
+    }
+    const rows = await events();
+    expect(rows.map((r) => [r.outcome, r.reasonCode])).toEqual([["denied", "download_disabled"], ["denied", "download_disabled"], ["denied", "download_disabled"]]);
+    expect(e.store.signedGet).toEqual([]);
+    expect((await getCourse(e.deps, staff, id.toString())).allowDownload).toBe(false); // 仍可在线查看
+  });
+  it("范围外仍报 out_of_scope，不借 download_disabled 探课程设置", async () => {
+    const id = await e.insertCourse({ brandIds: [e.org.hisense] });
+    await t.db.update(courses).set({ allowDownload: false }).where(eq(courses.courseId, id));
+    const hitachiStaff = await e.actor("store_staff", { staff: e.org.staffB });
+    await fails(downloadDocument(e.deps, hitachiStaff, id.toString()), 403, "out_of_scope");
+  });
+  it("重新允许后可下载", async () => {
+    const id = await e.insertCourse({});
+    await t.db.update(courses).set({ allowDownload: false }).where(eq(courses.courseId, id));
+    await t.db.update(courses).set({ allowDownload: true }).where(eq(courses.courseId, id));
+    const link = await downloadDocument(e.deps, await e.actor("platform_admin"), id.toString());
+    expect(link.url).toBeTruthy();
+  });
+});
 describe("预览不是下载", () => {
   it("读详情不产生下载审计", async () => {
     const staff = await e.actor("store_staff", { staff: e.org.staffA });

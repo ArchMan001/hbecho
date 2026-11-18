@@ -28,6 +28,15 @@ export async function downloadDocument(deps: LearningDeps, ctx: AuthContext, raw
     throw new LearningError("conflict", "not_a_document", "这门课没有可下载的原件");
   }
 
+  // 关闭下载的课程（G-D50）：对所有人一样，只能在线预览。先于出口守卫拒绝，不签发任何附件链接；留一条拒绝记录便于追查
+  if (courseVisible(ctx.scope, ref) && !course.allowDownload) {
+    await deps.audit.write(
+      { actor: ctx.actor, actorUserId: userId, eventType: "egress.learning_download", outcome: "denied", reasonCode: "download_disabled", targetType: "course", targetId: courseId.toString(), detail: { fileId: course.fileKey } },
+      { risk: "low" },
+    );
+    throw new LearningError("authorization", "download_disabled", "这份资料不允许下载，只能在线查看");
+  }
+
   const decision = await deps.egress.guardExit(10, ctx, {
     capability: "learning.read",
     resource: { key: "learning_course", ref },

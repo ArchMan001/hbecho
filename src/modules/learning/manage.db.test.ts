@@ -104,6 +104,18 @@ describe("编辑（G-13 审计）", () => {
     expect(await auditOf(t, "learning_course_updated")).toHaveLength(1);
   });
 
+  it("G-D50：改是否允许下载，直接生效，审计含前后值；管理视图与学员详情都反映", async () => {
+    const id = await e.insertCourse({ title: "资料" });
+    expect(await rowOf(id)).toMatchObject({ allowDownload: true }); // 默认允许
+    expect(await updateCourse(e.deps, admin, id.toString(), { allowDownload: false })).toEqual({ changed: ["allowDownload"] });
+    expect(await rowOf(id)).toMatchObject({ allowDownload: false });
+    const [ev] = await auditOf(t, "learning_course_updated");
+    expect(ev!.detail).toMatchObject({ changed: ["allowDownload"], before: { allowDownload: true }, after: { allowDownload: false } });
+    expect((await getManageCourse(e.deps, admin, id.toString())).allowDownload).toBe(false);
+    expect((await getCourse(e.deps, admin, id.toString())).allowDownload).toBe(false);
+    expect(await updateCourse(e.deps, admin, id.toString(), { allowDownload: false })).toEqual({ changed: [] }); // 没变化不写审计
+    await fails(updateCourse(e.deps, admin, id.toString(), { allowDownload: "yes" as never }), 400, "invalid_input");
+  });
   it("改品牌范围：减少后原学员立即看不到，进度仍在；hq 不能逐个勾未授权品牌", async () => {
     const hisenseStaff = await e.actor("store_staff", { staff: e.org.staffA });
     const id = await e.insertCourse({ brandIds: [e.org.hisense, e.org.hitachi] });

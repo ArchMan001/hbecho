@@ -1,0 +1,1 @@
+ALTER TABLE `courses` ADD `allow_download` boolean DEFAULT true NOT NULL;

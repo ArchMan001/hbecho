@@ -24,7 +24,7 @@ inclusion: always
 - 所有 UI 工作（无论谁做）都在预览工作树里做：`~/Documents/hbecho-preview`，分支是当前批次分支（`fix/ui-batch-<日期>`）或当前 spec 分支。
 - 启动：`./scripts/preview.sh`（前台运行，Ctrl-C 退出）。它同时提供 4175 与 3202，并把一次性 MySQL 容器和静态服务一起清理。
 - 同一时间只有一个工具在这个工作树里改文件（`AGENTS.md` 已有此规定）；换工具前先提交或说明未提交的内容。
-- 主目录 `~/Documents/hbecho` 当前分支是 `c-signals`，**不用来做 UI**；别的会话在它里面的未提交文件不要动。
+- 主目录 `~/Documents/hbecho` 始终停在 `main`，是 `main` 的**只读镜像**（见 [`dev-ci-cadence.md`](dev-ci-cadence.md)「一个事实来源与收尾」）：不在里面改文件、**不用来做 UI**；合并后由 AI 把它拉取到最新。
 - 开始新一批之前先对齐：`git fetch && git rev-list --count HEAD..origin/main`，要为 0（或先合并 `main`）。否则 3202 和 ECS 的差别，一半来自代码版本。
 
 ## 3. 每次改动先分类

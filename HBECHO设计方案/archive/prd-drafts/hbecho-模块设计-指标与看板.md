@@ -6,7 +6,7 @@
 
 > **文档状态**：`draft`（2026-10-26 由 liuxuekui 从归档恢复为子 PRD 草案，待复核）  
 > **复核状态**：未复核。此前 2026-09-02 的 `superseded` 标记作废。  
-> **权威关系**：与 [`metrics-and-dashboard/design.md`](../../../.kiro/specs/metrics-and-dashboard/design.md) 和 [`prd-platform.md`](../../prd-platform.md) 冲突时，以它们为准。  
+> **权威关系**：与 `metrics-and-dashboard/design.md`（已删除） 和 [`prd-platform.md`](../../prd-platform.md) 冲突时，以它们为准。  
 > **用途**：作为指标与看板子 PRD 重写的素材。  
 > **禁止用途**：不得作为当前实现合同，不得复用旧 DDL、旧角色授权、旧组织上卷或旧数据源。
 

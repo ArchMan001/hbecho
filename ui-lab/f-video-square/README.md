@@ -8,14 +8,14 @@
 
 ## 怎么打开
 
-本地 UI 入口是 4175（见 [`ui-lab/LOCAL-UI.md`](../LOCAL-UI.md)）：
+本地 UI 入口是 4100（见 [`ui-lab/LOCAL-UI.md`](../LOCAL-UI.md)）：
 
 ```bash
-python3 -m http.server 4175 --directory ui-lab
+python3 -m http.server 4100 --directory ui-lab
 ```
 
-- 广场列表：<http://localhost:4175/f-video-square/#/square>
-- AI分析界面示意：<http://localhost:4175/f-video-square/#/square/ai/v1>
+- 广场列表：<http://localhost:4100/f-video-square/#/square>
+- AI分析界面示意：<http://localhost:4100/f-video-square/#/square/ai/v1>
 
 ## 走查要点
 

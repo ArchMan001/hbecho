@@ -225,7 +225,7 @@ AI分析的线框示意页只存在于 `ui-lab` 原型（`#/square/ai/<id>`）�
 ### 10.3 线框与原型
 
 - 用户线框：2026-11-18 对话中的两张图（广场整体 + AI分析模块），未入库。
-- **可点击原型**：[`ui-lab/f-video-square/`](../../../ui-lab/f-video-square/README.md)（以 v2 为底的独立拷贝，页面在 `pages-f-square.js`）。走查地址（4175 是 `ui-lab/` 的静态服务，见 `ui-lab/LOCAL-UI.md`）：<http://localhost:4175/f-video-square/#/square>，AI分析示意页 <http://localhost:4175/f-video-square/#/square/ai/v1>。原型右上「原型：预览上线后的效果」可打开置灰的活动计划下拉。
+- **可点击原型**：[`ui-lab/f-video-square/`](../../../ui-lab/f-video-square/README.md)（以 v2 为底的独立拷贝，页面在 `pages-f-square.js`）。走查地址（4100 是 `ui-lab/` 的静态服务，见 `ui-lab/LOCAL-UI.md`）：<http://localhost:4100/f-video-square/#/square>，AI分析示意页 <http://localhost:4100/f-video-square/#/square/ai/v1>。原型右上「原型：预览上线后的效果」可打开置灰的活动计划下拉。
 - 页面顶部是两个整行对半的大块标签：「经销商视频广场」（选中）与「官媒阵地」（灰色，暂未开放，点击只提示）；AI分析示意页同样用两个大块标签「AI分析作品内容」「AI仿写」。
 - 筛选区沿用已确认的芯片样式（浅底 `#E9F5F6`、文字 `#0A6F74`、1px 青绿描边，不用渐变）；卡片白底 12px 圆角 1px 边线，无常驻阴影；「搜索」是深色按钮，「重置」是描边按钮。
 - 卡片网格：`repeat(auto-fill, minmax(220px, 1fr))`，1440 宽下每行 4 个；1700 以上 5–6 个。

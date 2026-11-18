@@ -610,10 +610,10 @@ C PRD §十二的每一条都有对应：
 
 | # | 需求 | 谁看 | 在哪看 | 检查什么 | 状态（2026-11-12） |
 |---|---|---|---|---|---|
-| MAN-1 | SG-8 | 评审人 | 测试 ECS，CLI `signals show --content <id> --plan <id> --version <n>` | 一个已计算的内容下能看到：用了哪版能力、什么时候算的、匹配点数量与内点率；输出里没有内容原文 | ◐ CLI 路径已由 `signals-cli.commands.db.test.ts`「show --plan --version」证明（分数、能力版本、时间、匹配点证据，不含原文）。**评审人在测试 ECS 的真实数据上抽查未做**：测试 ECS 的 `hbecho` 库没有迁移 C 的表（对现有库做 DDL 需另行同意） |
+| MAN-1 | SG-8 | 评审人 | 本机（真实同步数据副本 `hbecho_c_verify`），CLI `signals show --content <id> --plan <id> --version <n>` | 一个已计算的内容下能看到：用了哪版能力、什么时候算的、匹配点数量与内点率；输出里没有内容原文 | ✅ **2026-11-12 实做**（刘学奎同意，本机真实数据副本，不是测试 ECS——见下）。content 2 的封面作标准图（plan 901 v1），`show --content 2 --plan 901 --version 1` 输出：`capability {id: image.template, version: 1}`、`producedAt 2026-11-12T14:15:07.547Z`、`score 10`、`evidence.raw {inliers: 1502, good_matches: 1502, inlier_ratio: 1, keypoints_candidate/reference: 1502, low_features: false, elapsed_ms: 112}`。同时算的无关图 content 3 / 4 得 0.09 / 0.17（区分度合理）。**位置偏离**：测试 ECS 的 `hbecho` 库已迁 C 的 9 张表（同日），但该库 `contents = 0`、没有真实同步数据；真实数据只在 2026-11-06 本机 smoke 的一次性库里，按 `server-access.md`「测试机不放未脱敏生产数据」没有导入 ECS，故在本机副本上做。**「不含原文」口径**：输出没有 A 的原始快照字段（`content_snapshots.title/body/tag_text` 原样不出现在输出里）；文本信号返回的是归一化副本（PRD C §4.2：原文只留在 A），归一化后的中文与原文肉眼接近，评审人若认定归一化副本也算原文，请提出，需另改 CLI 输出 |
 | MAN-2 | SG-8 | 业务 + 刘学奎 | 标定报告 | 约 20 对脱敏样本的分数分布合理（同图高、轻度改动居中、无关图低）；每个整数档配有一张样例图；`R_FULL` / `I_FULL` 的取值有依据；刘学奎签字后才可把 `image.*` 加入生产启用集 | ⏳ 缺业务样本，[`calibration-report.md`](calibration-report.md) 状态“未标定” |
 | MAN-3 | SG-8 | 业务 | 样本图 | 纯色 logo、文字类元素在元素模式下得分很低且 `low_features` 为真——确认这符合 PRD C §5.1 对元素图适用边界的描述 | ⏳ 同上 |
-| MAN-4 | SG-3 | 评审人 | 测试 ECS，用 `a-full-sync` 已有的真实同步数据 | 抽查 10 个内容：话题与原文标题 / 正文 / `tag_text` 对得上，无漏抽 / 错抽；抖音、小红书、快手各至少 3 个 | ⏳ 同 MAN-1：需要有 C 的表的库与真实同步数据 |
+| MAN-4 | SG-3 | 评审人 | 本机（真实同步数据副本 `hbecho_c_verify`） | 抽查 10 个内容：话题与原文标题 / 正文 / `tag_text` 对得上，无漏抽 / 错抽；抖音、小红书、快手各至少 3 个 | ✅ **2026-11-12 实做**。数据：2026-11-06 真实 smoke 的 391 条内容 / 68 条评论（抖音 121、小红书 187、快手 83）复制到本机验证库，迁到 0011 后跑 `signals scan --once`（391 created / 68 created）。① 机械核对：用项目自己的 `normalizeText` / `extractHashtags` 对全部 391 条重算，与 `content_features` 的 `title_normalized` / `body_normalized` / `hashtags` **0 差异**；② 人工抽样 12 条（每平台 4 条，含 1 条无话题）逐条对照，全部对得上。发现并确认不是缺陷的两点：小红书 title 里供应商自带 `## 标题` / `## 正文` 分段标记（`##` 后是空白，按规则不抽）；`#茶知识[话题]#` 的 `[话题]#` 后缀被正确剥离。抽样明细在本机 `/tmp/man4-samples.md`（真实内容，不进仓库）。**位置偏离**同 MAN-1 |
 | MAN-5 | SG-7 | 评审人 | 测试 ECS | 标准图上传后，CLI `segment show` 列出的对象键含计划 ID、版本、图像对象与 SHA-256；`segment purge` 后桶内无残留（需先有真实桶，见 ENV-1） | ✅（在本机而不是测试 ECS 上做的）：用 CLI 对真实 `hbecho-signals` 桶 `put-image`，`show` 列出键 `segments/901/1/cover/template/<sha256>`，`purge --apply` 后桶内 0 个对象。没在 ECS 上做是因为 `signals-main` 目前只支持 AccessKey 环境变量，ECS 上没有 AccessKey（实例角色凭证未接入，见 tasks 任务 13 记录） |
 
 ## 环境依赖项（不能离线验证）
@@ -625,7 +625,7 @@ C PRD §十二的每一条都有对应：
 | ENV-3 | 匹配分标定 | ⏳ | 等业务提供样本；MAN-2 通过前 `image.*` 不进生产启用集 |
 | ENV-4 | 真实 ASR / 大模型 | ⏳ | `h-ai-min` 未开始；本 spec 的网关默认 disabled，没有发过任何付费调用 |
 | ENV-5 | D 的消费 | ⏳ | `d-rule-engine` 未实施；`retainUntil`、读取口、监控段由契约测试固定 |
-| ENV-6 | 扫描回看窗口在真实同步写入并发下是否足够 | ⏳ | 未验证：需要在带 C 的表的库上跑真实同步数据（见 MAN-1） |
+| ENV-6 | 扫描回看窗口在真实同步写入并发下是否足够 | ◐ | 2026-11-12 在本机真实数据副本上验了一半。① **真实延迟分布**：391 条内容从所属批次的 `logical_at` 到 `current_snapshot_selected_at`，最大 221 秒、平均 85 秒，**0 条超过 10 分钟窗口**（33 个 intake 批次，04:03–05:59）。② **受控边界实验**：窗口内（游标前 2 分钟）删掉特征行 → `scan --once` 补回 1 条；窗口外（游标前 22 分钟）删掉特征行 → `scan --once` scanned 0 不动，`reconcile --once` 补回 1 条。**未验证**：多个同步批次与扫描**真并发**时的乱序程度；真实 worker 被 `assertWorkerCanRun` 拒绝在 test 环境启动，本轮没有跑真实同步，留给真实同步环境上线后观测 |
 | ENV-7 | 规模与吞吐 | ✅ | 数字已回填 [design §12.1](design.md)（本机与测试 ECS） |
 
 ## 覆盖不了的

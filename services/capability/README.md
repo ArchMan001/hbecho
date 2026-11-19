@@ -30,7 +30,7 @@
 - 只在 compose 内网暴露：**没有 `ports:`**，不经 Nginx。
 - **不持有数据库或 OSS 凭证。** 音频的来源是 Node 生成的短期签名 GET URL；`ffmpeg` 只允许 `http,https,tcp,tls,crypto` 协议。
 - 单 worker（`python -m capability`）；重启靠 compose 的 `restart: unless-stopped`。环境变量：`CAPABILITY_HOST`（默认 `0.0.0.0`）、`CAPABILITY_PORT`（默认 `8080`）。
-- 需要 ffmpeg ≥ 7.1（HEIC 解码）。镜像与 compose 文件属 I 域，不在本目录。
+- 需要 ffmpeg ≥ 7.1（HEIC 解码）。镜像见本目录 `Dockerfile`（基础镜像 Debian trixie，构建时核对 ffmpeg 版本；CI 的 `capability` job 构建、用真实 HEIC 冒烟，标签 `capability-<git 短 sha>`，推到 ACR 的 `hbecho/app` 仓库）。compose 服务定义见运维手册 §10.3「能力服务」。
 
 ## 本地测试
 

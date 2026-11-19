@@ -10,7 +10,7 @@ import { FakeObjectStore } from "../../../tests/harness/fake-oss";
 import { XHS_LOCATOR, setupTracer, type TracerEnv } from "../../../tests/harness/tracer-env";
 import { accountProfileSnapshots, contentSnapshots, contents, dataQualityIssues, mediaAssets, mediaReferences, ossObjects, syncCheckpoints, syncTasks } from "../../db/schema";
 import { runTracerRoot } from "../orchestrator";
-import { runMediaArchive, type MediaArchiveHooks } from "./index";
+import { renormalizeUnavailable, runMediaArchive, type MediaArchiveHooks } from "./index";
 import type { MediaPolicy } from "./index";
 
 const t = useTestDb();
@@ -390,5 +390,57 @@ describe("事务与 fencing", () => {
     const dump = JSON.stringify([...(await t.db.select().from(ossObjects)), ...(await assets())], (_k, v) => (typeof v === "bigint" ? v.toString() : v));
     expect(urls.some((h) => dump.includes(h))).toBe(false);
     expect(contents).toBeDefined();
+  });
+});
+
+describe("回填：转换服务不可用期间留下的失败衍生图（线上 2026-11-19 的现状）", () => {
+  const derivatives = async (m: M) => (await m.refs()).filter((r) => r.role.endsWith("_normalized"));
+  const deps = (m: M) => ({ db: t.db, clock: m.env.clock, mediaStore: m.mediaStore, location: { providerCode: "aliyun-oss", region: "cn-beijing", bucket: "hbecho-media-test" }, converter: m.converter });
+  it("原图都已归档、衍生图全是 failed/converter_unavailable；服务恢复后回填：同一份原图只转换一次，衍生图变 archived；再跑一次没有候选", async () => {
+    const m = await structured();
+    await m.serveAll();
+    m.converter.fail = "unavailable";
+    await m.run();
+    const before = await derivatives(m);
+    expect(before.length).toBeGreaterThan(0);
+    expect(before.every((r) => r.archiveStatus === "failed" && r.lastErrorCode === "converter_unavailable")).toBe(true);
+    expect((await m.originals()).every((r) => r.archiveStatus === "archived")).toBe(true); // 原图没有受影响
+    m.converter.fail = null;
+    m.converter.inputs.length = 0;
+    const dry = await renormalizeUnavailable(deps(m), { dryRun: true });
+    expect(dry).toMatchObject({ examined: before.length, converted: 0 });
+    expect((await derivatives(m)).every((r) => r.archiveStatus === "failed")).toBe(true); // 预览不写
+    const rep = await renormalizeUnavailable(deps(m));
+    expect(rep).toMatchObject({ examined: before.length, failed: 0, skipped: 0, stoppedEarly: false });
+    expect(rep.converted + rep.reused).toBe(before.length);
+    // 不同的原图字节才转换：头像、背景、封面（20 个封面是同一份 HEIC 字节）= 3 次
+    expect(m.converter.inputs).toHaveLength(3);
+    const after = await derivatives(m);
+    expect(after.every((r) => r.archiveStatus === "archived" && r.lastErrorCode === null && r.mediaAssetId !== null)).toBe(true);
+    const jpegAssets = await Promise.all(after.map(async (r) => (await t.db.select().from(mediaAssets).where(eq(mediaAssets.mediaAssetId, r.mediaAssetId!)))[0]!));
+    expect(jpegAssets.every((a) => a.mimeType === "image/jpeg")).toBe(true);
+    expect(await renormalizeUnavailable(deps(m))).toMatchObject({ examined: 0 });
+  });
+  it("服务仍不可用：第一次失败就停止（不冲击剩余引用），状态保持不变，修好后再跑", async () => {
+    const m = await structured();
+    await m.serveAll();
+    m.converter.fail = "unavailable";
+    await m.run();
+    m.converter.inputs.length = 0;
+    const rep = await renormalizeUnavailable(deps(m));
+    expect(rep).toMatchObject({ converted: 0, stoppedEarly: true });
+    expect(m.converter.inputs).toHaveLength(1);
+    expect((await derivatives(m)).every((r) => r.archiveStatus === "failed" && r.lastErrorCode === "converter_unavailable")).toBe(true);
+  });
+  it("原图读不回（对象缺失）：跳过，不改状态", async () => {
+    const m = await structured();
+    await m.serveAll();
+    m.converter.fail = "unavailable";
+    await m.run();
+    m.converter.fail = null;
+    for (const key of ((m.mediaStore as unknown as { objects: Map<string, unknown> }).objects.keys() as Iterable<string>)) await m.mediaStore.delete(key);
+    const rep = await renormalizeUnavailable(deps(m));
+    expect(rep.skipped).toBe(rep.examined);
+    expect(rep.converted).toBe(0);
   });
 });

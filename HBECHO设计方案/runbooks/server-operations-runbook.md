@@ -2198,6 +2198,16 @@ docker image prune -f
 
 **2026-11-13 web 与 learning-worker 同步升级**：两者也临时固定到 `6368b94798ef`（含 capability 放行与「将自动加入分公司」页面文案），`docker compose up -d web learning-worker` 完成。验证：`/api/health` 返回 `{"ok":true}`，`/login` 本机 200、公网 200，Next.js Ready。三个服务现在同镜像；`/data/app/.env` 的 `WEB_TAG` 仍是 `69595423c6d3`，升级到新 sha 后把三个服务的 image 改回 `${WEB_TAG}`。
 
+#### 能力服务 capability（2026-11-19 增补）
+同一台机器上多一个容器，**没有 `ports:`**，不经 Nginx，只有 compose 内网的 sync-worker 通过 `http://capability:8080` 调用（`sync.env` 里的 `HBECHO_CAPABILITY_URL` 早已配好）。不持有数据库或 OSS 凭证，不需要 env 文件。镜像由 CI 的 `capability` job 构建（标签 `capability-<git 短 sha>`，仓库 `hbecho/app`）。
+```yaml
+  capability:
+    image: hbecho-registry-registry-vpc.cn-beijing.cr.aliyuncs.com/hbecho/app:capability-<sha>
+    container_name: hbecho-capability
+    restart: unless-stopped
+    mem_limit: 1g
+```
+部署顺序：拉镜像 → `docker compose up -d capability` → `docker exec hbecho-capability python3 -c "import urllib.request;print(urllib.request.urlopen('http://127.0.0.1:8080/healthz').read())"` 看到 ffmpeg ≥ 7.1 → 在 sync-worker 容器里跑一次回填（先预览）：`docker run --rm --network app_default --env-file /data/app/sync.env <app 镜像> ./node_modules/.bin/tsx src/worker/media-main.ts renormalize --dry-run`，数量对上后去掉 `--dry-run`（退出码 3 = 服务仍不可用，已停止，不会冲击剩余引用）。回滚 = `docker compose stop capability`（之后新采到的图片衍生图又会失败为 `converter_unavailable`，可再回填）。
 ### 10.4 部署后必检
 
 1. 服务健康：`curl -s http://127.0.0.1:3000/api/health` 返回 `{"ok":true}`；公网 `https://echo.hbmarketer.com/login` 200 且页脚有备案号；`/users` 未登录 307 到 `/login`

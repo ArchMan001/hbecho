@@ -216,6 +216,12 @@
   - 以 `ui-lab/d-rule-engine/precision/`（v15）为视觉基线，补页面级验收与截图；确认超出范围要重新确认。
   - **验证**：关键页面 1440×900 与 390×844 截图；无横向溢出；权限、空 / 错误 / 加载状态；页面只读 Module 服务，静态护栏通过。
 
+- [ ] 17. 对 `e-metrics-lite` 的读口扩展与账号能力结果（2026-11-19 追加，JP-22、D-D23）
+  - **Requirements:** JP-22、JP-16
+  - **Design:** §10.4 第 7–9 项、§10.1、`e-metrics-lite` design §4
+  - 迁移 `0016_d_ability_results`（`run_participants.ability_results` 可空 JSON，只加列）；纯函数 `abilityOutcomes`（`engine/pure/aggregate.ts`，复用 `contentOutcome` / `evaluateMethod`）与 `aggregate` 阶段接入；`outcomes.ts`：`ContentFact` 增 `contentSnapshotId / staffId / org / evidence`、`ExecutionDescriptor.config.conditions[]`、`executionsOf / planRefOf / listContents / listParticipants`、stream 的组织过滤、`ParticipantFact.abilityResults`；判定计划详情与执行记录页加「全量明细」入口、`/judgement/results/[runId]` 占位页改为跳转到 `e-metrics-lite` 页面（**入口属页面改动，待 `e-metrics-lite` 的界面确认（design §10.6）一并确认后再做；此前只做读口与迁移**）。
+  - **验证**：D 现有测试原样通过且四个结果列逐值不变；`evidence` 白名单契约；`conditions[].key ↔ evidence.l1.idx`；`abilityOutcomes` 穷举对照；`listContents.total` = 流式总数；迁移空库成功并幂等；旧执行 `abilityResults = null`。
+
 ## 必须停下来问的条件
 
 出现以下任一情况，停止实现并说明，不要自行选一边：

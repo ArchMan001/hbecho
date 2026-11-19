@@ -49,7 +49,7 @@ describe("smoke preview", () => {
   it("只校验计划并打印预算预览：不要审批、不要开关、不调用 execute", async () => {
     const h = harness({ env: {} });
     expect(await runSmokeCli(["preview", "--plan", "plan.json"], h.deps)).toBe(0);
-    expect(h.json()).toMatchObject({ ok: true, preview: { nominalPoints: 10, nominalYuan: 0.2 } });
+    expect(h.json()).toMatchObject({ ok: true, preview: { nominalPoints: 10, nominalYuan: 0.1 } });
     expect(h.executed).toHaveLength(0);
     expect(h.reads).toEqual(["plan.json"]);
     expect(h.out.join("")).not.toContain("MPOAlEqWpec");

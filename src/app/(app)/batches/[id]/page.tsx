@@ -91,7 +91,7 @@ export default async function BatchDetailPage({ params, searchParams }: { params
               <strong className="num" style={{ fontSize: 20, color: "var(--brand-deep)" }}>{percent}%</strong>
             </div>
             <div className="progress-track" style={{ marginTop: 10 }}><div className="progress-bar" style={{ width: `${percent}%` }} /></div>
-            <div className="rail-text">{n(done)} / {n(total)} 行已有结果；解析只读取主页信息，不触发列表采集。</div>
+            <div className="rail-text">{n(done)} / {n(total)} 行已有结果；解析只读取主页信息，列表在批次完成后补采。</div>
           </div>
           <div className="section-note">行结果 · 共 {n(b.totalRows)} 行</div>
           <div className="stat-grid" style={{ marginBottom: 14 }}>
@@ -109,7 +109,7 @@ export default async function BatchDetailPage({ params, searchParams }: { params
               <div className="stat" key={label}><div className="stat-label">{label}</div><div className="stat-value">{n(value ?? 0)}</div></div>
             ))}
           </div>
-          {pending > 0 ? <Callout icon="clock" tone="warn" style={{ marginBottom: 14 }}>仍在解析的行由系统逐条处理；只读取主页信息，不触发列表采集。本页每 8 秒自动刷新。批次完成后，会对「已存在并引用」的账号补抓一次（距上次采集满 7 天）。</Callout> : null}
+          {pending > 0 ? <Callout icon="clock" tone="warn" style={{ marginBottom: 14 }}>仍在解析的行由系统逐条处理；这一步只读取主页信息。本页每 8 秒自动刷新。批次完成后，会对被引用的账号补采（距上次成功采集满 7 天或从未采过才采；新账号补列表，已存在账号补主页和列表）。</Callout> : null}
           {b.rowsVisible && rows ? (
             rows.total === 0 && !outcome ? (
               <EmptyState title="这个批次没有逐行明细" text="批次已完成；行结果与批次同寿命保留。" action={<Link className="btn" href="/batches">返回批次列表</Link>} />

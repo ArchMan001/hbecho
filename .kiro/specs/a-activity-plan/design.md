@@ -664,6 +664,7 @@ interface PlanDownstream {
 | AP-D24 | 回收站清除：先调下游 `purge`（事务外），成功后再删；下游 `onDeleted` / `onRestored` 为加速通知，以计划状态对账 | 数据库事务内不做跨域调用；不引入 outbox 表 | proposed |
 | AP-D25 | 批次在计划清除后由 `summary` 快照（计划名、平台、品牌）自描述，按提交分公司 / 品牌 / 超管可见 | 批次是历史事实，比计划活得久 | proposed |
 | AP-D26 | 链接域名识别按 A §11.2.2 第二层：含 URL 且域名未知 → 错误；纯口令放行 | 保留 PRD 的明确规则；`PLATFORM_DOMAINS` 已含短链域名 | proposed（待确认） |
+| AP-D27 | 导入完成后对被引用账号补采列表（2026-11-19，刘学奎）：已存在账号 `only=full`、新建账号 `only=list`，都按「满 168 小时或从未采过」；解析根任务仍是 `profile_only`，列表交给 sync worker 的多页 walker（带 `initial_content_limit`、检查点、预算与重试） | 需求：导入后即可判定，不等周一。不让根任务直接采首页：它只取第一页并建立检查点，会让之后的周批次变成纯增量、首批内容可能少于 walker 的 `initial_content_limit` | accepted |
 
 ## 14. Open items
 

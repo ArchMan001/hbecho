@@ -44,7 +44,7 @@ describe("batch / status（FS-15.1、15.5、15.7）", () => {
     expect(r.identityCheck.list).toEqual({ verified: 1, unverifiable: 1, mismatch: 1, unknown: 0 }); // 无法判定不并入一致
     expect(r.identityCheck.profile).toEqual({ verified: 3, mismatch: 0 });
     // 3 次主页 + 3 次列表；成功的才计点：抖音 10+10、小红书 15+15、快手 10+10（失败任务的列表调用本身成功）
-    expect(r.cost).toMatchObject({ calls: 6, polls: 0, points: 70, estimatedYuan: 1.4, ambiguous: { calls: 0, pointsUpperBound: 0 } });
+    expect(r.cost).toMatchObject({ calls: 6, polls: 0, points: 70, estimatedYuan: 0.7, ambiguous: { calls: 0, pointsUpperBound: 0 } });
     expect(r.media.total).toBeGreaterThan(0);
     expect(r.media).toMatchObject({ pending: r.media.total, archived: 0, failed: 0, noAudioTrack: 0 });
     expect(env.transport.calls.length).toBe(calls0); // 只读本地，没有供应商调用

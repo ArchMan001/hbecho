@@ -99,7 +99,7 @@ export function buildAccountRunners(o: {
     transport: rateLimitedTransport(f.createTransport({ apiKey: secrets.apiKey, baseUrl: secrets.baseUrl }), bucket),
     clock: o.clock,
     location: { providerCode: "aliyun-oss", region: secrets.oss.region, bucket: secrets.oss.bucket },
-    policy: createBatchBudgetPolicy(o.db, { maxCalls: o.cfg.batchBudget.maxCalls, maxPoints: o.cfg.batchBudget.maxPoints }),
+    policy: createBatchBudgetPolicy(o.db, { maxCalls: o.cfg.batchBudget.maxCalls, maxPoints: o.cfg.batchBudget.maxPoints }, { maxPoints: o.cfg.batchBudget.yearMaxPoints, now: () => o.clock.now() }),
   });
   o.onGateway?.(gateway);
   const deps = { db: o.db, clock: o.clock, gateway, environment: o.cfg.environment, sleep: f.sleep, async: DEFAULT_ASYNC };

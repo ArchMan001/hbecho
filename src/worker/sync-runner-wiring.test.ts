@@ -13,7 +13,7 @@ const cfg = (over: Partial<SyncWorkerConfig> = {}): SyncWorkerConfig => ({
   providerQps: 2,
   mediaConcurrency: 1,
   breaker: { failures: 10, cooldownMs: 1000 },
-  batchBudget: { maxCalls: 100, maxPoints: 1000 },
+  batchBudget: { maxCalls: 100, maxPoints: 1000, yearMaxPoints: 3000000 },
   media: { tmpDir: "/tmp/m", maxBytes: 1000, batchMaxBytes: 10_000, capabilityUrl: "http://capability:8080" },
   actorId: "service:sync-worker",
   leaseMs: 60_000,

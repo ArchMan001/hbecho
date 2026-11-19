@@ -67,6 +67,19 @@ describe("supplement：空闲时立即运行（FS-13.1）", () => {
     const [b] = await batches();
     expect((await tasksOf(b!.batchId)).map((x) => x.requestedAction)).toEqual(["fetch_profile"]);
   });
+  it("--only list 只建 fetch_content_list；新鲜度只看最近一次成功的列表（主页再新也不能挡住从未采过列表的账号）", async () => {
+    const { org, commands } = await world();
+    const acc = await accounts(org);
+    const r1 = await commands.createSupplement({ accountIds: ids(acc.a.accountId), only: "list", ifOlderThanHours: 168, idempotencyKey: "k1" }, actor());
+    if (r1.kind !== "created") throw new Error(JSON.stringify(r1));
+    expect(r1.dispositions).toEqual([{ accountId: acc.a.accountId.toString(), disposition: "queued" }]); // 从未采过列表：到期
+    const [b] = await batches();
+    expect((await tasksOf(b!.batchId)).map((x) => x.requestedAction)).toEqual(["fetch_content_list"]);
+    await settleTasks(t.db, b!.batchId, { status: "succeeded" }, S1);
+    // 列表刚成功过：满 168 小时前不再补
+    const r2 = await commands.createSupplement({ accountIds: ids(acc.a.accountId), only: "list", ifOlderThanHours: 168, idempotencyKey: "k2" }, actor());
+    expect(r2).toMatchObject({ kind: "no_accounts", dispositions: [{ accountId: acc.a.accountId.toString(), disposition: "not_due" }] });
+  });
   it("external 账号的补抓只有主页任务", async () => {
     const { org, commands } = await world();
     const acc = await accounts(org);

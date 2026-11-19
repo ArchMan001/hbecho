@@ -48,7 +48,7 @@ function refusal(input: Parameters<typeof preflight>[0]): SmokeRefusalCode | nul
 }
 
 describe("preflight：全部满足才放行，并给出预算预览", () => {
-  it("放行：预览含逐项点数、合计点数与金额（0.02 元/点），不含 locator 原文", () => {
+  it("放行：预览含逐项点数、合计点数与金额（0.01 元/点），不含 locator 原文", () => {
     const p = plan();
     const ok = preflight({ plan: p, approval: approvalFor(p), env: ENV_ON, now: NOW });
     expect(ok.preview).toMatchObject({
@@ -58,7 +58,7 @@ describe("preflight：全部满足才放行，并给出预算预览", () => {
       ],
       nominalCalls: 2,
       nominalPoints: 20,
-      nominalYuan: 0.4,
+      nominalYuan: 0.2,
       budget: { maxCalls: 2, maxPolls: 0, maxPoints: 20 },
       deadlineMs: 120_000,
     });
@@ -75,7 +75,7 @@ describe("preflight：全部满足才放行，并给出预算预览", () => {
       budget: { max_calls: 2, max_polls: 0, max_points: 30 },
     });
     const ok = preflight({ plan: p, approval: approvalFor(p), env: ENV_ON, now: NOW });
-    expect([ok.preview.nominalPoints, ok.preview.nominalYuan]).toEqual([30, 0.6]);
+    expect([ok.preview.nominalPoints, ok.preview.nominalYuan]).toEqual([30, 0.3]);
   });
 
   it("异步主页是独立的一条 allowlist：提交计点，轮询不计点但受 max_polls 约束", () => {

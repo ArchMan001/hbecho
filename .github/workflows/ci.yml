@@ -154,3 +154,62 @@ jobs:
           push "$IMAGE:$SHA"
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then push "$IMAGE:main-latest"; fi
           echo "已推送 $IMAGE:$SHA" >> "$GITHUB_STEP_SUMMARY"
+  # 能力服务镜像（ADR-0012，2026-11-19）：只有 services/capability/ 变化才构建；分支只构建 + 冒烟（含真实 HEIC 转换），main 才推 ACR。
+  # 标签 = capability-<git 短 sha>，复用 hbecho/app 仓库（不依赖 ACR 自动建仓库）。
+  capability:
+    needs: [verify, quick]
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result != 'failure' && needs.quick.result != 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      REGISTRY: hbecho-registry-registry.cn-beijing.cr.aliyuncs.com
+      NAMESPACE: hbecho
+      REPO: app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 能力服务路径是否变化（手动触发一律构建）
+        id: changed
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "build=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            base="${{ github.event.before }}"
+            if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then base="$(git rev-list --max-parents=0 HEAD | tail -1)"; fi
+          else
+            base="$(git merge-base origin/main HEAD)"
+          fi
+          if git diff --name-only "$base" HEAD | grep -qE '^services/capability/'; then echo "build=true" >> "$GITHUB_OUTPUT"; else echo "build=false" >> "$GITHUB_OUTPUT"; echo "能力服务路径没有变化，跳过镜像构建"; fi
+      - name: 构建镜像
+        if: steps.changed.outputs.build == 'true'
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse --short=12 HEAD)"
+          image="$REGISTRY/$NAMESPACE/$REPO"
+          docker build -t "$image:capability-$sha" services/capability
+          echo "IMAGE=$image" >> "$GITHUB_ENV"; echo "TAG=capability-$sha" >> "$GITHUB_ENV"
+      - name: 冒烟：启动容器、ffmpeg 版本、真实 HEIC 转 JPEG
+        if: steps.changed.outputs.build == 'true'
+        run: |
+          set -euo pipefail
+          docker run -d --name cap -p 8080:8080 "$IMAGE:$TAG" > /dev/null
+          ok=0
+          for i in $(seq 1 30); do if curl -fsS http://127.0.0.1:8080/healthz; then ok=1; break; fi; sleep 1; done
+          if [ "$ok" != 1 ]; then docker logs cap | tail -30; exit 1; fi
+          echo
+          # 抖音封面是 HEVC 编码的 HEIC：不能解就是镜像里的 ffmpeg 不够新
+          curl -fsS -X POST -H 'Content-Type: image/heic' --data-binary @tests/fixtures/media/douyin-cover-540.heic -D /tmp/h.txt -o /tmp/out.jpg http://127.0.0.1:8080/v1/image/normalize
+          grep -iE '^(HTTP|x-width|x-height)' /tmp/h.txt || true
+          [ "$(head -c 3 /tmp/out.jpg | xxd -p)" = "ffd8ff" ]
+          [ "$(docker exec cap id -un)" = "capability" ]
+          docker rm -f cap > /dev/null
+      - name: 推送到 ACR
+        if: steps.changed.outputs.build == 'true' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
+        env:
+          ACR_PUSH_PASSWORD: ${{ secrets.ACR_PUSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          echo "$ACR_PUSH_PASSWORD" | docker login --username "hbecho-acr-push@1241086349153033" --password-stdin "$REGISTRY"
+          for n in 1 2; do timeout 1200 docker push "$IMAGE:$TAG" && break; echo "推送第 $n 次失败，重试"; sleep 10; done
+          echo "已推送 $IMAGE:$TAG" >> "$GITHUB_STEP_SUMMARY"

@@ -32,7 +32,7 @@ export interface SyncCliDeps {
 const USAGE = [
   "用法：",
   "  sync tick",
-  "  sync supplement --accounts <id,id,...> --key <幂等key> [--only profile|full] [--if-older-than <小时>] [--on-busy run_now|queue|cancel_current] [--apply]",
+  "  sync supplement --accounts <id,id,...> --key <幂等key> [--only profile|list|full] [--if-older-than <小时>] [--on-busy run_now|queue|cancel_current] [--apply]",
   "  sync batch cancel <batch_id> [--apply]      默认只预览，--apply 才取消",
   "  sync batch retry-failed <batch_id> [--apply] 把本批次 failed / dead 任务放回重试（最新 full 批次，下一批次未开始）；默认只预览",
   "  sync status [--limit N]                      最近批次 + 最新全量批次的完整报告（只读本地）",

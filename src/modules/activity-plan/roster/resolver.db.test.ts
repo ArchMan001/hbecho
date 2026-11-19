@@ -121,9 +121,12 @@ describe("映射表：每一种根任务终态各一行", () => {
     expect(b.status).toBe("completed");
     expect((b.summary as { confirm: Record<string, number> }).confirm).toMatchObject({ imported: 1, unchanged: 1, conflict: 2, invalid: 1, suspected_empty: 1, resolve_failed: 2, pending_account: 0 });
     expect(report.completedBatches).toEqual([batchId]);
-    // 收尾：只对 unchanged 的账号补抓一次，幂等键含批次 ID，且满一周才补（168 小时）
-    expect(e.supplements).toEqual([{ accountIds: [a2.toString()], only: "full", ifOlderThanHours: 168, apply: true, idempotencyKey: `roster-refresh:${batchId}` }]);
-    expect((b.summary as { refresh: unknown }).refresh).toMatchObject({ requested: 1, queued: 1 });
+    // 收尾（2026-11-19 修订）：已存在并引用的账号补抓主页 + 列表；本批新建的账号只补列表（刚采过主页）；都按满 168 小时或从未采过判定，幂等键含批次 ID；疑似空账号不补
+    expect(e.supplements).toEqual([
+      { accountIds: [a2.toString()], only: "full", ifOlderThanHours: 168, apply: true, idempotencyKey: `roster-refresh:${batchId}` },
+      { accountIds: [a1.toString()], only: "list", ifOlderThanHours: 168, apply: true, idempotencyKey: `roster-first-list:${batchId}` },
+    ]);
+    expect((b.summary as { refresh: unknown }).refresh).toMatchObject({ requested: 1, queued: 1, firstList: { requested: 1, queued: 1 } });
   });
   it("疑似空账号：名单项存在，监控开关开着，但 intake_status 门控使它不进入常规采集", async () => {
     const e = await env({ runRoot: noopRun });
@@ -152,7 +155,7 @@ describe("归并的保护与幂等", () => {
     const second = await e.resolver.runOnce();
     expect([first.settled, second.examined, second.settled]).toEqual([1, 0, 0]);
     expect((await entries()).filter((x) => x.accountId === a)).toHaveLength(1);
-    expect(e.supplements).toHaveLength(0); // 新账号不触发补抓
+    expect(e.supplements.map((x) => [x.only, x.accountIds])).toEqual([["list", [String(a)]]]); // 新账号只补一次列表，重复归并不重复请求
   });
   it("归并时计划已暂停 / 删除：行落为 conflict/plan_state_changed，不建名单项；账号与归属保留", async () => {
     const e = await env({ runRoot: noopRun });
@@ -275,7 +278,7 @@ describe("端到端：fixture transport 跑真实的 resolve_account 根任务�
       return { httpStatus: 200, body: key ? byUrlTail[key]! : bytesOf("{}") };
     });
   }
-  it("新账号只产生主页调用（没有列表任务）；已存在账号被引用；疑似空账号建名单项；批次完成时对已存在账号补抓一次", async () => {
+  it("解析阶段新账号只产生主页调用（没有列表任务）；已存在账号被引用；疑似空账号建名单项；批次完成时补抓：已存在账号主页 + 列表，新账号只补列表", async () => {
     const e = await env();
     // 种一个已存在的账号：同一个人，入口文本不同（本地命中不了，所以要调一次主页）
     await t.db.delete(activityPlanRoster).where(eq(activityPlanRoster.accountId, w.accZhao)); // 老赵种子里的账号让位（一专员一平台一账号）
@@ -299,7 +302,8 @@ describe("端到端：fixture transport 跑真实的 resolve_account 根任务�
     const emptyAcct = await t.db.select().from(aa).where(eq(aa.accountId, rows[1]!.accountId!));
     expect(emptyAcct[0]).toMatchObject({ intakeStatus: "suspected_empty", monitoringEnabled: true });
     expect((await batchOf(batchId)).status).toBe("completed");
-    expect(e.supplements.map((s) => s.accountIds)).toEqual([[existing.toString()]]);
+    // 已存在账号补主页 + 列表；新建账号只补列表；疑似空账号不补
+    expect(e.supplements.map((s) => [s.only, s.accountIds])).toEqual([["full", [existing.toString()]], ["list", [rows[0]!.accountId!.toString()]]]);
     // 没有真实供应商调用：全部来自 fixture transport
     expect(e.transport.rejected).toEqual([]);
   });

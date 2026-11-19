@@ -627,6 +627,24 @@ streamCircleRows(runId, constraint): AsyncIterable<CircleRow>                // 
 - 五条护栏各有反向用例，违规时护栏报错；
 - 既有测试（`pnpm test`、`pnpm test:db`）保持通过。
 
+### JP-22 · 对 `e-metrics-lite` 的读口扩展与账号能力结果
+
+**陈述**（D-D23；不改任何判定语义，只补读口与一列存储）：
+
+1. **内容行**：`ContentFact` SHALL 增加 `contentSnapshotId`、`staffId`、冻结的组织链 ID、`evidence`（恒为对象，没有证据 = 空对象；白名单：第 1 层各条件的 `idx` / 状态 / `hit` / `seconds` / `reason`；第 2 层各能力的 `id` / 状态 / `score` / `reason`；第 3 层的状态与 `verdict`；**不含**正文、评论原文、作者、第 3 层的模型理由与依赖明细）；
+2. **执行描述**：`ExecutionDescriptor.config` SHALL 增加有序的条件清单 `conditions[]`（`key` = `l1.<idx>` / `l2.<abilityId>` / `l3` / `comment`；层、种类、对象、`subject`（内容 / 账号）、别名）。`l1.<idx>` 的 `idx` 与 `evidence.l1[].idx` 是同一个编号（文本 → 话题 → 时长展平后的位置）；
+3. **新读口**：`executionsOf(planId)`（该判定计划已 `completed` 的执行，`completed_at` 倒序）、`planRefOf(planId)`（授权引用，含 `activityPlanName`；判定计划不存在或所属活动计划在回收站 → `not_found`；**没有调用者身份，不判断范围**，越范围由调用方 `authorize(report.read)` 表现为 `not_found`）、`plansOverview()`（落地页用：每个判定计划及其最近一次已完成执行；所属活动计划在回收站的不出现；不做能力校验）、`listContents` / `listParticipants`（组织过滤 + 偏移分页 + 总数；总数与列表共用同一个 WHERE）；这些新读口与现有 `stream*` 同构，**不做能力校验**，由调用方负责 `report.read` 与范围约束，不沿用 `explain` 的双能力校验（`rule.definition.read` + `data.content.read`）；`streamContents` / `streamParticipants` 接受可选组织过滤；
+4. **账号能力结果**：`run_participants` SHALL 新增可空 JSON 列 `ability_results`（迁移只加列），在 `aggregate` 阶段与现有结果同一个 fencing 事务写入：每个条件一项 `{ key, result: success | not_met | unobtained | skipped, reason? }`。规则见 D-D23：内容层条件沿用 `contentOutcome` 的 `at_least_n` 与零内容规则；评估集内没评估到但内容最终 `unobtained` 的行计 U；第 2、3 层没有内容走到该层 → `skipped`；头像、主页背景取 `account_detail.abilities`；评论取 `comment_result`；`ParticipantFact.abilityResults` 暴露它，旧执行为 `null`。
+
+**验收标准**
+- 新增字段与读口不改变任何已有结果：D 现有全部测试原样通过；`planResult` / `contentResult` / `commentResult` / `accountResult` 在同一输入下与改动前逐值相同；
+- `evidence` 白名单的契约测试：断言读口返回里不出现正文、评论原文、作者、第 3 层模型理由；
+- `conditions[].key` 与 `evidence.l1[].idx` 的对应有测试（文本 2 + 话题 1 + 时长 1 的计划，key 为 `l1.0`…`l1.3`）；
+- `abilityOutcomes` 纯函数对 (P, U, F, rows, N, 零内容) 穷举，与参照实现及 `contentOutcome` 对照；零内容账号：第 1 层条件走零内容规则、第 2 / 3 层 `skipped`；
+- `listContents` 的 `total` = 同一约束与过滤下 `streamContents` 的条数；范围约束与组织过滤同时生效；
+- 迁移在空库上成功并幂等，`drizzle-kit generate` 无新差异；已完成的旧执行读出 `abilityResults = null`；
+- 契约测试与 `e-metrics-lite` 的 fake 读口共用同一份 shape 测试。
+
 ## 3. PRD 验收项映射
 
 D PRD §六的验收清单与本 spec 需求的对应：

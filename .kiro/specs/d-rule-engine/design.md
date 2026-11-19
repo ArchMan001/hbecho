@@ -734,6 +734,7 @@ judgement maintain --once
 | `src/worker/plan-main.ts`（及将来的页面进程装配） | 构造 `createJudgement(...)` 并把 `downstream` 传给 `createActivityPlan` | 装配 |
 | `package.json` | `"judgement": "tsx src/worker/judgement-main.ts"` | 脚本 |
 | `.env.example` | 新增变量名（无值）：`HBECHO_JP_*` | 配置 |
+| `drizzle/0016_d_ability_results.sql`、`src/db/schema/judgement.ts` | `run_participants` 加可空 JSON 列 `ability_results`（2026-11-19，`e-metrics-lite`；只加列，旧执行为 NULL） | 迁移 |
 | `src/acceptance-boundaries.test.ts` | 五条静态护栏 + 反向用例 | 测试 |
 | `scripts/check-doc-registry.py` | `DESIGN_ONLY_SPECS` 去掉 `rule-engine`（任务 0 归档旧 design 时） | 脚本 |
 | `CONTEXT.md` | 增 JudgementExecution 一条词汇（任务 0） | 文档 |
@@ -792,6 +793,9 @@ C 的 design §14 第 11 项把「监控段 / 读取口 / 补算请求的 API �
 | 4 | 判定结果下载与第 1 页圈定下载经 E6，Capability = `report.export`；E6 的执行者按提交人范围 ∩ 执行时范围复核 | E-D04、B 的出口守卫 |
 | 5 | `ContentFact.final` 增加 `skipped`（第 1 层未被选中，原因 `layer1_not_selected`），并带 `layer1_selected` / `layer1_rank`；E 的 C1 = 被第 1 层选中的条数，不再是「通过第 1 层的全部条数」；E 的明细 / 导出与投影的 `final` 枚举要同步 | 2026-11-13 第 1 层数量要求（D-D18）；E 的 spec 里 `l1/l2/l3/final` 枚举需加 `skipped` |
 | 6 | `ExecutionDescriptor` 带能力的 `abilityId / kind / target / 别名`；E 的点检表仍按判定计划分组，**不按能力分列**（E-D16 / E-D21），能力别名只用于明细与导出的列头 | PRD D-D20 的显示位置（2026-11-16 补充） |
+| 7 | **（2026-11-19，`e-metrics-lite`）** `ContentFact` 增加 `contentSnapshotId`、`staffId`、冻结组织链 ID 与白名单 `evidence`（不含正文 / 评论原文 / 作者 / 第 3 层模型理由）；`ExecutionDescriptor.config` 增加有序 `conditions[]`（`key = l1.<idx> / l2.<abilityId> / l3 / comment`，`l1.<idx>` 的 `idx` 即 `runner.ts` layer1 阶段 `conds.map((c, idx) => …)` 的展平位置：文本 → 话题 → 时长）；新读口 `executionsOf`、`planRefOf`（含 `activityPlanName`，不判断范围）、`plansOverview`（每个判定计划的最近一次已完成执行）、`listContents`、`listParticipants`（均不做能力校验，与 `stream*` 同构），stream 接受组织过滤 | 全量视频明细要「每个条件一列」，现有读口只带第 2 层能力，内容行没有证据与内容快照 ID |
+| 8 | **（同上）** `run_participants` 新增可空 JSON 列 `ability_results`（迁移 `0016_d_ability_results`，只加列），`aggregate` 阶段由纯函数 `abilityOutcomes` 写入；`ParticipantFact.abilityResults`，旧执行为 `null`。规则 = D-D23：内容层条件复用 `contentOutcome` 的 `at_least_n` 与零内容规则，评估集内「没评估到但最终 `unobtained`」的行计 U，第 2、3 层无内容走到该层则 `skipped`；头像 / 背景取 `account_detail.abilities`，评论取 `comment_result` | 账号维度要每个能力一个四态结果；规则只写一处，且内容级行会被保留期清理，账号级结果须长期可读（`e-metrics-lite` design §4.3） |
+| 9 | **（同上）** `Outcome` 之外新增展示用的第四态 `skipped`（前置条件未满足），只出现在 `ability_results` 与 `ParticipantFact.abilityResults`，**不进入** `content_result` / `comment_result` / `account_result` / `plan_result` 的 CHECK 枚举 | 不改判定三值；E 的投影与点检表不会误读到第四态 |
 
 ## 11. Testing strategy
 
@@ -893,6 +897,7 @@ C 的 design §14 第 11 项把「监控段 / 读取口 / 补算请求的 API �
 | JP-D30 | 内容要求的 P / U / F 取每条参与内容的 `final`；`unobtained` 含任一层；`skipped` 单独计数；零内容 = 参与内容行数为 0 | 初稿的 T 漏掉第 1 层不通过 / 未获取的内容，会把 N=3、2 条通过 + 1 条未获取误判不达标，并把「没命中话题」误走零内容分支 | T = 选中 + `l0` 未获取（初稿） | 审查修订（刘学奎 2026-11-16 采纳） |
 | JP-D31 | 取前 N 按专员各自计算；N 既是上限也是门槛，「至少 N 条」等价于「这 N 条全通过」，不替补 | D-D18 的直接结果；PRD 已写明 | 门槛与截断条数拆成两个数 | 审查修订（刘学奎 2026-11-16 采纳） |
 | JP-D32 | `abilityId` 稳定标识 + 上传时由 D 以字节 SHA-256 写入 `elementKey`；换图换 key、同 `target` 相同字节拒绝 | 别名可空可重名，证据与 E 需要稳定的能力指代；C 的 `element_key` 是业务标识，D 来生成 | 用户填 `elementKey`；以数组下标指代能力 | 审查修订（刘学奎 2026-11-16 采纳） |
+| JP-D33 | 账号级「每能力一个结果」由 D 在聚合阶段算好存 `ability_results`，第四态 `skipped` 只用于展示、不进判定枚举（D-D23，JP-22） | `e-metrics-lite` 的账号维度需要；规则复用 `contentOutcome`，不在下游重写；`skipped` 不进 CHECK 以免污染三值逻辑 | 下游从 `run_contents.evidence` 自行重算（规则两处漂移；内容级行过保留期后旧执行没有账号维度）；把 `skipped` 加进 `JUDGEMENT_OUTCOMES`（改动 CHECK、影响 E 的投影枚举） | 审查修订（刘学奎 2026-11-19 采纳） |
 
 ## 14. Open items
 

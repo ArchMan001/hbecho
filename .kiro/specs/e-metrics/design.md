@@ -780,7 +780,7 @@ rows = projection_hits(p) where 范围 ∧ 板块 ∧ 筛选
   查看者没有 D 要求的权限（`rule.definition.read` + 对该内容的 `data.content.read` 范围，如 `store_staff`）→ 不展示入口，不报错
 ```
 
-- 行集 = 内容级 `final='pass'`；不含未命中（E-D02 / E-D09）；
+- 行集 = 内容级 `final='pass'`；不含未命中（E-D02 / E-D09；全量明细由 `e-metrics-lite` 交付，E-D23，2026-11-19，不在本视图）；
 - 同一作品在不同账号下各一行（A 按账号保存，D-23），页面固定说明；
 - 分页 keyset `(published_at desc, content_id)`，单页 ≤ 100。
 
@@ -1094,7 +1094,7 @@ export function composeDownstream(parts: PlanDownstream[]): PlanDownstream {
 ## 17. 明确不做与已知上限
 
 - 不做增量重算、多投影并行对比、投影分叉；
-- 不做 `n_day`、全量内容明细、自由看板、排行榜、地图、看板导出图片；
+- 不做 `n_day`、全量内容明细（改由 `e-metrics-lite` 交付，E-D23）、自由看板、排行榜、地图、看板导出图片；
 - 不做业务自建模板、个人视图、拖拽列序；
 - 不做 CSV / PDF / 图片导出、定时推送；
 - 不做跨对象聚合与指标 DSL；

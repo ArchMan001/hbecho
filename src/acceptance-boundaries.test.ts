@@ -74,7 +74,7 @@ const code = (p: string) => text(p).replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^
 describe("B-AX-6：业务代码只检查 Capability，不写角色条件", () => {
   // 页面里的角色字面量只用于「角色名展示」和「表单选项 / 筛选芯片」，授权判断一律 ctx.capabilities.has(...)。
   // 白名单精确到这几个文件，页面新增文件出现角色字面量会被这条拦住，由人确认它不是在做授权判断。
-  const APP_DISPLAY_ONLY = new Set(["app/(app)/users/_scope.ts", "app/(app)/users/[id]/page.tsx", "app/(app)/users/page.tsx", "app/_lib/labels.ts", "app/_components/user-forms.tsx"]);
+  const APP_DISPLAY_ONLY = new Set(["app/(app)/users/_scope.ts", "app/(app)/users/[id]/page.tsx", "app/(app)/users/page.tsx", "app/_lib/labels.ts", "app/_components/user-forms.tsx", "app/(app)/results/page.tsx", "app/(app)/reports/[planId]/page.tsx"]);
   it("四个角色字面量只出现在 access-control、授权表 schema、access CLI 与页面的几个展示文件里", () => {
     const allowed = (r: string) => r.startsWith("modules/access-control/") || r === "db/schema/access.ts" || r.startsWith("worker/access-") || APP_DISPLAY_ONLY.has(r);
     const offenders = nonTestSources.filter((p) => !allowed(rel(p)) && /\b(platform_admin|hq_manager|branch_manager|store_staff)\b/.test(code(p))).map(rel);

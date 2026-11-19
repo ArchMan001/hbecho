@@ -124,6 +124,33 @@ export const accountRequirementEnabled = (cfg: Config): boolean => accountAbilit
 /** 内容达标门槛：at_least_n，N = quantity ?? 1。 */
 export const contentThresholdN = (cfg: Config): number => cfg.layer1.quantity?.n ?? 1;
 
+// ---- 条件清单（给下游「每个条件一列」用；e-metrics-lite JP-22）------------------------------------------------
+export type ConditionKind = "text" | "hashtags" | "duration" | "whole_image" | "image_element" | "asr" | "comment";
+export interface ConditionDesc {
+  /** 稳定 key：`l1.<idx>`（第 1 层按「文本 → 话题 → 时长」展平后的位置，与 evidence.l1[].idx 同一个编号）/ `l2.<abilityId>` / `l3` / `comment` */
+  key: string;
+  layer: 1 | 2 | 3 | "comment";
+  kind: ConditionKind;
+  target: Ability["target"] | null;
+  /** 头像、主页背景按账号算，其余按内容算 */
+  subject: "content" | "account";
+  alias: string | null;
+}
+/**
+ * 判定配置里每个可展示的条件，按展示顺序（层序）：第 1 层（文本、话题、时长）→ 第 2 层（按配置顺序，封面 / 头像 / 主页背景混排）→ 第 3 层 → 评论。
+ * 第 1 层的 idx 必须与 runner 的 layer1 阶段 `conds.map((c, idx) => …)` 一致（文本、话题、时长展平），契约测试断言它。
+ */
+export function conditionsOf(cfg: Config): ConditionDesc[] {
+  const out: ConditionDesc[] = [];
+  let idx = 0;
+  for (const t of cfg.layer1.text) out.push({ key: `l1.${idx++}`, layer: 1, kind: "text", target: null, subject: "content", alias: t.alias ?? null });
+  for (const h of cfg.layer1.hashtags) out.push({ key: `l1.${idx++}`, layer: 1, kind: "hashtags", target: null, subject: "content", alias: h.alias ?? null });
+  if (cfg.layer1.duration) out.push({ key: `l1.${idx++}`, layer: 1, kind: "duration", target: null, subject: "content", alias: cfg.layer1.duration.alias ?? null });
+  for (const a of cfg.layer2.abilities) out.push({ key: `l2.${a.abilityId}`, layer: 2, kind: a.kind as ConditionKind, target: a.target, subject: a.target === "cover" ? "content" : "account", alias: a.alias ?? null });
+  if (cfg.contentRequirement?.layer3) out.push({ key: "l3", layer: 3, kind: "asr", target: null, subject: "content", alias: cfg.contentRequirement.layer3.alias ?? null });
+  if (cfg.commentRequirement) out.push({ key: "comment", layer: "comment", kind: "comment", target: null, subject: "content", alias: cfg.commentRequirement.alias ?? null });
+  return out;
+}
 // ---- 推导 C 监控段的信号集合 ---------------------------------------------------------------------------------
 
 export interface SegmentItem {

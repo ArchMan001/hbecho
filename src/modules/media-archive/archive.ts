@@ -7,7 +7,7 @@
 //  - 下载失败：上一快照有已验证资产 → carried_forward（保留本轮失败码，不算本轮成功）；否则 failed；
 //  - 有界重试：同一次运行内对可重试错误最多 2 次；每轮之间再试；最多 3 轮。签名 URL 过期需要新地址，不用旧地址重试。
 import { createHash } from "node:crypto";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq, isNotNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/mysql-core";
 import type { Db, DbTx } from "../../db/client";
 import { accountProfileSnapshots, contentSnapshots, contents, mediaAssets, mediaReferences, ossObjects, syncBatches, syncTasks } from "../../db/schema";
@@ -560,4 +560,90 @@ export async function putVerified(store: ObjectStore, key: string, bytes: Uint8A
 /** 快手封面的标准化来源：CDN 的 x-oss-process 转换为 540 宽 JPEG（D-62）。原始地址已带查询串时用 & 追加。 */
 export function kuaishouCoverTransformUrl(source: string): string {
   return `${source}${source.includes("?") ? "&" : "?"}x-oss-process=image/format,jpg/resize,w_540`;
+}
+
+// ───────────────────────── 回填：标准化衍生图因转换服务不可用而失败的引用 ─────────────────────────
+export interface RenormalizeReport {
+  /** 找到的待补引用数（原图已归档，衍生图 failed / converter_unavailable）。 */
+  examined: number;
+  converted: number;
+  /** 同一份原图已有衍生图，直接复用（不再调用转换服务）。 */
+  reused: number;
+  /** 原图读不回或摘要不符，保持失败状态不动。 */
+  skipped: number;
+  /** 转换服务认为这张图无法解码：衍生图改记 convert_failed（终态）。 */
+  failed: number;
+  /** 转换服务仍不可用：立即停止，剩余引用保持原状，修好服务后再跑。 */
+  stoppedEarly: boolean;
+}
+/**
+ * 运维回填（能力服务部署后跑一次）：对「原图已归档、衍生图因 converter_unavailable 失败」的引用补转换。
+ * 不重新下载（供应商地址早已过期），原图从正式媒资桶读回并核对 SHA-256；衍生图按内容寻址，同一份原图只转换一次。
+ * 不走任务与 fencing token：它不属于任何批次，每个引用一个短事务，重复运行幂等（已补好的不再出现在候选里）。
+ */
+export async function renormalizeUnavailable(
+  deps: Pick<MediaArchiveDeps, "db" | "clock" | "mediaStore" | "location" | "converter">,
+  o: { limit?: number; dryRun?: boolean } = {},
+): Promise<RenormalizeReport> {
+  const { db, clock } = deps;
+  const orig = alias(mediaReferences, "o");
+  const norm = alias(mediaReferences, "n");
+  const candidates = await db
+    .select({ ref: orig })
+    .from(orig)
+    .innerJoin(
+      norm,
+      and(
+        sql`${norm.profileSnapshotId} <=> ${orig.profileSnapshotId}`,
+        sql`${norm.contentSnapshotId} <=> ${orig.contentSnapshotId}`,
+        eq(norm.slotIndex, orig.slotIndex),
+        sql`${norm.role} = CONCAT(${orig.role}, '_normalized')`,
+      ),
+    )
+    .where(and(eq(orig.archiveStatus, "archived"), isNotNull(orig.mediaAssetId), eq(norm.archiveStatus, "failed"), eq(norm.lastErrorCode, "converter_unavailable")))
+    .orderBy(orig.mediaReferenceId)
+    .limit(o.limit ?? 5000);
+  const report: RenormalizeReport = { examined: candidates.length, converted: 0, reused: 0, skipped: 0, failed: 0, stoppedEarly: false };
+  if (o.dryRun) return report;
+  const memo = new Map<string, { sha: string; bytes: Uint8Array | null; width: number; height: number }>();
+  for (const { ref } of candidates) {
+    const [asset] = await db.select().from(mediaAssets).where(eq(mediaAssets.mediaAssetId, ref.mediaAssetId!));
+    const [obj] = asset ? await db.select().from(ossObjects).where(eq(ossObjects.ossObjectId, asset.ossObjectId)) : [];
+    const originalSha = asset?.sha256.toString("hex");
+    let derived = originalSha ? (memo.get(originalSha) ?? (await existingDerivative(db, originalSha))) : null;
+    let reused = derived !== null;
+    if (!derived) {
+      const stored = obj ? await deps.mediaStore.get(obj.objectKey) : null;
+      if (!asset || !stored || hex(stored) !== originalSha) {
+        report.skipped++;
+        continue;
+      }
+      try {
+        const out = await deps.converter.toNormalizedJpeg({ bytes: stored, mimeType: asset.mimeType });
+        if (sniffImage(out.bytes) !== "image/jpeg") throw new ConverterError("unsupported", "转换结果不是 JPEG");
+        const sha = hex(out.bytes);
+        if (!(await assetBySha(db, sha))) await putVerified(deps.mediaStore, mediaKey(sha), out.bytes);
+        derived = { sha, bytes: out.bytes, width: out.width, height: out.height };
+      } catch (e) {
+        if (e instanceof ConverterError && e.kind === "unsupported") {
+          await db.transaction((tx) => upsertNormalized(tx, ref, { status: "failed", assetId: null, error: "convert_failed", carried: false }, clock.now()));
+          report.failed++;
+          continue;
+        }
+        report.stoppedEarly = true; // 服务不可用 / 对象写入失败：不要对剩下的引用重复冲击
+        break;
+      }
+      reused = false;
+    }
+    memo.set(originalSha!, derived);
+    const done = derived;
+    await db.transaction(async (tx) => {
+      const now = clock.now();
+      const assetId = await ensureAsset(tx, deps, { sha: done.sha, byteLength: done.bytes?.byteLength ?? 0, mime: "image/jpeg", width: done.width, height: done.height, now, knownOnly: done.bytes === null });
+      await upsertNormalized(tx, ref, { status: "archived", assetId, error: null, carried: false }, now);
+    });
+    if (reused) report.reused++;
+    else report.converted++;
+  }
+  return report;
 }

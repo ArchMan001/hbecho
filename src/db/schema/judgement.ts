@@ -181,6 +181,8 @@ export const runParticipants = mysqlTable(
     // 各类原因计数；含 like_not_value
     reasonDetail: json("reason_detail"),
     accountDetail: json("account_detail"),
+    // e-metrics-lite（JP-22、D-D23）：每个条件一个结果 [{ key, result: success|not_met|unobtained|skipped, reason? }]；聚合阶段写入；旧执行为 NULL。skipped 只用于展示，不进上面四个结果列的 CHECK
+    abilityResults: json("ability_results"),
     staleUsed: boolean("stale_used").notNull().default(false),
     state: varchar("state", { length: 16 }).notNull().default("pending"),
   },

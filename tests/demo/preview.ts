@@ -13,12 +13,13 @@ import { execSync } from "node:child_process";
 import { createServer } from "node:http";
 import { eq } from "drizzle-orm";
 import { createDb, createPool } from "../../src/db/client";
-import { activityPlans, authAccounts, brands, courses, courseTags, dealers, judgementRuns, sectors, stores, tagCategories, tags } from "../../src/db/schema";
+import { accountProfileSnapshots, activityPlans, authAccounts, brands, contentSnapshots, courses, courseTags, dealers, judgementRuns, mediaReferences, ossObjects, runContents, runParticipants, sectors, staffAccountAssignments, stores, syncBatches, tagCategories, tags } from "../../src/db/schema";
+import { assembleReport } from "../../src/modules/report-detail";
 import { assembleSquare } from "../../src/modules/video-square";
 import { accessEnv, insertAccessUser } from "../harness/access";
 import { resetData } from "../harness/db";
 import { addContent, addListTask, addParticipant, judgementEnv, judgementWorld, type JudgementEnv } from "../harness/judgement";
-import { insertAccount, insertAssignment } from "../harness/factories";
+import { insertAccount, insertAssignment, insertBatch, insertMediaAsset, insertProfileSnapshot } from "../harness/factories";
 import { insertPlan, insertRosterEntry, insertStaff, insertStore, T0 } from "../harness/plan";
 import { insertSector } from "../harness/roster";
 import { seedSquareAccount, seedSquareWork, type WorkSpec } from "../harness/square";
@@ -319,6 +320,33 @@ const fakeCovers = {
 };
 (globalThis as unknown as Record<symbol, unknown>)[Symbol.for("hbecho.square.deps")] = assembleSquare({ db, clock: { now: () => new Date() }, env: process.env, covers: fakeCovers });
 void plan2;
+// ---- 活动计划判定结果（e-metrics-lite）：给「618 主推视频考核」再执行几次，做出「最近 / 旧执行（无账号能力结果）/ 内容已过保留期」三种状态 ----
+const rerun = async (key: string) => {
+  const r = await e.runs.execute(e.creator, p1, { key });
+  await e.runs.drive(r.runId, "demo", e.sleep);
+  return r.runId;
+};
+const xPruned = await rerun("demo-1c"); // 内容级行已被保留期清理
+await db.delete(runContents).where(eq(runContents.runId, xPruned));
+await db.update(judgementRuns).set({ phaseDetail: { contentsPruned: true } as never }).where(eq(judgementRuns.runId, xPruned));
+const xOld = await rerun("demo-1d"); // 早于「账号能力结果」功能的旧执行
+await db.update(runParticipants).set({ abilityResults: null }).where(eq(runParticipants.runId, xOld));
+void (await rerun("demo-1e")); // 最近一次
+// 主页快照（昵称、粉丝）：每位参与专员一条，批次在执行冻结之前已终态；封面：前几条内容各一张（预览用渐变图）
+for (const [i, pp] of people.entries()) {
+  const [asg] = await db.select().from(staffAccountAssignments).where(eq(staffAccountAssignments.accountId, pp.accountId));
+  const b = await insertBatch(db, day(10));
+  await db.update(syncBatches).set({ finishedAt: day(10), status: "succeeded" }).where(eq(syncBatches.batchId, b));
+  const snap = await insertProfileSnapshot(db, { batchId: b, accountId: pp.accountId, assignmentId: asg!.assignmentId, now: day(10) });
+  await db.update(accountProfileSnapshots).set({ nickname: `日立中央空调（${i === 0 ? "老赵" : names[i - 1]}店）`, followerValue: BigInt(300 + i * 137), likeValue: BigInt(2000 + i * 811), likeState: "value", postValue: BigInt(40 + i * 7), postState: "value" }).where(eq(accountProfileSnapshots.profileSnapshotId, snap));
+}
+const someSnapshots = await db.select({ id: contentSnapshots.contentSnapshotId }).from(contentSnapshots).orderBy(contentSnapshots.contentSnapshotId).limit(8);
+for (const [i, sn] of someSnapshots.entries()) {
+  const asset = await insertMediaAsset(db, { key: `preview/cover-${i}.jpg`, now: day(10) });
+  await db.update(ossObjects).set({ status: "available", byteLength: 10n, sha256: Buffer.alloc(32, i + 1), verifiedAt: day(10) });
+  await db.insert(mediaReferences).values({ contentSnapshotId: sn.id, role: "cover_normalized", slotIndex: 0, observedAt: day(10), mediaAssetId: asset, archiveStatus: "archived", isCarriedForward: false, createdAt: day(10), updatedAt: day(10) });
+}
+(globalThis as unknown as Record<symbol, unknown>)[Symbol.for("hbecho.report-detail.web")] = assembleReport({ db, env: process.env, outcomes: e.outcomes, media: fakeCovers });
 // ---- 页面进程用的 judgement 单例 + 代替 `judgement serve` 的试跑循环 ----------------------------------------------
 (globalThis as unknown as Record<symbol, unknown>)[Symbol.for("hbecho.judgement.web")] = { views: e.views, versions: e.versions, runs: e.runs, outcomes: e.outcomes, plans: e.plans, facts: e.facts, authz: e.authz };
 // 预览用 FakeClock：页面上的圈定 / 试跑用真实休眠等下一个 tick，所以时钟要随真实时间前进（生产用真实时钟）

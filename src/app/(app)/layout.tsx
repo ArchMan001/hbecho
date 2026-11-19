@@ -17,6 +17,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   if (ctx.capabilities.has("rule.definition.read")) groups.push({ label: "规则", items: [{ href: "/judgement", label: "判定计划", icon: "clipboard" }] });
   const dataItems: NavGroup["items"] = [];
   if (ctx.capabilities.has("data.account.manage")) dataItems.push({ href: "/accounts", label: "账号与监控", icon: "activity" });
+  // 活动计划判定结果（e-metrics-lite，刘学奎 2026-11-19）：report.read 四个角色都有，门店专员也有；进入后只看到数据范围内的行
+  if (ctx.capabilities.has("report.read")) dataItems.push({ href: "/results", label: "活动计划判定结果", icon: "layers", also: ["/reports"] });
   if (ctx.capabilities.has("data.master_data.import") || ctx.capabilities.has("data.master_data.structure")) dataItems.push({ href: "/master-data", label: "主数据", icon: "database", also: ["/master-data/import", "/master-data/batches"] });
   // 视频广场（F4）：四个角色都有 square.read；与「数据」同组，门店专员也有入口
   if (ctx.capabilities.has("square.read")) dataItems.push({ href: "/square", label: "视频广场", icon: "play" });

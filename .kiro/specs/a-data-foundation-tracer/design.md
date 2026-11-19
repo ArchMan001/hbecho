@@ -707,7 +707,7 @@ pnpm tracer cancel <root_task_id>
 - 每个 submission/poll/page/retry 都单独计数；
 - platform/action/mode、最大调用数、最大 polling、最大 pages、media bytes 和 deadline 有硬上限；
 - 成本估算使用 A v1.10 §6.2 的 1.0 点数：抖音主页 10/次、列表 10/页；小红书主页 15/次、列表 15/页；失败、超时、429 与异步轮询不计点；
-- 单价 0.02 元/点（2026-11-04 确认）；QPS 未知，并发由我方配置；预算按点数、调用数与金额三者控制；
+- 单价 0.01 元/点（2026-11-04 确认）；QPS 未知，并发由我方配置；预算按点数、调用数与金额三者控制；
 - 默认 fixture 路径网络禁用；
 - paid smoke 需要人工批准、显式 switch、allowlist 和固定预算；
 - 超预算先停止再记状态，不能先调用后告警；
@@ -805,7 +805,7 @@ smoke 独立于 CI，必须先显示并确认 capability、locator allowlist、c
 |---|---|---|
 | 1 | 生产认证 | `X-Api-Key`；生产开关由任务 9 的批准式 smoke 复核 |
 | 2 | 异步 profile 的 terminal schema、TTL、轮询参数 | 由任务 9 的 smoke 实测后定；未实测前异步保持 disabled，首版走同步 |
-| 3 | 单价与 QPS | 单价 0.02 元/点；QPS 未知，并发由我方配置 |
+| 3 | 单价与 QPS | 单价 0.01 元/点；QPS 未知，并发由我方配置 |
 | 4、5 | 入口清洗与解析策略 | 单一策略：最小清洗（截掉路径之后的分享文案）后直接调 `media_user_info`；其返回即主页投影来源；成功路径调用数 = 主页 1 + 列表 1 |
 | 6 | 调用入口 | CLI（§14），不做 HTTP |
 | 7 | 是否请求第二页 | 不请求 |

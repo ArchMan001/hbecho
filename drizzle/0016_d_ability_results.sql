@@ -1,0 +1,1 @@
+ALTER TABLE `run_participants` ADD `ability_results` json;

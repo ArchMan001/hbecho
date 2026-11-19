@@ -596,7 +596,7 @@
 
 ## 2026-11-13 · production capability 放行（刘学奎 2026-11-12 批准）
 
-- **批准记录**：刘学奎，2026-11-12，范围＝**抖音与小红书的全部 action**，预算上限 1 万元，有效期一年。证据沿用 2026-11-04 的批准式 smoke（a-data-foundation-tracer acceptance ENV-2）。
+- **批准记录**：刘学奎，2026-11-12，范围＝**抖音与小红书的全部 action**，预算上限 1 万元，有效期一年（2026-11-19 刘学奎调整：年度上限 3 万元，单次采集 / 单批上限 20000 点）。证据沿用 2026-11-04 的批准式 smoke（a-data-foundation-tracer acceptance ENV-2）。
 - **实现**：`capability.ts` 把 production 行从「全部 disabled」改为按显式批准名单 `PRODUCTION_APPROVAL` 放行——平台在名单内且 `observedOutcome === "succeeded"` 才 `approved`，并带 `approval { by, at, ref }`；快手与 `provider_failed` 的 tuple 仍 `disabled`（gate 另行拒绝 `provider_failed`）。`a-full-sync/requirements.md` FS-16.2 已按修订规则加删除线并注明。
 - **测试**：`capability.test.ts` 改为断言批准名单放行、快手与 provider_failed 拒绝；`sync-runner-wiring.test.ts` 改为「已批准允许启动 / 全未批准仍拒绝」；原「生产全 disabled」的集成断言改用未登记的 staging 或改为正向验证（拒绝路径由 capability 单测覆盖）。
 - **未做**：sync worker 只在 runbook §10.3 写了部署步骤（独立 `sync.env`、预算与回滚），**没有在测试 ECS 上实际部署**，也没有发起任何真实付费调用。

@@ -5,11 +5,13 @@ import type { Db } from "../../db/client";
 import { judgementPlanVersions, judgementPlans, judgementRuns, runContents, runParticipants } from "../../db/schema";
 import { constraintOf, type AuthContext, type ResourceConstraint } from "../access-control";
 import type { Clock } from "../raw-capture/ports";
-import { contentRequirementEnabled, contentThresholdN, parseConfig } from "./config";
+import { conditionsOf, contentRequirementEnabled, contentThresholdN, parseConfig, type ConditionDesc } from "./config";
+import type { AbilityResult } from "./engine/pure/ability";
 import type { JudgementConfig } from "./env";
 import { JudgementError } from "./errors";
 import type { Facts } from "./facts";
 import { loadPlan, type JudgementDeps } from "./plans";
+import type { JudgementPlanRef } from "./authz";
 import { createRunOps, type RunOps } from "./run-ops";
 
 export interface ExecutionDescriptor {
@@ -36,6 +38,8 @@ export interface ExecutionDescriptor {
     contentThresholdN: number;
     abilities: Array<{ abilityId: string; kind: string; target: string; threshold: string; alias: string | null }>;
     commentMethod: unknown;
+    /** 每个可展示条件的清单（层序；key 与 evidence 的编号一一对应）；下游「每个条件一列」用（JP-22） */
+    conditions: ConditionDesc[];
   };
 }
 type Part = typeof runParticipants.$inferSelect;
@@ -51,12 +55,25 @@ export interface ParticipantFact {
   syncComplete: boolean | null;
   syncReason: string | null;
   staleUsed: boolean;
+  /** 每个条件一个结果（D-D23）；旧执行（早于 JP-22）为 null */
+  abilityResults: AbilityResult[] | null;
 }
 type Row = typeof runContents.$inferSelect;
+/** 内容证据白名单：只有状态、命中的配置关键词 / 话题、秒数、分数、结论；不含正文、评论原文、作者、第 3 层的模型理由与依赖明细。 */
+export interface ContentEvidence {
+  l1?: Array<{ idx: number; state: string; hit?: string[]; seconds?: string; reason?: string }>;
+  l2?: Array<{ id: string; state: string; score?: string; reason?: string }>;
+  l3?: { state: string; verdict?: "meets" | "not_meets" };
+}
 export interface ContentFact {
   executionId: bigint;
   accountId: bigint;
   contentId: bigint;
+  /** 本次执行冻结的内容快照（标题、互动值等由下游按它读，不读 current） */
+  contentSnapshotId: bigint;
+  staffId: bigint;
+  org: { regionId: bigint; branchId: bigint; sectorId: bigint; storeId: bigint; dealerId: bigint; brandId: bigint };
+  evidence: ContentEvidence;
   publishedAt: Date | null;
   like: { value: bigint | null; state: string };
   layer1: { selected: boolean | null; rank: number | null };
@@ -68,10 +85,54 @@ export interface ContentFact {
   stale: boolean;
   comments: { total: number | null; pass: number | null; unobtained: number | null };
 }
-export interface CircleRow extends ContentFact {
-  staffId: bigint;
+export type CircleRow = ContentFact;
+/** 导航落地页的一行：判定计划与它最近一次已完成的执行。回收站里的活动计划不出现。 */
+export interface PlanOverview {
+  planId: bigint;
+  alias: string;
+  status: string;
+  activityPlanId: bigint;
+  activityPlanName: string;
+  platform: string;
+  ref: JudgementPlanRef;
+  latest: { executionId: bigint; completedAt: Date; version: number } | null;
+}
+/** 组织过滤：按冻结的组织链；staffIds 为空数组表示没有任何专员（返回空，不是不过滤）。 */
+export interface OrgFilter {
+  regionId?: bigint;
+  branchId?: bigint;
+  sectorId?: bigint;
+  storeId?: bigint;
+  staffIds?: readonly bigint[];
 }
 const PAGE = 500;
+const LIST_MAX = 1000;
+const isObj = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
+const strs = (x: unknown): string[] | undefined => (Array.isArray(x) && x.every((v) => typeof v === "string") ? (x as string[]) : undefined);
+/** 白名单投影：只放行已知字段，其余一律丢弃（证据里将来加字段也不会默认外泄）。 */
+export function publicEvidence(raw: unknown): ContentEvidence {
+  const out: ContentEvidence = {};
+  if (!isObj(raw)) return out;
+  if (Array.isArray(raw.l1)) {
+    out.l1 = raw.l1.filter(isObj).map((e) => ({ idx: Number(e.idx), state: String(e.state), ...(strs(e.hit) ? { hit: strs(e.hit)! } : {}), ...(typeof e.seconds === "string" ? { seconds: e.seconds } : {}), ...(typeof e.reason === "string" ? { reason: e.reason } : {}) }));
+  }
+  const abilities = isObj(raw.l2) ? raw.l2.abilities : undefined;
+  if (Array.isArray(abilities)) {
+    out.l2 = abilities.filter(isObj).map((e) => ({ id: String(e.id), state: String(e.state), ...(typeof e.score === "string" ? { score: e.score } : {}), ...(typeof e.reason === "string" ? { reason: e.reason } : {}) }));
+  }
+  if (isObj(raw.l3)) out.l3 = { state: String(raw.l3.state), ...(raw.l3.verdict === "meets" || raw.l3.verdict === "not_meets" ? { verdict: raw.l3.verdict } : {}) };
+  return out;
+}
+const filterWhere = (f: OrgFilter): SQL | undefined =>
+  and(
+    f.regionId === undefined ? undefined : eq(runParticipants.regionId, f.regionId),
+    f.branchId === undefined ? undefined : eq(runParticipants.branchId, f.branchId),
+    f.sectorId === undefined ? undefined : eq(runParticipants.sectorId, f.sectorId),
+    f.storeId === undefined ? undefined : eq(runParticipants.storeId, f.storeId),
+    f.staffIds === undefined ? undefined : f.staffIds.length ? inArray(runParticipants.staffId, [...f.staffIds]) : sql`1 = 0`,
+  );
+const orgOrder = [asc(runParticipants.brandId), asc(runParticipants.regionId), asc(runParticipants.branchId), asc(runParticipants.sectorId), asc(runParticipants.storeId), asc(runParticipants.staffId)];
+const clampPage = (p: { offset: number; limit: number }) => ({ offset: Math.max(0, Math.floor(p.offset)), limit: Math.min(LIST_MAX, Math.max(0, Math.floor(p.limit))) });
 
 export const outcomeWhere = (c: ResourceConstraint): SQL | null => {
   if (c.empty) return null;
@@ -121,6 +182,7 @@ export function createOutcomes(deps: JudgementDeps & { config: JudgementConfig; 
           contentThresholdN: contentThresholdN(cfg),
           abilities: cfg.layer2.abilities.map((a) => ({ abilityId: a.abilityId, kind: a.kind, target: a.target, threshold: a.threshold, alias: a.alias ?? null })),
           commentMethod: cfg.commentRequirement?.method ?? null,
+          conditions: conditionsOf(cfg),
         },
       });
     }
@@ -169,11 +231,16 @@ export function createOutcomes(deps: JudgementDeps & { config: JudgementConfig; 
     syncComplete: r.syncComplete,
     syncReason: r.syncReason,
     staleUsed: r.staleUsed,
+    abilityResults: Array.isArray(r.abilityResults) ? (r.abilityResults as AbilityResult[]) : null,
   });
-  const contentFact = (r: Row): ContentFact => ({
+  const contentFact = (r: Row, p: Part): ContentFact => ({
     executionId: r.runId,
     accountId: r.accountId,
     contentId: r.contentId,
+    contentSnapshotId: r.contentSnapshotId,
+    staffId: p.staffId,
+    org: { regionId: p.regionId, branchId: p.branchId, sectorId: p.sectorId, storeId: p.storeId, dealerId: p.dealerId, brandId: p.brandId },
+    evidence: publicEvidence(r.evidence),
     publishedAt: r.publishedAt,
     like: { value: r.likeValue, state: r.likeState },
     layer1: { selected: r.layer1Selected, rank: r.layer1Rank },
@@ -185,45 +252,130 @@ export function createOutcomes(deps: JudgementDeps & { config: JudgementConfig; 
     comments: { total: r.cmTotal, pass: r.cmPass, unobtained: r.cmUnobtained },
   });
 
-  async function* streamParticipants(executionId: bigint, constraint: ResourceConstraint): AsyncGenerator<ParticipantFact> {
+  async function* streamParticipants(executionId: bigint, constraint: ResourceConstraint, filter: OrgFilter = {}): AsyncGenerator<ParticipantFact> {
     await completedRun(executionId, "execution");
     const where = outcomeWhere(constraint);
     if (!where) return;
     let cursor: bigint | null = null;
     for (;;) {
-      const rows: Part[] = await db.select().from(runParticipants).where(and(eq(runParticipants.runId, executionId), where, cursor === null ? undefined : gt(runParticipants.accountId, cursor))).orderBy(asc(runParticipants.accountId)).limit(PAGE);
+      const rows: Part[] = await db.select().from(runParticipants).where(and(eq(runParticipants.runId, executionId), where, filterWhere(filter), cursor === null ? undefined : gt(runParticipants.accountId, cursor))).orderBy(asc(runParticipants.accountId)).limit(PAGE);
       for (const r of rows) yield partFact(r);
       if (rows.length < PAGE) return;
       cursor = rows[rows.length - 1]!.accountId;
     }
   }
 
-  async function* pageContents(runId: bigint, constraint: ResourceConstraint): AsyncGenerator<{ row: Row; staffId: bigint }> {
+  async function* pageContents(runId: bigint, constraint: ResourceConstraint, filter: OrgFilter = {}): AsyncGenerator<{ row: Row; part: Part }> {
     const where = outcomeWhere(constraint);
     if (!where) return;
     let cursor: bigint | null = null;
     for (;;) {
-      const rows: Array<{ c: Row; staffId: bigint }> = await db
-        .select({ c: runContents, staffId: runParticipants.staffId })
+      const rows: Array<{ c: Row; p: Part }> = await db
+        .select({ c: runContents, p: runParticipants })
         .from(runContents)
         .innerJoin(runParticipants, and(eq(runParticipants.runId, runContents.runId), eq(runParticipants.accountId, runContents.accountId)))
-        .where(and(eq(runContents.runId, runId), where, cursor === null ? undefined : gt(runContents.contentId, cursor)))
+        .where(and(eq(runContents.runId, runId), where, filterWhere(filter), cursor === null ? undefined : gt(runContents.contentId, cursor)))
         .orderBy(asc(runContents.contentId))
         .limit(PAGE);
-      for (const r of rows) yield { row: r.c, staffId: r.staffId };
+      for (const r of rows) yield { row: r.c, part: r.p };
       if (rows.length < PAGE) return;
       cursor = rows[rows.length - 1]!.c.contentId;
     }
   }
-  async function* streamContents(executionId: bigint, constraint: ResourceConstraint): AsyncGenerator<ContentFact> {
+  async function* streamContents(executionId: bigint, constraint: ResourceConstraint, filter: OrgFilter = {}): AsyncGenerator<ContentFact> {
     const { run } = await completedRun(executionId, "execution");
     if ((run.phaseDetail as { contentsPruned?: boolean } | null)?.contentsPruned) throw new JudgementError("conflict", "content_rows_pruned", "这次执行的内容级结果已按保留期清理（参与专员与汇总仍保留）");
-    for await (const r of pageContents(executionId, constraint)) yield contentFact(r.row);
+    for await (const r of pageContents(executionId, constraint, filter)) yield contentFact(r.row, r.part);
   }
   /** 第 1 页下载（经 E6）：圈定运行的全部行——被选中的、未选中的（skipped）、未通过 / 未获取的，都带结果与原因。 */
   async function* streamCircleRows(runId: bigint, constraint: ResourceConstraint): AsyncGenerator<CircleRow> {
     await completedRun(runId, "circle");
-    for await (const r of pageContents(runId, constraint)) yield { ...contentFact(r.row), staffId: r.staffId };
+    for await (const r of pageContents(runId, constraint)) yield contentFact(r.row, r.part);
+  }
+
+  /**
+   * 该判定计划已 completed 的执行，completed_at 倒序（e-metrics-lite JP-22）。回收站里的活动计划的结果不可见（与 describe 一致）。
+   * 只读、不做能力校验：与 stream* 同构，由调用方负责 report.read 与范围约束。
+   */
+  async function executionsOf(planId: bigint): Promise<ExecutionDescriptor[]> {
+    const rows = await db
+      .select()
+      .from(judgementRuns)
+      .where(and(eq(judgementRuns.planId, planId), eq(judgementRuns.runKind, "execution"), eq(judgementRuns.status, "completed")))
+      .orderBy(desc(judgementRuns.completedAt), desc(judgementRuns.runId));
+    return describeRows(rows);
+  }
+
+  /**
+   * 授权引用（JP-22）：判定计划不存在或所属活动计划在回收站 → not_found。
+   * 没有调用者身份，**不判断范围**：越范围由调用方 authorize(report.read, ref) 表现为 not_found。
+   */
+  async function planRefOf(planId: bigint): Promise<{ ref: JudgementPlanRef; alias: string; activityPlanId: bigint; activityPlanName: string; platform: string }> {
+    const { plan, ref, activity } = await loadPlan(deps, planId);
+    return { ref, alias: plan.alias, activityPlanId: plan.activityPlanId, activityPlanName: activity.planName, platform: activity.platformCode };
+  }
+
+  /**
+   * 全部判定计划的概览（e-metrics-lite 的导航落地页）：只读、不做能力校验、**不判断范围**——调用方对每一项用 `ref` 做 authorize(report.read) 再决定可见性。
+   * 规模：判定计划是「每个活动计划几个」，全表读一次可以接受；变成上千再改成按范围查询。
+   */
+  async function plansOverview(): Promise<PlanOverview[]> {
+    const plans = await db.select().from(judgementPlans).orderBy(asc(judgementPlans.alias), asc(judgementPlans.planId));
+    if (plans.length === 0) return [];
+    const live = await facts.liveActivityPlans([...new Set(plans.map((p) => p.activityPlanId))]);
+    const acts = await facts.activityPlansOf([...live]);
+    const branches = new Map<bigint, bigint[]>();
+    const runs = await db
+      .select({ planId: judgementRuns.planId, runId: judgementRuns.runId, version: judgementRuns.version, completedAt: judgementRuns.completedAt })
+      .from(judgementRuns)
+      .where(and(eq(judgementRuns.runKind, "execution"), eq(judgementRuns.status, "completed")))
+      .orderBy(desc(judgementRuns.completedAt), desc(judgementRuns.runId));
+    const latest = new Map<bigint, { executionId: bigint; completedAt: Date; version: number }>();
+    for (const r of runs) if (!latest.has(r.planId)) latest.set(r.planId, { executionId: r.runId, completedAt: r.completedAt!, version: r.version });
+    const out: PlanOverview[] = [];
+    for (const p of plans) {
+      const a = acts.get(p.activityPlanId);
+      if (!a || !live.has(p.activityPlanId) || a.status === "deleted") continue;
+      let joined = branches.get(p.activityPlanId);
+      if (!joined) branches.set(p.activityPlanId, (joined = await facts.joinedBranchIds(p.activityPlanId)));
+      out.push({ planId: p.planId, alias: p.alias, status: p.status, activityPlanId: p.activityPlanId, activityPlanName: a.planName, platform: a.platformCode, ref: { brandId: a.brandId, branchIds: joined, planCreatorActor: a.createdByActor }, latest: latest.get(p.planId) ?? null });
+    }
+    return out;
+  }
+
+  /** 偏移分页的内容行（组织过滤 + 总数）；总数与列表共用同一个 WHERE。排序：冻结组织 ID，再发布时间倒序、内容 ID。 */
+  async function listContents(executionId: bigint, constraint: ResourceConstraint, filter: OrgFilter, page: { offset: number; limit: number }): Promise<{ rows: ContentFact[]; total: number }> {
+    const { run } = await completedRun(executionId, "execution");
+    if ((run.phaseDetail as { contentsPruned?: boolean } | null)?.contentsPruned) throw new JudgementError("conflict", "content_rows_pruned", "这次执行的内容级结果已按保留期清理（参与专员与汇总仍保留）");
+    const scope = outcomeWhere(constraint);
+    if (!scope) return { rows: [], total: 0 };
+    const where = and(eq(runContents.runId, executionId), scope, filterWhere(filter));
+    const { offset, limit } = clampPage(page);
+    const join = and(eq(runParticipants.runId, runContents.runId), eq(runParticipants.accountId, runContents.accountId));
+    const [c] = await db.select({ n: sql<number>`COUNT(*)`.mapWith(Number) }).from(runContents).innerJoin(runParticipants, join).where(where);
+    if (limit === 0) return { rows: [], total: c?.n ?? 0 };
+    const rows = await db
+      .select({ c: runContents, p: runParticipants })
+      .from(runContents)
+      .innerJoin(runParticipants, join)
+      .where(where)
+      .orderBy(...orgOrder, desc(runContents.publishedAt), asc(runContents.contentId))
+      .limit(limit)
+      .offset(offset);
+    return { rows: rows.map((r) => contentFact(r.c, r.p)), total: c?.n ?? 0 };
+  }
+
+  /** 偏移分页的参与专员行（组织过滤 + 总数）。 */
+  async function listParticipants(executionId: bigint, constraint: ResourceConstraint, filter: OrgFilter, page: { offset: number; limit: number }): Promise<{ rows: ParticipantFact[]; total: number }> {
+    await completedRun(executionId, "execution");
+    const scope = outcomeWhere(constraint);
+    if (!scope) return { rows: [], total: 0 };
+    const where = and(eq(runParticipants.runId, executionId), scope, filterWhere(filter));
+    const { offset, limit } = clampPage(page);
+    const [c] = await db.select({ n: sql<number>`COUNT(*)`.mapWith(Number) }).from(runParticipants).where(where);
+    if (limit === 0) return { rows: [], total: c?.n ?? 0 };
+    const rows = await db.select().from(runParticipants).where(where).orderBy(...orgOrder).limit(limit).offset(offset);
+    return { rows: rows.map(partFact), total: c?.n ?? 0 };
   }
 
   /**
@@ -245,12 +397,12 @@ export function createOutcomes(deps: JudgementDeps & { config: JudgementConfig; 
       return { kind: "staff" as const, execution: descriptor, participant: partFact(p) };
     }
     const [r] = await db
-      .select({ c: runContents })
+      .select({ c: runContents, p: runParticipants })
       .from(runContents)
       .innerJoin(runParticipants, and(eq(runParticipants.runId, runContents.runId), eq(runParticipants.accountId, runContents.accountId)))
       .where(and(eq(runContents.runId, executionId), eq(runContents.contentId, target.contentId), where));
     if (!r) throw notFound();
-    const f = contentFact(r.c);
+    const f = contentFact(r.c, r.p);
     const ev = (r.c.evidence ?? {}) as Record<string, unknown>;
     const stoppedAt = f.stopLayer === null ? null : Number(f.stopLayer);
     return {
@@ -304,7 +456,7 @@ export function createOutcomes(deps: JudgementDeps & { config: JudgementConfig; 
     return { expiredRuns: gone.runs, prunedExecutions: pruned, prunedFailed };
   }
 
-  return { listCompleted, describe, streamParticipants, streamContents, streamCircleRows, explain, maintain };
+  return { listCompleted, describe, executionsOf, planRefOf, plansOverview, streamParticipants, streamContents, streamCircleRows, listContents, listParticipants, explain, maintain };
 }
 export type Outcomes = ReturnType<typeof createOutcomes>;
 export type { Facts };

@@ -325,11 +325,12 @@ describe("静态护栏（J6、J11、K15、A11、H16、L10）", () => {
     // （运行期断言见 audit.db.test 的综合场景：reasonCode 都匹配 /^[a-z0-9_.]+$/）
   });
 
-  it("K15：src/app 的路由只有 auth、health 与学习域的两个（进度上报、资料预览）", () => {
+  it("K15：src/app 的路由只有 auth、health、学习域的两个（进度上报、资料预览）与活动计划判定结果的导出", () => {
     const routes = all.filter((f) => f.startsWith(join(SRC, "app")) && /route\.ts$/.test(f)).map((f) => f.slice(join(SRC, "app").length + 1)).sort();
     // 学习域两个 Route Handler（g-learning-min 任务 6、7）：一个因 sendBeacon 不能走 server action，一个要流式内联返回文件；
     // 都是「认证 → 授权 → 转交 Module」的薄入口，授权与范围判断在 modules/learning
-    expect(routes).toEqual(["api/auth/[...all]/route.ts", "api/health/route.ts", "api/learning/courses/[id]/preview/route.ts", "api/learning/progress/route.ts"]);
+    // 活动计划判定结果的导出（e-metrics-lite）：要把 xlsx 流式写进响应、并按 guardExit(4) 在写出前拒绝，不能走 server action；同样是薄入口，授权与范围在 modules/report-detail
+    expect(routes).toEqual(["(app)/reports/[planId]/export/route.ts", "api/auth/[...all]/route.ts", "api/health/route.ts", "api/learning/courses/[id]/preview/route.ts", "api/learning/progress/route.ts"]);
   });
 
   it("A11、H16：CLI 没有设置 / 返回密码的命令，也没有「一键改成新增」", () => {

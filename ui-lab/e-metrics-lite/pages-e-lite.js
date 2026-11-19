@@ -558,14 +558,14 @@ export function renderLite(planId, runId) {
     <div class="page-head">
       <div><h1 class="page-title">全量明细</h1><p class="page-sub">${esc(plan.alias)}：一次已完成执行里的全部视频与账号，判定计划里设了什么条件就多什么列。</p></div>
       <div class="page-actions">
-        ${canExport ? `<a class="btn" href="#/judgement">${icon("arrowLeft")} 返回判定计划</a>` : ""}
+        <a class="btn" href="#/accountinfo">${icon("arrowLeft")} 返回账号信息</a>
         ${canExport ? `<button type="button" class="btn btn-primary" data-action="el-export" ${disabledReason ? `disabled title="${esc(disabledReason)}"` : ""}>${icon("download")} 导出 Excel</button>` : ""}
       </div>
     </div>`;
   if (!exec) {
     return renderShell({
       activeNav: activeNav(), breadcrumb: ["工作区", "全量明细"],
-      content: `${head("还没有完成的执行")}${stateAware(emptyState({ title: "还没有完成的执行", text: "这个判定计划还没有一次已完成的执行，所以没有可展示的明细，也不能导出。", action: '<a class="btn" href="#/judgement">去判定计划</a>' }))}`,
+      content: `${head("还没有完成的执行")}${stateAware(emptyState({ title: "还没有完成的执行", text: "这个判定计划还没有一次已完成的执行，所以没有可展示的明细，也不能导出。", action: '<a class="btn" href="#/accountinfo">返回账号信息</a>' }))}`,
     });
   }
   const data = dataOf(exec);
@@ -585,7 +585,24 @@ export function renderLite(planId, runId) {
     ${tab === "videos" && exec.contentsPruned ? emptyState({ title: "内容明细已过保留期", text: "视频明细只保留最近几次执行；账号维度仍可查看。", action: '<button type="button" class="btn" data-action="el-tab" data-tab="accounts">看账号维度</button>' }) : `${filterBar(exec)}${tab === "videos" ? videosTable(plan, exec) : accountsTable(plan, exec)}`}`;
   return renderShell({ activeNav: activeNav(), breadcrumb: ["工作区", "全量明细"], content: `${head("")}${stateAware(inner)}` });
 }
-const activeNav = () => (state.role === "store_staff" ? "elreports" : "judgement");
+const activeNav = () => "accountinfo";
+
+/* ---------- 导航「账号信息」的落地页：选一个判定计划（四个角色都有；范围由数据范围决定） ---------- */
+export function renderInfoEntry() {
+  const own = state.role === "store_staff";
+  const rows = Object.values(PLANS).map((p) => {
+    const l = latestOf(p);
+    return `<tr>
+      <td>${esc(p.alias)}</td><td>${esc(p.activity)}</td><td>${esc(p.platform)}</td><td>${l ? `${esc(l.completedAt)} · v${l.version}` : "—"}</td>
+      <td>${l ? badge("已完成", "green") : badge("没有已完成的执行", "gray")}</td>
+      <td class="right"><a class="btn btn-sm" href="#/reports/${p.id}">${icon("chart")} 查看</a></td></tr>`;
+  }).join("");
+  const scope = own ? "只显示你名下的账号与内容。" : state.role === "branch_manager" ? "只显示本分公司范围内的账号与内容。" : "显示授权范围内的全部账号与内容。";
+  const content = `
+    <div class="page-head"><div><h1 class="page-title">账号信息</h1><p class="page-sub">选一个判定计划，查看它某次已完成执行里的全部视频与账号。${scope}</p></div></div>
+    ${stateAware(`<div class="table-wrap"><table><thead><tr><th>判定计划</th><th>活动计划</th><th>平台</th><th>最近一次完成</th><th>状态</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`)}`;
+  return renderShell({ activeNav: "accountinfo", breadcrumb: ["工作区", "账号信息"], content });
+}
 
 /* ---------- 判定计划入口示意（D 已实现的页面，这里只示意新增的「全量明细」按钮） ---------- */
 export function renderJudgementEntry() {

@@ -94,6 +94,7 @@ const NAV_GROUPS = [
     label: "数据",
     items: [
       { key: "accounts", label: "账号与监控", icon: "activity", roles: ["platform_admin", "hq_manager", "branch_manager"] },
+      { key: "accountinfo", label: "账号信息", icon: "users", roles: ["platform_admin", "hq_manager", "branch_manager"] },
       { key: "master", label: "主数据", icon: "database", roles: ["platform_admin", "hq_manager"] },
       { key: "learning", label: "学习", icon: "book", roles: ["platform_admin", "hq_manager", "branch_manager"] },
     ],
@@ -114,7 +115,7 @@ function navGroupsFor(role) {
       items: [
         { key: "store", label: "我的考核", icon: "clipboard", roles: ["store_staff"] },
         { key: "learning", label: "学习", icon: "book", roles: ["store_staff"] },
-        { key: "elreports", label: "全量明细", icon: "chart", href: "#/reports/jp1", roles: ["store_staff"] },
+        { key: "accountinfo", label: "账号信息", icon: "users", roles: ["store_staff"] },
       ],
     }];
   }
@@ -210,8 +211,8 @@ function renderTopbar(breadcrumb) {
 
 function renderMobileTabs(activeNav) {
   const tabs = state.role === "store_staff"
-    ? [["store", "我的考核", "clipboard"], ["learning", "学习", "book"], ["elreports", "全量明细", "chart", "#/reports/jp1"]]
-    : [["plans", "计划", "calendar"], ["accounts", "账号", "activity"], ["users", "用户", "users"], ["learning", "更多", "more"]];
+    ? [["store", "我的考核", "clipboard"], ["learning", "学习", "book"], ["accountinfo", "账号信息", "users"]]
+    : [["plans", "计划", "calendar"], ["accounts", "账号", "activity"], ["accountinfo", "账号信息", "users"], ["users", "用户", "users"], ["learning", "更多", "more"]];
   return `
     <nav class="mobile-tabs" aria-label="手机导航">
       ${tabs.map(([key, label, ico, href]) => `
@@ -253,7 +254,8 @@ export function renderDemoPanel() {
         </div>
         <div class="demo-title" style="margin-top:6px"><span>全量明细场景</span></div>
         <div class="demo-links">
-          <a class="demo-link" href="#/judgement">判定计划（入口示意）</a>
+          <a class="demo-link" href="#/accountinfo">账号信息（导航落地页）</a>
+          <a class="demo-link" href="#/judgement">判定计划（D 页面里的按钮示意）</a>
           <a class="demo-link" href="#/reports/jp1">最近一次执行（v3）</a>
           <a class="demo-link" href="#/reports/jp1/e2">旧执行 v2（无账号能力结果）</a>
           <a class="demo-link" href="#/reports/jp1/e1">v1（内容明细已过保留期）</a>

@@ -10,7 +10,7 @@ import {
 } from "./pages-a.js";
 import { renderMasterImport, renderMasterBatches, renderMasterBatchDetail } from "./pages-m.js";
 import { renderMasterBrowse } from "./pages-m-browse.js";
-import { renderLite, renderJudgementEntry, PLANS as EL_PLANS, exportModalHtml, exportInfo, zoomHtml } from "./pages-e-lite.js";
+import { renderLite, renderJudgementEntry, renderInfoEntry, PLANS as EL_PLANS, exportModalHtml, exportInfo, zoomHtml } from "./pages-e-lite.js";
 import {
   renderAuth, renderUsers, renderUserNew, renderUserDetail, renderUserImport,
   renderAudit, renderPlaceholder, renderStoreHome,
@@ -28,7 +28,7 @@ let cooldownTimer = null;
 let lastAuthRoute = null;
 
 function parseRoute() {
-  const raw = location.hash.replace(/^#\/?/, "");
+  const raw = location.hash.replace(/^#\/?/, "").split("?")[0];
   const parts = raw.split("/").filter(Boolean);
   if (!parts.length) return { name: "login" };
   const [head, second, third] = parts;
@@ -73,7 +73,7 @@ function renderRaw() {
   }
   lastAuthRoute = null;
 
-  if (state.role === "store_staff" && !["store", "learning", "reports"].includes(route.name)) {
+  if (state.role === "store_staff" && !["store", "learning", "reports", "accountinfo"].includes(route.name)) {
     app.innerHTML = renderStoreHome();
     syncCooldown();
     return;
@@ -100,6 +100,7 @@ function renderRaw() {
     case "master-batches": html = renderMasterBatches(); break;
     case "master-batch": html = renderMasterBatchDetail(route.id); break;
     case "judgement": html = renderJudgementEntry(); break;
+    case "accountinfo": html = renderInfoEntry(); break;
     case "reports": html = route.id ? renderLite(route.id.split("?")[0], route.sub?.split("?")[0]) : renderPlaceholder("reports"); break;
     case "learning":
     case "system":
@@ -212,7 +213,7 @@ document.addEventListener("change", (event) => {
   const el = event.target;
   if (el.matches("[data-demo-role]")) {
     state.role = el.value;
-    if (state.role === "store_staff") go(location.hash.startsWith("#/reports") ? location.hash : "#/store");
+    if (state.role === "store_staff") go(/^#\/(reports|accountinfo)/.test(location.hash) ? location.hash : "#/store");
     else if (location.hash === "#/store" || location.hash === "#/login") go("#/plans");
     else render();
     return;

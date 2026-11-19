@@ -68,14 +68,14 @@ type AbilityOutcome = "success" | "not_met" | "unobtained" | "skipped";   // D �
 interface AbilityResult { key: ConditionKey; result: AbilityOutcome; reason?: string }
 
 // ---- 扩展现有类型 ----
-ExecutionDescriptor.config += { conditions: ConditionDesc[] }              // 展示顺序：第 1 层（按 idx）→ 第 2 层内容类 → 第 2 层账号类 → 第 3 层 → 评论
+ExecutionDescriptor.config += { conditions: ConditionDesc[] }              // 展示顺序按层序：第 1 层（按 idx）→ 第 2 层（按配置顺序，封面 / 头像 / 主页背景混排）→ 第 3 层 → 评论
 ContentFact += { contentSnapshotId: bigint; staffId: bigint; org: {…六个冻结 ID}; evidence: ContentEvidence | null }
 ParticipantFact += { abilityResults: AbilityResult[] | null }              // null = 执行早于 JP-22
 
 // ---- 新增读口 ----
 type OrgFilter = { regionId?: bigint; branchId?: bigint; sectorId?: bigint; storeId?: bigint; staffIds?: bigint[] };
 executionsOf(planId): Promise<ExecutionDescriptor[]>                        // 该判定计划已 completed 的执行，completed_at 倒序
-planRefOf(planId): Promise<{ ref: JudgementPlanRef; alias: string; activityPlanId: bigint; platform: string }>   // 越范围 / 不存在统一 not_found
+planRefOf(planId): Promise<{ ref: JudgementPlanRef; alias: string; activityPlanId: bigint; activityPlanName: string; platform: string }>   // 不存在 / 所属活动计划在回收站 → not_found；越范围由调用方 authorize(report.read) 表现为 not_found（本函数没有调用者身份）
 listContents(executionId, constraint, filter, { offset, limit }): Promise<{ rows: ContentFact[]; total: number }>
 listParticipants(executionId, constraint, filter, { offset, limit }): Promise<{ rows: ParticipantFact[]; total: number }>
 streamContents / streamParticipants 增加可选 filter 参数                      // 导出用，仍是键集分页
@@ -113,6 +113,7 @@ abilityOutcomes(conditions, rows, N, zero):
 
 - `stateOf(c, row)`：第 1 层取 `evidence.l1` 里 `idx` 相等的一项；第 2 层取 `evidence.l2` 里 `id` 相等的一项；第 3 层取 `evidence.l3.state`。注意 `l3` 在「没配第 3 层」时 D 写 `l3 = 'not_configured'`，此时没有第 3 层条件，不进入本函数。
 - 第 2、3 层条件的评估集不用显式过滤「被选中」：没被选中的行没有该条件的证据（`s == undefined`），且最终结果是 `skipped`（不是 `unobtained`），自然不计。
+- **口径**（EL-D14）：第 1 层条件的评估集是该账号全部 `run_contents` 行，包括 `final = skipped` 的截断行（它们保留着第 1 层证据）；第 2、3 层条件只算有该层证据的行；
 - 每位专员一次 O(行数 × 条件数)，与 D 现有 `aggregate` 同量级；规模演练（2,001 专员 × 40,000 行，D design §12.1）下增加的是内存里的循环，不增加 SQL。
 - 迁移 `0016_d_ability_results.sql`：`ALTER TABLE run_participants ADD COLUMN ability_results JSON NULL`，**只加列**；旧执行为 NULL，读口返回 `null`；`ability_results` 没有 CHECK（JSON 形状由 zod 在写入处校验）。
 
@@ -133,7 +134,7 @@ export interface ColumnDef { key: string; header: string; kind: "fixed" | "condi
 export interface Cell { text: string; tone: "pass" | "fail" | "unobtained" | "skipped" | "plain"; link?: string }   // link 仅 http(s)
 
 export interface ReportHeader {                     // 页面顶部与导出文件名所需
-  planAlias: string; version: number; executionId: string; completedAt: string;   // ISO UTC
+  activityPlanName: string; planAlias: string; version: number; executionId: string; completedAt: string;   // ISO UTC
   cutoffAt: string; window: { fromBjt: string; toBjt: string }; platformName: string;
   videosAvailable: boolean;                          // false = 内容级行已被清理
   abilityResultsAvailable: boolean;                  // false = 执行早于 JP-22
@@ -154,7 +155,7 @@ exportWorkbook(rc, args, sink): Promise<{ videoRows: number; accountRows: number
 ### 5.2 读流程（videos / accounts 共用前半）
 
 ```text
-1. planRef = outcomes.planRefOf(planId)                                  // 越范围 / 不存在 → not_found
+1. planRef = outcomes.planRefOf(planId)                                  // 不存在 / 回收站 → not_found
 2. authorizer.authorize(ctx, 'report.read', { key: 'report', ref: toReportRef(planRef) })
 3. constraint = constraintOf(ctx.scope)                                  // empty → 授权错误，不回退为全部
 4. execs = outcomes.executionsOf(planId)；空 → ReportError('no_completed_execution')
@@ -240,7 +241,7 @@ export function registerReportAuthz(registry: AccessRegistry): void {
 
 - **先查再注册**：`e-metrics` 开工时直接复用，不重复注册（它的 design §8.1 要求的 `ref` 比本 spec 多 `activityPlanId`，本 spec 已把它设为可选）；
 - Capability：读 `report.read`，导出 `report.export` + 出口 4 的 `guardExit`；**不新增 Capability**，`roles.ts` 不改；
-- 越范围的判定计划：`planRefOf` 与 `authorize` 都表现为 `not_found`；
+- 越范围的判定计划：由 `authorize(report.read)` 表现为 `not_found`（`planRefOf` 不判断范围，也没有调用者身份）；新读口不做能力校验、不沿用 `explain` 的双能力校验，授权全在 E 一侧；
 - 范围约束只在 D 读口里生效（按冻结的组织链）。本 spec 不在 SQL 里再写一份范围过滤，避免两处口径；
 - 装配：页面进程与 CLI 各调 `registerReportAuthz`，与 `registerJudgementAuthz` 同位。
 
@@ -273,6 +274,8 @@ GET /reports/<planId>/export?run=&filters…
 ### 7.2 为什么默认同步（以及何时改异步）
 
 ADR-0011 写「不在 Web 请求进程里生成大文件」，针对**带图**的大工作簿（内存是整本在内存里建）。本路径是无图、流式、有硬上限、单次最多两个并发，内存与一页数据成正比。同步路径不新增表与桶，也不依赖 `e-metrics` 的 E6。**这是对 ADR-0011 的有条件豁免，须刘学奎确认（U1）并在 ADR-0011 补一行；确认前该路由不得合并。**
+
+ADR-0011 要补**两处**（U1 确认时一并落笔）：①「不在 Web 请求进程里生成大文件」的豁免条件（无图、流式、硬上限、≤2 并发）；②「大表无图导出是否用流式写入器，在 e-metrics spec 实测后定」改为由本 spec 的 T5 实测回填。
 
 改异步的触发条件（任一）：任务 8 实测单次导出 > 20 秒或峰值 RSS > 300 MB；nginx 的 `proxy_read_timeout` 不能满足；业务要把上限提到 5 万行以上。异步形态 = `e-metrics` 的 E6（任务表 + 私有桶 + 下载链接），届时本 spec 的 `exportWorkbook(rc, args, sink)` 的 `sink` 换成写 OSS 的流，列与单元格规则不变。
 
@@ -321,14 +324,15 @@ ADR-0011 写「不在 Web 请求进程里生成大文件」，针对**带图**�
 
 | 页面 | 角色 | 入口 | 主要操作 | Capability |
 |---|---|---|---|---|
-| 全量明细 `/reports/<判定计划>` | 四个角色（门店只看本人范围） | ① D 的判定计划详情与执行记录页新增「全量明细」按钮；② D 现有 `/judgement/results/[runId]` 占位页改为跳转到本页并带 `?run=`；③ **门店专员没有 D 的页面，入口待定（requirements U6）**：建议门店端导航加「全量明细」（原型里已临时放了一个） | 切换执行、切换标签、筛选、翻页、放大看图、导出 | `report.read`；导出 `report.export` |
+| 账号信息（导航落地页） | 四个角色（含门店专员） | 左侧导航「账号信息」（刘学奎 2026-11-19） | 选判定计划 | `report.read` |
+| 全量明细 `/reports/<判定计划>` | 四个角色（门店只看本人范围） | ① 导航「账号信息」→ 选判定计划；② D 的判定计划详情与执行记录页新增「全量明细」按钮；③ D 现有 `/judgement/results/[runId]` 占位页改为跳转到本页并带 `?run=` | 切换执行、切换标签、筛选、翻页、放大看图、导出 | `report.read`；导出 `report.export` |
 
-没有第二个页面。本期**不加**左侧导航入口（避免与 `e-metrics` 的「报表与看板」入口冲突，U 项之外的导航由 `e-metrics` 统一设计）。
+导航「账号信息」与 `e-metrics` 将来的「报表与看板」是两个入口，互不替代；本期只加「账号信息」。页面内标题仍写「全量明细」，与导航名是否统一待刘学奎看过原型再定。
 
 ### 10.2 流程
 
 ```text
-判定计划详情 / 执行记录 → 全量明细（默认最近一次完成的执行，默认「视频明细」标签）
+导航「账号信息」→ 选判定计划（或 D 的判定计划 / 执行记录页的「全量明细」按钮）→ 全量明细（默认最近一次完成的执行，默认「视频明细」标签）
   → 切换「账号维度」标签：保留已选的组织筛选
   → 切换执行：下拉列出该计划的历史执行（完成时间、版本）；切换后回到第 1 页
   → 筛选：大区 → 分公司 → 板块 → 门店（级联）、专员搜索；任一变化回到第 1 页
@@ -368,6 +372,7 @@ ADR-0011 写「不在 Web 请求进程里生成大文件」，针对**带图**�
 | 字段 | `platform_admin` | `hq_manager` | `branch_manager` | `store_staff` |
 |---|---|---|---|---|
 | 两张表的全部列、图片 | 可见（全部范围） | 可见（按品牌范围） | 可见（本分公司） | 可见（仅本人） |
+| 导航「账号信息」 | 有 | 有 | 有 | **有**（刘学奎 2026-11-19） |
 | 「导出 Excel」 | 有 | 有 | 有 | **无**（`report.export` 不含该角色，U5） |
 | 联系方式、证据正文 | 不返回 | 不返回 | 不返回 | 不返回 |
 
@@ -392,6 +397,10 @@ ADR-0011 写「不在 Web 请求进程里生成大文件」，针对**带图**�
 | EL-D09 | 账号维度采集状态取数据截止时点前最近的终态同步任务；无记录显示「无记录」 | 与 `e-metrics` 的 as-of 观测同口径；不把「没记录」当「失败」 | 2026-11-19 |
 | EL-D10 | 视频明细只在内容级行未被清理时可用；不为已清理的执行重建 | 重建需要重跑判定，违背「只读展示」 | 2026-11-19 |
 | EL-D11 | 评论要求单元格写 `命中 x / 共 y 条`（U3） | 评论达标方式是账号级，内容级没有「达标」 | 2026-11-19 |
+| EL-D12 | 导航「账号信息」，四个角色都有（含门店专员）；页面内标题与导出文件名仍用「全量明细」，待统一 | 刘学奎 2026-11-19；关闭 U6 | 2026-11-19 |
+| EL-D13 | 能力列顺序按层序（第 1 层 → 第 2 层含头像 / 背景 → 第 3 层 → 评论），头像、主页背景不排到最后 | 与 D 读口的条件清单顺序、原型一致；采纳 DeepSeek 审查 M1 | 2026-11-19 |
+| EL-D14 | 第 1 层条件的账号结果对被数量要求截掉的行按保留的证据计数；第 2、3 层只算被选中并走到该层的行 | `runner.ts` select 阶段不清第 1 层证据（核对属实）；这样能看出是哪个条件拖了后腿；采纳 DeepSeek 审查 M4 | 2026-11-19 |
+| EL-D15 | `planRefOf` 返回 `activityPlanName` 并不判断范围 | 导出文件名需要活动计划名；该函数没有调用者身份，范围由 `authorize` 判；采纳 DeepSeek 审查 M2 | 2026-11-19 |
 
 ## 12. 已知上限
 

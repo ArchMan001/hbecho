@@ -633,7 +633,7 @@ streamCircleRows(runId, constraint): AsyncIterable<CircleRow>                // 
 
 1. **内容行**：`ContentFact` SHALL 增加 `contentSnapshotId`、`staffId`、冻结的组织链 ID、`evidence`（白名单：第 1 层各条件的 `idx` / 状态 / `hit` / `seconds` / `reason`；第 2 层各能力的 `id` / 状态 / `score` / `reason`；第 3 层的状态与 `verdict`；**不含**正文、评论原文、作者、第 3 层的模型理由与依赖明细）；
 2. **执行描述**：`ExecutionDescriptor.config` SHALL 增加有序的条件清单 `conditions[]`（`key` = `l1.<idx>` / `l2.<abilityId>` / `l3` / `comment`；层、种类、对象、`subject`（内容 / 账号）、别名）。`l1.<idx>` 的 `idx` 与 `evidence.l1[].idx` 是同一个编号（文本 → 话题 → 时长展平后的位置）；
-3. **新读口**：`executionsOf(planId)`（该判定计划已 `completed` 的执行，`completed_at` 倒序）、`planRefOf(planId)`（授权引用；越范围 / 不存在统一 `not_found`）、`listContents` / `listParticipants`（组织过滤 + 偏移分页 + 总数；总数与列表共用同一个 WHERE）；`streamContents` / `streamParticipants` 接受可选组织过滤；
+3. **新读口**：`executionsOf(planId)`（该判定计划已 `completed` 的执行，`completed_at` 倒序）、`planRefOf(planId)`（授权引用，含 `activityPlanName`；判定计划不存在或所属活动计划在回收站 → `not_found`；**没有调用者身份，不判断范围**，越范围由调用方 `authorize(report.read)` 表现为 `not_found`）、`listContents` / `listParticipants`（组织过滤 + 偏移分页 + 总数；总数与列表共用同一个 WHERE）；这些新读口与现有 `stream*` 同构，**不做能力校验**，由调用方负责 `report.read` 与范围约束，不沿用 `explain` 的双能力校验（`rule.definition.read` + `data.content.read`）；`streamContents` / `streamParticipants` 接受可选组织过滤；
 4. **账号能力结果**：`run_participants` SHALL 新增可空 JSON 列 `ability_results`（迁移只加列），在 `aggregate` 阶段与现有结果同一个 fencing 事务写入：每个条件一项 `{ key, result: success | not_met | unobtained | skipped, reason? }`。规则见 D-D23：内容层条件沿用 `contentOutcome` 的 `at_least_n` 与零内容规则；评估集内没评估到但内容最终 `unobtained` 的行计 U；第 2、3 层没有内容走到该层 → `skipped`；头像、主页背景取 `account_detail.abilities`；评论取 `comment_result`；`ParticipantFact.abilityResults` 暴露它，旧执行为 `null`。
 
 **验收标准**

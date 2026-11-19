@@ -33,14 +33,14 @@ P0 原型与界面确认（闸门）──→ P1…（确认后才展开）
 - [ ] **T3 A 侧读取**（对应 EL-3、EL-5、EL-7、EL-10）：`facts.ts`：组织与专员名称、内容与冻结快照、cutoff 之前最新主页快照（`ROW_NUMBER()` 取 `(logical_at, batch_id)` 最新）、主页链接、两类采集状态、已采集作品数（U2 默认口径）、封面 / 头像 / 背景引用与签名。数据库测试（`*.db.test.ts`）：cutoff 之后到达的批次与快照不被选中；`archived` / `carried_forward` 取、`failed` / `pending` 不取；采集状态四种（是 / 部分 / 否 / 无记录）；缺失值留空并计入 `missingRows`；一页一类一条查询（断言查询数，防 N+1）。
 - [ ] **D17 D 的 JP-22**（在 D 的 `tasks.md` 任务 17 里实施，本 spec 依赖它）：读口三处补全 + 迁移 `0016_d_ability_results` + `abilityOutcomes` 纯函数与聚合接入；D 页面加入口按钮与占位页改跳转。验收见 D 的 JP-22。**不改任何判定语义**：D 现有全部测试须原样通过。
 - [ ] **T4 编排**（对应 EL-1、EL-2、EL-5、EL-6、EL-10、EL-11；依赖 T1–T3、D17）：`read.ts`：`videos` / `accounts` / `executions` 与 §5.2 的十步；`ReportError` 的全部码；`videosAvailable` / `abilityResultsAvailable` 标志。测试：fake `JudgementOutcomeReader` 覆盖无执行、历史执行切换、内容级行已清理、旧执行无 `ability_results`、四个角色的行集与总数、越范围 `not_found`；契约测试与 D 真实实现共用一份 shape 测试（含 `ConditionDesc.key ↔ evidence.l1.idx`）。
-- [ ] **T5 exceljs 与导出器**（对应 EL-8；**U1 确认后开工**）：`package.json` 加 `exceljs` **精确 `4.4.0`**（不加 `^`）；`export.ts` 用 `stream.xlsx.WorkbookWriter` 写两个 sheet；`safeText`、文本单元格、着色、冻结首行。测试：往返读回（读取代码只在测试里，生产代码零 `xlsx.read` / `xlsx.load`，加一条静态检查）、`addImage` 零调用、`export_row_limit` 不产生字节、并发上限 `export_busy`、中途失败终止连接。**规模实测**：用 D 的规模演练数据（D design §12.1）与一份 1.4 万行视频的夹具，记录耗时与峰值 RSS；超过 design §7.2 的阈值就停下来找刘学奎改异步。
+- [ ] **T5 exceljs 与导出器**（对应 EL-8；**U1 确认后开工**；同时在 ADR-0011 补两处：豁免条件、「流式写入器实测后定」改由本任务回填）：`package.json` 加 `exceljs` **精确 `4.4.0`**（不加 `^`）；`export.ts` 用 `stream.xlsx.WorkbookWriter` 写两个 sheet；`safeText`、文本单元格、着色、冻结首行。测试：往返读回（读取代码只在测试里，生产代码零 `xlsx.read` / `xlsx.load`，加一条静态检查）、`addImage` 零调用、`export_row_limit` 不产生字节、并发上限 `export_busy`、中途失败终止连接。**规模实测**：用 D 的规模演练数据（D design §12.1）与一份 1.4 万行视频的夹具，记录耗时与峰值 RSS；超过 design §7.2 的阈值就停下来找刘学奎改异步。
 - [ ] **T6 导出路由与出口守卫**（对应 EL-8、EL-9；依赖 T4、T5）：`src/app/(app)/reports/[planId]/export/route.ts`：参数 zod、`guardExit(4)`、行数预检、响应头与文件名、警告头 `X-Report-Warning`、审计。测试：`store_staff` 被拒并记审计；撤权后的提交；范围收缩；文件名非法字符。**这是路由，不是页面：不含任何 UI。**
 - [ ] **T7 CLI**（对应 EL-3 至 EL-8，页面确认之前的验证手段）：`src/worker/report-cli.ts`、`report-main.ts`、`package.json` 的 `report` 脚本：`pnpm report columns --plan <id> [--run <id>]` 打印两张表的表头；`pnpm report export --plan <id> [--run <id>] --actor <用户> --out <文件>` 以指定用户身份导出到本地文件。测试：离线、fake 依赖；沿用 `judgement-cli` 的装配方式与退出码。
 - [ ] **T8 验收**：`acceptance.md` 的 A1–A22 自动项全绿；本机 `./scripts/verify.sh` 通过；规模实测结果写入 design §7.1 / §12；对着一份真实执行（日立或海信）与旧系统导出核对行数与至少三个账号（M1、M2，需测试 ECS 数据，先说明并得到同意，`server-access.md`）。**页面验收在页面任务做完之后单独记。**
 
 ## 页面任务（界面确认后才展开）
 
-- [ ] **P0 原型与界面确认（闸门）**：**原型 v1 已做**（2026-11-19，`ui-lab/e-metrics-lite/`，状态表已登记为「待确认」；4100：<http://localhost:4100/e-metrics-lite/#/judgement>；做了视频明细与账号维度两个标签、历史执行切换、旧执行 / 内容已清理 / 无执行 / 导出超限、四个角色、图片放大、导出弹窗与全部状态）。**待办**：请业务走一遍，刘学奎明确确认后，把确认人、日期、范围、原型链接填进 design §10.6，并更新本 tasks。**AI 不得把「没反对」当作确认；确认范围之外的界面改动要重新确认。**
+- [ ] **P0 原型与界面确认（闸门）**：**原型 v1 已做**（2026-11-19，`ui-lab/e-metrics-lite/`，状态表已登记为「待确认」；4100：<http://localhost:4100/e-metrics-lite/#/judgement>；做了视频明细与账号维度两个标签、历史执行切换、旧执行 / 内容已清理 / 无执行 / 导出超限、四个角色、图片放大、导出弹窗与全部状态）。**2026-11-19 刘学奎看过后的反馈**：导航改名「账号信息」、四个角色都有（已改原型，U6 关闭），**其余无意见**；**待办**：请业务走一遍，刘学奎明确说「确认」后，把确认人、日期、范围、原型链接填进 design §10.6，并更新本 tasks。**AI 不得把「没反对」当作确认；确认范围之外的界面改动要重新确认。**
 - [ ] **P1…Pn**：P0 确认后再写（预计：`/reports/[planId]` 页面与筛选、两张表的渲染、图片放大、状态矩阵、D 页面入口按钮与占位页跳转的界面确认、4400 造数与走查）。**现在不写，避免未确认的界面被默认冻结。**
 
 ## 不在本 spec 的任务

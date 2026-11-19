@@ -1,5 +1,5 @@
 // 角色、Capability 注册表与角色矩阵（design §7.1、AX-6）。
-// 注册表是**唯一**的 Capability 清单：29 项，与 B PRD §7.3 逐行一致，由 tests/fixtures/access/capability-matrix.v1.json
+// 注册表是**唯一**的 Capability 清单：30 项（v1.22 起含 `square.read`），与 B PRD §7.3 逐行一致，由 tests/fixtures/access/capability-matrix.v1.json
 // （从 PRD 转写）逐行对照。别的 spec 要新增 Capability，改这里并走 B 的评审；业务代码出现注册表以外的字符串，静态测试失败。
 // 这里是 `access-control` 里唯一允许出现四个角色字面量的地方之一（静态护栏的例外目录）。
 
@@ -43,6 +43,7 @@ export const CAPABILITIES = [
   "learning.manage",
   "learning.report.read",
   "learning.tag.manage",
+  "square.read",
   "ai.content.assist",
   "user.manage",
   "audit.read",
@@ -85,6 +86,7 @@ const GRANTS: Readonly<Record<Capability, readonly RoleCode[]>> = {
   "learning.manage": ADMIN_HQ,
   "learning.report.read": ADMIN_HQ,
   "learning.tag.manage": ADMIN_ONLY,
+  "square.read": EVERYONE,
   "ai.content.assist": ADMIN_HQ,
   "user.manage": ADMIN_HQ_BRANCH,
   "audit.read": ADMIN_ONLY,

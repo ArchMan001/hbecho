@@ -1,5 +1,5 @@
 {
-  "_comment": "由 HBECHO设计方案/prd-domain-b-access-control.md §7.3 机械转写（2026-11-10，PRD v1.21.2）。单元格保留 PRD 原文：❌ = 不授予，其余 = 授予（✅ / 授权品牌 / 本分公司 / 本人）。增删改注册表任一项，对照测试失败。",
+  "_comment": "由 HBECHO设计方案/prd-domain-b-access-control.md §7.3 机械转写（2026-11-10，PRD v1.21.2；2026-11-19 PRD v1.22 增 square.read）。单元格保留 PRD 原文：❌ = 不授予，其余 = 授予（✅ / 授权品牌 / 本分公司 / 本人）。增删改注册表任一项，对照测试失败。",
   "source": "prd-domain-b-access-control.md §7.3",
   "rows": [
     {
@@ -176,6 +176,13 @@
       "hq_manager": "❌",
       "branch_manager": "❌",
       "store_staff": "❌"
+    },
+    {
+      "capability": "square.read",
+      "platform_admin": "✅",
+      "hq_manager": "✅",
+      "branch_manager": "✅",
+      "store_staff": "✅"
     },
     {
       "capability": "ai.content.assist",

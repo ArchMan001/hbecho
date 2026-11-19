@@ -81,10 +81,10 @@ describe("B-AX-6：业务代码只检查 Capability，不写角色条件", () =>
     expect(offenders).toEqual([]);
   });
 
-  it("仓库里出现的 Capability 字符串都属于注册表（29 项）", () => {
-    expect(CAPABILITIES).toHaveLength(29);
+  it("仓库里出现的 Capability 字符串都属于注册表（30 项）", () => {
+    expect(CAPABILITIES).toHaveLength(30);
     const known = new Set<string>(CAPABILITIES);
-    const re = /["'`]((?:data|report|rule|metric|learning|ai|user|audit|config|activity_plan|monitor)\.[a-z_]+(?:\.[a-z_]+)*)["'`]/g;
+    const re = /["'`]((?:data|report|rule|metric|learning|square|ai|user|audit|config|activity_plan|monitor)\.[a-z_]+(?:\.[a-z_]+)*)["'`]/g;
     const unknown: string[] = [];
     // 日志事件名（logger.info(obj, "audit.low_risk_write_failed")）长得像 Capability 但不是；只放行这一种明确形态
     const logEvent = /\b(?:logger|log)\??\.(?:info|warn|error|debug)\([^)]*["'`]$/;

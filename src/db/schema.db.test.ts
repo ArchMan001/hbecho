@@ -58,6 +58,8 @@ describe("迁移与参考数据", () => {
       "segment_images", "signal_tasks", "signal_cursors", "signal_recompute_runs",
       // 域 D 自有的 5 张表（d-rule-engine design §6.1），同样不属于 v2
       "judgement_plans", "judgement_plan_versions", "judgement_runs", "run_participants", "run_contents",
+      // 域 F 自有的 1 张表（f-video-square design §4.1），同样不属于 v2
+      "square_brand_policies",
     ];
     const names = (tables as Array<{ n: string }>).map((r) => r.n);
     expect(B_TABLES.filter((n) => !names.includes(n))).toEqual([]);

@@ -1,33 +1,44 @@
-// 装配：把视频广场接到访问控制的运行时（授权器、审计）与正式媒资桶（只用来给封面签短期读取地址）。
+// 装配：把视频广场接到访问控制的运行时（授权器、审计）与正式媒资桶（只用来给封面签短期读取地址；复用学习模块的凭证来源与 OSS 签名实现，不另写一份）。
 // 页面进程（src/app/_lib/square.ts）、CLI（worker/square-main.ts）与测试共用这一份，所以测试证明的就是生产接线。
 import type { Logger } from "pino";
 import type { Db } from "../../db/client";
 import { createAuditWriter, createAuthorizer, defaultRegistry, denialAuditor, type AccessRegistry } from "../access-control";
-import { OssObjectStore, type Clock, type MediaObjectStore } from "../raw-capture";
+import { ecsRoleCredentials, OssCourseStore, staticCredentials, type CredentialSource } from "../learning";
+import type { Clock, MediaObjectStore } from "../raw-capture";
 import type { SquareDeps } from "./deps";
 import { createSquareStrategy } from "./policy";
 
 export interface SquareEnvConfig {
-  accessKeyId: string;
-  accessKeySecret: string;
+  credentials: CredentialSource;
+  /** 凭证来源的说明，只用于日志，不含密钥。 */
+  credentialsKind: "ecs_role" | "env_access_key";
   region: string;
   bucket: string;
   ttlSeconds: number;
 }
 
 /**
- * 封面签名所需配置；缺任一项返回 null（封面全部用占位，不让页面起不来）。
- * 凭证：HBECHO_SQUARE_ACCESS_KEY_ID / SECRET，缺省回退 OSS_ACCESS_KEY_ID / SECRET；只需要 OSS_BUCKET_MEDIA 的读权限。
+ * 封面签名所需配置；缺了就返回 null（封面全部用占位并告警，不让页面起不来）。
+ *   HBECHO_SQUARE_CREDENTIALS=ecs_role → ECS 实例 RAM 角色 hbecho-ecs-role（生产首选，机器上零长期 AccessKey，runbook §7.7；
+ *                                       该角色对 hbecho-media 已有读权限，不需要改 RAM）；
+ *   HBECHO_SQUARE_CREDENTIALS=access_key → HBECHO_SQUARE_ACCESS_KEY_ID / SECRET（缺省回退 OSS_ACCESS_KEY_*，只给本机用）。
+ * 不设 HBECHO_SQUARE_CREDENTIALS 时：有 AccessKey 就按 access_key，没有就 null。
+ * 地域取 HBECHO_COURSE_OSS_REGION 或 OSS_REGION；桶取 OSS_BUCKET_MEDIA，缺省 hbecho-media。
  * 不读 OSS_ENDPOINT：它可能是内网地址，签出来的 URL 浏览器打不开；这里用 SDK 默认的公网地址。
  */
-export function parseSquareEnv(env: Record<string, string | undefined>): SquareEnvConfig | null {
+export function parseSquareEnv(env: Record<string, string | undefined>, opts: { fetchImpl?: typeof fetch } = {}): SquareEnvConfig | null {
+  const region = env.HBECHO_COURSE_OSS_REGION || env.OSS_REGION;
+  if (!region) return null;
+  // 实例角色的临时凭证在到期前 5 分钟刷新，签出的 URL 随凭证失效；缺省 300 秒与学习封面一致，上限 900
+  const ttl = Number(env.HBECHO_SQUARE_COVER_TTL_S ?? 300);
+  const base = { region, bucket: env.OSS_BUCKET_MEDIA || "hbecho-media", ttlSeconds: Number.isInteger(ttl) && ttl >= 60 && ttl <= 900 ? ttl : 300 };
+  const mode = env.HBECHO_SQUARE_CREDENTIALS;
+  if (mode === "ecs_role") return { ...base, credentials: ecsRoleCredentials(opts.fetchImpl ? { fetchImpl: opts.fetchImpl } : {}), credentialsKind: "ecs_role" };
+  if (mode && mode !== "access_key") return null;
   const accessKeyId = env.HBECHO_SQUARE_ACCESS_KEY_ID || env.OSS_ACCESS_KEY_ID;
   const accessKeySecret = env.HBECHO_SQUARE_ACCESS_KEY_SECRET || env.OSS_ACCESS_KEY_SECRET;
-  const region = env.OSS_REGION;
-  const bucket = env.OSS_BUCKET_MEDIA;
-  if (!accessKeyId || !accessKeySecret || !region || !bucket) return null;
-  const ttl = Number(env.HBECHO_SQUARE_COVER_TTL_S ?? 900);
-  return { accessKeyId, accessKeySecret, region, bucket, ttlSeconds: Number.isInteger(ttl) && ttl >= 60 && ttl <= 3600 ? ttl : 900 };
+  if (!accessKeyId || !accessKeySecret) return null;
+  return { ...base, credentials: staticCredentials({ accessKeyId, accessKeySecret }), credentialsKind: "env_access_key" };
 }
 
 export function assembleSquare(a: {
@@ -45,14 +56,14 @@ export function assembleSquare(a: {
   if (!registry.scopeStrategy("content_square")) registry.registerScopeStrategy("content_square", createSquareStrategy(a.db) as never);
   const audit = createAuditWriter({ db: a.db, clock: a.clock, ...(a.logger ? { logger: a.logger } : {}) });
   const authorizer = createAuthorizer({ registry, onDenied: denialAuditor(audit) });
-  const covers = a.covers !== undefined ? a.covers : cfg ? new OssObjectStore({ accessKeyId: cfg.accessKeyId, accessKeySecret: cfg.accessKeySecret, region: cfg.region, bucket: cfg.bucket }) : null;
+  const covers = a.covers !== undefined ? a.covers : cfg ? new OssCourseStore({ credentials: cfg.credentials, region: cfg.region, bucket: cfg.bucket }) : null;
   return {
     db: a.db,
     clock: a.clock,
     authorizer,
     audit,
     covers,
-    coverTtlSeconds: cfg?.ttlSeconds ?? 900,
+    coverTtlSeconds: cfg?.ttlSeconds ?? 300,
     alert: (e) => a.logger?.warn({ alert: e }, "square_alert"),
   };
 }

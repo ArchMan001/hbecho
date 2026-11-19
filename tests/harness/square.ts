@@ -75,7 +75,7 @@ export async function squareEnv(t: TestDb): Promise<SquareEnv> {
   const authorizer = createAuthorizer({ registry, onDenied: denialAuditor(env.audit) });
   const covers = new FakeCovers();
   const alerts: unknown[] = [];
-  const deps: SquareDeps = { db: t.db, clock: env.clock, authorizer, audit: env.audit, covers, coverTtlSeconds: 900, alert: (e) => void alerts.push(e) };
+  const deps: SquareDeps = { db: t.db, clock: env.clock, authorizer, audit: env.audit, covers, coverTtlSeconds: 300, alert: (e) => void alerts.push(e) };
   let seq = 0;
   async function actor(role: RoleCode, o: { brandIds?: bigint[]; branchIds?: bigint[]; staff?: bigint } = {}): Promise<AuthContext> {
     const brandIds = o.brandIds ?? [];

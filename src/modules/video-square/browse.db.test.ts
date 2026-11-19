@@ -248,7 +248,7 @@ describe("封面（R5.1）", () => {
     await w.addWork(a, { title: "无", like: 80 });
     const admin = await w.actor("platform_admin");
     const by = Object.fromEntries((await list(w.deps, admin, f())).items.map((x) => [x.title, x]));
-    expect(by["有"]!.coverUrl).toMatch(/^https:\/\/fake-media\.test\/media\/cover-\d+\.jpg\?ttl=900$/);
+    expect(by["有"]!.coverUrl).toMatch(/^https:\/\/fake-media\.test\/media\/cover-\d+\.jpg\?ttl=300$/);
     expect(by["无"]!.coverUrl).toBeNull();
   });
   it("单卡签名失败只影响该卡，并告警；未配置签名器时全部占位", async () => {

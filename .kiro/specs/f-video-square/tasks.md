@@ -24,7 +24,7 @@ T5 ─→ P1 页面 ─→ P2 AI分析弹窗 ─→ P3 导航与外壳 ─→ P4
 - [x] **T3 policy**：`policy.ts`（`visibleBrands`、`setBrandPolicy`、`listBrandPolicies`、`createSquareStrategy`）；CLI `pnpm square policy list | set --brand <编码> --mode all|own`（`worker/square-cli.ts`、`square-main.ts`）；审计事件 `square_policy_changed`（高风险，同事务）。
 - [x] **T4 filter**：`filter.ts`（校验、`LIKE` 转义、`watchUrl` 白名单、点赞区间）；`filter.test.ts`。
 - [x] **T5 读口**：`browse.ts`（`list` / `options` / `get`）、`assemble.ts`（封面签名器来自 `OSS_BUCKET_MEDIA`，缺配置时全部占位并告警）；`browse.db.test.ts`。
-- [x] **T6 验收**：`acceptance.md` A1–A19 自动验收已通过；本机 `./scripts/verify.sh` 通过（2026-11-19，Python 侧未验证）；推送一次。合并与部署另行：CI 绿后 `--no-ff` 合并，部署前先说明并得到同意（含 `.env` 里的 `OSS_BUCKET_MEDIA` 读权限与迁移 0015 的逻辑备份）。
+- [x] **T6 验收**：`acceptance.md` A1–A19 自动验收已通过；本机 `./scripts/verify.sh` 通过（2026-11-19，Python 侧未验证）；推送一次。合并与部署另行：CI 绿后 `--no-ff` 合并，部署前先说明并得到同意。部署只需：迁移 0015 前做逻辑备份；`/data/app/web.env` 追加 `HBECHO_SQUARE_CREDENTIALS=ecs_role`（实例角色 `hbecho-ecs-role` 对 `hbecho-media` 已有读权限，2026-11-19 用 `ossutil --mode EcsRamRole` 实测可列可读，不改 RAM；地域沿用已有的 `HBECHO_COURSE_OSS_REGION`）；`pnpm square policy set` 按需给品牌设 `own`。Python 侧同日已验证（36 例通过）。
 
 ## 页面任务（界面已确认，依赖 T5）
 

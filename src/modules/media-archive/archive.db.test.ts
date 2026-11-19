@@ -417,8 +417,7 @@ describe("回填：转换服务不可用期间留下的失败衍生图（线上 
     expect(m.converter.inputs).toHaveLength(3);
     const after = await derivatives(m);
     expect(after.every((r) => r.archiveStatus === "archived" && r.lastErrorCode === null && r.mediaAssetId !== null)).toBe(true);
-    const jpegAssets = await Promise.all(after.map(async (r) => (await t.db.select().from(mediaAssets).where(eq(mediaAssets.mediaAssetId, r.mediaAssetId!)))[0]!));
-    expect(jpegAssets.every((a) => a.mimeType === "image/jpeg")).toBe(true);
+    for (const r of after) expect((await t.db.select().from(mediaAssets).where(eq(mediaAssets.mediaAssetId, r.mediaAssetId!)))[0]!.mimeType).toBe("image/jpeg");
     expect(await renormalizeUnavailable(deps(m))).toMatchObject({ examined: 0 });
   });
   it("服务仍不可用：第一次失败就停止（不冲击剩余引用），状态保持不变，修好后再跑", async () => {

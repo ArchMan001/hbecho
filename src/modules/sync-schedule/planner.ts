@@ -20,7 +20,7 @@ const planSnapshot = z.looseObject({
   list_safety_page_limit: z.number().int(),
   task_max_attempts: z.number().int(),
   runtime: z.looseObject({ modes: z.strictObject({ media_user_info: modeSchema, user_video_list: modeSchema }) }),
-  supplement: z.looseObject({ account_ids: z.array(z.string()), only: z.enum(["profile", "full"]) }).optional(),
+  supplement: z.looseObject({ account_ids: z.array(z.string()), only: z.enum(["profile", "list", "full"]) }).optional(),
 });
 
 export interface ReusedTask {
@@ -57,14 +57,14 @@ export function createBatchPlanner(deps: PlannerDeps) {
 
   async function planChunk(
     tx: DbTx,
-    p: { batchId: bigint; snapshot: z.infer<typeof planSnapshot>; providerId: bigint; rows: TargetRow[]; onlyProfile: boolean; priority: number; bump: boolean; now: Date },
+    p: { batchId: bigint; snapshot: z.infer<typeof planSnapshot>; providerId: bigint; rows: TargetRow[]; only: "profile" | "list" | "full"; priority: number; bump: boolean; now: Date },
   ): Promise<ReusedTask[]> {
     const ids = p.rows.map((r) => r.accountId);
     // 账号行锁下判断复用（FS-3.5）；按 ID 排序加锁避免互相死锁
     await tx.select({ id: externalAccounts.accountId }).from(externalAccounts).where(inArray(externalAccounts.accountId, ids)).orderBy(asc(externalAccounts.accountId)).for("update");
 
     const wanted = p.rows.flatMap((r) => {
-      const actions = r.watchType === "external" || p.onlyProfile ? ["fetch_profile"] : ["fetch_profile", "fetch_content_list"];
+      const actions = r.watchType === "external" || p.only === "profile" ? ["fetch_profile"] : p.only === "list" ? ["fetch_content_list"] : ["fetch_profile", "fetch_content_list"];
       return actions.map((action) => ({ row: r, action }));
     });
     const actions = [...new Set(wanted.map((w) => w.action))];
@@ -170,7 +170,7 @@ export function createBatchPlanner(deps: PlannerDeps) {
             snapshot,
             providerId: pid,
             rows: chunk.rows,
-            onlyProfile: supp?.only === "profile",
+            only: supp?.only ?? "full",
             priority: supp ? SUPPLEMENT_PRIORITY : 0,
             bump: supp !== undefined,
             now: clock.now(),

@@ -18,7 +18,7 @@ import { ACTIVE_TASK_STATUSES } from "./task-keys";
 const decimalId = z.string().regex(/^[1-9]\d*$/, "必须是不带前导零的正十进制整数 string");
 const supplementInput = z.strictObject({
   accountIds: z.array(decimalId).min(1).max(5000),
-  only: z.enum(["profile", "full"]).default("full"),
+  only: z.enum(["profile", "list", "full"]).default("full"),
   ifOlderThanHours: z.number().positive().finite().optional(),
   onBusy: z.enum(["run_now", "queue", "cancel_current"]).default("run_now"),
   apply: z.boolean().default(false),
@@ -57,13 +57,14 @@ export function createSyncCommands(deps: { db: Db; clock: Clock; resolver: Monit
   /** 批次级命令（取消批次、cancel_current）的影响面是整个批次：1.0 只允许全范围服务身份（B 域接入后再按批次内账号集合细化）。 */
   const requireFullScope = (actor: ActorContext) => requireFullScopeOf(actor, "取消批次");
 
-  async function lastSuccess(accountId: bigint, only: "profile" | "full"): Promise<Date | null> {
+  async function lastSuccess(accountId: bigint, only: "profile" | "list" | "full"): Promise<Date | null> {
     const [p] = await db.select({ at: max(accountProfileSnapshots.responseReceivedAt) }).from(accountProfileSnapshots).where(eq(accountProfileSnapshots.accountId, accountId));
     if (only === "profile") return p?.at ?? null;
     const [l] = await db
       .select({ at: max(syncTasks.finishedAt) })
       .from(syncTasks)
       .where(and(eq(syncTasks.accountId, accountId), eq(syncTasks.requestedAction, "fetch_content_list"), inArray(syncTasks.status, ["succeeded", "succeeded_with_gap"])));
+    if (only === "list") return l?.at ?? null; // 只补列表：以最近一次成功的列表采集为准（名单新账号刚采过主页，不能让主页的新鲜度挡住它的首次列表）
     // 主页与列表两者中较早的那个：任一过期就视为过期；从未成功过视为无限久（FS-13.4）
     if (!p?.at || !l?.at) return null;
     return p.at.getTime() <= l.at.getTime() ? p.at : l.at;
@@ -240,7 +241,7 @@ export function createSyncCommands(deps: { db: Db; clock: Clock; resolver: Monit
         plan = await planner.planBatch(out.batchId);
         const reusedBy = new Map<string, string[]>();
         for (const r of plan.reused) reusedBy.set(r.accountId, [...(reusedBy.get(r.accountId) ?? []), r.taskId]);
-        const wantedPerAccount = input.only === "profile" ? 1 : 2;
+        const wantedPerAccount = input.only === "full" ? 2 : 1;
         for (let i = 0; i < dispositions.length; i++) {
           const d = dispositions[i]!;
           const t = reusedBy.get(d.accountId);

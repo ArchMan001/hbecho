@@ -17,14 +17,14 @@ import { buildRequest } from "../provider-adapter";
 import { RawCaptureGateway } from "../raw-capture";
 import { createSyncScheduler } from "../sync-schedule";
 import { withFences } from "../orchestrator";
-import { createBatchBudgetPolicy, isBudgetReason, spentForBatch } from "./budget";
+import { createBatchBudgetPolicy, isBudgetReason, spentForBatch, spentInWindow } from "./budget";
 import type { TaskRunner } from "./types";
 
 const t = useTestDb();
 const S1 = new Date("2026-11-08T18:00:00Z");
 const PROFILE_PATH = "/openapi/v1/media_user_info";
 
-async function world(limits: { maxCalls: number; maxPoints: number }, respond?: (callIndex: number) => { httpStatus: number; body: Uint8Array }) {
+async function world(limits: { maxCalls: number; maxPoints: number }, respond?: (callIndex: number) => { httpStatus: number; body: Uint8Array }, yearMaxPoints?: number) {
   const org = await seedOrg(t.db, S1);
   await seedSyncSettings(t.db, S1);
   const clock = new FakeClock(S1);
@@ -37,7 +37,7 @@ async function world(limits: { maxCalls: number; maxPoints: number }, respond?: 
     transport,
     clock,
     location: { providerCode: "aliyun-oss", region: "cn-beijing", bucket: "hbecho-test" },
-    policy: createBatchBudgetPolicy(t.db, limits),
+    policy: createBatchBudgetPolicy(t.db, limits, yearMaxPoints === undefined ? undefined : { maxPoints: yearMaxPoints, now: () => clock.now() }),
   });
   // 一个只做「发一次主页调用」的 Runner：预算封口 → budget_exhausted；其余按 HTTP 状态映射
   const runner: TaskRunner = async (ctx) => {
@@ -137,5 +137,20 @@ describe("spentForBatch", () => {
     } finally {
       await other.end();
     }
+  });
+});
+
+describe("年度硬护栏（最近 365 天累计点数）", () => {
+  it("年度 25 点：抖音 10 + 小红书 15 刚好够，下一次（快手 10 点）发送前被封口，原因 year_budget；批次上限再宽也一样", async () => {
+    const w = await world({ maxCalls: 1000, maxPoints: 1_000_000 }, undefined, 25);
+    await w.worker.run({ untilIdle: true });
+    expect(w.transport.calls).toHaveLength(2);
+    expect((await profiles()).map((x) => [x.status, x.lastErrorCode])).toEqual([["succeeded", null], ["succeeded", null], ["failed", "budget_exhausted"], ["failed", "budget_exhausted"]]);
+  });
+  it("窗口按 365 天算：一年前的调用不计入，窗口内的计入（被封口的 not_sent 不计点）", async () => {
+    const w = await world({ maxCalls: 1000, maxPoints: 1_000_000 }, undefined, 1_000_000);
+    await w.worker.run({ untilIdle: true });
+    expect(await spentInWindow(t.db, new Date(S1.getTime() - 365 * 86_400_000))).toBe(45); // 抖音 10 + 小红书 15 + 快手 10 + external 快手 10
+    expect(await spentInWindow(t.db, new Date(S1.getTime() + 86_400_000))).toBe(0);
   });
 });

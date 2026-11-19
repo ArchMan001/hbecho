@@ -1,4 +1,4 @@
-// 全量明细与导出（e-metrics-lite）页面原型：视频明细 + 账号维度 + 判定计划入口示意。
+// 活动计划判定结果（e-metrics-lite）页面原型：视频明细 + 账号维度 + 导航落地页。
 // 2026-11-19 起草，供刘学奎评审（design §10）；未确认前不是实现依据。
 // 演示数据全部虚构。结果不是写死的：按 requirements EL-4 / EL-6 的规则，用一个小的确定性生成器
 // 现算三层结果与账号能力四态，所以「各能力都通过但判定结果不通过」这类现象是规则本身产生的。
@@ -550,22 +550,22 @@ export function renderLite(planId, runId) {
   const e = f();
   const wantTab = new URLSearchParams(location.hash.split("?")[1] ?? "").get("tab"); // 深链接：#/reports/jp1?tab=accounts
   if (wantTab === "videos" || wantTab === "accounts") e.tab = wantTab;
-  if (!plan) return renderShell({ activeNav: activeNav(), breadcrumb: ["工作区", "全量明细"], content: deniedState("找不到这个判定计划，或它不在你的数据范围内。") });
+  if (!plan) return renderShell({ activeNav: activeNav(), breadcrumb: ["工作区", "活动计划判定结果"], content: deniedState("找不到这个判定计划，或它不在你的数据范围内。") });
   if (e.planKey !== `${planId}/${runId ?? ""}`) { e.planKey = `${planId}/${runId ?? ""}`; Object.assign(e, { page: 1, region: "all", branch: "all", sector: "all", store: "all", q: "" }); }
   const exec = plan.executions.find((x) => x.id === (runId ?? latestOf(plan)?.id)) ?? latestOf(plan);
   const canExport = state.role !== "store_staff";
   const head = (disabledReason) => `
     <div class="page-head">
-      <div><h1 class="page-title">全量明细</h1><p class="page-sub">${esc(plan.alias)}：一次已完成执行里的全部视频与账号，判定计划里设了什么条件就多什么列。</p></div>
+      <div><h1 class="page-title">活动计划判定结果</h1><p class="page-sub">${esc(plan.alias)}：一次已完成执行里的全部视频与账号，判定计划里设了什么条件就多什么列。</p></div>
       <div class="page-actions">
-        <a class="btn" href="#/accountinfo">${icon("arrowLeft")} 返回账号信息</a>
+        <a class="btn" href="#/results">${icon("arrowLeft")} 返回活动计划判定结果</a>
         ${canExport ? `<button type="button" class="btn btn-primary" data-action="el-export" ${disabledReason ? `disabled title="${esc(disabledReason)}"` : ""}>${icon("download")} 导出 Excel</button>` : ""}
       </div>
     </div>`;
   if (!exec) {
     return renderShell({
-      activeNav: activeNav(), breadcrumb: ["工作区", "全量明细"],
-      content: `${head("还没有完成的执行")}${stateAware(emptyState({ title: "还没有完成的执行", text: "这个判定计划还没有一次已完成的执行，所以没有可展示的明细，也不能导出。", action: '<a class="btn" href="#/accountinfo">返回账号信息</a>' }))}`,
+      activeNav: activeNav(), breadcrumb: ["工作区", "活动计划判定结果"],
+      content: `${head("还没有完成的执行")}${stateAware(emptyState({ title: "还没有完成的执行", text: "这个判定计划还没有一次已完成的执行，所以没有可展示的明细，也不能导出。", action: '<a class="btn" href="#/results">返回活动计划判定结果</a>' }))}`,
     });
   }
   const data = dataOf(exec);
@@ -583,11 +583,11 @@ export function renderLite(planId, runId) {
     <div class="md-tabs el-tabs" role="tablist">${tabBtn("videos", "视频明细", exec.contentsPruned ? 0 : scopedRows.length)}${tabBtn("accounts", "账号维度", scopedAccs.length)}</div>
     ${tab === "videos" && exec.contentsPruned ? "" : filterToggle(0)}
     ${tab === "videos" && exec.contentsPruned ? emptyState({ title: "内容明细已过保留期", text: "视频明细只保留最近几次执行；账号维度仍可查看。", action: '<button type="button" class="btn" data-action="el-tab" data-tab="accounts">看账号维度</button>' }) : `${filterBar(exec)}${tab === "videos" ? videosTable(plan, exec) : accountsTable(plan, exec)}`}`;
-  return renderShell({ activeNav: activeNav(), breadcrumb: ["工作区", "全量明细"], content: `${head("")}${stateAware(inner)}` });
+  return renderShell({ activeNav: activeNav(), breadcrumb: ["工作区", "活动计划判定结果"], content: `${head("")}${stateAware(inner)}` });
 }
-const activeNav = () => "accountinfo";
+const activeNav = () => "results";
 
-/* ---------- 导航「账号信息」的落地页：选一个判定计划（四个角色都有；范围由数据范围决定） ---------- */
+/* ---------- 导航「活动计划判定结果」的落地页：选一个判定计划（四个角色都有；范围由数据范围决定） ---------- */
 export function renderInfoEntry() {
   const own = state.role === "store_staff";
   const rows = Object.values(PLANS).map((p) => {
@@ -599,28 +599,7 @@ export function renderInfoEntry() {
   }).join("");
   const scope = own ? "只显示你名下的账号与内容。" : state.role === "branch_manager" ? "只显示本分公司范围内的账号与内容。" : "显示授权范围内的全部账号与内容。";
   const content = `
-    <div class="page-head"><div><h1 class="page-title">账号信息</h1><p class="page-sub">选一个判定计划，查看它某次已完成执行里的全部视频与账号。${scope}</p></div></div>
+    <div class="page-head"><div><h1 class="page-title">活动计划判定结果</h1><p class="page-sub">选一个判定计划，查看它某次已完成执行里的全部视频与账号。${scope}</p></div></div>
     ${stateAware(`<div class="table-wrap"><table><thead><tr><th>判定计划</th><th>活动计划</th><th>平台</th><th>最近一次完成</th><th>状态</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`)}`;
-  return renderShell({ activeNav: "accountinfo", breadcrumb: ["工作区", "账号信息"], content });
-}
-
-/* ---------- 判定计划入口示意（D 已实现的页面，这里只示意新增的「全量明细」按钮） ---------- */
-export function renderJudgementEntry() {
-  const plans = Object.values(PLANS);
-  const rows = plans.map((p) => {
-    const l = latestOf(p);
-    return `<tr>
-      <td>${esc(p.alias)}</td><td>${esc(p.platform)}</td><td>${l ? `${esc(l.completedAt)} · v${l.version}` : "—"}</td>
-      <td>${l ? badge("已完成", "green") : badge("没有已完成的执行", "gray")}</td>
-      <td class="right"><a class="btn btn-sm" href="#/reports/${p.id}">${icon("chart")} 全量明细</a></td></tr>`;
-  }).join("");
-  const execRows = PLANS.jp1.executions.map((x, i) => `<tr><td class="num">${esc(x.completedAt)}</td><td>v${x.version}${i === 0 ? "（最近）" : ""}</td><td>${num(dataOf(x).accounts.length)} 位专员</td>
-    <td class="right"><a class="btn btn-sm" href="#/reports/jp1/${x.id}">${icon("chart")} 全量明细</a></td></tr>`).join("");
-  const content = `
-    <div class="page-head"><div><h1 class="page-title">判定计划</h1><p class="page-sub">这是 d-rule-engine 已实现页面的入口示意：只新增「全量明细」按钮，其余不动。</p></div></div>
-    <div class="callout">${icon("alert")}<span>原型说明：本页不是 e-metrics-lite 的页面。D 现有的 <code>/judgement/results/[runId]</code> 占位页会改为跳转到全量明细。</span></div>
-    <div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>判定计划</th><th>平台</th><th>最近一次完成</th><th>状态</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
-    <h3 class="card-title" style="margin:22px 0 10px">执行记录 · ${esc(PLANS.jp1.alias)}</h3>
-    <div class="table-wrap"><table><thead><tr><th>完成时间</th><th>版本</th><th>参与</th><th></th></tr></thead><tbody>${execRows}</tbody></table></div>`;
-  return renderShell({ activeNav: "judgement", breadcrumb: ["工作区", "判定计划"], content });
+  return renderShell({ activeNav: "results", breadcrumb: ["工作区", "活动计划判定结果"], content });
 }

@@ -52,4 +52,4 @@
 
 ## 回填记录
 - 2026-11-18 本机：`pnpm exec vitest --run --project unit` report-detail 38、report-url 9、report-cli 5；`with-test-mysql.sh … --project db` `report.db.test.ts` 25、D judgement 数据库测试 224（JP-22 12 例）；边界护栏 `acceptance-boundaries`（B-AX-6 白名单登记两个页面文件、`report.xlsx` 回退名改为 `export.xlsx`）与 `acceptance-gaps` K15（登记导出路由）已随本批更新并通过；
-- 完整 `./scripts/verify.sh` 的最终结果见本批提交说明。
+- 2026-11-18 本机完整 `./scripts/verify.sh`：unit 1278 通过、db 全部通过（含 `export.perf.db.test.ts`）、文档链接与登记通过，结果 `verify: OK`；Python 侧未验证（缺 pytest / ffmpeg），尚无静态门禁。

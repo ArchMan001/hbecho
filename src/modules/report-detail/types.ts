@@ -11,7 +11,8 @@ export class ReportError extends Error {
     this.name = "ReportError";
   }
 }
-export const isReportError = (e: unknown): e is ReportError => e instanceof ReportError;
+/** 按名称与字段判断，不用 instanceof：Next 把同一个模块打包进多个入口时类会有多份，instanceof 会误判成未知错误。 */
+export const isReportError = (e: unknown): e is ReportError => e instanceof ReportError || (e instanceof Error && e.name === "ReportError" && typeof (e as { kind?: unknown }).kind === "string" && typeof (e as { code?: unknown }).code === "string");
 export const PAGE_SIZE = 50;
 /** 导出行数上限：起始值，不是冻结值（e-metrics-lite EL-8；T5 / M3 实测后定稿）。 */
 export const DEFAULT_EXPORT_LIMITS = { videoRows: 50_000, accountRows: 5_000 } as const;
@@ -78,7 +79,7 @@ export interface TableView {
   total: number;
   page: number;
   pageCount: number;
-  /** 有缺失数据（互动值 / 粉丝数读不到）的行数，用于顶部提示 */
+  /** 读不到快照数据的行数（内容快照 / 主页快照缺失），用于顶部提示；值状态为空（缺失、null）不算 */
   missingRows: number;
 }
 export type { ConditionDesc };

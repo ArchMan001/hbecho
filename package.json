@@ -18,6 +18,7 @@
     "signals": "tsx src/worker/signals-main.ts",
     "judgement": "tsx src/worker/judgement-main.ts",
     "square": "tsx src/worker/square-main.ts",
+    "report": "tsx src/worker/report-main.ts",
     "smoke": "tsx src/worker/smoke-main.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",

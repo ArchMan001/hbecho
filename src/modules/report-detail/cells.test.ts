@@ -92,3 +92,13 @@ describe("值与格式", () => {
     expect([kindLabel("video"), kindLabel("image"), kindLabel("text"), kindLabel("unknown")]).toEqual(["视频", "图文", "图文", "未知"]);
   });
 });
+import { isReportError, ReportError } from "./types";
+describe("isReportError：模块被打包成两份时也认得", () => {
+  it("同一个类、另一份拷贝（同名同字段）都算；普通 Error 不算", () => {
+    expect(isReportError(new ReportError("auth", "x", "m"))).toBe(true);
+    class Copy extends Error { name = "ReportError"; kind = "auth"; code = "x"; }
+    expect(isReportError(new Copy("m"))).toBe(true);
+    expect(isReportError(new Error("m"))).toBe(false);
+    expect(isReportError({ name: "ReportError", kind: "auth", code: "x" })).toBe(false);
+  });
+});

@@ -3588,3 +3588,42 @@ td.num {
 .sq-skel-card { border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--card); overflow: hidden; }
 .sq-skel-card .skeleton-block { height: 150px; border-radius: 0; }
 .sq-skel-card .skeleton-line { margin: 12px; }
+
+/* ---------- 活动计划判定结果（e-metrics-lite；原型 ui-lab/e-metrics-lite，2026-11-19 已确认）---------- */
+.el-meta { display: flex; align-items: center; justify-content: space-between; gap: 14px 22px; flex-wrap: wrap; }
+.el-banners { display: grid; gap: 8px; margin: 12px 0; }
+.el-banners:empty { display: none; }
+.el-tabs { margin: 14px 0 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+.el-selects { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+.el-search { display: inline-flex; align-items: center; gap: 8px; }
+.el-hint { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 8px; }
+.el-pager { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.el-scroll { overflow: auto; max-height: 68vh; border: 1px solid var(--line); border-radius: var(--radius-card); background: #fff; }
+.el-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--fs-meta); }
+.el-table th { position: sticky; top: 0; z-index: 2; padding: 10px 14px; }
+.el-table td { max-width: 240px; padding: 9px 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-bottom: 1px solid var(--line-2); }
+.el-table tbody tr:last-child td { border-bottom: 0; }
+.el-table .el-fixed-l { position: sticky; left: 0; z-index: 1; background: #fff; border-right: 1px solid var(--line); }
+.el-table th.el-fixed-l { z-index: 3; background: var(--surface-sunken); }
+.el-table tbody tr:hover .el-fixed-l { background: var(--surface-hover); }
+.el-table td.el-title { max-width: 320px; }
+.el-table td.el-id { font-family: var(--font-mono); font-size: 11.5px; }
+.el-table td.el-ability { max-width: 260px; }
+.el-table th.is-ability, .el-table th.is-result { background: var(--tint); color: var(--brand-ink); }
+.el-table td.el-result { font-weight: 600; }
+.t-pass { color: #1b7f3b; }
+.t-fail { color: #c0362c; }
+.t-unob { color: #8a8f98; }
+.t-skip { color: #b5bac2; }
+.el-link { color: var(--brand-ink); display: inline-flex; }
+.el-thumb { display: inline-block; width: 40px; height: 30px; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; vertical-align: middle; cursor: zoom-in; background: var(--muted-bg); }
+.el-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.el-thumb-avatar { width: 32px; height: 32px; border-radius: 50%; }
+.el-thumb-background { width: 64px; height: 30px; }
+.el-thumb.is-empty { display: inline-flex; align-items: center; justify-content: center; color: var(--ink-3); cursor: default; }
+.el-thumb.is-empty .ico { width: 14px; height: 14px; }
+.el-zoom { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; border-radius: 12px; }
+.el-h { margin: 16px 0 8px; font-size: var(--fs-body); }
+.el-headlist { display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow: auto; }
+.el-headlist .chip { cursor: default; font-size: 11.5px; padding: 2px 8px; }
+@media (max-width: 760px) { .el-scroll { max-height: 60vh; } }

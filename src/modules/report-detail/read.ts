@@ -159,7 +159,7 @@ export function createReportDetail(deps: ReportDeps) {
     const out = rows.map((r) => {
       const s = snaps.get(r.contentSnapshotId);
       const p = profiles.get(r.accountId);
-      if (!s || [s.like, s.comment, s.share, s.collect].some((v) => v.state !== "value")) missing++;
+      if (!s) missing++; // 读不到冻结的内容快照；互动值的缺失 / 空是值状态，不算「读不到」
       const cells: Record<string, Cell> = { ...orgCells(r.org, r.staffId, names, platformName), nickname: { text: p?.nickname ?? "", tone: "plain" }, homeUrl: linkCell(homes.get(r.accountId)) };
       Object.assign(cells, {
         kind: { text: s ? kindLabel(s.kind) : "", tone: "plain" }, title: { text: s?.title ?? "", tone: "plain" }, publishedAt: { text: fmtBjt(s?.publishedAt), tone: "plain" },
@@ -186,7 +186,7 @@ export function createReportDetail(deps: ReportDeps) {
     let missing = 0;
     const out = rows.map((r) => {
       const p: ProfileFact | undefined = profiles.get(r.accountId);
-      if (!p || p.followers.state !== "value") missing++;
+      if (!p) missing++; // 数据截止时点前没有主页快照；粉丝数等值状态为空是正常的，不算「读不到」
       const sy = syncs.get(r.accountId);
       const cells: Record<string, Cell> = { ...orgCells(r.org, r.staffId, names, platformName), nickname: { text: p?.nickname ?? "", tone: "plain" }, homeUrl: linkCell(homes.get(r.accountId)) };
       Object.assign(cells, {
@@ -324,21 +324,27 @@ export function createReportDetail(deps: ReportDeps) {
     const completedDate = fmtBjt(exec.completedAt).slice(0, 10);
     return { o, exec, filter, platformName, warnings, abilityResultsAvailable, videosPruned: warnings.includes("videos_pruned"), plan: { fileName: exportFileName(o.activityPlanName, o.alias, completedDate), warnings, videoRows: videos, accountRows: accounts } satisfies ExportPlan };
   }
-  /** 写出到 sink。调用方先 prepareExport 拿文件名与警告头，再调用本函数；并发上限在这里占位。 */
-  async function writeExport(prep: Awaited<ReturnType<typeof prepareExport>>, sink: import("node:stream").Writable): Promise<{ rowsBySheet: Record<string, number> }> {
+  /**
+   * 开始写出到 sink。并发上限在这里**同步**占位：满了立刻抛 export_busy（此时还没有写出任何字节，调用方可以回 429）；
+   * 返回的 Promise 在写完（或失败）后释放占位。调用方先 prepareExport 拿文件名与警告头。
+   */
+  function startExport(prep: Awaited<ReturnType<typeof prepareExport>>, sink: import("node:stream").Writable): Promise<{ rowsBySheet: Record<string, number> }> {
     if (activeExports >= MAX_CONCURRENT_EXPORTS) throw new ReportError("conflict", "export_busy", "当前有较多导出正在进行，请稍后再试");
     activeExports++;
-    try {
-      const { exec, o, filter, platformName } = prep;
-      const sheets = [
-        ...(prep.videosPruned ? [] : [{ name: "视频明细", columns: buildColumns("videos", exec.config.conditions, platformName), rows: videoRows(exec, o.constraint, filter, platformName) }]),
-        { name: "账号维度", columns: buildColumns("accounts", exec.config.conditions, platformName), rows: accountRows(exec, o.constraint, filter, platformName, prep.abilityResultsAvailable) },
-      ];
-      return await writeWorkbook(sink, sheets);
-    } finally {
-      activeExports--;
-    }
+    return (async () => {
+      try {
+        const { exec, o, filter, platformName } = prep;
+        const sheets = [
+          ...(prep.videosPruned ? [] : [{ name: "视频明细", columns: buildColumns("videos", exec.config.conditions, platformName), rows: videoRows(exec, o.constraint, filter, platformName) }]),
+          { name: "账号维度", columns: buildColumns("accounts", exec.config.conditions, platformName), rows: accountRows(exec, o.constraint, filter, platformName, prep.abilityResultsAvailable) },
+        ];
+        return await writeWorkbook(sink, sheets);
+      } finally {
+        activeExports--;
+      }
+    })();
   }
+  const writeExport = async (prep: Awaited<ReturnType<typeof prepareExport>>, sink: import("node:stream").Writable) => startExport(prep, sink);
   /** 一步到位（CLI 与测试用）：prepare + write。 */
   async function exportWorkbook(ctx: AuthContext, planIdText: string, args: { executionId?: string; filter: ReportFilterInput }, sink: import("node:stream").Writable) {
     const prep = await prepareExport(ctx, planIdText, args);
@@ -363,7 +369,7 @@ export function createReportDetail(deps: ReportDeps) {
       videoColumns: warnings.includes("videos_pruned") ? [] : buildColumns("videos", exec.config.conditions, platformName), accountColumns: buildColumns("accounts", exec.config.conditions, platformName),
     };
   }
-  return { overview, view, exportPreview, prepareExport, writeExport, exportWorkbook };
+  return { overview, view, exportPreview, prepareExport, startExport, writeExport, exportWorkbook };
 }
 export type ReportDetail = ReturnType<typeof createReportDetail>;
 export type { SnapshotFact };

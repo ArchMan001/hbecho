@@ -74,6 +74,8 @@ const CRUMBS: Array<[RegExp, string[]]> = [
   [/^\/judgement\/[^/]+$/, ["判定计划", "计划详情"]],
   [/^\/judgement$/, ["判定计划"]],
   [/^\/accounts$/, ["账号与监控"]],
+  [/^\/reports\/[^/]+$/, ["活动计划判定结果", "判定结果"]],
+  [/^\/results$/, ["活动计划判定结果"]],
   [/^\/learning\/manage\/new$/, ["学习", "课程管理", "新建课程"]],
   [/^\/learning\/manage\/[^/]+$/, ["学习", "课程管理", "编辑课程"]],
   [/^\/learning\/manage$/, ["学习", "课程管理"]],

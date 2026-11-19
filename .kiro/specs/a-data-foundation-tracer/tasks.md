@@ -295,9 +295,9 @@
   - 提供独立于默认 tests/CI 的 smoke 入口；启动前强制 human approval、显式 runtime switch、locator/action/mode allowlist、secret provider、固定 call/cost budget 和 deadline。
   - 首轮只验证最小 `media_user_info`/`user_video_list` tuple；同时实测异步 profile 的 terminal schema、TTL 与合适的轮询间隔，写回 capability 证据；异步 profile 必须作为独立 smoke，不因同步成功而启用；异步列表保持 disabled。
   - 每个真实 submit/poll/retry 仍走 RawCaptureGateway、ProviderCall、cost guard 和 redacted audit；达到预算或 deadline 时在下一次调用前停止。
-  - 使用 A v1.10 §6.2 点数表估算成本（抖音主页 10、列表 10/页；小红书主页 15、列表 15/页），单价 0.02 元/点（1 元 = 50 点，2026-11-04）；QPS 仍未知。
+  - 使用 A v1.10 §6.2 点数表估算成本（抖音主页 10、列表 10/页；小红书主页 15、列表 15/页），单价 0.01 元/点（1 元 = 100 点，2026-11-04）；QPS 仍未知。
   - 输出 audit summary：实际 tuple、calls、polls、latency、bytes、estimated points、result category、schema/Adapter version 和 evidence refs，不含 secret/full payload。
-  - 将实测结果更新为对应 capability 的 evidence；认证 header（raw4 为 `X-Api-Key`）、QPS、task TTL 或 schema 差异继续显式记录，不能自动外推；单价已确认 0.02 元/点。
+  - 将实测结果更新为对应 capability 的 evidence；认证 header（raw4 为 `X-Api-Key`）、QPS、task TTL 或 schema 差异继续显式记录，不能自动外推；单价已确认 0.01 元/点。
   - **Manual acceptance:** 审批记录、预算预览、停止行为、raw-before-parse evidence 和审计摘要均由操作人确认；没有批准时命令必须在任何网络调用前失败。
 
   - **完成记录（2026-11-04）：** 本轮范围按约定只做 smoke **入口、审批开关、allowlist、预算与停止逻辑**，**没有发任何真实 AI Master 调用，没有读取任何 secret**。`./scripts/verify.sh` 通过（unit 21 个文件 253 条；db 13 个文件 250 条；Python 7 条）。对 11 处关键逻辑做了变异检查（开关、审批过期、审批有效期上限、审批绑定计划摘要、已知失败 tuple、预算放不下、出站请求核对、deadline、轮询上限、异步条目才允许轮询、未接线时停止），全部被杀。
@@ -310,9 +310,9 @@
     | R17.2 / M1 没有批准 → 任何网络调用之前失败 | 6 类拒绝（开关、无审批、审批过期、计划不符、异步列表、预算不足）：transport 0 次（含 `rejected` 0 次）、secret 读取 0 次、transport 工厂 0 次、批次 / ProviderCall / ODS 对象 / 日志 0 行；CLI 在开关缺失时连审批文件都不读，`execute` 永远不被调用 | 同上 |
     | R17.3 / M1 上限在下一次调用前停止 | deadline 超过后下一条在发送前被封口（`terminal/not_sent`，transport 只有 1 次）；`max_polls` 到达后第 3 次轮询在发送前封口（`stoppedBy=poll_budget`）；调用 / 点数上限由 `createBudgetPolicy` 在每次调用前检查（任务 8） | `smoke.db.test.ts` |
     | design §16.3 / 每个调用仍走 RawCaptureGateway | smoke 的每个 submit / poll 都经网关：请求字节先落 ODS → prepared → in_flight → 响应字节落 ODS → 才解码；响应不是合法信封时先落 ODS 再报告 `decoded=false`；**不写任何业务事实**（账号 / 归属 / 快照 / 内容 / 检查点均为 0 行）；`AllowlistTransport` 在出站前再核对一次路径、`async`、`url`，即使执行器有缺陷也不会向 allowlist 之外发请求 | 同上 |
-    | R17.4 / M2 审计摘要 | `SmokeSummary`：实际 tuple、调用数、轮询数、延迟、字节数、估算点数与金额（0.02 元/点）、结果类别、Adapter 版本、证据引用（ProviderCall ID + 响应字节 SHA-256 前缀）、`stoppedBy`；**不含 secret、完整载荷、locator 原文**（只有 SHA-256 前缀），ODS 证据字节里也没有 secret | 同上 |
+    | R17.4 / M2 审计摘要 | `SmokeSummary`：实际 tuple、调用数、轮询数、延迟、字节数、估算点数与金额（0.01 元/点）、结果类别、Adapter 版本、证据引用（ProviderCall ID + 响应字节 SHA-256 前缀）、`stoppedBy`；**不含 secret、完整载荷、locator 原文**（只有 SHA-256 前缀），ODS 证据字节里也没有 secret | 同上 |
     | R17.5 不自动启用 capability | smoke 不写任何 capability；成功只在摘要里列出实际 exercise 的 tuple，capability 表仍全部 production `disabled`，更新证据需要人工 | 设计约束，无自动路径 |
-    | R17.6 点数表与单价 | 抖音 10 / 10、小红书 15 / 15、异步提交计点、轮询与失败不计点、0.02 元/点；预览显示逐项与合计金额 | `preflight.test.ts`、`cost-guard.test.ts` |
+    | R17.6 点数表与单价 | 抖音 10 / 10、小红书 15 / 15、异步提交计点、轮询与失败不计点、0.01 元/点；预览显示逐项与合计金额 | `preflight.test.ts`、`cost-guard.test.ts` |
 
   - **真实 smoke 需要你批准的内容（建议首轮，均为最小 tuple，不自动重试）：**
     1. **同步轮（抖音）**：`douyin / media_user_info / synchronous` ×1 + `douyin / user_video_list / synchronous` ×1，locator 用 raw3 的 `HITACHI1` 分享文本；调用数上限 2、轮询 0、**预算 20 点（0.4 元）**，deadline 120 秒。

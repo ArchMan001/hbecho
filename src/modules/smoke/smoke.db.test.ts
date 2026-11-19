@@ -136,7 +136,7 @@ describe("获批后的执行：仍走 raw-before-parse / ProviderCall / 成本�
     expect(s.transport.calls.map((c) => c.request.path)).toEqual([PROFILE_PATH, LIST_PATH]);
 
     expect(sum).toMatchObject({ stoppedBy: null, approvedBy: "liuxuekui", environment: "production" });
-    expect(sum.totals).toMatchObject({ calls: 2, polls: 0, estimatedPoints: 20, estimatedYuan: 0.4 });
+    expect(sum.totals).toMatchObject({ calls: 2, polls: 0, estimatedPoints: 20, estimatedYuan: 0.2 });
     expect(sum.totals.bytesReceived).toBeGreaterThan(10_000);
     expect(sum.tuples.map((x) => [x.action, x.mode, x.calls, x.polls, x.category, x.decoded, x.adapterVersion])).toEqual([
       ["media_user_info", "synchronous", 1, 0, "none", true, "aimaster-adapter.v1"],

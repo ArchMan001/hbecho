@@ -20,7 +20,7 @@ describe("点数表（A §6.2、计费点数表.md；FS-16.3）", () => {
     expect(pointsOf("douyin", "task_lookup")).toBe(0);
     expect(pointsOf("wechat_channels", "media_user_info")).toBe(0);
   });
-  it("单价 0.02 元/点：一次抖音主页 + 一页列表 = 20 点 = 0.4 元", () => {
-    expect((POINTS.douyin!.media_user_info! + POINTS.douyin!.user_video_list!) * YUAN_PER_POINT).toBeCloseTo(0.4, 10);
+  it("单价 0.01 元/点：一次抖音主页 + 一页列表 = 20 点 = 0.2 元", () => {
+    expect((POINTS.douyin!.media_user_info! + POINTS.douyin!.user_video_list!) * YUAN_PER_POINT).toBeCloseTo(0.2, 10);
   });
 });

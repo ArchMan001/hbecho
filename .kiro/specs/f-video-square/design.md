@@ -1,10 +1,10 @@
 # F 经销商视频广场（f-video-square）· 设计
 
-> **状态**：`draft`（界面待确认，见 §10.6）
+> **状态**：`draft`（界面已确认，见 §10.6）
 >
 > **权威来源**：[requirements.md](requirements.md)；数据基线 [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)；界面基线 [`ui-foundation.md`](../../../HBECHO设计方案/ui/ui-foundation.md)
 >
-> **更新日期**：2026-11-18（初建）
+> **更新日期**：2026-11-19（经审查订正：D 状态、ScopeStrategy、平台枚举、字段出处；界面确认入档）
 
 ## 1. 一句话方案
 
@@ -51,7 +51,7 @@ square_brand_policies (
 | 标题、发布时间、点赞、评论、链接 | `content_snapshots`，经 `contents.current_snapshot_id` 联接，只取 `snapshot_status='finalized'` |
 | 账号名 | `external_accounts.current_profile_snapshot_id` → `account_profile_snapshots.nickname` |
 | 品牌 / 分公司（当前归属） | `staff_account_assignments`（`watch_type='staff'`、`slot_released_at IS NULL`、`UQ(account_id)`）→ `media_staff` → `stores`（`brand_id`、`sector_id`）→ `sectors.branch_id` → `branches` |
-| 封面 | `media_references`（`content_snapshot_id` = 当前快照、`role='cover_normalized'`、`slot_index=0`、`archive_status IN ('archived','carried_forward')`）→ `media_assets.object_key` → `signedGetUrl` |
+| 封面 | `media_references`（`content_snapshot_id` = 当前快照、`role='cover_normalized'`、`slot_index=0`、`archive_status IN ('archived','carried_forward')`）→ `media_assets.oss_object_id` → `oss_objects.object_key` → `signedGetUrl` |
 | 平台 | `platforms` |
 
 品牌与分公司取**当前归属**（D4）。理由：一次联接即可，不必在 `content_discoveries` 的多批次行里挑一行。已知差异：账号改绑后，旧作品跟随新归属。
@@ -63,12 +63,12 @@ square_brand_policies (
 ```ts
 export interface SquareFilter {
   brandId?: string;            // 十进制字符串；缺省 = 全部（在可见集合内）
-  platformCode?: 'douyin' | 'xiaohongshu' | 'kuaishou';
+  platformCode?: (typeof SEGMENT_PLATFORMS)[number];   // 复用 db/schema/signals 的代码枚举，不另写字面量；选项仍数据驱动（§5.6）
   kind: 'video' | 'image' | 'all';          // 缺省 'video'
   branchId?: string;
   withinDays?: 7 | 30 | 90 | 180;
   likeBand?: '51-100' | '101-300' | '301-500' | '501+';
-  activityPlanId?: string;     // D 上线前传入即抛 plan_filter_unavailable
+  activityPlanId?: string;     // 本切片内传入即抛 plan_filter_unavailable（U2 定后打开）
   q?: string;                  // ≤100 字
   page: number;                // 1 起；每页固定 20
 }
@@ -100,7 +100,7 @@ list/options:
   5. 查询（§5.5）
 ```
 
-`content_square` 的 ScopeStrategy：`contains` 返回「范围非空」，`constraint` 返回 `brands:'all'`（广场本身公共，窄化由 §5.3 在 Module 内做）。具体装配以 `learning/runtime.ts` 为样板，T1 实现时按 `authorize.ts` 核对。
+`content_square` 的 ScopeStrategy 照 `learning/visibility.ts` 同构：`constraint: constraintOf`（如实反映 B 授予的范围，空范围 `empty:true`；它是同步纯函数，读不了策略表，所以**不**把策略并进去，也**不**恒返回 `brands:'all'`），`contains(scope, {brandId})` 为「范围非空且 `brandId ∈ policy.visibleBrands(scope)`」（`contains` 是异步，可读策略表）。可见品牌**只有一个来源**：`policy.visibleBrands`，列表 SQL、`options`、`contains` 都从它取。注意：广场可见范围可以**宽于** B 的范围（策略为 `all` 时），所以下游不得拿 `scopeFor('content_square')` 当可见范围用；要判断某品牌的作品能否被某人看到，调 `contains`。装配沿用 `learning/runtime.ts` 的 `defaultRegistry.registerScopeStrategy` 写法。
 
 ### 5.3 `policy.visibleBrands(scope)`
 
@@ -157,7 +157,7 @@ LIMIT 20 OFFSET :offset
 
 在同一可见范围与恒定条件下取 `DISTINCT` 品牌、平台、分公司，供芯片与下拉。单独一条查询，不随筛选联动（单选芯片不做互相收窄，避免「选了品牌后平台只剩一个」的跳变；可以以后再做）。
 
-## 6. 为「参与活动计划」预留的契约（D 上线后启用）
+## 6. 为「参与活动计划」预留的契约（U2 定后启用）
 
 D 的设计里「某内容在某执行中合格」是 `run_contents.final='pass'`；某判定计划当前结果是最近一次 `completed` 的 `execution`（d-rule-engine design §7.11），**不按版本号取**。启用时在 §5.5 追加：
 
@@ -171,7 +171,7 @@ AND EXISTS (
 )
 ```
 
-要点：一个活动计划下有 1..n 个判定计划，取「任一通过」（未决 U2）；`run_contents` 只保留每个（判定计划，版本）最近若干次执行的内容级行（d-rule-engine §7.13），被清理的执行不参与。**D 未实现之前，页面置灰、读口拒绝该参数，不写占位 SQL。**
+要点：一个活动计划下有 1..n 个判定计划，取「任一通过」（未决 U2）；`run_contents` 只保留每个（判定计划，版本）最近若干次执行的内容级行（d-rule-engine §7.13），被清理的执行不参与。**U2 未定之前，页面置灰、读口拒绝该参数，不写占位 SQL。**（D 已实现；真正启用时优先走 D 对外的读结果端口，不直读 `run_contents`，上面的 SQL 只表达语义。）
 
 ## 7. 失败语义
 
@@ -196,10 +196,13 @@ AND EXISTS (
 | `OFFSET` 分页，深页变慢 | 单页 20 条、业务不会翻很深；真有需要再改键集分页 |
 | 品牌 / 分公司取当前归属 | 改绑后旧作品跟新归属；业务需要「发布当时归属」时改读 `content_discoveries.owner_*` |
 | 多品牌观看者取策略并集 | 业务需要更严格时改为取交集（需要重新确认 R2.3） |
+| 主查询没有专门覆盖索引（`like_value DESC` + `snapshot_status` + 当前快照联接） | 可见作品数增大后实测 `EXPLAIN`，再迁移补索引；v1 靠 `status='active'` 与点赞 >50 先收窄 |
+| 封面只取 `cover_normalized`，不回退原始 `cover` | 未跑规格化的内容显示占位图；规格化覆盖率低时再评估回退 |
+| 手动停采（`monitoring_enabled=false`）账号的历史作品仍展示 | 业务要求隐藏时在 §5.5 加 `monitoring_enabled` 条件（requirements U3） |
 
 ## 10. 界面
 
-> **状态：待确认。** 刘学奎 2026-11-18 的原型与口述已吸收到本节，但 §10.6 未填写前页面任务不得开工。AI 不得把「没有反对」当作确认。
+> **状态：已确认（2026-11-19，§10.6）。** 确认范围之外的界面改动要重新确认。
 
 ### 10.1 页面清单
 
@@ -208,7 +211,7 @@ AND EXISTS (
 | 经销商视频广场 `/square` | 四个角色 | 左侧导航「视频广场」（与「学习」同组；门店端也有入口）；页面内第一个大块标签才叫「经销商视频广场」 | 筛选、搜索、翻页、「观看」、「AI分析」弹窗 | `square.read` |
 | 官媒阵地（同页第二个标签） | — | 标签灰色，写「暂未开放」，不可点 | — | — |
 
-AI分析的线框示意页只存在于 `ui-lab` 原型（`#/square/ai/<id>`），**正式页面不做**（U5，待确认）。
+AI分析的线框示意页只存在于 `ui-lab` 原型（`#/square/ai/<id>`），**正式页面不做**（U5，按默认：不做）。
 
 ### 10.2 用户流程
 
@@ -252,7 +255,7 @@ AI分析的线框示意页只存在于 `ui-lab` 原型（`#/square/ai/<id>`）�
 
 | 确认人 | 日期 | 确认的页面范围 | 原型 / 线框链接 | 备注 |
 |---|---|---|---|---|
-| （待填写） | | | | 未填写 = 未确认，页面任务不得开工 |
+| 刘学奎 | 2026-11-19 | `/square` 广场页：三行芯片与四个下拉的单选筛选、标题搜索与重置、卡片网格（含悬浮 / 触屏按钮）、「观看」新标签页、「AI分析」只弹「功能正在开发中」、「参与活动计划」置灰、「官媒阵地」灰色不可点、无收藏星标；四种状态（加载 / 空 / 无权限 / 错误）。**不含**原型里的「AI分析示意页」（U5 按默认不做）。 | [`ui-lab/f-video-square/`](../../../ui-lab/f-video-square/README.md) 原型 v1 | 对话中口头确认（「UI 原型我已确认没问题」）。2026-11-19 同日仅把置灰下拉的提示由「判定计划上线后开放」改为「暂未开放」（原提示在 D 已实现后不准确）；其余未动 |
 
 ## 11. 决策记录
 
@@ -263,8 +266,9 @@ AI分析的线框示意页只存在于 `ui-lab` 原型（`#/square/ai/<id>`）�
 | SQ-D03 | 品牌与分公司取当前归属 | 一次联接；与 D 域「执行时当前归属」同口径 | 2026-11-18 |
 | SQ-D04 | 筛选选项不随其他筛选联动 | 避免选项跳变；可以以后加 | 2026-11-18 |
 | SQ-D05 | 点赞 `>50` 写在 SQL 恒定条件里，不做成可配置项 | 刘学奎的业务规则；改阈值走决策修订 | 2026-11-18 |
-| SQ-D06 | 「参与活动计划」置灰且读口拒绝参数，不写占位 SQL | D 未实现；数据纪律「未决项不得被默认冻结」 | 2026-11-18 |
+| SQ-D06 | 「参与活动计划」置灰且读口拒绝参数，不写占位 SQL | U2（列哪些计划、「合格」取任一还是全部）未定；数据纪律「未决项不得被默认冻结」。**理由订正 2026-11-19**：原写「D 未实现」，D 已实现并合并，结论不变 | 2026-11-18 |
 | SQ-D07 | 「AI分析」正式页面只弹窗；线框页只在原型里 | 刘学奎 2026-11-18 | 2026-11-18 |
+| SQ-D08 | `content_square` 的 `constraint` 用 `constraintOf`，策略只进 `contains` 与 `policy.visibleBrands`；不恒返回 `all` | `constraint` 同步、读不了策略表；恒 `all` 会让下游把它当真实范围而过度授权。照学习模块同构 | 2026-11-19 |
 
 ## 12. 与既有 spec 的接缝
 

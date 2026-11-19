@@ -144,7 +144,7 @@ export function renderSquare() {
       <div class="filter-line"><span class="filter-label">平台</span>${chips("platform", [["all", "全部平台"], ...uniq("platform").map((p) => [p, p])], f.platform)}</div>
       <div class="filter-line"><span class="filter-label">类型</span>${chips("kind", [["all", "全部类型"], ["video", "视频"], ["image", "图文"]], f.kind)}</div>
       <div class="filter-line sq-selects">
-        ${select("plan", "参与活动计划", [["all", "全部活动计划"], ...(state.sq.planLive ? PLANS.map((p) => [p.id, p.name]) : [])], f.plan, { disabled: !state.sq.planLive, hint: "判定计划上线后开放" })}
+        ${select("plan", "参与活动计划", [["all", "全部活动计划"], ...(state.sq.planLive ? PLANS.map((p) => [p.id, p.name]) : [])], f.plan, { disabled: !state.sq.planLive, hint: "暂未开放" })}
         ${select("branch", "分公司", [["all", "全部分公司"], ...BRANCHES.map((b) => [b, b])], f.branch)}
         ${select("time", "发布时间", TIME_OPTIONS, f.time)}
         ${select("like", "点赞数", LIKE_OPTIONS, f.like)}

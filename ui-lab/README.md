@@ -16,6 +16,7 @@
 | [`d-rule-engine/`](d-rule-engine/README.md) | 判定计划：`precision/`（v15，2026-11-13 确认）；根目录 v1 与 `explore/` | `precision/` 已确认；已实现，归档 | 任务 13–16 于 2026-11-16 合并并部署到测试 ECS；截图存档 `app-shots/`。v1 与 `explore/` 为对照 |
 | [`e-metrics/`](e-metrics/README.md) | 指标与看板（2026-11-16） | 已确认 | 页面代码等查询 / 导出接口落地后再写 |
 | [`f-video-square/`](f-video-square/README.md) | 经销商视频广场与 AI分析界面示意（2026-11-18，以 `hbecho-ui-v2` 当前版为底） | 已确认（2026-11-19，含 AI分析示意页） | `.kiro/specs/f-video-square/`；页面任务见该 spec 的 tasks；实现落地后改为「已实现，归档」 |
+| [`e-metrics-lite/`](e-metrics-lite/README.md) | 全量明细与导出（简版）：视频明细 + 账号维度（2026-11-19，以 `hbecho-ui-v2` 当前版为底） | **待确认**（2026-11-19 起草，尚未请刘学奎走查） | `.kiro/specs/e-metrics-lite/`；确认前不写页面任务；确认后填 design §10.6 |
 
 ## 本地总览（4100）
 

@@ -1,6 +1,6 @@
 # E 全量明细与导出（e-metrics-lite）· 设计
 
-> **状态**：`draft`（界面未确认，见 §10.6）
+> **状态**：`draft`（界面原型 v1 已做，待刘学奎确认，见 §10.6）
 >
 > **权威来源**：[requirements.md](requirements.md)；D 的读口以 [`d-rule-engine`](../d-rule-engine/design.md) §7.11 / §10.4 与 `src/modules/judgement/outcomes.ts` 为准；数据基线 [`database-design-v2.md`](../../../HBECHO设计方案/domains/data-foundation/database-design-v2.md)；界面基线 [`ui-foundation.md`](../../../HBECHO设计方案/ui/ui-foundation.md)
 >
@@ -210,8 +210,8 @@ buildColumns(kind: 'videos'|'accounts', conditions: ConditionDesc[], platformNam
 contentCell(cond: ConditionDesc, row: ContentFact, ev: ContentEvidence | null) -> Cell
   if ev == null                      → plain 空                  // 执行没有证据（早于 JP-22 或证据缺失），不当作未评估（EL-4 最后一条）
   if cond.kind == 'comment':
-      if row.comments.total == null  → skipped(SKIPPED_TEXT)
-      else                           → plain `命中 ${pass} / 共 ${total} 条`
+      if row.comments.total != null  → plain `命中 ${pass} / 共 ${total} 条`
+      else                           → 走下面「没评估到」的同一条规则（评论候选 = 走完第 2 层的内容，所以 stopLayer < 2.5 且 final == unobtained 时写原因码，否则 skipped）
   entry = lookup(cond, ev)                                   // l1 按 idx；l2 按 abilityId；l3 取 ev.l3
   if entry == undefined:
       // 没评估到：区分两种来源
@@ -321,7 +321,7 @@ ADR-0011 写「不在 Web 请求进程里生成大文件」，针对**带图**�
 
 | 页面 | 角色 | 入口 | 主要操作 | Capability |
 |---|---|---|---|---|
-| 全量明细 `/reports/<判定计划>` | 四个角色（门店只看本人范围） | ① D 的判定计划详情与执行记录页新增「全量明细」按钮；② D 现有 `/judgement/results/[runId]` 占位页改为跳转到本页并带 `?run=` | 切换执行、切换标签、筛选、翻页、放大看图、导出 | `report.read`；导出 `report.export` |
+| 全量明细 `/reports/<判定计划>` | 四个角色（门店只看本人范围） | ① D 的判定计划详情与执行记录页新增「全量明细」按钮；② D 现有 `/judgement/results/[runId]` 占位页改为跳转到本页并带 `?run=`；③ **门店专员没有 D 的页面，入口待定（requirements U6）**：建议门店端导航加「全量明细」（原型里已临时放了一个） | 切换执行、切换标签、筛选、翻页、放大看图、导出 | `report.read`；导出 `report.export` |
 
 没有第二个页面。本期**不加**左侧导航入口（避免与 `e-metrics` 的「报表与看板」入口冲突，U 项之外的导航由 `e-metrics` 统一设计）。
 
@@ -375,7 +375,7 @@ ADR-0011 写「不在 Web 请求进程里生成大文件」，针对**带图**�
 
 | 确认人 | 日期 | 确认的页面范围 | 原型 / 线框链接 | 备注 |
 |---|---|---|---|---|
-| （待确认） | | | | AI 不得把「没有反对」当作确认；原型落在 `ui-lab/e-metrics-lite/`，先登记 `ui-lab/README.md` 的状态表 |
+| （待确认） | | | [`ui-lab/e-metrics-lite/`](../../../ui-lab/e-metrics-lite/README.md) 原型 v1（2026-11-19 起草；4100：<http://localhost:4100/e-metrics-lite/#/judgement>） | AI 不得把「没有反对」当作确认。走查要点见原型 README；确认范围含：入口按钮、两个标签与全部列规则、历史执行切换、导出弹窗、状态矩阵、四个角色的可见性；U6（门店入口）与 U1–U5 同时需要答复 |
 
 ## 11. 决策记录
 

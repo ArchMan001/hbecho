@@ -13,10 +13,10 @@
 在仓库根目录运行：
 
 ```bash
-python3 -m http.server 4173 --directory ui-lab/hbecho-ui
+python3 -m http.server 4100 --directory ui-lab   # 本机已有 4100 常驻时不用再起
 ```
 
-然后打开 <http://localhost:4173/>。页面使用 ES modules，必须通过 HTTP 打开，不能直接双击 `index.html`。
+然后打开 <http://localhost:4100/hbecho-ui/>。页面使用 ES modules，必须通过 HTTP 打开，不能直接双击 `index.html`。
 
 ## 原型演示账号
 

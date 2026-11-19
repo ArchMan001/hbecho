@@ -81,4 +81,4 @@ cd ~/Documents/hbecho-preview
 - 不要用 `next start`：本地是假短信 + http，生产模式下访问控制配置会拒绝启动；
 - 4100 的静态服务随 `preview.sh` 一起退出；单独起一个：`python3 -m http.server 4100 --directory ui-lab`（会和 `preview.sh` 抢端口）；
 - 本机 `gh` 直连 GitHub 会超时，需要代理：`HTTPS_PROXY=http://127.0.0.1:7890 HTTP_PROXY=http://127.0.0.1:7890 gh ...`；
-- 旧的 `hbecho-smoke-mysql` 容器（3307，库 `hbecho_local`）不再被预览使用，可以保留或自行清理，别和预览数据混用。
+- 旧的 `hbecho-smoke-mysql`（3307，库 `hbecho_local`、`hbecho_smoke`）与 `hbecho-fullsync-smoke-mysql`（3310，库 `hbecho_fullsync_smoke`、`hbecho_c_verify`）容器已于 2026-11-18 **停止（未删除，数据保留）**，需要时 `docker start <容器名>`；不再被预览使用，别和预览数据混用。

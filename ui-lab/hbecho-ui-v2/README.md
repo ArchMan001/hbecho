@@ -32,10 +32,10 @@
 在仓库根目录运行：
 
 ```bash
-python3 -m http.server 4174 --directory ui-lab/hbecho-ui-v2
+python3 -m http.server 4100 --directory ui-lab   # 本机已有 4100 常驻时不用再起
 ```
 
-然后打开 <http://localhost:4174/>。与 v1（`4173`）同时开也可以，方便左右对照。
+然后打开 <http://localhost:4100/hbecho-ui-v2/>；v1 在 <http://localhost:4100/hbecho-ui/>，方便左右对照。
 
 ## 原型演示账号
 

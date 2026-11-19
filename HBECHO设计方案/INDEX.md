@@ -125,6 +125,7 @@
 | 不可协商条款 | [`constitution.md`](governance/constitution.md) | current（索引） | 18 条跨模块条款；索引，不新增事实、不裁决冲突 |
 | 架构决策 | [`adr/README.md`](architecture/adr/README.md) | current | 17 项已定决定（ADR-0001～0017）+ 10 项选型登记（全部关闭）；新决定必须单独写 ADR |
 | 开发测试部署流程 | [`dev-test-deploy-workflow.md`](runbooks/dev-test-deploy-workflow.md) | current | 当前唯一实例是**测试 ECS**，生产 ECS 未购买；只有本机 verify 与 CI 可用 |
+| 日常工作流（一页纸） | [`daily-workflow.md`](runbooks/daily-workflow.md) | current（derived） | 三个固定位置、对话怎么开、三类工作的流程、推送与 CI 节奏（小批只推一次 / spec 两次）、谁做什么；不新增规则，冲突以 steering 为准 |
 | 本机验证与 CI | [`verify.sh`](../scripts/verify.sh) · [`ci.yml`](../.github/workflows/ci.yml) · [`pre-commit`](../.githooks/pre-commit) | current | verify 覆盖 Node 版本、类型检查、离线测试（禁网）、迁移一致、MySQL 8.4 数据库测试、密钥、文档链接、文档登记与 spec 结构，以及 Python 能力服务单测（环境满足 pytest 与 ffmpeg ≥ 7.1 时；CI 不验 Python 侧）；尚无静态门禁与真实数据库集成测试；pre-commit 只扫暂存区 |
 | 数据底座数据库 | [`database-design-v2.md`](domains/data-foundation/database-design-v2.md) | draft（待 A 域 PRD 逐表复核） | 35 表草案（29 张数据底座 + 6 张活动计划，§22）；v1 不参与新实现 |
 | 数据底座字段字典 | [`field-dictionary.md`](domains/data-foundation/field-dictionary.md) | draft | 主页/列表/详情/评论的规范字段、含义、值状态与 10 个未确认语义 |

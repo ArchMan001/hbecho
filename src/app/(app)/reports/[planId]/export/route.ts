@@ -40,7 +40,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ planId: 
     return new Response(Readable.toWeb(sink) as ReadableStream, {
       headers: {
         "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "content-disposition": `attachment; filename="report.xlsx"; filename*=UTF-8''${encodeURIComponent(name)}`,
+        "content-disposition": `attachment; filename="export.xlsx"; filename*=UTF-8''${encodeURIComponent(name)}`,
         "cache-control": "no-store",
         ...(prep.plan.warnings.length ? { "x-report-warning": prep.plan.warnings.join(",") } : {}),
       },

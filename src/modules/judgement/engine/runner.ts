@@ -9,7 +9,7 @@ import { sha256Utf8 } from "../../canonical-json";
 import type { Clock } from "../../raw-capture/ports";
 import type { JudgementAudit } from "../audit";
 import type { JudgementAuthz } from "../authz";
-import { accountAbilities, accountRequirementEnabled, commentRequirementEnabled, configSha256, contentAbilities, contentRequirementEnabled, parseConfig, scoreSignalOf, type Ability, type Config } from "../config";
+import { accountAbilities, accountRequirementEnabled, commentRequirementEnabled, conditionsOf, configSha256, contentAbilities, contentRequirementEnabled, contentThresholdN, parseConfig, scoreSignalOf, type Ability, type Config } from "../config";
 import type { JudgementConfig } from "../env";
 import { JudgementError } from "../errors";
 import type { ActivityPlanFact, Facts } from "../facts";
@@ -23,6 +23,7 @@ import { evalDuration, evalHashtags, evalKeywords, evalScore, thresholdToCents }
 import { combineLayer, type LayerResult } from "./pure/layer";
 import { selectLayer1 } from "./pure/select";
 import { commentOutcome, contentCounts, contentOutcome, topReason, type ContentRowLite } from "./pure/aggregate";
+import { abilityOutcomes, type AccountDetailLite } from "./pure/ability";
 import { andOutcome } from "./pure/tri";
 import type { Outcome } from "./pure/types";
 import { bjtDaysToUtc } from "./pure/window";
@@ -355,6 +356,7 @@ export function createRunner(deps: RunnerDeps) {
     // 走完全部层的行：没配第 3 层 → l3 = not_configured，最终通过
     if (!cfg.contentRequirement?.layer3) await claim.withFence(run, async (tx) => void (await tx.update(runContents).set({ l3: "not_configured", final: "pass" }).where(and(eq(runContents.runId, run.runId), isNull(runContents.final), eq(runContents.l0, "pass")))));
     const people = await db.select().from(runParticipants).where(and(eq(runParticipants.runId, run.runId), eq(runParticipants.state, "pending"))).orderBy(asc(runParticipants.accountId));
+    const conditions = conditionsOf(cfg);
     for (const p of people) {
       const rows = await db.select({ final: runContents.final, reasonCode: runContents.reasonCode, l1: runContents.l1, l2: runContents.l2, l0: runContents.l0, selected: runContents.layer1Selected, stale: runContents.stale, stopLayer: runContents.stopLayer, cmTotal: runContents.cmTotal, cmPass: runContents.cmPass, cmUnobtained: runContents.cmUnobtained, ev: runContents.evidence }).from(runContents).where(and(eq(runContents.runId, run.runId), eq(runContents.accountId, p.accountId)));
       const counts = contentCounts(rows.map((r) => ({ final: r.final as ContentRowLite["final"] })));
@@ -374,6 +376,8 @@ export function createRunner(deps: RunnerDeps) {
       const depFailed = rows.some((r) => (r.ev as { cm?: { depFailed?: boolean } } | null)?.cm?.depFailed === true);
       const commentResult: Outcome | null = comment === null ? null : comment.result === "not_met" && depFailed ? "unobtained" : comment.result;
       const plan = andOutcome([content?.result ?? null, commentResult, account]);
+      // 账号级「每能力一个结果」（D-D23）：只影响展示，不改上面任何一个结果；规则见 pure/ability.ts
+      const abilities = abilityOutcomes({ conditions, rows: rows.map((r) => ({ final: r.final as ContentRowLite["final"], evidence: r.ev })), n: contentThresholdN(cfg), zero, accountDetail: (p.accountDetail as AccountDetailLite | null) ?? null, commentResult });
       const primary = content?.result === "unobtained" ? (content.reason ?? topReason(reasons)) : commentResult === "unobtained" ? (comment!.reason ?? topReason(cmReasons)) : account === "unobtained" ? (acc?.reason ?? "unknown") : null;
       const c2 = rows.filter((r) => r.l0 === "pass" && ["pass", "not_configured"].includes(r.l1 ?? "") && r.selected !== false && ["pass", "not_configured"].includes(r.l2 ?? "")).length;
       const prev = (p.reasonDetail as Record<string, unknown> | null) ?? {};
@@ -388,6 +392,7 @@ export function createRunner(deps: RunnerDeps) {
             c3Count: counts.p,
             accountResult: account,
             planResult: plan,
+            abilityResults: abilities as never,
             primaryReason: primary,
             reasonDetail: { ...prev, unobtained_reasons: reasons, ...(commentOn ? { comment_unobtained_reasons: cmReasons } : {}) } as never,
             staleUsed: rows.some((r) => r.stale) || Boolean(acc?.stale),

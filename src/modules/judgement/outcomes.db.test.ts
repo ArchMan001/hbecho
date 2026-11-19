@@ -259,3 +259,127 @@ describe("maintain（保留与清理）", () => {
     expect(await t.db.select().from(runContents).where(eq(runContents.runId, r.runId))).toHaveLength(0);
   });
 });
+
+// ---- JP-22：e-metrics-lite 需要的读口扩展与账号能力结果 ---------------------------------------------------------
+describe("JP-22 读口扩展", () => {
+  it("描述符带有序的条件清单；key 与证据编号一一对应", async () => {
+    const { e, execId } = await twoStaff();
+    const d = await e.outcomes.describe(execId);
+    expect(d.config.conditions).toEqual([{ key: "l1.0", layer: 1, kind: "text", target: null, subject: "content", alias: null }]);
+  });
+  it("内容行带冻结的内容快照 ID、专员 ID、冻结组织链与白名单证据", async () => {
+    const { w, e, execId } = await twoStaff();
+    const rows = await collect(e.outcomes.streamContents(execId, ALL));
+    const stored = await t.db.select({ id: runContents.contentId, snap: runContents.contentSnapshotId }).from(runContents);
+    for (const r of rows) {
+      expect(r.contentSnapshotId).toBe(stored.find((x) => x.id === r.contentId)!.snap);
+      expect(r.org).toMatchObject({ branchId: w.bj, storeId: w.stores.sW1 });
+      expect(r.evidence.l1).toEqual([{ idx: 0, state: "pass", hit: ["海信"] }]);
+    }
+    expect(rows.find((r) => r.accountId === w.accZhao)!.staffId).toBe(w.staff.zhao);
+  });
+  it("证据白名单：正文、评论原文、作者、第 3 层模型理由、依赖明细一律不出读口（即使库里的 evidence 里有）", async () => {
+    const { e, execId } = await twoStaff();
+    await t.db.update(runContents).set({
+      evidence: {
+        l1: [{ idx: 0, state: "pass", hit: ["海信"], body: "视频正文原文", author: "某作者" }],
+        l2: { abilities: [{ id: "a1", kind: "whole_image", target: "cover", state: "pass", score: "7.80", resultId: "9" }] },
+        l3: { state: "pass", verdict: "meets", reason: "模型理由里引用了原文", model: "m", promptVersion: 3, resultId: "7" },
+        dep: { audio: "ready" },
+        cm: { reasons: { x: 1 }, depFailed: false, text: "评论原文" },
+        secret: "不该出现",
+      } as never,
+    }).where(eq(runContents.runId, execId));
+    const rows = await collect(e.outcomes.streamContents(execId, ALL));
+    const json = JSON.stringify(rows.map((r) => r.evidence), (_k, v) => (typeof v === "bigint" ? v.toString() : v));
+    for (const bad of ["视频正文原文", "某作者", "模型理由里引用了原文", "评论原文", "不该出现", "promptVersion", "resultId", "dep", "secret"]) expect(json).not.toContain(bad);
+    expect(rows[0]!.evidence).toEqual({
+      l1: [{ idx: 0, state: "pass", hit: ["海信"] }],
+      l2: [{ id: "a1", state: "pass", score: "7.80" }],
+      l3: { state: "pass", verdict: "meets" },
+    });
+  });
+  it("没有证据的行（如发布时间缺失）也返回空对象，不返回 null", async () => {
+    const { e, execId } = await twoStaff();
+    await t.db.update(runContents).set({ evidence: null }).where(eq(runContents.runId, execId));
+    expect((await collect(e.outcomes.streamContents(execId, ALL))).every((r) => JSON.stringify(r.evidence) === "{}")).toBe(true);
+  });
+  it("账号能力结果：执行聚合时写入；第 1 层条件按 at_least_n（N=2）：老赵 2 条通过 → 成功，老孙 1 条 → 不达标", async () => {
+    const { w, e, p2, execId } = await twoStaff();
+    const ps = await collect(e.outcomes.streamParticipants(execId, ALL));
+    expect(ps.find((p) => p.staffId === w.staff.zhao)!.abilityResults).toEqual([{ key: "l1.0", result: "success" }]);
+    expect(ps.find((p) => p.staffId === p2.staffId)!.abilityResults).toEqual([{ key: "l1.0", result: "not_met" }]);
+  });
+  it("账号能力结果只影响展示：四个结果列与改动前同样（成功 / 不达标）", async () => {
+    const { w, e, p2, execId } = await twoStaff();
+    const ps = await collect(e.outcomes.streamParticipants(execId, ALL));
+    expect(ps.find((p) => p.staffId === w.staff.zhao)!.results).toMatchObject({ content: "success", plan: "success" });
+    expect(ps.find((p) => p.staffId === p2.staffId)!.results).toMatchObject({ content: "not_met", plan: "not_met" });
+  });
+  it("旧执行（ability_results 为 NULL）读出 null", async () => {
+    const { e, execId } = await twoStaff();
+    await t.db.update(runParticipants).set({ abilityResults: null }).where(eq(runParticipants.runId, execId));
+    expect((await collect(e.outcomes.streamParticipants(execId, ALL))).every((p) => p.abilityResults === null)).toBe(true);
+  });
+  it("listContents / listParticipants：总数与流式条数一致；偏移分页稳定；limit=0 只给总数", async () => {
+    const { e, execId } = await twoStaff();
+    const all = await collect(e.outcomes.streamContents(execId, ALL));
+    const p1 = await e.outcomes.listContents(execId, ALL, {}, { offset: 0, limit: 2 });
+    const p2 = await e.outcomes.listContents(execId, ALL, {}, { offset: 2, limit: 2 });
+    expect(p1.total).toBe(all.length);
+    expect([...p1.rows, ...p2.rows].map((r) => r.contentId).sort()).toEqual(all.map((r) => r.contentId).sort());
+    expect((await e.outcomes.listContents(execId, ALL, {}, { offset: 0, limit: 0 })).rows).toEqual([]);
+    expect((await e.outcomes.listContents(execId, ALL, {}, { offset: 0, limit: 0 })).total).toBe(all.length);
+    const parts = await e.outcomes.listParticipants(execId, ALL, {}, { offset: 0, limit: 10 });
+    expect(parts.total).toBe(2);
+    expect(parts.rows).toHaveLength(2);
+    // 排序稳定：重复读取一致
+    const again = await e.outcomes.listContents(execId, ALL, {}, { offset: 0, limit: 2 });
+    expect(again.rows.map((r) => r.contentId)).toEqual(p1.rows.map((r) => r.contentId));
+  });
+  it("组织过滤与范围约束同时生效，总数只算范围内；staffIds 为空数组 → 空", async () => {
+    const { w, e, p2, execId } = await twoStaff();
+    expect((await e.outcomes.listContents(execId, ALL, { branchId: w.bj }, { offset: 0, limit: 50 })).total).toBe(3);
+    expect((await e.outcomes.listContents(execId, ALL, { branchId: w.sh }, { offset: 0, limit: 50 })).total).toBe(0);
+    expect((await e.outcomes.listContents(execId, ALL, { storeId: w.stores.sW1 }, { offset: 0, limit: 50 })).total).toBe(3);
+    expect((await e.outcomes.listContents(execId, ALL, { staffIds: [p2.staffId] }, { offset: 0, limit: 50 })).total).toBe(1);
+    expect((await e.outcomes.listContents(execId, ALL, { staffIds: [] }, { offset: 0, limit: 50 })).total).toBe(0);
+    const self = { ...ALL, self: { mediaStaffId: w.staff.zhao, storeId: w.stores.sW1 } };
+    expect((await e.outcomes.listContents(execId, self, { staffIds: [p2.staffId] }, { offset: 0, limit: 50 })).total).toBe(0); // 范围 ∩ 过滤
+    expect((await e.outcomes.listParticipants(execId, self, {}, { offset: 0, limit: 50 })).rows.map((r) => r.staffId)).toEqual([w.staff.zhao]);
+    expect((await e.outcomes.listParticipants(execId, { empty: true, brands: [], branches: [], self: null }, {}, { offset: 0, limit: 50 })).total).toBe(0);
+    // 流式读口同样接受过滤
+    expect(await collect(e.outcomes.streamContents(execId, ALL, { staffIds: [p2.staffId] }))).toHaveLength(1);
+    expect(await collect(e.outcomes.streamParticipants(execId, ALL, { storeId: w.stores.sH1 }))).toHaveLength(0);
+  });
+  it("内容级行已被保留期清理：listContents 报 content_rows_pruned，listParticipants 仍可读（含 abilityResults）", async () => {
+    const { e, execId } = await twoStaff();
+    await e.outcomes.maintain();
+    await t.db.update(judgementRuns).set({ phaseDetail: { contentsPruned: true } as never }).where(eq(judgementRuns.runId, execId));
+    expect(await code(e.outcomes.listContents(execId, ALL, {}, { offset: 0, limit: 10 }))).toBe("content_rows_pruned");
+    const parts = await e.outcomes.listParticipants(execId, ALL, {}, { offset: 0, limit: 10 });
+    expect(parts.total).toBe(2);
+    expect(parts.rows.every((p) => p.abilityResults !== null)).toBe(true);
+  });
+  it("executionsOf：只列 completed 的执行，completed_at 倒序；未完成 / 取消的不出现", async () => {
+    const { w, e, planId } = await setup();
+    await content(w, e, "a");
+    const a = await executeOnce(e, planId, "kA");
+    const b = await executeOnce(e, planId, "kB");
+    await t.db.update(judgementRuns).set({ completedAt: new Date("2026-11-16T01:00:00Z") }).where(eq(judgementRuns.runId, a));
+    await t.db.update(judgementRuns).set({ completedAt: new Date("2026-11-16T03:00:00Z") }).where(eq(judgementRuns.runId, b));
+    expect((await e.outcomes.executionsOf(planId)).map((d) => d.executionId)).toEqual([b, a]);
+    expect(await e.outcomes.executionsOf(999n)).toEqual([]);
+  });
+  it("planRefOf：带活动计划名；不存在 / 活动计划在回收站 → not_found；不判断范围", async () => {
+    const { w, e, planId } = await setup();
+    const r = await e.outcomes.planRefOf(planId);
+    expect(r).toMatchObject({ alias: "计划 A", activityPlanId: w.planId, platform: "douyin" });
+    expect(r.activityPlanName.length).toBeGreaterThan(0);
+    expect(r.ref.brandId).toBeTypeOf("bigint");
+    expect(await code(e.outcomes.planRefOf(999n))).toBe("judgement_plan_not_found");
+    await t.db.update(activityPlans).set({ status: "deleted", statusBeforeDelete: "collecting", deletedAt: new Date(), purgeAfter: new Date(Date.now() + 86_400_000), deletedByActor: "user:7" }).where(eq(activityPlans.planId, w.planId));
+    expect(await code(e.outcomes.planRefOf(planId))).toBe("judgement_plan_not_found");
+    expect(await e.outcomes.executionsOf(planId)).toEqual([]); // 回收站里的结果不可见
+  });
+});

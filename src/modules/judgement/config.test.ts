@@ -214,3 +214,31 @@ describe("失效矩阵（design §7.9）", () => {
     expect(keep({ contentRequirement: { layer3: { standardText: "t" } } })).toBe("none");
   });
 });
+
+describe("conditionsOf：每个可展示条件的清单与稳定 key（e-metrics-lite JP-22）", () => {
+  it("层序：第 1 层按「文本 → 话题 → 时长」展平编号，第 2 层按配置顺序（封面 / 头像 / 背景混排），再第 3 层、评论", async () => {
+    const { conditionsOf, parseConfig } = await import("./config");
+    const c = parseConfig({
+      window: { from: "2026-11-01" }, kinds: ["video"],
+      layer1: { text: [{ alias: "品牌词", fields: ["title"], mode: "any", keywords: ["a"] }, { fields: ["title"], mode: "any", keywords: ["b"] }], hashtags: [{ mode: "any", values: ["#x"] }], duration: { minSeconds: 5 } },
+      layer2: { abilities: [
+        { abilityId: "c1", alias: "封面模板", kind: "whole_image", target: "cover", threshold: "6" },
+        { abilityId: "av", kind: "whole_image", target: "avatar", threshold: "6" },
+        { abilityId: "c2", kind: "image_element", target: "cover", threshold: "6", elementKey: "k1" },
+        { abilityId: "bg", kind: "image_element", target: "background", threshold: "6", elementKey: "k2" },
+      ] },
+      contentRequirement: { layer3: { alias: "语音", standardText: "t" } },
+      commentRequirement: { mode: "any", keywords: ["k"], method: { type: "any" } },
+    });
+    expect(conditionsOf(c).map((x) => [x.key, x.subject, x.alias])).toEqual([
+      ["l1.0", "content", "品牌词"], ["l1.1", "content", null], ["l1.2", "content", null], ["l1.3", "content", null],
+      ["l2.c1", "content", "封面模板"], ["l2.av", "account", null], ["l2.c2", "content", null], ["l2.bg", "account", null],
+      ["l3", "content", "语音"], ["comment", "content", null],
+    ]);
+    expect(conditionsOf(c).slice(0, 4).map((x) => x.kind)).toEqual(["text", "text", "hashtags", "duration"]);
+  });
+  it("空配置只有配置里有的条件；没有第 3 层 / 评论就没有对应项", async () => {
+    const { conditionsOf, parseConfig } = await import("./config");
+    expect(conditionsOf(parseConfig({ window: { from: "2026-11-01" }, kinds: ["video"] }))).toEqual([]);
+  });
+});

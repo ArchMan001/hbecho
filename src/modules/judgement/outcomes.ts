@@ -86,6 +86,17 @@ export interface ContentFact {
   comments: { total: number | null; pass: number | null; unobtained: number | null };
 }
 export type CircleRow = ContentFact;
+/** 导航落地页的一行：判定计划与它最近一次已完成的执行。回收站里的活动计划不出现。 */
+export interface PlanOverview {
+  planId: bigint;
+  alias: string;
+  status: string;
+  activityPlanId: bigint;
+  activityPlanName: string;
+  platform: string;
+  ref: JudgementPlanRef;
+  latest: { executionId: bigint; completedAt: Date; version: number } | null;
+}
 /** 组织过滤：按冻结的组织链；staffIds 为空数组表示没有任何专员（返回空，不是不过滤）。 */
 export interface OrgFilter {
   regionId?: bigint;
@@ -304,6 +315,34 @@ export function createOutcomes(deps: JudgementDeps & { config: JudgementConfig; 
     return { ref, alias: plan.alias, activityPlanId: plan.activityPlanId, activityPlanName: activity.planName, platform: activity.platformCode };
   }
 
+  /**
+   * 全部判定计划的概览（e-metrics-lite 的导航落地页）：只读、不做能力校验、**不判断范围**——调用方对每一项用 `ref` 做 authorize(report.read) 再决定可见性。
+   * 规模：判定计划是「每个活动计划几个」，全表读一次可以接受；变成上千再改成按范围查询。
+   */
+  async function plansOverview(): Promise<PlanOverview[]> {
+    const plans = await db.select().from(judgementPlans).orderBy(asc(judgementPlans.alias), asc(judgementPlans.planId));
+    if (plans.length === 0) return [];
+    const live = await facts.liveActivityPlans([...new Set(plans.map((p) => p.activityPlanId))]);
+    const acts = await facts.activityPlansOf([...live]);
+    const branches = new Map<bigint, bigint[]>();
+    const runs = await db
+      .select({ planId: judgementRuns.planId, runId: judgementRuns.runId, version: judgementRuns.version, completedAt: judgementRuns.completedAt })
+      .from(judgementRuns)
+      .where(and(eq(judgementRuns.runKind, "execution"), eq(judgementRuns.status, "completed")))
+      .orderBy(desc(judgementRuns.completedAt), desc(judgementRuns.runId));
+    const latest = new Map<bigint, { executionId: bigint; completedAt: Date; version: number }>();
+    for (const r of runs) if (!latest.has(r.planId)) latest.set(r.planId, { executionId: r.runId, completedAt: r.completedAt!, version: r.version });
+    const out: PlanOverview[] = [];
+    for (const p of plans) {
+      const a = acts.get(p.activityPlanId);
+      if (!a || !live.has(p.activityPlanId) || a.status === "deleted") continue;
+      let joined = branches.get(p.activityPlanId);
+      if (!joined) branches.set(p.activityPlanId, (joined = await facts.joinedBranchIds(p.activityPlanId)));
+      out.push({ planId: p.planId, alias: p.alias, status: p.status, activityPlanId: p.activityPlanId, activityPlanName: a.planName, platform: a.platformCode, ref: { brandId: a.brandId, branchIds: joined, planCreatorActor: a.createdByActor }, latest: latest.get(p.planId) ?? null });
+    }
+    return out;
+  }
+
   /** 偏移分页的内容行（组织过滤 + 总数）；总数与列表共用同一个 WHERE。排序：冻结组织 ID，再发布时间倒序、内容 ID。 */
   async function listContents(executionId: bigint, constraint: ResourceConstraint, filter: OrgFilter, page: { offset: number; limit: number }): Promise<{ rows: ContentFact[]; total: number }> {
     const { run } = await completedRun(executionId, "execution");
@@ -417,7 +456,7 @@ export function createOutcomes(deps: JudgementDeps & { config: JudgementConfig; 
     return { expiredRuns: gone.runs, prunedExecutions: pruned, prunedFailed };
   }
 
-  return { listCompleted, describe, executionsOf, planRefOf, streamParticipants, streamContents, streamCircleRows, listContents, listParticipants, explain, maintain };
+  return { listCompleted, describe, executionsOf, planRefOf, plansOverview, streamParticipants, streamContents, streamCircleRows, listContents, listParticipants, explain, maintain };
 }
 export type Outcomes = ReturnType<typeof createOutcomes>;
 export type { Facts };

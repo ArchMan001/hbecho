@@ -69,12 +69,13 @@ interface AbilityResult { key: ConditionKey; result: AbilityOutcome; reason?: st
 
 // ---- 扩展现有类型 ----
 ExecutionDescriptor.config += { conditions: ConditionDesc[] }              // 展示顺序按层序：第 1 层（按 idx）→ 第 2 层（按配置顺序，封面 / 头像 / 主页背景混排）→ 第 3 层 → 评论
-ContentFact += { contentSnapshotId: bigint; staffId: bigint; org: {…六个冻结 ID}; evidence: ContentEvidence | null }
+ContentFact += { contentSnapshotId: bigint; staffId: bigint; org: {…六个冻结 ID}; evidence: ContentEvidence }                 // 恒为对象（只含白名单字段 publicEvidence）；没有证据 = 空对象
 ParticipantFact += { abilityResults: AbilityResult[] | null }              // null = 执行早于 JP-22
 
 // ---- 新增读口 ----
 type OrgFilter = { regionId?: bigint; branchId?: bigint; sectorId?: bigint; storeId?: bigint; staffIds?: bigint[] };
 executionsOf(planId): Promise<ExecutionDescriptor[]>                        // 该判定计划已 completed 的执行，completed_at 倒序
+plansOverview(): Promise<PlanOverview[]>                                     // 落地页：每个判定计划及其最近一次已完成执行（活动计划在回收站的不出现）；授权由调用方按范围过滤
 planRefOf(planId): Promise<{ ref: JudgementPlanRef; alias: string; activityPlanId: bigint; activityPlanName: string; platform: string }>   // 不存在 / 所属活动计划在回收站 → not_found；越范围由调用方 authorize(report.read) 表现为 not_found（本函数没有调用者身份）
 listContents(executionId, constraint, filter, { offset, limit }): Promise<{ rows: ContentFact[]; total: number }>
 listParticipants(executionId, constraint, filter, { offset, limit }): Promise<{ rows: ParticipantFact[]; total: number }>
@@ -187,7 +188,7 @@ exportWorkbook(rc, args, sink): Promise<{ videoRows: number; accountRows: number
 | 平台名 | `platforms.platform_name` |
 
 - 所有 ID 作为十进制字符串出 Module；外部 ID 原样文本，不经 `Number`；
-- 任一类查询失败 → 整页错误（不静默当空）；单个值缺失 → 该格空并计入 `missingRows`；
+- 任一类查询失败 → 整页错误（不静默当空）；单个值缺失 → 该格空；`missingRows` 只统计「读不到快照」的行（内容快照 / 主页快照缺失），值状态为 missing / explicit_null 不计入；
 - 签名器来自 `parseSquareEnv(process.env)`；缺配置时全部占位并告警一次（沿用 `assembleSquare` 的做法）。
 
 ### 5.4 列规则（`columns.ts`，纯函数）
@@ -209,7 +210,7 @@ buildColumns(kind: 'videos'|'accounts', conditions: ConditionDesc[], platformNam
 
 ```text
 contentCell(cond: ConditionDesc, row: ContentFact, ev: ContentEvidence | null) -> Cell
-  if ev == null                      → plain 空                  // 执行没有证据（早于 JP-22 或证据缺失），不当作未评估（EL-4 最后一条）
+  if ev 为空对象（没有任何层的证据）  → 按 row.final / row.reasonCode 走下面的「没评估到」分支；不再有 null 分支（读口保证 evidence 恒为对象）
   if cond.kind == 'comment':
       if row.comments.total != null  → plain `命中 ${pass} / 共 ${total} 条`
       else                           → 走下面「没评估到」的同一条规则（评论候选 = 走完第 2 层的内容，所以 stopLayer < 2.5 且 final == unobtained 时写原因码，否则 skipped）
@@ -269,7 +270,7 @@ GET /reports/<planId>/export?run=&filters…
 - 账号能力结果不可用（旧执行）时账号能力列写空，同样带警告头；
 - 流式写入器逐行 `commit()` 释放内存，峰值与单页（500 行）而非全表成正比；
 - **没有任何网络 IO 持有数据库事务**：读取是只读语句，签名不发生（导出无图）；
-- 规模参照：日立一次 ≈ 13,500 行视频 + 660 账号；本机与测试 ECS 的实测（耗时、峰值 RSS）写入 acceptance 与 §12。
+- 规模参照：日立一次 ≈ 13,500 行视频 + 660 账号。本机实测（2026-11-18，`export.perf.db.test.ts`，一次性 MySQL 8.4，fake 信号，丢弃字节的 sink）：13,200 行视频 + 661 账号 **0.9 秒**、文件 1.4 MB、RSS 增长 60 MB；50,000 行视频 + 2,501 账号 **3.4 秒**、文件 5.4 MB、RSS 增长 125 MB（测试进程自带约 320–370 MB 基线）。均低于改异步阈值（20 秒 / 300 MB）。**测试机（ECS）未测**；真实数据的标题与证据更长，数字只作量级参考。
 
 ### 7.2 为什么默认同步（以及何时改异步）
 
@@ -286,7 +287,9 @@ ADR-0011 补的**两处**（EL-D16，U1 确认时已落笔）：①「不在 Web
 - 时间：北京时间文本，不写 Excel 日期序列；
 - 互动值：数字单元格，`invalid` 写「无效」，非 `value` 空；
 - 着色：`tone` → 字体颜色（通过 `#1B7F3B`、不通过 `#C0362C`、获取失败 `#8A8F98`、未评估 `#B5BAC2`）；不填充背景，保持可打印；
-- 首行冻结；列宽按表头与前 100 行估算上限 60 字符；不设置自动筛选（用户可自行加）。
+- 首行冻结；列宽**只按表头**估算（上限 60 字符；流式写入器写出表头后不能回改，ponytail：数据很长时会被截显示，真有需要改成固定宽度表）；不设置自动筛选（用户可自行加）。
+- Excel 行序按 `contentId` / `accountId`（键集流），不是页面上的组织序；业务要组织序时在 Excel 里自行排序。
+- `startExport` 在响应头发出前**同步**占用并发名额并完成授权、预检，之后才开始写流（避免超限请求已发出头部）；失败路径统一释放名额。
 
 ## 8. 失败语义与并发
 

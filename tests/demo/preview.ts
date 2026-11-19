@@ -13,13 +13,15 @@ import { execSync } from "node:child_process";
 import { createServer } from "node:http";
 import { eq } from "drizzle-orm";
 import { createDb, createPool } from "../../src/db/client";
-import { activityPlans, authAccounts, courses, courseTags, dealers, judgementRuns, stores, tagCategories, tags } from "../../src/db/schema";
+import { activityPlans, authAccounts, brands, courses, courseTags, dealers, judgementRuns, sectors, stores, tagCategories, tags } from "../../src/db/schema";
+import { assembleSquare } from "../../src/modules/video-square";
 import { accessEnv, insertAccessUser } from "../harness/access";
 import { resetData } from "../harness/db";
 import { addContent, addListTask, addParticipant, judgementEnv, judgementWorld, type JudgementEnv } from "../harness/judgement";
 import { insertAccount, insertAssignment } from "../harness/factories";
 import { insertPlan, insertRosterEntry, insertStaff, insertStore, T0 } from "../harness/plan";
 import { insertSector } from "../harness/roster";
+import { seedSquareAccount, seedSquareWork, type WorkSpec } from "../harness/square";
 
 const url = process.env.HBECHO_PREVIEW_DATABASE_URL;
 if (!url) throw new Error("缺少 HBECHO_PREVIEW_DATABASE_URL（请用 scripts/preview.sh 启动）");
@@ -243,6 +245,79 @@ for (const [i, c] of COURSES.entries()) {
   });
   await db.insert(courseTags).values(c.tags.map((name) => ({ courseId: BigInt(r.insertId), tagId: tagIds[name]! })));
 }
+// ---- 视频广场（f-video-square）：四个品牌 × 三个平台的作品，点赞边界与缺链接 / 缺封面各一条 -------------------------------------
+// 品牌只有日立、海信时再补约克、科龙；每个品牌在三个分公司各一家店，每家店一位专员、三个平台各一个账号。
+const squareBrands: Array<{ id: bigint; name: string }> = [{ id: w.org.hitachiBrandId, name: "日立" }, { id: w.org.hisenseBrandId, name: "海信" }];
+for (const [code, name] of [["YORK", "约克VRF"], ["KELON", "科龙"]] as const) {
+  const [r] = await db.insert(brands).values({ brandCode: code, brandName: name, status: "active", createdAt: T0, updatedAt: T0 });
+  squareBrands.push({ id: BigInt(r.insertId), name });
+}
+const squareSectors = (await db.select({ id: sectors.sectorId }).from(sectors).orderBy(sectors.sectorId)).slice(0, 3).map((x) => x.id);
+const SQ_PLATFORMS = ["douyin", "xiaohongshu", "kuaishou"] as const;
+const SQ_SEEDS: Array<[string, number, "video" | "image", number, number, (typeof SQ_PLATFORMS)[number]]> = [
+  ["金泽舒适家又获奖啦，心存感激 一份荣誉，一份责任，感谢日立中央空调", 0, "video", 20400, 14, "douyin"],
+  ["#日立中央空调郑州分公司#家用中央空调 #全心全意为您服务", 0, "video", 15300, 12, "douyin"],
+  ["成都设计师的家 | 中央空调品牌怎么选 不知道怎么选中央空调？来听听", 0, "image", 14100, 12, "xiaohongshu"],
+  ["选择这一款智慧空气定制系统，你会回来感谢我。#每一感都超有感", 0, "video", 13200, 108, "douyin"],
+  ["天冷了，明装暖气避坑#明装暖气 #新力舒适家 #扬州明装暖气片", 1, "video", 13000, 652, "douyin"],
+  ["邻居拆除中间墙，各借了一个冰箱位", 1, "video", 10700, 3, "kuaishou"],
+  ["那就祝刷到的都旺～", 3, "video", 7342, 2134, "douyin"],
+  ["年会不能停 不愧是义乌最强日立中央空调旗舰店！年年登顶。老板怎么会", 0, "video", 6893, 624, "douyin"],
+  ["日立智享～天氟地水两联供～～省钱省到怀疑自己🤪#共建理想家 #地暖", 0, "video", 5863, 12, "xiaohongshu"],
+  ["销售日记第二十五天。#真实生活分享计划 #销售日常 不需要怎么办", 2, "video", 5786, 34, "kuaishou"],
+  ["三口之家 120 平，约克 VRF 一拖多的实际使用感受", 2, "image", 4210, 96, "xiaohongshu"],
+  ["科龙新风空调开箱：安装师傅教你三步检查出风口", 3, "video", 3120, 45, "kuaishou"],
+  ["海信日立中央空调联动演示｜一键切换睡眠模式", 1, "video", 2650, 71, "douyin"],
+  ["春季换季保养，这三个滤网动作别省", 0, "video", 1780, 23, "douyin"],
+  ["客户回访日常：装完一年后的真实反馈", 2, "video", 960, 18, "douyin"],
+  ["店面新装修完成，欢迎来店体验", 1, "image", 410, 9, "xiaohongshu"],
+  ["冬季取暖方案对比：地暖 vs 暖气片 vs 空气能", 3, "video", 188, 7, "douyin"],
+  ["门店晨会二十分钟，今天讲怎么接待咨询客户", 0, "video", 76, 2, "kuaishou"],
+];
+const sqAccounts = new Map<string, bigint>();
+let sqPhone = 0;
+for (const [bi, b] of squareBrands.entries()) {
+  for (const [si, sectorId] of squareSectors.entries()) {
+    const storeId = await insertStore(db, w.org, { code: `SQ-${bi}-${si}`, name: `${b.name}广场样例店 ${si + 1}`, sectorId, brandId: b.id });
+    const staffId = await insertStaff(db, { storeId, name: `广场专员${bi}${si}`, phone: `1380004${String(sqPhone++).padStart(4, "0")}` });
+    for (const platform of SQ_PLATFORMS) sqAccounts.set(`${bi}-${si}-${platform}`, await seedSquareAccount(db, staffId, { platform, nickname: `${b.name}${["北京", "上海", "广州"][si]}${platform === "douyin" ? "抖音" : platform === "xiaohongshu" ? "小红书" : "快手"}号` }, T0));
+  }
+}
+const sqNow = new Date(Date.UTC(2026, 10, 18, 4));
+let sqSeq = 0;
+for (const [i, [title, bi, kind, likes, comments, platform]] of SQ_SEEDS.entries()) {
+  for (const [k, f] of [1, 0.55, 0.2].entries()) {
+    const sqIndex = i * 3 + k;
+    const account = sqAccounts.get(`${bi}-${(i + k) % squareSectors.length}-${platform}`)!;
+    const spec: WorkSpec = {
+      kind,
+      title: k === 0 ? title : `${title}${k === 1 ? "（二）" : "（三）"}`,
+      like: Math.max(51, Math.round(likes * f)),
+      comment: Math.round(comments * f),
+      publishedAt: new Date(sqNow.getTime() - [3, 12, 26, 48, 75, 120, 160, 200][sqIndex % 8]! * 86_400_000),
+      shareUrl: `https://www.${platform}.example/work/${sqIndex + 1}`,
+      cover: sqIndex % 7 !== 6, // 每 7 条有 1 条没有封面（占位图）
+    };
+    if (sqIndex === 5) spec.shareUrl = null; // 没有原链接：「观看」置灰
+    if (sqIndex === 8) spec.comment = null; // 评论缺失：显示 —
+    await seedSquareWork(db, account, spec, sqNow, ++sqSeq);
+  }
+}
+// 点赞边界各一条：50（不出现）、51（出现）；已释放名额、外部账号的作品（不出现）
+const sqEdge = sqAccounts.get("0-0-douyin")!;
+await seedSquareWork(db, sqEdge, { title: "【边界】点赞 50，不应出现", like: 50 }, sqNow, ++sqSeq);
+await seedSquareWork(db, sqEdge, { title: "【边界】点赞 51，应出现在最后", like: 51 }, sqNow, ++sqSeq);
+await seedSquareWork(db, await seedSquareAccount(db, null, { platform: "kuaishou", nickname: "竞品号" }, sqNow), { title: "【外部账号】不应出现", like: 9999 }, sqNow, ++sqSeq);
+// 封面：预览没有 OSS，用一个只在本进程里生成渐变图的签名器代替；页面进程拿到的单例与 src/app/_lib/square.ts 同一把钥匙
+const GRADIENTS = [["#c9485b", "#7a2a4a"], ["#5b86a8", "#2c4a63"], ["#d09a4a", "#7a5224"], ["#4f9a8a", "#244f48"], ["#8a6fb5", "#443068"], ["#6e7f95", "#2f3b4b"]] as const;
+const fakeCovers = {
+  async signedGetUrl(key: string): Promise<string> {
+    const [a, b] = GRADIENTS[Number(key.replace(/\D/g, "")) % GRADIENTS.length]!;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="400" height="300" fill="url(#g)"/></svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  },
+};
+(globalThis as unknown as Record<symbol, unknown>)[Symbol.for("hbecho.square.deps")] = assembleSquare({ db, clock: { now: () => new Date() }, env: process.env, covers: fakeCovers });
 void plan2;
 // ---- 页面进程用的 judgement 单例 + 代替 `judgement serve` 的试跑循环 ----------------------------------------------
 (globalThis as unknown as Record<symbol, unknown>)[Symbol.for("hbecho.judgement.web")] = { views: e.views, versions: e.versions, runs: e.runs, outcomes: e.outcomes, plans: e.plans, facts: e.facts, authz: e.authz };

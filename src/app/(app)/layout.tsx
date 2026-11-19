@@ -18,6 +18,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const dataItems: NavGroup["items"] = [];
   if (ctx.capabilities.has("data.account.manage")) dataItems.push({ href: "/accounts", label: "账号与监控", icon: "activity" });
   if (ctx.capabilities.has("data.master_data.import") || ctx.capabilities.has("data.master_data.structure")) dataItems.push({ href: "/master-data", label: "主数据", icon: "database", also: ["/master-data/import", "/master-data/batches"] });
+  // 视频广场（F4）：四个角色都有 square.read；与「数据」同组，门店专员也有入口
+  if (ctx.capabilities.has("square.read")) dataItems.push({ href: "/square", label: "视频广场", icon: "play" });
   if (dataItems.length) groups.push({ label: "数据", items: dataItems });
   // 「学习」排在管理之前（ui-foundation §2）；按 Capability 裁剪，页面与动作各自再判断一次
   if (ctx.capabilities.has("learning.read")) groups.push({ label: "学习", items: [{ href: "/learning", label: "学习", icon: "book" }] });

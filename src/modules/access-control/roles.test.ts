@@ -12,13 +12,13 @@ interface Row {
 const fixture = JSON.parse(readFileSync(new URL("../../../tests/fixtures/access/capability-matrix.v1.json", import.meta.url), "utf8")) as { rows: Row[] };
 
 describe("Capability 注册表对照 PRD §7.3 的转写 fixture", () => {
-  it("恰好 29 项，名字和顺序与 PRD 一致，没有重复", () => {
-    expect(fixture.rows).toHaveLength(29);
+  it("恰好 30 项，名字和顺序与 PRD 一致，没有重复", () => {
+    expect(fixture.rows).toHaveLength(30);
     expect([...CAPABILITIES]).toEqual(fixture.rows.map((r) => r.capability));
-    expect(new Set(CAPABILITIES).size).toBe(29);
+    expect(new Set(CAPABILITIES).size).toBe(30);
   });
 
-  it("四类角色 × 29 项：授予与否逐格一致（❌ = 不授予，其余 = 授予）", () => {
+  it("四类角色 × 30 项：授予与否逐格一致（❌ = 不授予，其余 = 授予）", () => {
     const mismatches: string[] = [];
     for (const row of fixture.rows) {
       for (const role of ROLE_CODES) {
@@ -32,7 +32,7 @@ describe("Capability 注册表对照 PRD §7.3 的转写 fixture", () => {
 
   it("每个角色的授予总数（防止同时错两格互相抵消）", () => {
     const count = (r: RoleCode) => ROLE_CAPABILITIES[r].size;
-    expect(count("platform_admin")).toBe(29); // PRD：超管全部 ✅
+    expect(count("platform_admin")).toBe(30); // PRD：超管全部 ✅
     expect(count("hq_manager")).toBe(fixture.rows.filter((r) => r.hq_manager !== "❌").length);
     expect(count("branch_manager")).toBe(fixture.rows.filter((r) => r.branch_manager !== "❌").length);
     expect(count("store_staff")).toBe(fixture.rows.filter((r) => r.store_staff !== "❌").length);
@@ -48,7 +48,7 @@ describe("Capability 注册表对照 PRD §7.3 的转写 fixture", () => {
     expect(ROLE_CAPABILITIES.store_staff.has("data.export")).toBe(false);
     expect(ROLE_CAPABILITIES.store_staff.has("user.manage")).toBe(false);
     expect(ROLE_CAPABILITIES.store_staff.has("learning.read")).toBe(true);
-    expect([...ROLE_CAPABILITIES.store_staff].sort()).toEqual(["data.account.read", "data.content.read", "data.media.read", "learning.read", "report.read"]);
+    expect([...ROLE_CAPABILITIES.store_staff].sort()).toEqual(["data.account.read", "data.content.read", "data.media.read", "learning.read", "report.read", "square.read"]);
   });
 
   it("一个用户恰好一个角色：只有四个合法角色；等级严格递增；人员级别按 B-D23", () => {

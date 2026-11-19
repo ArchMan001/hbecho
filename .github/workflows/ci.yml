@@ -24,7 +24,24 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  # main 上不重跑完整 verify（2026-11-18，刘学奎）：合并规则保证 main 的树与已通过 CI 的分支顶端一致（见 dev-ci-cadence.md「推送与合并」），
+  # 重跑只是重复花额度。这里只做几秒钟的文档与密钥门禁兜底，然后由 image 构建镜像。
+  quick:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 文档与密钥门禁
+        run: |
+          python3 -I scripts/check-doc-links.py
+          python3 -I scripts/check-doc-registry.py
+          ./scripts/check-secrets.sh
   verify:
+    # 分支与手动触发才跑完整 verify；main 由 quick 兜底
+    if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -60,9 +77,9 @@ jobs:
       - name: 本机验证入口
         run: ./scripts/verify.sh
   image:
-    needs: verify
-    # PR 不推镜像（push 事件已经覆盖同一提交）
-    if: github.event_name != 'pull_request'
+    needs: [verify, quick]
+    # PR 不推镜像（push 事件已经覆盖同一提交）；verify 或 quick 失败则不构建（被跳过的那个不算失败）
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result != 'failure' && needs.quick.result != 'failure' }}
     runs-on: ubuntu-latest
     # 链路本身不慢（探针：大文件约 9.4 MB/s，与 hbdam 同量级）；依赖层（大量小文件）首次推送要几分钟，之后依赖不变时层已在 ACR，
     # 稳态约 1.5 分钟（构建 1 分钟 + 推送 30 秒）。留 30 分钟余量给「依赖变了、整层重推」的情形。

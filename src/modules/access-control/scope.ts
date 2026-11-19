@@ -212,6 +212,7 @@ export const RESOURCE_KEYS = [
   "user",
   "raw_payload",
   "learning_course",
+  "content_square",
   "activity_plan",
   "judgement_plan",
   "audit_log",

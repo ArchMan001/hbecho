@@ -39,7 +39,7 @@
 
 | 依赖 | 当前状态（2026-11-06 核对） | 对本 spec 的影响 |
 |---|---|---|
-| B 域 PRD v1.21 | `current` | 角色、29 个 Capability 的角色矩阵、DataScope、10 个出口、审计、38 项决定全部沿用，不重述产品理由 |
+| B 域 PRD v1.22（2026-11-19 起；本表其余「29 项」为 v1.21 时的数字，现为 30 项，新增 `square.read`，见 PRD v1.22） | `current` | 角色、29 个 Capability 的角色矩阵、DataScope、10 个出口、审计、38 项决定全部沿用，不重述产品理由 |
 | ADR-0005 | accepted | 采用 better-auth（登录、密码、会话、手机号 OTP）+ Next.js 16 + Drizzle + zod + pino。**仓库里目前没有 Next.js、React、better-auth**（`package.json` 只有 drizzle、mysql2、csv-parse、pino、zod、ali-oss），本 spec 引入它们；这些依赖 ADR-0005 已登记，不需要新 ADR 来「选型」，但**版本与行为必须在任务 1 验证** |
 | `a-data-foundation-tracer` / `a-full-sync` / `a-master-data-import` | 已合并 `main` | 现有两套互不统一的 `ActorContext` 接口（tracer 的 `{actorId, scope:{platformCodes, mediaStaffIds}}`，sync 共用它；master-data 的 `{actor, brandScope}`）、三个进程内审计回调（pino）、`media_staff` 只有测试写入。本 spec **不重写它们**，只提供统一的 `AuthContext` 与到各 actor 的适配器（AX-11） |
 | `a-activity-plan`（草案） | `draft`，未实施 | 它的 `PlanActor`（含分公司范围）与 `created_by_actor` 比较创建者谓词，设计上已写明「B 接入时由会话构造」。本 spec 固定规范主体字符串（`user:<id>` / `service:<name>`），使两边对得上 |

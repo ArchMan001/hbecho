@@ -46,6 +46,6 @@ export interface Env {
 export type Out =
   | { kind: "advance"; phase: string }
   | { kind: "more"; cursor?: bigint | null }
-  | { kind: "wait"; on?: "signals" | "demand" }
+  | { kind: "wait"; on?: "signals" | "demand" | "collection"; detail?: Record<string, unknown> }
   | { kind: "done" }
   | { kind: "fail"; code: string; detail?: unknown };

@@ -3,7 +3,7 @@
 import { and, asc, eq, inArray, isNotNull, lte, or, sql } from "drizzle-orm";
 import type { Db } from "../../db/client";
 import {
-  accountProfileSnapshots, branches, brands, contents, contentSnapshots, dealers, mediaAssets, mediaReferences, mediaStaff, ossObjects, platforms, regions,
+  accountProfileSnapshots, branches, brands, contents, contentSnapshots, dealers, externalAccountIdentifiers, mediaAssets, mediaReferences, mediaStaff, ossObjects, platforms, regions,
   sectors, staffAccountAssignments, stores, syncBatches, syncTasks,
 } from "../../db/schema";
 import type { MediaObjectStore } from "../raw-capture/ports";
@@ -53,6 +53,11 @@ export interface FactsDeps {
   mediaTtlSeconds: number;
   alert?: (e: { code: "image_sign_failed"; failed: number } | { code: "media_unconfigured" }) => void;
 }
+/**
+ * 标题为空时用话题文本顶上：抖音列表接口把「正文」放 title、把「#话题」放 tag_text，只有话题的作品 title 是空串
+ * （测试机 9,845 条里 2,109 条标题为空，其中只有 141 条话题也为空；2026-11-20 起 Excel / 页面不再留空）。
+ */
+const titleOf = (title: string | null, tagText: string | null): string | null => (title ?? "").trim() !== "" ? title : (tagText ?? "").trim() !== "" ? tagText : title;
 const TERMINAL = ["succeeded", "succeeded_with_gap", "failed", "dead", "cancelled"];
 const OK_BY_STATUS: Record<string, SyncOk> = { succeeded: "是", succeeded_with_gap: "部分（有缺口）", failed: "否", dead: "否", cancelled: "否" };
 /** LIKE 的转义：% _ \ 当作普通字符。 */
@@ -89,7 +94,7 @@ export function createReportFacts(deps: FactsDeps) {
       db
         .select({
           id: contentSnapshots.contentSnapshotId, contentId: contentSnapshots.contentId, kind: contents.contentKind, pcid: contents.platformContentId,
-          title: contentSnapshots.title, publishedAt: contentSnapshots.publishedAt, shareUrl: contentSnapshots.shareUrl, snapshotAt: contentSnapshots.snapshotAt,
+          title: contentSnapshots.title, tagText: contentSnapshots.tagText, publishedAt: contentSnapshots.publishedAt, shareUrl: contentSnapshots.shareUrl, snapshotAt: contentSnapshots.snapshotAt,
           likeV: contentSnapshots.likeValue, likeS: contentSnapshots.likeState, comV: contentSnapshots.commentValue, comS: contentSnapshots.commentState,
           shV: contentSnapshots.shareValue, shS: contentSnapshots.shareState, coV: contentSnapshots.collectValue, coS: contentSnapshots.collectState,
         })
@@ -100,7 +105,7 @@ export function createReportFacts(deps: FactsDeps) {
     return new Map(
       rows.map((r) => [
         r.id,
-        { contentId: r.contentId, kind: r.kind, platformContentId: String(r.pcid), title: r.title, publishedAt: r.publishedAt, shareUrl: r.shareUrl, snapshotAt: r.snapshotAt,
+        { contentId: r.contentId, kind: r.kind, platformContentId: String(r.pcid), title: titleOf(r.title, r.tagText), publishedAt: r.publishedAt, shareUrl: r.shareUrl, snapshotAt: r.snapshotAt,
           like: { state: r.likeS, value: r.likeV }, comment: { state: r.comS, value: r.comV }, share: { state: r.shS, value: r.shV }, collect: { state: r.coS, value: r.coV } },
       ]),
     );
@@ -128,9 +133,26 @@ export function createReportFacts(deps: FactsDeps) {
     return out;
   }
 
+  /**
+   * 主页链接。供应商的主页接口和列表接口都不返回主页 URL，所以：
+   *  1) 有规范标识时拼规范地址：抖音 `douyin.sec_uid`（列表条目的作者 sec_uid，成功采集列表后登记）→ https://www.douyin.com/user/<sec_uid>；小红书主页 user_id → https://www.xiaohongshu.com/user/profile/<user_id>；
+   *  2) 否则用提交时的入口（resolved_home_url），它常是整段分享文案，由单元格规则取出其中的网址。
+   */
   async function homeUrls(accountIds: readonly bigint[]): Promise<Map<bigint, string>> {
     const rows = await inChunks(accountIds, (c) => db.select({ a: staffAccountAssignments.accountId, u: staffAccountAssignments.resolvedHomeUrl }).from(staffAccountAssignments).where(inArray(staffAccountAssignments.accountId, c)));
-    return new Map(rows.map((r) => [r.a, r.u]));
+    const out = new Map(rows.map((r) => [r.a, r.u]));
+    const ids = await inChunks(accountIds, (c) =>
+      db
+        .select({ a: externalAccountIdentifiers.accountId, ns: externalAccountIdentifiers.namespaceCode, v: externalAccountIdentifiers.identifierValue })
+        .from(externalAccountIdentifiers)
+        .where(and(inArray(externalAccountIdentifiers.accountId, c), inArray(externalAccountIdentifiers.namespaceCode, ["douyin.sec_uid", "xiaohongshu.profile.user_id"]))),
+    );
+    for (const i of ids) {
+      const v = i.v.trim();
+      if (!/^[A-Za-z0-9_-]+$/.test(v)) continue; // 不合规的标识值不拼进地址
+      out.set(i.a, i.ns === "douyin.sec_uid" ? `https://www.douyin.com/user/${v}` : `https://www.xiaohongshu.com/user/profile/${v}`);
+    }
+    return out;
   }
 
   /** 主页 / 视频列表采集状态：数据截止时点前最近一次**终态**的任务；没有记录（含已过一年保留期）= 无记录，不是失败。 */
@@ -145,13 +167,13 @@ export function createReportFacts(deps: FactsDeps) {
           rn: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${syncTasks.accountId}, ${syncTasks.requestedAction} ORDER BY ${syncTasks.finishedAt} DESC, ${syncTasks.taskId} DESC)`.as("rn"),
         })
         .from(syncTasks)
-        .where(and(inArray(syncTasks.accountId, c), inArray(syncTasks.requestedAction, ["fetch_profile", "fetch_content_list"]), inArray(syncTasks.status, TERMINAL), isNotNull(syncTasks.finishedAt), lte(syncTasks.finishedAt, cutoff)))
+        .where(and(inArray(syncTasks.accountId, c), inArray(syncTasks.requestedAction, ["fetch_profile", "resolve_account", "fetch_content_list"]), inArray(syncTasks.status, TERMINAL), isNotNull(syncTasks.finishedAt), lte(syncTasks.finishedAt, cutoff)))
         .as("ranked");
       for (const r of await db.select().from(ranked).where(eq(ranked.rn, 1))) {
         if (r.accountId === null) continue;
         const cur = out.get(r.accountId)!;
         const f: SyncFact = { ok: OK_BY_STATUS[r.status] ?? "否", at: r.finishedAt };
-        out.set(r.accountId, r.action === "fetch_profile" ? { ...cur, profile: f } : { ...cur, list: f });
+        out.set(r.accountId, r.action === "fetch_content_list" ? { ...cur, list: f } : { ...cur, profile: f });
       }
       return [];
     });

@@ -102,7 +102,7 @@ export function createBatchSummarizer(deps: { db: Db; clock: Clock }) {
     const pending = await db
       .select({ id: syncBatches.batchId })
       .from(syncBatches)
-      .where(and(inArray(syncBatches.status, ["succeeded", "partial_succeeded", "failed"]), sql`${syncBatches.mediaFinishedAt} IS NULL`, inArray(syncBatches.purpose, ["full", "supplement"])));
+      .where(and(inArray(syncBatches.status, ["succeeded", "partial_succeeded", "failed"]), sql`${syncBatches.mediaFinishedAt} IS NULL`, inArray(syncBatches.purpose, ["full", "supplement", "intake"])));
     const mediaFinished: string[] = [];
     for (const { id } of pending) {
       // 结构化阶段已终态：先对账补建账号级媒资任务（已有则跳过），再判断是否全部终态

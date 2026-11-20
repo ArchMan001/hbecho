@@ -77,6 +77,12 @@ describe("值与格式", () => {
     expect(fmtBjt(new Date("2026-11-17T16:00:00Z"))).toBe("2026-11-18 00:00");
     expect(fmtBjt(null)).toBe("");
   });
+  it("分享文案里取出第一个网址（账号主页链接存的是整段「长按复制此条消息…」文案）；文案里没有网址 / 只有危险协议 → 不输出", () => {
+    expect(httpUrl("9- 长按复制此条消息，打开抖音搜索，查看TA的更多作品。 https://v.douyin.com/1BNjIHNOMA0/ 5@7.com :8pm")).toBe("https://v.douyin.com/1BNjIHNOMA0/");
+    expect(httpUrl("长按复制此条消息 https://v.douyin.com/hAdTE2ioejk/")).toBe("https://v.douyin.com/hAdTE2ioejk/");
+    expect(httpUrl("请补充")).toBeUndefined();
+    expect(httpUrl("点这里 javascript:alert(1) 或 data:text/html,x")).toBeUndefined();
+  });
   it("链接只放行 http / https", () => {
     expect(httpUrl("https://www.douyin.com/video/1")).toBeDefined();
     for (const bad of ["javascript:alert(1)", "data:text/html,x", "", null, undefined, "not a url", "ftp://x"]) expect(httpUrl(bad)).toBeUndefined();

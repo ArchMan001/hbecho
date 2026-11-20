@@ -17,7 +17,9 @@ export interface ExecutionBrief {
   version: number;
   status: string;
   phase: string | null;
-  waitingOn: "demand" | "signals" | null;
+  waitingOn: "demand" | "signals" | "collection" | null;
+  /** 等待列表采集时：还有多少个账号在采集、等待截止时间（ISO）；其他情况 null。 */
+  collectWait: { pendingAccounts: number; deadline: string | null } | null;
   lastErrorCode: string | null;
   participants: number | null;
   contentTotal: number | null;
@@ -97,6 +99,8 @@ export interface ExecutionDetail {
   submittedBy: string;
   window: { from: string; to: string | null } | null;
   syncIncomplete: number;
+  /** 同步不完整的专员里，因「还在采集」（执行时账号的列表任务还没跑完）而不完整的人数。 */
+  syncPending: number;
   contentsPruned: boolean;
 }
 export type ParticipantFilter = "all" | "success" | "not_met" | "unobtained" | "sync";
@@ -136,8 +140,9 @@ export interface StaffContentRow {
 export function createViews(deps: JudgementDeps & { plans: Plans; runs: Runs; versions: Versions; outcomes: Outcomes }) {
   const { db, facts, authz } = deps;
   const waitingOn = (phaseDetail: unknown): ExecutionBrief["waitingOn"] => {
-    const w = (phaseDetail as { waiting_on?: string } | null)?.waiting_on;
-    return w === "demand" || w === "signals" ? w : null;
+    // 运行器写的是驼峰 waitingOn；此前这里读蛇形 waiting_on，永远是 null，页面的「等待采集 / 等待识别」状态一直没显示（2026-11-20 修复）
+    const w = (phaseDetail as { waitingOn?: string; waiting_on?: string } | null)?.waitingOn ?? (phaseDetail as { waiting_on?: string } | null)?.waiting_on;
+    return w === "demand" || w === "signals" || w === "collection" ? w : null;
   };
   async function outcomesOf(runIds: readonly bigint[]): Promise<Map<bigint, { success: number; notMet: number; unobtained: number }>> {
     const out = new Map<bigint, { success: number; notMet: number; unobtained: number }>();
@@ -162,6 +167,7 @@ export function createViews(deps: JudgementDeps & { plans: Plans; runs: Runs; ve
     status: r.status,
     phase: r.phase,
     waitingOn: r.status === "waiting" ? waitingOn(r.phaseDetail) : null,
+    collectWait: r.status === "waiting" && waitingOn(r.phaseDetail) === "collection" ? { pendingAccounts: Number((r.phaseDetail as { pendingAccounts?: number }).pendingAccounts ?? 0), deadline: (r.phaseDetail as { waitDeadline?: string }).waitDeadline ?? null } : null,
     lastErrorCode: r.lastErrorCode,
     participants: r.participantCount,
     contentTotal: r.contentTotal,
@@ -344,6 +350,7 @@ export function createViews(deps: JudgementDeps & { plans: Plans; runs: Runs; ve
     }
     const outcomes = await outcomesOf(row.status === "completed" ? [row.runId] : []);
     const [bad] = await db.select({ n: sql<number>`COUNT(*)` }).from(runParticipants).where(and(eq(runParticipants.runId, runId), eq(runParticipants.syncComplete, false)));
+    const [pending] = await db.select({ n: sql<number>`COUNT(*)` }).from(runParticipants).where(and(eq(runParticipants.runId, runId), eq(runParticipants.syncReason, "sync_pending")));
     const frozen = row.frozen as { window?: { from: string; to?: string } } | null;
     return {
       run: briefOf(row, outcomes),
@@ -355,6 +362,7 @@ export function createViews(deps: JudgementDeps & { plans: Plans; runs: Runs; ve
       submittedBy: row.submittedByActor,
       window: frozen?.window ? { from: frozen.window.from, to: frozen.window.to ?? null } : null,
       syncIncomplete: Number(bad?.n ?? 0),
+      syncPending: Number(pending?.n ?? 0),
       contentsPruned: Boolean((row.phaseDetail as { contentsPruned?: boolean } | null)?.contentsPruned),
     };
   }

@@ -11,6 +11,8 @@ import {
   contents,
   contentSnapshots,
   externalAccounts,
+  importBatches,
+  importRowResults,
   mediaStaff,
   platforms,
   sectors,
@@ -255,10 +257,34 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     return new Map(rows.map((r) => [r.a, r.p]));
   }
 
+  /**
+   * 「还在采集」的账号（d-wait-collection WC-2）：有未终态的列表 / 主页 / 名单解析任务（任何批次、任何 purpose），
+   * 或名单来自仍在 resolving 的导入批次（该批完成时才会建首次列表补采任务，这段空窗里账号已在名单里但还没有列表任务）。
+   * 终态失败（身份校验失败、预算被拦…）不算「采集中」。只读；分块查询。
+   */
+  async function collectingAccountsOf(accountIds: readonly bigint[]): Promise<Set<bigint>> {
+    const out = new Set<bigint>();
+    await inChunks(accountIds, async (chunk) => {
+      const active = await db
+        .selectDistinct({ a: syncTasks.accountId })
+        .from(syncTasks)
+        .where(and(inArray(syncTasks.accountId, chunk), inArray(syncTasks.requestedAction, ["fetch_content_list", "fetch_profile", "resolve_account"]), inArray(syncTasks.status, ["pending", "running", "retry_wait"])));
+      for (const r of active) if (r.a !== null) out.add(r.a);
+      const resolving = await db
+        .selectDistinct({ a: importRowResults.accountId })
+        .from(importRowResults)
+        .innerJoin(importBatches, eq(importBatches.importBatchId, importRowResults.importBatchId))
+        .where(and(inArray(importRowResults.accountId, chunk), eq(importBatches.status, "resolving")));
+      for (const r of resolving) if (r.a !== null) out.add(r.a);
+      return [];
+    });
+    return out;
+  }
   /** 每位账号在窗口内的列表同步是否完整（§7.5）。一批账号一次批量取数，不逐账号往返。 */
   async function syncCompletenessOf(accountIds: readonly bigint[], fromUtc: Date): Promise<Map<bigint, SyncResult>> {
     const TERMINAL = ["succeeded", "succeeded_with_gap", "failed", "dead", "cancelled"];
     const out = new Map<bigint, SyncResult>();
+    const collecting = await collectingAccountsOf(accountIds);
     for (let i = 0; i < accountIds.length; i += CHUNK) {
       const chunk = accountIds.slice(i, i + CHUNK);
       // 每账号最近一条已终态列表任务
@@ -288,6 +314,7 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
             sinceWindow: since.filter((s) => s.accountId === a).map((s) => ({ status: s.status, continuityGapDetected: s.gap })),
             checkpoint: cp ? { continuityStatus: cp.continuityStatus, lastGapAt: cp.lastGapAt } : null,
             fromUtc,
+            inFlight: collecting.has(a),
           }),
         );
       }
@@ -295,6 +322,6 @@ export function createFacts(deps: { db: Db; reader: Pick<PlanReader, "rosterSnap
     return out;
   }
 
-  return { rosterOf, planOf, liveActivityPlans, activityPlansOf, brandsOf, collectingPlans, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, staffLabelsOf, contentsOf, durationsOf, commentIdsOf, profileOf, syncCompletenessOf };
+  return { rosterOf, planOf, liveActivityPlans, activityPlansOf, brandsOf, collectingPlans, brandCodesOf, joinedBranchIds, assignmentsOf, orgChainOf, staffLabelsOf, contentsOf, durationsOf, commentIdsOf, profileOf, syncCompletenessOf, collectingAccountsOf };
 }
 export type Facts = ReturnType<typeof createFacts>;

@@ -42,7 +42,7 @@ describe("列表作者三态（FS-5.13）", () => {
   it("E20：20 条中 19 条是登记作者 → verified（异作者共创是常态，不能要求全部是）", () => {
     const entries = [...Array.from({ length: 19 }, () => entry("HITACHI1", "SEC1")), entry("HITACHI2023", "SEC2")];
     const c = countListAuthors(entries, new Set(["HITACHI1", "SEC1"]));
-    expect(c).toEqual({ known: 20, matched: 19 });
+    expect(c).toEqual({ known: 20, matched: 19, nicknameOnly: 0 });
     expect(checkListAuthors({ baselineHasRegistered: true, knownAuthorEntries: c.known, matchedEntries: c.matched })).toBe("verified");
   });
   it("E20：20 条一条都不是登记作者 → mismatch", () => {
@@ -60,12 +60,33 @@ describe("列表作者三态（FS-5.13）", () => {
   });
   it("作者字段整体缺失（契约漂移）不是串号：不数入「可用作者条目」，所以不会 mismatch", () => {
     const c = countListAuthors(Array.from({ length: 30 }, () => entry(null, null)), new Set(["HITACHI1"]));
-    expect(c).toEqual({ known: 0, matched: 0 });
+    expect(c).toEqual({ known: 0, matched: 0, nicknameOnly: 0 });
     expect(checkListAuthors({ baselineHasRegistered: true, knownAuthorEntries: c.known, matchedEntries: c.matched })).toBe("unverifiable");
   });
   it("抖音第二标识 sec_uid 命中也算匹配；快手 / 小红书没有 sec_uid（null）不影响", () => {
-    expect(countListAuthors([entry("X", "SEC1")], new Set(["SEC1"]))).toEqual({ known: 1, matched: 1 });
-    expect(countListAuthors([entry("HK1")], new Set(["HK1"]))).toEqual({ known: 1, matched: 1 });
-    expect(countListAuthors([entry("X", null)], new Set(["HK1"]))).toEqual({ known: 1, matched: 0 });
+    expect(countListAuthors([entry("X", "SEC1")], new Set(["SEC1"]))).toEqual({ known: 1, matched: 1, nicknameOnly: 0 });
+    expect(countListAuthors([entry("HK1")], new Set(["HK1"]))).toEqual({ known: 1, matched: 1, nicknameOnly: 0 });
+    expect(countListAuthors([entry("X", null)], new Set(["HK1"]))).toEqual({ known: 1, matched: 0, nicknameOnly: 0 });
+  });
+});
+
+describe("列表作者昵称兜底（2026-11-20）：主页与列表的 user_id 不一致、昵称一致", () => {
+  const named = (id: string, name: string) => ({ author: { namespace: "douyin.user_id" as const, id: v(id) }, authorSecUid: null, authorName: v(name) });
+  it("22 条都是同一个作者，user_id 与登记值不同但昵称等于主页昵称 → 全部算匹配（nicknameOnly 22），状态 verified", () => {
+    const entries = Array.from({ length: 22 }, () => named("99333694788", "开封七大街日立空调时玲"));
+    const c = countListAuthors(entries, new Set(["19937832336."]), "开封七大街日立空调时玲");
+    expect(c).toEqual({ known: 22, matched: 22, nicknameOnly: 22 });
+    expect(checkListAuthors({ baselineHasRegistered: true, knownAuthorEntries: c.known, matchedEntries: c.matched })).toBe("verified");
+  });
+  it("昵称不同 → 仍是 mismatch；没有主页昵称（null / 空）→ 不兜底", () => {
+    const entries = Array.from({ length: 10 }, () => named("OTHER", "别人的号"));
+    expect(countListAuthors(entries, new Set(["A"]), "开封七大街日立空调时玲")).toEqual({ known: 10, matched: 0, nicknameOnly: 0 });
+    expect(countListAuthors(entries, new Set(["A"]), null)).toEqual({ known: 10, matched: 0, nicknameOnly: 0 });
+    expect(countListAuthors(entries, new Set(["A"]), "")).toEqual({ known: 10, matched: 0, nicknameOnly: 0 });
+    expect(checkListAuthors({ baselineHasRegistered: true, knownAuthorEntries: 10, matchedEntries: 0 })).toBe("mismatch");
+  });
+  it("id 已匹配的条目不计入 nicknameOnly", () => {
+    const entries = [named("A", "昵称"), named("B", "昵称")];
+    expect(countListAuthors(entries, new Set(["A"]), "昵称")).toEqual({ known: 2, matched: 2, nicknameOnly: 1 });
   });
 });

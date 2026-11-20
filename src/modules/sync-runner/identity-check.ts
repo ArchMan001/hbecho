@@ -31,21 +31,31 @@ export function checkListAuthors(c: { baselineHasRegistered: boolean; knownAutho
   return c.matchedEntries > 0 ? "verified" : "mismatch";
 }
 
-/** 一页里「作者 ID 可用」的条目数，以及其中由登记作者创作的条目数（抖音的第二标识 sec_uid 也算）。 */
+/**
+ * 一页里「作者 ID 可用」的条目数，以及其中由登记作者创作的条目数（抖音的第二标识 sec_uid 也算）。
+ * 昵称兜底（刘学奎 2026-11-20 同意）：供应商的主页接口与列表接口对同一账号返回的 user_id 不一致（测试机 22 / 22 抽查：昵称完全一致、列表只有一个作者），
+ * 所以条目的作者昵称等于该账号当前主页昵称也算「由登记作者创作」；靠昵称才匹配上的条目数单独返回（nicknameOnly），调用方据此记一条质量提示。
+ */
 export function countListAuthors(
-  entries: ReadonlyArray<Pick<ListEntry, "author" | "authorSecUid">>,
+  entries: ReadonlyArray<Pick<ListEntry, "author" | "authorSecUid"> & Partial<Pick<ListEntry, "authorName">>>,
   registered: ReadonlySet<string>,
-): { known: number; matched: number } {
+  nickname: string | null = null,
+): { known: number; matched: number; nicknameOnly: number } {
   let known = 0;
   let matched = 0;
+  let nicknameOnly = 0;
   for (const e of entries) {
     const id = e.author.id.state === "value" ? e.author.id.value : null;
     const sec = e.authorSecUid?.state === "value" ? e.authorSecUid.value : null;
     if (id === null && sec === null) continue; // 作者字段缺失 / 非法：不数，契约漂移不是串号
     known++;
     if ((id !== null && registered.has(id)) || (sec !== null && registered.has(sec))) matched++;
+    else if (nickname !== null && nickname !== "" && e.authorName?.state === "value" && e.authorName.value === nickname) {
+      matched++;
+      nicknameOnly++;
+    }
   }
-  return { known, matched };
+  return { known, matched, nicknameOnly };
 }
 
 /** 主页响应里的账号标识所在命名空间（与 decodeProfile 一致）。 */

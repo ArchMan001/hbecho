@@ -8,6 +8,7 @@ const KEYS = {
   pollSeconds: "HBECHO_JP_POLL_SECONDS",
   waitSignalSeconds: "HBECHO_JP_WAIT_SIGNAL_SECONDS",
   waitDemandSeconds: "HBECHO_JP_WAIT_DEMAND_SECONDS",
+  waitCollectSeconds: "HBECHO_JP_WAIT_COLLECT_SECONDS", // 执行前等待参与账号的列表采集完成的上限（d-wait-collection，建议 3600）
   leaseSeconds: "HBECHO_JP_LEASE_SECONDS",
   tickBudgetMs: "HBECHO_JP_TICK_BUDGET_MS",
   phaseMaxAttempts: "HBECHO_JP_PHASE_MAX_ATTEMPTS",
@@ -20,7 +21,7 @@ const KEYS = {
 export type JudgementConfig = { [K in keyof typeof KEYS]: number };
 export const JUDGEMENT_ENV_KEYS: readonly string[] = Object.values(KEYS);
 /** 等待上限允许为 0（所有「在等」的依赖立即记 dependency_timeout）；其余必须是正整数。 */
-const ALLOW_ZERO: ReadonlySet<keyof typeof KEYS> = new Set(["waitSignalSeconds", "waitDemandSeconds"]);
+const ALLOW_ZERO: ReadonlySet<keyof typeof KEYS> = new Set(["waitSignalSeconds", "waitDemandSeconds", "waitCollectSeconds"]);
 /** C 与 A 的单次上限。 */
 const BATCH_CEILING = 5000;
 

@@ -7,6 +7,11 @@ import type { Clock } from "../raw-capture";
 import { ONE_YEAR_MS, STRUCTURED_ACTIONS, taskIdempotencyKey } from "./task-keys";
 
 export const ACCOUNT_MEDIA_TASK_SCHEMA = "sync-media-task.v1";
+/**
+ * 可作为账号级媒资任务模板的成功任务：周期 / 补抓的主页与列表，加上名单导入的 resolve_account（intake 批次）。
+ * 2026-11-20：此前漏了 resolve_account，名单导入后新账号的头像 / 主页背景一直停在 pending，直到下一个周一全量才下载（测试机 573 个）。
+ */
+const MEDIA_TEMPLATE_ACTIONS = [...STRUCTURED_ACTIONS, "resolve_account"] as const;
 const CHUNK = 500;
 
 /** 返回新建（或已存在）任务所覆盖的账号数；批次内已有 download_media 的账号不重复建。 */
@@ -21,7 +26,7 @@ export async function ensureMediaTasks(db: Db, clock: Clock, batchId: bigint): P
       maxAttempts: sql<number>`MIN(${syncTasks.maxAttempts})`.mapWith(Number),
     })
     .from(syncTasks)
-    .where(and(eq(syncTasks.batchId, batchId), inArray(syncTasks.requestedAction, [...STRUCTURED_ACTIONS]), inArray(syncTasks.status, ["succeeded", "succeeded_with_gap"])))
+    .where(and(eq(syncTasks.batchId, batchId), inArray(syncTasks.requestedAction, [...MEDIA_TEMPLATE_ACTIONS]), inArray(syncTasks.status, ["succeeded", "succeeded_with_gap"])))
     .groupBy(syncTasks.accountId);
   const now = clock.now();
   for (let i = 0; i < rows.length; i += CHUNK) {

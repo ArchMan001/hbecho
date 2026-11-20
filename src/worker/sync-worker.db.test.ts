@@ -151,6 +151,22 @@ describe("claimNext：SKIP LOCKED、排序、范围", () => {
     expect(await claimNext(t.db, { workerId: "w", leaseMs: LEASE, now: S1, limit: 100, actions: ["download_media"] })).toEqual([]);
   });
 
+  it("名单导入（intake）批次终态后：只有账号级媒资任务可以领，intake 的其他任务仍不归本 worker（头像 / 背景补下载）", async () => {
+    const w = await world({});
+    await accounts(w.org);
+    await w.scheduler.tick(S1);
+    const [batch] = await t.db.select().from(syncBatches);
+    const [one, two] = await allTasks();
+    await t.db.update(syncTasks).set({ requestedAction: "download_media" }).where(eq(syncTasks.taskId, one!.taskId));
+    await t.db.update(syncBatches).set({ purpose: "intake", status: "partial_succeeded" }).where(eq(syncBatches.batchId, batch!.batchId));
+    const got = await claimNext(t.db, { workerId: "w", leaseMs: LEASE, now: S1, limit: 100, actions: ["download_media", "fetch_profile", "fetch_content_list"] });
+    expect(got.map((c) => c.task.taskId)).toEqual([one!.taskId]); // 只领到媒资任务；two 等同类的采集任务不领
+    expect(two).toBeDefined();
+    // intake 批次还在解析中（running）时，媒资任务也不领：媒资任务本来就只在批次终态后才会建
+    await t.db.update(syncTasks).set({ status: "pending", leaseOwner: null, leaseExpiresAt: null }).where(eq(syncTasks.taskId, one!.taskId));
+    await t.db.update(syncBatches).set({ status: "running" }).where(eq(syncBatches.batchId, batch!.batchId));
+    expect(await claimNext(t.db, { workerId: "w", leaseMs: LEASE, now: S1, limit: 100, actions: ["download_media"] })).toEqual([]);
+  });
   it("熔断排除 provider：调用供应商的任务不领，媒资下载不受影响", async () => {
     const w = await world({});
     await accounts(w.org);

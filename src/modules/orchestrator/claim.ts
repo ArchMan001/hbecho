@@ -98,8 +98,10 @@ export async function claimNext(db: Db, o: ClaimNextOptions): Promise<ClaimedTas
         ${o.excludeProviderIds?.length ? sql`AND (t.requested_action = 'download_media' OR t.provider_id NOT IN (${list(o.excludeProviderIds)}))` : sql``}
         AND EXISTS (
           SELECT 1 FROM sync_batches b
-          WHERE b.batch_id = t.batch_id AND b.purpose IN ('full','supplement','demand')
-            AND (b.status = 'running' OR (t.requested_action = 'download_media' AND b.status IN ('succeeded','partial_succeeded','failed'))))
+          WHERE b.batch_id = t.batch_id
+            AND ((b.purpose IN ('full','supplement','demand') AND (b.status = 'running' OR (t.requested_action = 'download_media' AND b.status IN ('succeeded','partial_succeeded','failed'))))
+              -- 名单导入（intake）批次终态后补建的账号级媒资任务（头像 / 主页背景）：只放行 download_media；intake 的解析根任务仍不归本 worker（2026-11-20：此前这些任务建出来没人领，573 个账号的头像停在 pending）
+              OR (b.purpose = 'intake' AND t.requested_action = 'download_media' AND b.status IN ('succeeded','partial_succeeded','failed'))))
       ORDER BY t.priority DESC, t.attempt_count ASC, t.task_id ASC
       LIMIT ${o.limit}
       FOR UPDATE SKIP LOCKED`)) as unknown as [Array<{ task_id: string }>];

@@ -233,6 +233,9 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
     if (ex.kind === "not_sent") {
       if (ex.reason === "cancelled") return { kind: "end", result: result("cancelled") };
       if (ex.reason.startsWith("policy:")) return { kind: "fail", category: "policy", code: "policy_blocked" };
+      // 重放时遇到更早的 not_sent（封口瞬间租约丢失，当时的原因没有落库）：这次尝试已作废，进入下一次尝试并重新过策略；
+      // 不能当 stale 结束，否则根任务停在 running，每个 tick 重放第 1 次尝试都得到同样的结果，租约被一再续上，永远不结束
+      if (ex.reason === "previously_not_sent") return { kind: "again", category: "not_sent_replay" };
       return { kind: "end", result: result("stale") };
     }
     if (ex.kind === "in_progress") return { kind: "fail", category: "provider_outcome_unknown", code: "in_progress" };

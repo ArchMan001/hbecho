@@ -18,7 +18,8 @@ export const TRASH_DAYS = 30;
 export const MAX_OWNER_SLOTS = 2;
 export const PLAN_NAME_MAX = 200;
 export const PLAN_DESCRIPTION_MAX = 2_000;
-export const RESOLVE_CONCURRENCY = 2;
+// 2026-11-20 由 2 调到 6：测试机实测解析一行约 6.8 秒，并发 2 时吞吐只有约 0.25 行 / 秒，CPU 与供应商 QPS（2）都远没用满
+export const RESOLVE_CONCURRENCY = 6;
 /** 北京时间每日维护开始的小时。 */
 export const MAINTENANCE_HOUR_BJT = 4;
 /** 板块种类（水机 / 家装）。计划选的是种类，不是某分公司下的板块行。 */

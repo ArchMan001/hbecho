@@ -56,7 +56,7 @@ export function createRosterResolver(deps: ResolverDeps) {
       .leftJoin(platforms, eq(platforms.platformId, syncTasks.platformId))
       .where(and(eq(importRowResults.outcome, "pending_account"), eq(importBatches.status, "resolving"), eq(importBatches.importKind, "roster")))
       .orderBy(asc(importRowResults.importBatchId), asc(importRowResults.rowNo))
-      .limit(o.limit ?? 50);
+      .limit(o.limit ?? 300); // 每轮之间有 30 秒间隔，一轮太小间隔占比就高（2026-11-20 由 50 调到 300）
     const completed = new Set<bigint>();
     const touchedBatches = new Set<bigint>();
     report.examined = rows.length;

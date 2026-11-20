@@ -4,7 +4,7 @@ import { JudgementError } from "./errors";
 
 const FULL: Record<string, string> = {
   HBECHO_JP_BLOCK_SIZE: "200", HBECHO_JP_SIGNAL_BATCH: "1000", HBECHO_JP_DEMAND_BATCH: "1000", HBECHO_JP_POLL_SECONDS: "30",
-  HBECHO_JP_WAIT_SIGNAL_SECONDS: "600", HBECHO_JP_WAIT_DEMAND_SECONDS: "7200", HBECHO_JP_LEASE_SECONDS: "120", HBECHO_JP_TICK_BUDGET_MS: "5000",
+  HBECHO_JP_WAIT_SIGNAL_SECONDS: "600", HBECHO_JP_WAIT_DEMAND_SECONDS: "7200", HBECHO_JP_WAIT_COLLECT_SECONDS: "3600", HBECHO_JP_LEASE_SECONDS: "120", HBECHO_JP_TICK_BUDGET_MS: "5000",
   HBECHO_JP_PHASE_MAX_ATTEMPTS: "5", HBECHO_JP_MAX_ITEMS: "50", HBECHO_JP_MAX_KEYWORD_LENGTH: "64",
   HBECHO_JP_TRIAL_RETENTION_DAYS: "30", HBECHO_JP_KEEP_CONTENT_RUNS: "5", HBECHO_JP_FAILED_RETENTION_DAYS: "30",
 };
@@ -19,7 +19,7 @@ const fail = (env: Record<string, string | undefined>): JudgementError => {
 describe("parseJudgementEnv（没有代码默认值）", () => {
   it("全部给出 → 解析成数字", () => {
     expect(parseJudgementEnv(FULL)).toMatchObject({ blockSize: 200, waitSignalSeconds: 600, keepContentRuns: 5 });
-    expect(JUDGEMENT_ENV_KEYS).toHaveLength(14);
+    expect(JUDGEMENT_ENV_KEYS).toHaveLength(15);
   });
   it("缺任一项都失败并指出缺哪一项（逐项）", () => {
     for (const key of JUDGEMENT_ENV_KEYS) {
@@ -37,6 +37,6 @@ describe("parseJudgementEnv（没有代码默认值）", () => {
     expect(parseJudgementEnv({ ...FULL, HBECHO_JP_SIGNAL_BATCH: "5000" }).signalBatch).toBe(5000);
   });
   it("等待上限为 0 合法（所有在等的依赖立即 dependency_timeout）", () => {
-    expect(parseJudgementEnv({ ...FULL, HBECHO_JP_WAIT_SIGNAL_SECONDS: "0", HBECHO_JP_WAIT_DEMAND_SECONDS: "0" })).toMatchObject({ waitSignalSeconds: 0, waitDemandSeconds: 0 });
+    expect(parseJudgementEnv({ ...FULL, HBECHO_JP_WAIT_SIGNAL_SECONDS: "0", HBECHO_JP_WAIT_DEMAND_SECONDS: "0", HBECHO_JP_WAIT_COLLECT_SECONDS: "0" })).toMatchObject({ waitSignalSeconds: 0, waitDemandSeconds: 0 });
   });
 });

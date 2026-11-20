@@ -26,6 +26,7 @@ const RUN_STATUS: Record<string, { label: string; tone: Tone }> = {
 export function runStatus(r: Pick<ExecutionBrief, "status" | "waitingOn">): { label: string; tone: Tone } {
   if (r.status === "waiting" && r.waitingOn === "demand") return { label: "等待采集", tone: "amber" };
   if (r.status === "waiting" && r.waitingOn === "signals") return { label: "等待识别", tone: "amber" };
+  if (r.status === "waiting" && r.waitingOn === "collection") return { label: "等待列表采集", tone: "amber" };
   return RUN_STATUS[r.status] ?? { label: r.status, tone: "gray" };
 }
 export const KIND_LABEL: Record<string, string> = { video: "视频", image: "图文" };
@@ -77,7 +78,8 @@ const REASON: Record<string, string> = {
   account_unavailable: "账号不可用",
   no_profile_snapshot: "无主页快照",
   sync_gap: "同步有缺口",
-  sync_failed: "同步失败",
+  sync_failed: "采集失败",
+  sync_pending: "采集中",
   not_computed: "识别尚未补算",
   published_at_missing: "发布时间缺失",
   content_kind_unknown: "内容形态无法归类",

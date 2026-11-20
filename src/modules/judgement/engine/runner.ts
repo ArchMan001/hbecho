@@ -31,7 +31,7 @@ import type { RunnerDeps, Env, Frozen, Out } from "./types";
 
 export type { RunnerDeps, Frozen } from "./types";
 export type TickResult = "continue" | "waiting" | "terminal" | "stale";
-const PHASES_BY_KIND: Record<string, readonly string[]> = { circle: ["freeze", "scope", "layer1", "select", "finalize"], compare: ["freeze", "scope", "layer1", "select", "scores", "finalize"], execution: ["freeze", "scope", "layer1", "select", "scores", "demand", "layer3", "comments", "aggregate", "finalize"] };
+const PHASES_BY_KIND: Record<string, readonly string[]> = { circle: ["freeze", "scope", "layer1", "select", "finalize"], compare: ["freeze", "scope", "layer1", "select", "scores", "finalize"], execution: ["freeze", "collect_wait", "scope", "layer1", "select", "scores", "demand", "layer3", "comments", "aggregate", "finalize"] };
 
 
 export function createRunner(deps: RunnerDeps) {
@@ -40,10 +40,12 @@ export function createRunner(deps: RunnerDeps) {
   const setPhase = (tx: DbTx, run: RunRow, phase: string, cursor: bigint | null, detail: unknown = null) =>
     tx.update(judgementRuns).set({ phase, phaseCursor: cursor, phaseDetail: detail as never, updatedAt: clock.now() }).where(eq(judgementRuns.runId, run.runId));
 
+  /** 执行（execution）冻结后先等参与账号的列表采集完成（d-wait-collection）；圈定 / 试跑不等。 */
+  const afterFreeze = (run: RunRow): string => (run.runKind === "execution" ? "collect_wait" : "scope");
   // ---- freeze -------------------------------------------------------------------------------------------------
   async function freeze(env: Env): Promise<Out> {
     const { run, cfg, activity } = env;
-    if (env.frozen.freezeDone) return { kind: "advance", phase: "scope" };
+    if (env.frozen.freezeDone) return { kind: "advance", phase: afterFreeze(run) };
     // 崩溃在中途、frozen 尚未写完：此时还没有任何下游行，删掉已写的参与专员后整段重做（名单可能已变，以重做时读到的为准）
     await claim.withFence(run, async (tx) => void (await tx.delete(runParticipants).where(eq(runParticipants.runId, run.runId))));
     const roster = await facts.rosterOf(activity.planId);
@@ -90,9 +92,23 @@ export function createRunner(deps: RunnerDeps) {
       await setPhase(tx, run, "scope", null);
     });
     env.frozen = { ...frozen, freezeDone: true };
-    return { kind: "advance", phase: "scope" };
+    return { kind: "advance", phase: afterFreeze(run) };
   }
 
+  // ---- collect_wait：执行前等待参与账号的列表采集完成（d-wait-collection）--------------------------------------------
+  // 只等「还在排队 / 采集中」的账号；已经终态失败的账号不拦（它们在 scope 的同步完整谓词里记 sync_failed）。
+  // 有等待上限（HBECHO_JP_WAIT_COLLECT_SECONDS）：超时继续，仍在采集的账号记 sync_pending。只读 A 的任务表，不发调用、不花点数。
+  async function collectWait(env: Env): Promise<Out> {
+    const { run } = env;
+    const ids = (await db.select({ a: runParticipants.accountId }).from(runParticipants).where(eq(runParticipants.runId, run.runId)).orderBy(asc(runParticipants.accountId))).map((r) => r.a);
+    const pending = await facts.collectingAccountsOf(ids);
+    if (pending.size === 0) return { kind: "advance", phase: "scope" };
+    const detail = (run.phaseDetail as { waitDeadline?: string } | null) ?? {};
+    const now = clock.now();
+    const deadline = detail.waitDeadline ? Date.parse(detail.waitDeadline) : now.getTime() + config.waitCollectSeconds * 1000;
+    if (now.getTime() >= deadline) return { kind: "advance", phase: "scope" };
+    return { kind: "wait", on: "collection", detail: { pendingAccounts: pending.size } };
+  }
   // ---- scope：参与内容的范围构建与冻结（含同步完整谓词）----------------------------------------------------------
   async function scope(env: Env): Promise<Out> {
     const { run, cfg, frozen } = env;
@@ -362,7 +378,7 @@ export function createRunner(deps: RunnerDeps) {
       const counts = contentCounts(rows.map((r) => ({ final: r.final as ContentRowLite["final"] })));
       const reasons: Record<string, number> = {};
       for (const r of rows) if (r.final === "unobtained") reasons[r.reasonCode ?? "unknown"] = (reasons[r.reasonCode ?? "unknown"] ?? 0) + 1;
-      const zero = { syncComplete: p.syncComplete ?? false, syncReason: (p.syncReason as "sync_failed" | "sync_gap" | "no_sync_in_window" | null) ?? null };
+      const zero = { syncComplete: p.syncComplete ?? false, syncReason: (p.syncReason as "sync_failed" | "sync_gap" | "no_sync_in_window" | "sync_pending" | null) ?? null };
       const content = contentOn ? contentOutcome(counts, cfg.layer1.quantity?.n ?? undefined, zero) : null;
       const acc = accountOn ? (p.accountDetail as { result?: string; reason?: string; stale?: boolean } | null) : null;
       const account: Outcome | null = !accountOn ? null : acc?.result === "pass" ? "success" : acc?.result === "fail" ? "not_met" : "unobtained";
@@ -441,7 +457,7 @@ export function createRunner(deps: RunnerDeps) {
   }
 
   const dep = createDependencyPhases(deps);
-  const PHASE_FN: Record<string, (env: Env) => Promise<Out>> = { freeze, scope, layer1, select, scores, demand: dep.demand, layer3: dep.layer3, comments: dep.comments, aggregate, finalize };
+  const PHASE_FN: Record<string, (env: Env) => Promise<Out>> = { freeze, collect_wait: collectWait, scope, layer1, select, scores, demand: dep.demand, layer3: dep.layer3, comments: dep.comments, aggregate, finalize };
 
   // ---- tick ----------------------------------------------------------------------------------------------------
   /** 提交人复核（JP-15）：每个 tick 开头用 contextForUser 现建身份并确认仍持有该类运行所需的 Capability；失败则取消运行。 */
@@ -497,8 +513,8 @@ export function createRunner(deps: RunnerDeps) {
         if (out.kind === "wait") {
           const detail = (env.run.phaseDetail as { waitDeadline?: string } | null) ?? {};
           const on = out.on ?? "signals";
-          const waitDeadline = detail.waitDeadline ?? new Date(now.getTime() + (on === "demand" ? config.waitDemandSeconds : config.waitSignalSeconds) * 1000).toISOString();
-          await claim.settle(run, { status: "waiting", nextTickAt: new Date(now.getTime() + config.pollSeconds * 1000), phase, phaseDetail: { ...detail, waitDeadline, waitingOn: on }, attemptCount: 0 });
+          const waitDeadline = detail.waitDeadline ?? new Date(now.getTime() + (on === "demand" ? config.waitDemandSeconds : on === "collection" ? config.waitCollectSeconds : config.waitSignalSeconds) * 1000).toISOString();
+          await claim.settle(run, { status: "waiting", nextTickAt: new Date(now.getTime() + config.pollSeconds * 1000), phase, phaseDetail: { ...detail, ...(out.detail ?? {}), waitDeadline, waitingOn: on }, attemptCount: 0 });
           return "waiting";
         }
         await claim.settle(run, { status: "waiting", nextTickAt: now, phase, phaseCursor: env.run.phaseCursor ?? null, attemptCount: 0 });

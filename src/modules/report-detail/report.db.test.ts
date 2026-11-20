@@ -3,9 +3,9 @@ import { Writable } from "node:stream";
 import ExcelJS from "exceljs";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { activityPlans, auditEvents, contentSnapshots, contents, judgementPlanVersions, judgementRuns, mediaReferences, runParticipants, staffAccountAssignments, syncBatches, syncTasks, ossObjects } from "../../db/schema";
+import { activityPlans, auditEvents, contentSnapshots, contents, externalAccountIdentifiers, judgementPlanVersions, judgementRuns, mediaReferences, runParticipants, staffAccountAssignments, syncBatches, syncTasks, ossObjects } from "../../db/schema";
 import { useTestDb } from "../../../tests/harness/db";
-import { insertBatch, insertMediaAsset, insertProfileSnapshot, insertTask } from "../../../tests/harness/factories";
+import { insertBatch, insertMediaAsset, insertProfileSnapshot, insertTask, sha } from "../../../tests/harness/factories";
 import { addContent, addListTask, addParticipant, judgementEnv, judgementWorld, moveCurrentSnapshot, userCtx, type JudgementEnv, type JudgementWorld } from "../../../tests/harness/judgement";
 import { createRegistry, type AuthContext } from "../access-control";
 import { assembleReport } from "./assemble";
@@ -188,6 +188,36 @@ describe("账号维度", () => {
     expect(sun.cells.profileOk!.text).toBe("无记录");
     expect(sun.cells.profileAt!.text).toBe("");
     expect(v.table.missingRows).toBeGreaterThan(0);
+  });
+  it("主页链接：有规范标识时用规范地址，否则取分享文案里的网址（2026-11-20：Excel 里约一半账号的主页链接曾是空的）", async () => {
+    const s = await build();
+    const share = "9- 长按复制此条消息，打开抖音搜索，查看TA的更多作品。 https://v.douyin.com/1BNjIHNOMA0/ 5@7.com :8pm";
+    await t.db.update(staffAccountAssignments).set({ resolvedHomeUrl: share }).where(eq(staffAccountAssignments.accountId, s.w.accZhao));
+    await t.db.update(staffAccountAssignments).set({ resolvedHomeUrl: "请补充" }).where(eq(staffAccountAssignments.accountId, s.p2.accountId));
+    await t.db.insert(externalAccountIdentifiers).values({ accountId: s.p2.accountId, namespaceCode: "douyin.sec_uid", identifierValue: "MS4wLjABAAAA_sec-1", identifierSha256: sha("MS4wLjABAAAA_sec-1"), bindingMethod: "same_payload", confidence: "observed", firstSeenAt: day(6), lastSeenAt: day(6), createdAt: day(6) } as never);
+    const v = await s.report.view(s.hq, s.planId.toString(), { tab: "accounts", filter: NOFILTER, page: 1 });
+    const links = v.table.rows.map((r) => r.cells.homeUrl!.text).sort();
+    expect(links).toEqual(["https://v.douyin.com/1BNjIHNOMA0/", "https://www.douyin.com/user/MS4wLjABAAAA_sec-1"]);
+  });
+  it("标题为空时用话题文本顶上；两者都空才留空", async () => {
+    const s = await build();
+    await t.db.update(contentSnapshots).set({ title: "", tagText: "#日立十年包修 #家用中央空调" }).where(eq(contentSnapshots.contentId, s.ca.contentId));
+    const v = await s.report.view(s.hq, s.planId.toString(), { tab: "videos", filter: NOFILTER, page: 1 });
+    expect(v.table.rows.find((r) => r.cells.contentId!.text === ID19)!.cells.title!.text).toBe("#日立十年包修 #家用中央空调");
+    await t.db.update(contentSnapshots).set({ title: "", tagText: "" }).where(eq(contentSnapshots.contentId, s.ca.contentId));
+    const v2 = await s.report.view(s.hq, s.planId.toString(), { tab: "videos", filter: NOFILTER, page: 1 });
+    expect(v2.table.rows.find((r) => r.cells.contentId!.text === ID19)!.cells.title!.text).toBe("");
+  });
+  it("名单导入解析（resolve_account）的主页也算主页采集：是否成功与采集时间不再是「无记录」/ 空", async () => {
+    const s = await build();
+    const b1 = await insertBatch(t.db, day(7));
+    await t.db.update(syncBatches).set({ finishedAt: day(7), status: "succeeded" }).where(eq(syncBatches.batchId, b1));
+    const tk = await insertTask(t.db, { batchId: b1, platform: "douyin", now: day(7), status: "succeeded", action: "resolve_account" });
+    await t.db.update(syncTasks).set({ accountId: s.w.accZhao, finishedAt: day(7) }).where(eq(syncTasks.taskId, tk));
+    const v = await s.report.view(s.hq, s.planId.toString(), { tab: "accounts", filter: NOFILTER, page: 1 });
+    const hit = v.table.rows.filter((r) => r.cells.profileOk!.text === "是");
+    expect(hit).toHaveLength(1);
+    expect(hit[0]!.cells.profileAt!.text).toBe("2026-11-07 12:00");
   });
   it("采集失败 / 部分 / 无记录：失败 → 否；succeeded_with_gap → 部分（有缺口）", async () => {
     const s = await build();

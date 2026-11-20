@@ -24,7 +24,7 @@ export function contentCounts(rows: readonly ContentRowLite[]): ContentCounts {
   return c;
 }
 
-export type ZeroReason = "sync_failed" | "sync_gap" | "no_sync_in_window";
+export type ZeroReason = "sync_failed" | "sync_gap" | "no_sync_in_window" | "sync_pending";
 export interface ZeroContext {
   syncComplete: boolean;
   syncReason: ZeroReason | null;

@@ -84,13 +84,14 @@ export default async function ExecutionDetailPage({ params, searchParams }: { pa
         <div className="callout" role="status" style={{ marginBottom: 14 }}>
           <Icon name="clock" />
           <span style={{ flex: 1 }}>
-            <b>{st.label}</b>：{run.status === "waiting" && run.waitingOn === "demand" ? "等待采集系统返回评论 / 音频等数据；有等待上限，超时的内容记未获取成功。" : run.status === "waiting" && run.waitingOn === "signals" ? "等待识别结果补算完成；有等待上限，超时的内容记未获取成功。" : run.status === "planned" ? "已提交，等待后台领取。" : `正在${phase.label}。`} 页面会自动更新。
+            <b>{st.label}</b>：{run.status === "waiting" && run.waitingOn === "demand" ? "等待采集系统返回评论 / 音频等数据；有等待上限，超时的内容记未获取成功。" : run.status === "waiting" && run.waitingOn === "signals" ? "等待识别结果补算完成；有等待上限，超时的内容记未获取成功。" : run.status === "waiting" && run.waitingOn === "collection" ? `等待参与账号的视频列表采集完成（还有 ${n(run.collectWait?.pendingAccounts ?? 0)} 个账号在采集${run.collectWait?.deadline ? `，最多等到 ${new Date(run.collectWait.deadline).toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit" })}` : ""}）；超时后按现有数据继续判定。` : run.status === "planned" ? "已提交，等待后台领取。" : `正在${phase.label}。`} 页面会自动更新。
             <div className="progress-bar" style={{ marginTop: 8 }}><i style={{ width: `${phase.percent}%` }} /></div>
           </span>
         </div>
       ) : null}
       {run.status === "failed" ? <div className="callout danger" role="alert" style={{ marginBottom: 14 }}><Icon name="alert" /><span><b>执行失败</b>：{runErrorText(run.lastErrorCode)}{run.lastErrorCode ? `（错误码 ${run.lastErrorCode}）` : ""}。已定的内容保留，可以续跑。</span></div> : null}
       {run.status === "cancelled" ? <Callout icon="alert" style={{ marginBottom: 14 }}>已取消：取消的执行不对 E 可见；已提交的采集由采集系统自己跑完。</Callout> : null}
+      {done && d.syncPending > 0 ? <Callout icon="alert" tone="warn" style={{ marginBottom: 14 }}>执行时仍有 <b>{n(d.syncPending)}</b> 个账号在采集，这些账号记为「采集中」，结果可能不完整；采完后重新执行即可。</Callout> : null}
       {done && d.syncIncomplete > 0 ? <Callout icon="alert" tone="warn" style={{ marginBottom: 14 }}>有 <b>{n(d.syncIncomplete)}</b> 名专员窗口内的同步不完整。他们的「不达标」可能是误判：缺失的内容本来可能让他们达标。结果不改，只在明细与导出里提示。</Callout> : null}
       {done && d.contentsPruned ? <Callout icon="file" style={{ marginBottom: 14 }}>这次执行的内容级结果已按保留期清理；参与专员与汇总仍长期保留。</Callout> : null}
 

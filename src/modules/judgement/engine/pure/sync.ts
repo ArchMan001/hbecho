@@ -16,6 +16,8 @@ export interface SyncInput {
   sinceWindow: readonly ListTaskFact[];
   checkpoint: CheckpointFact | null;
   fromUtc: Date;
+  /** 账号还有未终态的列表 / 主页 / 解析任务，或名单来自仍在解析的导入批次：不完整时原因记 sync_pending（采集中），不是采集失败。 */
+  inFlight?: boolean;
 }
 export interface SyncResult {
   complete: boolean;
@@ -26,6 +28,10 @@ export interface SyncResult {
  * 对「确实没发」的断言必须判为 sync_gap。窗口前发生的缺口不影响本窗口；窗口内某次失败之后又成功且无缺口判完整（design §14 第 26 项，宽松版）。
  */
 export function syncCompleteness(i: SyncInput): SyncResult {
+  const r = judge(i);
+  return !r.complete && i.inFlight ? { complete: false, reason: "sync_pending" } : r;
+}
+function judge(i: SyncInput): SyncResult {
   const bad = (reason: ZeroReason): SyncResult => ({ complete: false, reason });
   if (i.latest === null || ["failed", "dead", "cancelled"].includes(i.latest.status)) return bad("sync_failed");
   const cp = i.checkpoint;

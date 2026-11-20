@@ -1,5 +1,5 @@
 # D 判定执行前等待采集完成（d-wait-collection）· 设计
-> **状态**：`draft`。**界面未确认**，页面相关任务不得展开（见 §界面 N.6）。
+> **状态**：`accepted`。界面已确认（§6.3）。
 >
 > **权威来源**：[requirements.md](requirements.md)；D 的阶段机见 `src/modules/judgement/engine/runner.ts`；同步完整谓词见 `src/modules/judgement/engine/pure/sync.ts`
 >
@@ -16,7 +16,7 @@ freeze → collect_wait → scope → layer1 → select → scores → demand �
   - > 0 且未到截止 → `waiting`，`phase_detail = { waiting_on: "collection", pending_accounts: N, deadline: <ISO> }`，`next_tick_at = now + poll_seconds`；
   - 到截止仍 > 0 → 在 `phase_detail` 记 `collection_timeout = { pending_accounts: N }` 并 `advance`；
 - 截止时间在**第一次进入**阶段时写入（`phase_detail.deadline`），重放不重置；
-- 等待上限来自配置 `HBECHO_JP_COLLECT_WAIT_MINUTES`（没有默认值写进代码；`.env.example` 建议 60），遵守「花钱 / 等待上限不静默默认」的项目约定。
+- 等待上限来自配置 `HBECHO_JP_WAIT_COLLECT_SECONDS`（没有默认值写进代码；`.env.example` 建议 3600；0 = 不等待；缺失启动失败），遵守「等待上限不静默默认」的项目约定。部署前必须先把这一项加进 `judgement.env`（以及任何加载 `HBECHO_JP_*` 的环境文件）。
 - `circle` / `compare`（圈定 / 试跑）不加等待阶段（它们不依赖列表是否采完，且用户在向导里要快速反馈）。
 
 ## 2. 「采集中」的查询（只读）
@@ -74,4 +74,6 @@ latest 为空 / 失败，且 !inFlight → reason = "sync_failed"
 | 完成（含超时） | 顶部提示条（第 3 行） |
 
 ### 6.3 N.6 界面设计确认
-**未确认**。确认人、日期、范围待刘学奎填写；确认前不得写页面相关任务与代码。
+**已确认**。确认人：刘学奎；日期：2026-11-20；范围：§6.1 的状态文案、超时提示条与原因列文案（U3「全部认可」），上限 60 分钟、超时继续执行。界面改动超出此范围要重新确认。
+
+实现时顺带修了一个既有缺陷：运行器把等待原因写成驼峰 `waitingOn`，视图却读蛇形 `waiting_on`，所以「等待采集 / 等待识别」状态从来没有显示过（一直是通用的等待）；现在两种写法都读。

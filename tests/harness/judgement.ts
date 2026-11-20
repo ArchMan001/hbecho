@@ -138,7 +138,7 @@ import { FakeClock } from "./fake-clock";
 
 export const LIMITS = { maxItems: 50, maxKeywordLength: 64 } as const;
 /** 测试用的数值配置（生产没有代码默认值）；块大小取很小，让分块与游标续跑真的被走到。 */
-export const TEST_CONFIG: JudgementConfig = { blockSize: 2, signalBatch: 3, demandBatch: 10, pollSeconds: 30, waitSignalSeconds: 600, waitDemandSeconds: 7200, leaseSeconds: 120, tickBudgetMs: 60_000, phaseMaxAttempts: 3, maxItems: 50, maxKeywordLength: 64, trialRetentionDays: 30, keepContentRuns: 5, failedRetentionDays: 30 };
+export const TEST_CONFIG: JudgementConfig = { blockSize: 2, signalBatch: 3, demandBatch: 10, pollSeconds: 30, waitSignalSeconds: 600, waitDemandSeconds: 7200, waitCollectSeconds: 3600, leaseSeconds: 120, tickBudgetMs: 60_000, phaseMaxAttempts: 3, maxItems: 50, maxKeywordLength: 64, trialRetentionDays: 30, keepContentRuns: 5, failedRetentionDays: 30 };
 export const userCtx = (role: RoleCode, id: number, scope: DataScope): AuthContext => ({ kind: "user", actor: `user:${id}`, userId: BigInt(id), role, capabilities: ROLE_CAPABILITIES[role], scope, sessionId: null });
 export const ALL_SCOPE: DataScope = { brands: "all", branches: "all", self: { kind: "none" }, level: 3 };
 export interface JudgementEnv {
@@ -153,7 +153,7 @@ export interface JudgementEnv {
   claim: Judgement["claim"];
   /** 休眠 = 推进 FakeClock，并在每次休眠后调用 onSleep（让测试在等待期间「让信号就绪」） */
   sleep: Sleep;
-  onSleep: { fn: (() => void) | null };
+  onSleep: { fn: (() => void | Promise<void>) | null };
   facts: Judgement["facts"];
   authz: Judgement["authz"];
   /** 与 createJudgement 同一份审计（downstream 等直接构造的部件用它） */
@@ -194,7 +194,7 @@ export function judgementEnv(t: TestDb, w: RosterWorld, over: { limits?: { maxIt
   const onSleep: JudgementEnv["onSleep"] = { fn: null };
   const sleep: Sleep = async (ms) => {
     clock.advance(ms);
-    onSleep.fn?.();
+    await onSleep.fn?.();
   };
   return { fake, demand, clock, plans: j.plans, versions: j.versions, runs: j.runs, outcomes: j.outcomes, views: j.views, claim: j.claim, sleep, onSleep, facts: j.facts, authz: j.authz, audit: j.audit, audits, creator, other: userCtx("hq_manager", 8, brandScope), admin: userCtx("platform_admin", 1, ALL_SCOPE), revoked };
 }

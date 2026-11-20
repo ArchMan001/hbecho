@@ -2,6 +2,7 @@
 // 校验失败时整笔不写（陈旧 worker 不能发布 current / 检查点 / 归属 / 终态）。
 import { inArray } from "drizzle-orm";
 import type { Db, DbTx } from "../../db/client";
+import { retryOnDeadlock } from "../../db/deadlock";
 import { syncTasks } from "../../db/schema";
 import { fenceFailure, type Clock, type FenceFailureReason } from "../raw-capture";
 
@@ -23,7 +24,9 @@ export async function withFences<T>(
   fn: (tx: DbTx, tasks: Map<bigint, TaskRow>) => Promise<T>,
 ): Promise<Fenced<T>> {
   const ordered = [...locks].sort((a, b) => (a.taskId < b.taskId ? -1 : a.taskId > b.taskId ? 1 : 0));
-  return db.transaction(async (tx) => {
+  // 死锁时整笔事务已回滚，原样重跑即可（先锁任务行、再写，fn 只在事务内写库）。
+  // 实测：名单解析并发运行多个根任务时，两个根任务同时收尾，各自更新同一个 sync_batches 行，InnoDB 会选一个当死锁受害者
+  return retryOnDeadlock(() => db.transaction(async (tx) => {
     const rows = await tx
       .select()
       .from(syncTasks)
@@ -37,7 +40,7 @@ export async function withFences<T>(
       if (failure) return { ok: false as const, reason: failure, taskId: l.taskId };
     }
     return { ok: true as const, value: await fn(tx, byId) };
-  });
+  }));
 }
 
 /** 并发的另一个 worker 抢先建立了同一个账号 / 标识：重试一次，此时会命中已有行。 */

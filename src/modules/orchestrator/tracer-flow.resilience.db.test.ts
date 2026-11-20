@@ -483,6 +483,30 @@ describe("预算与成本：达到上限在下一次调用前停止", () => {
     expect((await runner(enough).run(r2)).kind).toBe("succeeded");
   });
 
+  it("封口时租约恰好丢失（not_sent 的原因不是 policy）：重新运行从下一次尝试继续，不会永远 stale 并反复续租", async () => {
+    // 测试机 2026-11-20 的实际现象：批次预算封口的同一瞬间根任务租约过期，网关把该调用记为 not_sent 但原因是租约，
+    // 根任务停在 running；之后每个 tick 重放第 1 次尝试都得到 previously_not_sent → stale，租约被一再续上，永远不结束。
+    let checks = 0;
+    // eslint-disable-next-line prefer-const -- 策略需要在创建 env 之后才能引用 env.clock
+    let env: TracerEnv;
+    const policy = {
+      async check() {
+        if (checks++ > 0) return null;
+        env.clock.advance(120_000); // 租约默认 60 秒：到网关最后一次校验时已过期，原因记为租约而不是 policy
+        return "call_budget" as const;
+      },
+    };
+    env = await setupTracer(t, { policy });
+    env.serve.profile("douyin");
+    env.serve.list("douyin");
+    const rootId = await env.submit();
+    const { run } = runner(env);
+    expect((await run(rootId)).kind).toBe("stale");
+    expect(env.transport.calls).toHaveLength(0);
+    const r = await run(rootId); // 预算已放宽：第 1 次尝试是 previously_not_sent，第 2 次尝试新建调用并发送
+    expect(r.kind).toBe("succeeded");
+    expect((await calls()).map((c) => [c.attemptNo, c.requestedAction, c.outcome])).toEqual([[1, "media_user_info", "not_sent"], [2, "media_user_info", "succeeded"], [1, "user_video_list", "succeeded"]]);
+  });
   it("轮询不计点，但受 maxPolls 限制：maxPolls=2 时第 3 次轮询在发送前被封口", async () => {
     const env = await setupTracer(t, { policy: createBudgetPolicy(t.db, { maxPolls: 2 }) });
     serveAsync(env, [taskBody("running")]);

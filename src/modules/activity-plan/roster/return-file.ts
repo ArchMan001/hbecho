@@ -33,6 +33,7 @@ export const REASON_TEXT: Record<string, string> = {
   non_home_locator: "这是视频或笔记链接，不是主页链接，请换成账号主页链接",
   platform_mismatch: "链接所属平台与计划平台不一致",
   platform_unrecognized: "链接域名无法识别为任何支持的平台",
+  locator_no_url: "主页链接里没有网址：请粘贴账号主页的分享链接（以 https:// 开头，或抖音 / 小红书复制出来的整段分享文案）；「请补充」「账号昵称」之类的文字不是链接",
   duplicate_phone_in_file: "同一手机号在文件里出现了多次，每位专员只填一行",
   phone_name_conflict_in_file: "同一手机号在文件里对应了不同姓名",
   duplicate_locator_in_file: "同一主页链接在文件里出现了多次",

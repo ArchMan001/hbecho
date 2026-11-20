@@ -132,7 +132,7 @@
 | D14 | AP-6 | 手机号属于本门店有效专员 | `new`；姓名不同只在 detail 写 `staff_name_differs`，不阻塞 |
 | D15 | AP-6 | 链接是视频 / 笔记 | `non_home_locator` |
 | D16 | AP-6 | 抖音计划里填小红书主页链接 | `platform_mismatch`；**不默认成抖音** |
-| D17 | AP-6 | 没有 URL 的纯分享口令 | 通过（交供应商判断），预检不拒绝；预检里不存在「链接格式错误」这个原因码 |
+| D17 | AP-6 | 没有 URL 的文本（「请补充」、页面标题、只有口令暗号） | `locator_no_url`（AP-D28，2026-11-20 修订；原为放行）；带短链的分享文案仍通过；同步校验失败回退异步后任务失败 → 重试耗尽 `invalid_link` |
 | D17a | AP-6 | 含 URL 但域名不属于任何支持平台（如 `https://example.com/user/1`） | `platform_unrecognized` |
 | D17b | AP-6 | 各平台短链域名：`v.douyin.com`、`xhslink.com`、`v.kuaishou.com` | 域名可识别，通过（平台一致时）；平台不一致时报 `platform_mismatch` |
 | D18 | AP-6 | 同上的行解析后被供应商判为无效 | 行 `invalid`（F5），不是预检错误 |

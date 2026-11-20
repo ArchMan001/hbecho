@@ -24,7 +24,8 @@ const t = useTestDb();
 const S1 = new Date("2026-11-08T18:00:00Z");
 const PROFILE_PATH = "/openapi/v1/media_user_info";
 
-async function world(limits: { maxCalls: number; maxPoints: number }, respond?: (callIndex: number) => { httpStatus: number; body: Uint8Array }, yearMaxPoints?: number) {
+// purpose 默认 supplement：批次上限只约束非周期批次；周期全量（full）的行为在最后一组用例里单独验证
+async function world(limits: { maxCalls: number; maxPoints: number }, respond?: (callIndex: number) => { httpStatus: number; body: Uint8Array }, yearMaxPoints?: number, purpose: "full" | "supplement" = "supplement") {
   const org = await seedOrg(t.db, S1);
   await seedSyncSettings(t.db, S1);
   const clock = new FakeClock(S1);
@@ -82,6 +83,7 @@ async function world(limits: { maxCalls: number; maxPoints: number }, respond?: 
   const c = await addStaffAccount(t.db, { platform: "kuaishou", staffId: org.staffC, now: S1 });
   await addExternalAccount(t.db, { platform: "kuaishou", now: S1 });
   await scheduler.tick(S1);
+  if (purpose !== "full") await t.db.update(syncBatches).set({ purpose });
   return { clock, transport, worker, accounts: { a, b, c } };
 }
 const profiles = async () => (await t.db.select().from(syncTasks).orderBy(syncTasks.taskId)).filter((x) => x.requestedAction === "fetch_profile");
@@ -152,5 +154,22 @@ describe("年度硬护栏（最近 365 天累计点数）", () => {
     await w.worker.run({ untilIdle: true });
     expect(await spentInWindow(t.db, new Date(S1.getTime() - 365 * 86_400_000))).toBe(45); // 抖音 10 + 小红书 15 + 快手 10 + external 快手 10
     expect(await spentInWindow(t.db, new Date(S1.getTime() + 86_400_000))).toBe(0);
+  });
+});
+
+describe("周期全量批次（purpose = full）：不设批次上限，只受年度上限约束（刘学奎 2026-11-20）", () => {
+  it("批次调用数 / 点数上限再小也不拦：4 个主页任务全部发出", async () => {
+    const w = await world({ maxCalls: 1, maxPoints: 10 }, undefined, 1_000_000, "full");
+    const [batch] = await t.db.select().from(syncBatches);
+    expect(batch!.purpose).toBe("full");
+    await w.worker.run({ untilIdle: true });
+    expect(w.transport.calls).toHaveLength(4);
+    expect((await profiles()).map((x) => x.status)).toEqual(["succeeded", "succeeded", "succeeded", "succeeded"]);
+  });
+  it("年度上限照样拦：年度 25 点 → 第 3 个任务（快手 10 点）发送前被封口", async () => {
+    const w = await world({ maxCalls: 1, maxPoints: 10 }, undefined, 25, "full");
+    await w.worker.run({ untilIdle: true });
+    expect(w.transport.calls).toHaveLength(2);
+    expect((await profiles()).map((x) => [x.status, x.lastErrorCode])).toEqual([["succeeded", null], ["succeeded", null], ["failed", "budget_exhausted"], ["failed", "budget_exhausted"]]);
   });
 });

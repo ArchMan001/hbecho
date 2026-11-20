@@ -2,7 +2,7 @@
 // 点数表见 cost-guard；失败、超时、429 与异步轮询不计点。
 import { and, eq, sql } from "drizzle-orm";
 import type { Db } from "../../db/client";
-import { odsProviderCalls, platforms, syncTasks } from "../../db/schema";
+import { odsProviderCalls, platforms, syncBatches, syncTasks } from "../../db/schema";
 import { pointsOf } from "../cost-guard";
 import type { PolicyContext, SendPolicy } from "../raw-capture";
 
@@ -95,15 +95,21 @@ export function createBatchBudgetPolicy(db: Db, limits: BatchBudgetLimits, year?
   return {
     async check(ctx: PolicyContext) {
       const [task] = await db
-        .select({ batchId: syncTasks.batchId, platform: platforms.platformCode })
+        .select({ batchId: syncTasks.batchId, platform: platforms.platformCode, purpose: syncBatches.purpose })
         .from(syncTasks)
         .innerJoin(platforms, eq(platforms.platformId, syncTasks.platformId))
+        .innerJoin(syncBatches, eq(syncBatches.batchId, syncTasks.batchId))
         .where(eq(syncTasks.taskId, ctx.syncTaskId));
       if (!task) return null;
-      const spent = await spentForBatch(db, task.batchId, ctx);
-      if (ctx.requestedAction === "task_lookup") return limits.maxPolls !== undefined && spent.polls >= limits.maxPolls ? "poll_budget" : null;
-      if (spent.calls >= limits.maxCalls) return "call_budget";
-      if (spent.points + pointsOf(task.platform, ctx.requestedAction) > limits.maxPoints) return "points_budget";
+      // 周期全量批次（purpose = full）不设批次上限，只受年度上限约束（刘学奎 2026-11-20）：账号数增长时，每周一必须全部抓完，
+      // 批次上限会让排在后面的账号整批被拦；它的体量由账号数决定，年度上限是唯一的硬护栏。其余批次（导入 / 补采 / 需求）仍按批次上限。
+      if (task.purpose !== "full") {
+        const spent = await spentForBatch(db, task.batchId, ctx);
+        if (ctx.requestedAction === "task_lookup") return limits.maxPolls !== undefined && spent.polls >= limits.maxPolls ? "poll_budget" : null;
+        if (spent.calls >= limits.maxCalls) return "call_budget";
+        if (spent.points + pointsOf(task.platform, ctx.requestedAction) > limits.maxPoints) return "points_budget";
+      }
+      if (ctx.requestedAction === "task_lookup") return null; // 轮询不计点，年度上限也不拦
       if (year && (await spentInWindow(db, new Date(now().getTime() - YEAR_MS), ctx)) + pointsOf(task.platform, ctx.requestedAction) > year.maxPoints) return "year_budget";
       return null;
     },

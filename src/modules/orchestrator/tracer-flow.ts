@@ -269,6 +269,13 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
     if (asyncOk && (step.kind === "validation" || (step.kind === "again" && step.fallback === true))) fallbackToAsync = true;
     return step;
   };
+  /**
+   * 同步先因校验失败 / 超时回退到异步之后，异步任务以其他错误码（实测 ACTION_EXECUTION_FAILED）失败：这是无效主页链接的真实形态
+   * （测试机 2026-11-20「请补充」一行）。按校验失败计数，三次耗尽后判 invalid_link，行显示「链接无效」，而不是通用的「解析失败」。
+   * 异步本来就是配置模式（没有回退）时，任务失败仍不重试、不判 invalid_link。
+   */
+  const profileFailure = (cls: FailureClassification, providerCallId: bigint, attempt: number): Promise<Step<never>> =>
+    fallbackToAsync && cls.category === "provider_task_failed" ? Promise.resolve({ kind: "validation", category: cls.category }) : failureStep(cls, providerCallId, attempt);
   const profileAttempt = async (attempt: number, mode: ExecutionMode): Promise<Step<ProfileOk>> => {
     const stop = await beat({ taskId: rootId, token });
     if (stop) return { kind: "end", result: stop };
@@ -283,7 +290,7 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
     const interpreted = await interpretCaptured(db, captured, (bytes) => decodeProfile(platform, bytes));
     const cls = captured.classification;
     const out = interpreted.outcome;
-    if (cls.category !== "none") return failureStep(cls, captured.providerCallId, attempt);
+    if (cls.category !== "none") return profileFailure(cls, captured.providerCallId, attempt);
     if (out.outcome === "decoded") {
       if (out.data.account.id.state !== "value") return { kind: "fail", category: "schema_drift", code: "account_id_unavailable" };
       return { kind: "ok", value: { captured, submit: null, interpreted, data: out.data, adapterVersion: out.adapterVersion, attempt } };
@@ -318,7 +325,7 @@ export async function runTracerRoot(deps: TracerRunDeps, rootTaskIdIn: bigint | 
       const cls = terminal.classification;
       const out = interpreted.outcome;
       if (cls.category === "rate_limited" || cls.category === "provider_server_error") continue; // 轮询被限流：下一次再问
-      if (cls.category !== "none") return failureStep(cls, terminal.providerCallId, attempt);
+      if (cls.category !== "none") return profileFailure(cls, terminal.providerCallId, attempt);
       if (out.outcome === "decoded") {
         if (out.data.account.id.state !== "value") return { kind: "fail", category: "schema_drift", code: "account_id_unavailable" };
         return { kind: "ok", value: { captured: terminal, submit, interpreted, data: out.data, adapterVersion: out.adapterVersion, attempt } };

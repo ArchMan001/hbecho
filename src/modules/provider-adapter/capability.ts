@@ -112,7 +112,7 @@ const TUPLES: Tuple[] = [
   { platform: "douyin", action: "post_comments_list", mode: "asynchronous", outcome: "provider_failed", evidenceRef: ["raw8.A3.poll1"] },
 ];
 
-/** 生产放行批准（刘学奎 2026-11-12）：批准范围是**抖音与小红书的全部 action**，预算上限原为 1 万元、有效期一年（2026-11-19 刘学奎调整：年度上限 3 万元，单次采集 / 单批上限 20000 点）；
+/** 生产放行批准（刘学奎 2026-11-12）：批准范围是**抖音与小红书的全部 action**，预算上限原为 1 万元、有效期一年（2026-11-19 刘学奎调整为年度 3 万元、单批 20000 点；2026-11-20 再调整为年度 5 万元、单批 30000 点）；
  *  快手不在名单里。证据来自 2026-11-04 的批准式 smoke（见 a-data-foundation-tracer acceptance ENV-2）。
  *  更新证据与放行范围都需要人工，没有自动路径；provider_failed 的 tuple 即使在此名单里也被 gate 拒绝。 */
 const PRODUCTION_APPROVAL = Object.freeze({

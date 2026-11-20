@@ -127,10 +127,12 @@ function stage1(row: RosterRow, ctx: ClassifyCtx): Stage1 {
   // 10. 视频 / 笔记链接
   const decision = classifyLocator(original);
   if (decision.action === "reject") return fail("non_home_locator", "这是视频或笔记链接，不是主页链接", where);
-  // 11. 链接平台：另一平台 → 错配（不默认成抖音）；含 URL 但域名不属于任何支持平台 → 无法识别；纯口令放行
+  // 11. 链接平台：另一平台 → 错配（不默认成抖音）；含 URL 但域名不属于任何支持平台 → 无法识别；没有 URL → 报错（locator_no_url）
   const check = checkLocatorPlatform(ctx.plan.platform, original);
   if (!check.ok) return fail("platform_mismatch", `链接属于 ${check.detected}，与计划平台 ${ctx.plan.platform} 不一致`, where);
   if (detectLocatorPlatform(original) === null) return fail("platform_unrecognized", "链接域名无法识别为任何支持的平台", where);
+  // 12. 没有任何网址（「请补充」、页面标题、只剩口令暗号）：不发给供应商（刘学奎 2026-11-20 选 C；测试机上这类行白白多发 1–2 次调用，结果还显示成通用的「解析失败」）
+  if (detectLocatorPlatform(original) === "no_url") return fail("locator_no_url", "主页链接里没有网址", where);
   return { ok: true, name, phone, store, storeCode, staff: active, original, cleaned: decision.cleaned };
 }
 

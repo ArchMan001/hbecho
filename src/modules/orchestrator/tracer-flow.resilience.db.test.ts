@@ -121,6 +121,17 @@ describe("异步主页：提交 + 持久化任务 ID + 每次轮询一条 Provid
     expect(await env.root(rootId)).toMatchObject({ status: "failed", stopReason: "invalid_link" });
   });
 
+  it("同步先返回 RESULT_VALIDATION_FAILED、改走异步后任务以 ACTION_EXECUTION_FAILED 失败（链接无效的真实形态）：按校验失败计数，三次耗尽后 invalid_link，不是通用的 provider_task_failed", async () => {
+    // 测试机 2026-11-20：导入行的主页链接填的是「请补充」，供应商同步返回 500 RESULT_VALIDATION_FAILED，异步任务随后以 ACTION_EXECUTION_FAILED 失败
+    const env = await setupTracer(t);
+    env.serve.profile("douyin", bytesOf('{"code":"RESULT_VALIDATION_FAILED","message":"x"}'), 500);
+    serveAsync(env, [failedBody("ACTION_EXECUTION_FAILED")]);
+    const rootId = await env.submit();
+    expect((await runner(env).run(rootId)).kind).toBe("failed");
+    expect(await env.root(rootId)).toMatchObject({ status: "failed", stopReason: "invalid_link" });
+    expect((await env.status(rootId)).entryOutcome).toBe("invalid_link");
+    expect(await entities()).toEqual(NONE);
+  });
   it("轮询终态的任务 ID 与提交的不一致：不能把提交里的 locator 和别的任务的账号配对 → 稳定失败，无业务身份", async () => {
     const env = await setupTracer(t);
     const other = new TextDecoder().decode(loadFixtureBytes("raw4.C09.poll1")).replaceAll(TASK_ID, "6aaaaaaaaaaaaaaaaaaaaaaa");

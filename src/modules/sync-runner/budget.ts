@@ -2,7 +2,7 @@
 // 点数表见 cost-guard；失败、超时、429 与异步轮询不计点。
 import { and, eq, sql } from "drizzle-orm";
 import type { Db } from "../../db/client";
-import { odsProviderCalls, platforms, syncTasks } from "../../db/schema";
+import { odsProviderCalls, platforms, syncBatches, syncTasks } from "../../db/schema";
 import { pointsOf } from "../cost-guard";
 import type { PolicyContext, SendPolicy } from "../raw-capture";
 
@@ -59,7 +59,7 @@ export const BUDGET_REASONS = ["call_budget", "points_budget", "poll_budget", "y
 export const isBudgetReason = (reason: string): boolean => BUDGET_REASONS.some((r) => reason === `policy:${r}`);
 
 /**
- * 最近 365 天的累计点数（年度硬护栏，刘学奎 2026-11-19：年度上限 3 万元 = 300 万点）。口径同 spentForBatch：
+ * 最近 365 天的累计点数（年度硬护栏，刘学奎 2026-11-20：年度上限 5 万元 = 500 万点，原 2026-11-19 为 3 万元）。口径同 spentForBatch：
  * 没有被封口的调用里，succeeded / ambiguous / reconciled_succeeded 或尚未有结果的算点；轮询不计。按 prepared_at 取窗口（有索引）。
  */
 export async function spentInWindow(db: Db, since: Date, exclude?: Pick<PolicyContext, "syncTaskId" | "attemptNo" | "callSequence">): Promise<number> {
@@ -95,15 +95,21 @@ export function createBatchBudgetPolicy(db: Db, limits: BatchBudgetLimits, year?
   return {
     async check(ctx: PolicyContext) {
       const [task] = await db
-        .select({ batchId: syncTasks.batchId, platform: platforms.platformCode })
+        .select({ batchId: syncTasks.batchId, platform: platforms.platformCode, purpose: syncBatches.purpose })
         .from(syncTasks)
         .innerJoin(platforms, eq(platforms.platformId, syncTasks.platformId))
+        .innerJoin(syncBatches, eq(syncBatches.batchId, syncTasks.batchId))
         .where(eq(syncTasks.taskId, ctx.syncTaskId));
       if (!task) return null;
-      const spent = await spentForBatch(db, task.batchId, ctx);
-      if (ctx.requestedAction === "task_lookup") return limits.maxPolls !== undefined && spent.polls >= limits.maxPolls ? "poll_budget" : null;
-      if (spent.calls >= limits.maxCalls) return "call_budget";
-      if (spent.points + pointsOf(task.platform, ctx.requestedAction) > limits.maxPoints) return "points_budget";
+      // 周期全量批次（purpose = full）不设批次上限，只受年度上限约束（刘学奎 2026-11-20）：账号数增长时，每周一必须全部抓完，
+      // 批次上限会让排在后面的账号整批被拦；它的体量由账号数决定，年度上限是唯一的硬护栏。其余批次（导入 / 补采 / 需求）仍按批次上限。
+      if (task.purpose !== "full") {
+        const spent = await spentForBatch(db, task.batchId, ctx);
+        if (ctx.requestedAction === "task_lookup") return limits.maxPolls !== undefined && spent.polls >= limits.maxPolls ? "poll_budget" : null;
+        if (spent.calls >= limits.maxCalls) return "call_budget";
+        if (spent.points + pointsOf(task.platform, ctx.requestedAction) > limits.maxPoints) return "points_budget";
+      }
+      if (ctx.requestedAction === "task_lookup") return null; // 轮询不计点，年度上限也不拦
       if (year && (await spentInWindow(db, new Date(now().getTime() - YEAR_MS), ctx)) + pointsOf(task.platform, ctx.requestedAction) > year.maxPoints) return "year_budget";
       return null;
     },

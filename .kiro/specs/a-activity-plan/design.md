@@ -272,7 +272,7 @@ daily scan                   → 补记起点；满 15 天关闭
 | 12 | 文件内重复（对通过 1–11 的行成组判断，整组报错） | 同手机号两行：`duplicate_phone_in_file`；同手机号不同姓名：`phone_name_conflict_in_file`（优先于前者）；同一清洗后入口两行：`duplicate_locator_in_file` |
 | 13 | 本地账号命中（§7.3）+ 名单项状态 | 见下 |
 
-> 步骤 10–11 是本地能做的**全部**链接判断：`classifyLocator` 对没有 URL 的文本（纯分享口令）一律 `send/unknown`，无法本地识别，放行交供应商判断；对含 URL 的入口，`PLATFORM_DOMAINS` 已含各平台的短链域名（`xhslink.com`、`v.kuaishou.com` 经 `kuaishou.com`、`v.douyin.com` 经 `douyin.com`），所以「含 URL 但域名不属于任何平台」可以安全地判错，对应 A §11.2.2 第二层「域名识别不出 → 错误」。A 第三层的「链接格式不认 → 链接格式错误」**没有本地实现**：认不出的纯口令由供应商判断，落为解析后的 `invalid`（`result_validation_exhausted`）。这是对 PRD 第三层的如实收窄，已列入 §14 第 11 项。
+> 步骤 10–12 是本地能做的**全部**链接判断：`classifyLocator` 对没有 URL 的文本一律 `send/unknown`，本地无法判断**平台**；（2026-11-20 AP-D28 修订：预检不再放行没有网址的文本，步骤 12 报 `locator_no_url`；原文：放行交供应商判断；）对含 URL 的入口，`PLATFORM_DOMAINS` 已含各平台的短链域名（`xhslink.com`、`v.kuaishou.com` 经 `kuaishou.com`、`v.douyin.com` 经 `douyin.com`），所以「含 URL 但域名不属于任何平台」可以安全地判错，对应 A §11.2.2 第二层「域名识别不出 → 错误」。A 第三层的「链接格式不认 → 链接格式错误」**没有本地实现**：认不出的纯口令由供应商判断，落为解析后的 `invalid`（`result_validation_exhausted`）。这是对 PRD 第三层的如实收窄，已列入 §14 第 11 项。
 
 第 13 步分支：
 
@@ -663,7 +663,8 @@ interface PlanDownstream {
 | AP-D23 | 名单项可见范围按**加入时**的 `branch_id` 快照算，不跟随门店后来换分公司 | A §11.3「分公司只看自己报的」讲的是谁报的；快照稳定，不让历史名单在换分公司时在两个分公司之间跳 | proposed |
 | AP-D24 | 回收站清除：先调下游 `purge`（事务外），成功后再删；下游 `onDeleted` / `onRestored` 为加速通知，以计划状态对账 | 数据库事务内不做跨域调用；不引入 outbox 表 | proposed |
 | AP-D25 | 批次在计划清除后由 `summary` 快照（计划名、平台、品牌）自描述，按提交分公司 / 品牌 / 超管可见 | 批次是历史事实，比计划活得久 | proposed |
-| AP-D26 | 链接域名识别按 A §11.2.2 第二层：含 URL 且域名未知 → 错误；纯口令放行 | 保留 PRD 的明确规则；`PLATFORM_DOMAINS` 已含短链域名 | proposed（待确认） |
+| ~~AP-D26~~ | ~~链接域名识别按 A §11.2.2 第二层：含 URL 且域名未知 → 错误；纯口令放行~~（**纯口令放行这一半由 AP-D28 于 2026-11-20 修订**；「含 URL 且域名未知 → 错误」仍有效） | 保留 PRD 的明确规则；`PLATFORM_DOMAINS` 已含短链域名 | 部分修订 |
+| AP-D28 | 没有网址的主页链接在预检报错 `locator_no_url`，不发给供应商（刘学奎 2026-11-20，选方案 C）；同时修复「同步校验失败回退到异步后任务以 ACTION_EXECUTION_FAILED 失败」落成通用解析失败的缺陷：按校验失败计数，三次耗尽后 `invalid_link`（行显示「链接无效」） | 测试机 2026-11-20 导入里一行主页链接填的是「请补充」，被放行后白白发出 1 次同步 + 1 次异步调用（失败不计点），结果还显示成「解析失败（provider_task_failed）」；575 个解析任务里只有 2 个没有 URL（「请补充」与一个页面标题），真实分享文案都带短链 | 已确认 |
 | AP-D27 | 导入完成后对被引用账号补采列表（2026-11-19，刘学奎）：已存在账号 `only=full`、新建账号 `only=list`，都按「满 168 小时或从未采过」；解析根任务仍是 `profile_only`，列表交给 sync worker 的多页 walker（带 `initial_content_limit`、检查点、预算与重试） | 需求：导入后即可判定，不等周一。不让根任务直接采首页：它只取第一页并建立检查点，会让之后的周批次变成纯增量、首批内容可能少于 walker 的 `initial_content_limit` | accepted |
 
 ## 14. Open items
@@ -682,7 +683,7 @@ interface PlanDownstream {
 | 8 | 解析驱动的并发默认值与块大小 | 并发 2、块 200，均为可配置默认，不是合同 | AP-8、AP-9 |
 | 9 | 真实付费 smoke 是否在本 spec 内做 | 不做；需要时按 `a-full-sync` 的批准式 smoke 另行申请 | AP-15 |
 | 10 | 计划起始日期是否允许早于今天 | 允许（跨年与回填场景）；不校验 | AP-1 |
-| 11 | A §11.2.2 第二、三层的链接判断 | 第二层「域名识别不出」：含 URL 且域名未知 → `platform_unrecognized`（需要导出 `detectLocatorPlatform`）；纯口令放行。第三层「链接格式错误」：本地不实现，认不出的由供应商判断，落为解析后的 `invalid`（§7.1 步骤 10–11 的说明） | AP-6、AP-9 |
+| 11 | A §11.2.2 第二、三层的链接判断 | 第二层「域名识别不出」：含 URL 且域名未知 → `platform_unrecognized`（需要导出 `detectLocatorPlatform`）；纯口令放行（2026-11-20 AP-D28 修订：没有网址 → `locator_no_url`）。第三层「链接格式错误」：本地不实现，认不出的由供应商判断，落为解析后的 `invalid`（§7.1 步骤 10–11 的说明） | AP-6、AP-9 |
 | 12 | 名单可见范围用加入时快照还是当前组织 | 快照（AP-D23） | AP-13 |
 
 ## 15. 界面

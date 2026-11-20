@@ -104,14 +104,18 @@ describe("步骤 8–11：专员与链接", () => {
     expect(one(good({ 3: "https://www.xiaohongshu.com/user/profile/1" })).reason).toBe("platform_mismatch");
     expect(one(good({ 3: "https://v.kuaishou.com/abc" })).reason).toBe("platform_mismatch");
   });
-  it("含 URL 但域名不属于任何平台 → platform_unrecognized；纯口令放行；短链域名可识别", () => {
+  it("含 URL 但域名不属于任何平台 → platform_unrecognized；没有网址 → locator_no_url；短链域名可识别", () => {
     expect(one(good({ 3: "https://example.com/user/1" })).reason).toBe("platform_unrecognized");
-    expect(one(good({ 3: "9.99 复制打开抖音 aB1:/ 12345" })).cls).toBe("new_staff");
+    expect(one(good({ 3: "9.99 复制打开抖音 aB1:/ 12345" })).reason).toBe("locator_no_url");
     expect(one(good({ 3: "https://v.douyin.com/MPOAlEqWpec/" })).cls).toBe("new_staff");
     expect(one(good({ 3: "https://xhslink.com/abc" }), {}, { plan: { platform: "xiaohongshu", sectors: new Set(["water"]) } }).cls).toBe("new_staff");
   });
-  it("没有「链接格式错误」这个原因码（A §11.2.2 第三层本地不实现）", () => {
-    expect(one(good({ 3: "乱七八糟的文字" })).cls).toBe("new_staff");
+  it("没有网址的文字（请补充 / 页面标题 / 乱写）→ locator_no_url，类别 error，不进入解析；带网址的分享文案照常通过（A §11.2.2 第三层「链接格式」仍不在本地判断）", () => {
+    for (const text of ["请补充", "河南汇泽智慧家的抖音 - 抖音", "乱七八糟的文字"]) {
+      const r = one(good({ 3: text }));
+      expect([r.cls, r.reason]).toEqual(["error", "locator_no_url"]);
+    }
+    expect(one(good({ 3: "9- 长按复制此条消息，打开抖音搜索，查看TA的更多作品。 https://v.douyin.com/1BNjIHNOMA0/ 5@7.com :8pm" })).cls).toBe("new_staff");
   });
 });
 

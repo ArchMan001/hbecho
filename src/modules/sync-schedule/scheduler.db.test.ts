@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { useTestDb } from "../../../tests/harness/db";
-import { insertBatch, insertTask } from "../../../tests/harness/factories";
+import { insertAccount, insertBatch, insertTask } from "../../../tests/harness/factories";
 import { FakeClock } from "../../../tests/harness/fake-clock";
 import { seedOrg, seedSyncSettings, type OrgSeed } from "../../../tests/harness/seed";
 import { addExternalAccount, addStaffAccount, settleTasks } from "../../../tests/harness/sync-fixtures";
@@ -322,6 +322,24 @@ describe("批次终态与汇总（FS-1.7/1.8，A9–A11、A15）", () => {
       await settleTasks(t.db, id, { status: "succeeded", where: (x) => x.taskId !== tasks[0]!.taskId }, S1);
     });
     expect(b.status).toBe("running");
+  });
+  it("名单导入（intake）批次终态后，为成功解析的账号补建账号级媒资任务：头像 / 主页背景不再等到周一全量（测试机 573 个停在 pending）", async () => {
+    const w = await world();
+    const intake = await insertBatch(t.db, S1);
+    const ok = await insertAccount(t.db, "douyin", S1);
+    const bad = await insertAccount(t.db, "douyin", S1);
+    const okTask = await insertTask(t.db, { batchId: intake, platform: "douyin", now: S1, status: "succeeded", action: "resolve_account", key: "intake-ok" });
+    const badTask = await insertTask(t.db, { batchId: intake, platform: "douyin", now: S1, status: "failed", action: "resolve_account", key: "intake-bad" });
+    await t.db.update(syncTasks).set({ accountId: ok }).where(eq(syncTasks.taskId, okTask));
+    await t.db.update(syncTasks).set({ accountId: bad }).where(eq(syncTasks.taskId, badTask));
+    await t.db.update(syncBatches).set({ status: "partial_succeeded", finishedAt: S1 }).where(eq(syncBatches.batchId, intake));
+    w.clock.set(new Date(S1.getTime() + 60_000));
+    await w.scheduler.tick();
+    const media = (await t.db.select().from(syncTasks)).filter((x) => x.batchId === intake && x.requestedAction === "download_media");
+    expect(media.map((x) => x.accountId)).toEqual([ok]); // 只给解析成功的账号建；失败的不建
+    expect(media[0]).toMatchObject({ status: "pending", subjectType: "external_account" });
+    await w.scheduler.tick(new Date(S1.getTime() + 120_000)); // 幂等：再对账不重复建
+    expect((await t.db.select().from(syncTasks)).filter((x) => x.batchId === intake && x.requestedAction === "download_media")).toHaveLength(1);
   });
   it("媒资不决定批次终态：批次已终态后媒资任务仍在跑，media_finished_at 为空；全部终态后写入（A11）", async () => {
     const w = await world();

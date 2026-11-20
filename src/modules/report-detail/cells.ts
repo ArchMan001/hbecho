@@ -8,12 +8,21 @@ export const SKIPPED_TEXT = "前置条件未满足，不进行计算";
 const t = (text: string, tone: Tone = "plain"): Cell => ({ text, tone });
 export const emptyCell = (): Cell => t("");
 
-/** 仅 http / https 才输出链接，其余（javascript:、data:、空）一律不输出。 */
+// 与 provider-adapter/locator.ts 的 URL_RE 同一个字符集：只取 URL 允许的 ASCII 字符，空白与中文标点处截断
+const URL_IN_TEXT = /https?:\/\/[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+/;
+/**
+ * 仅 http / https 才输出链接，其余（javascript:、data:、空）一律不输出。
+ * 账号的「主页链接」存的是用户粘贴的整段分享文案（「9- 长按复制此条消息，打开抖音搜索… https://v.douyin.com/xx/」，测试机约 60% 如此），
+ * 整段不是合法 URL，所以先取出其中第一个 http(s) 网址（2026-11-20 修复：此前这些行在页面与 Excel 里都是空的）。
+ */
 export function httpUrl(raw: string | null | undefined): string | undefined {
   if (!raw) return undefined;
+  const m = URL_IN_TEXT.exec(raw);
+  if (!m) return undefined;
+  const candidate = m[0].replace(/[.,;:!?)'\]]+$/, "");
   try {
-    const u = new URL(raw);
-    return u.protocol === "http:" || u.protocol === "https:" ? raw : undefined;
+    const u = new URL(candidate);
+    return u.protocol === "http:" || u.protocol === "https:" ? candidate : undefined;
   } catch {
     return undefined;
   }

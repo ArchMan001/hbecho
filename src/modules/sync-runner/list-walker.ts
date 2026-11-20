@@ -8,7 +8,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import type { Db, DbTx } from "../../db/client";
-import { externalAccountIdentifiers, odsProviderCalls, staffAccountAssignments, syncTasks } from "../../db/schema";
+import { accountProfileSnapshots, externalAccountIdentifiers, externalAccounts, odsProviderCalls, staffAccountAssignments, syncTasks } from "../../db/schema";
 import { bindDominantListAuthor, bindSecondaryIdentifier, loadOwnerSnapshot, type IdentifierRef } from "../identity";
 import { DEFAULT_STRATEGIES, withFences } from "../orchestrator";
 import { retryOnDeadlock } from "../../db/deadlock";
@@ -127,6 +127,15 @@ export function createListWalker(deps: AccountRunnerDeps): TaskRunner {
         ).map((r) => r.v),
       );
 
+    /** 账号当前主页昵称（昵称兜底用）；没有主页快照 / 昵称为空返回 null。 */
+    const profileNickname = async (tx: DbTx): Promise<string | null> => {
+      const [r] = await tx
+        .select({ n: accountProfileSnapshots.nickname })
+        .from(externalAccounts)
+        .innerJoin(accountProfileSnapshots, eq(accountProfileSnapshots.profileSnapshotId, externalAccounts.currentProfileSnapshotId))
+        .where(eq(externalAccounts.accountId, accountId));
+      return r?.n ?? null;
+    };
     /** 页事务。要么整页 + 进度一起提交，要么什么都不留。 */
     const pageTx = (pageNo: number, data: ListData, callId: bigint, receivedAt: Date) =>
       withFences(db, clock, [{ taskId: task.taskId, token: ctx.token }], async (tx, tasks) => {
@@ -194,7 +203,10 @@ export function createListWalker(deps: AccountRunnerDeps): TaskRunner {
         }
 
         // 5) 列表作者三态（累计）
-        const counted = countListAuthors(data.entries, registered);
+        const counted = countListAuthors(data.entries, registered, await profileNickname(tx));
+        if (counted.nicknameOnly > 0) {
+          await issue("identity_conflict", "warning", "list.author_id_differs_nickname_match", { reason: "author_id_differs_nickname_match", page_no: pageNo, nickname_only_entries: counted.nicknameOnly, known_author_entries: counted.known });
+        }
         const known = prev.identity_check.known_author_entries + counted.known;
         const matched = prev.identity_check.matched_entries + counted.matched;
         const identity = { baseline_has_registered: prev.identity_check.baseline_has_registered, known_author_entries: known, matched_entries: matched, state: checkListAuthors({ baselineHasRegistered: prev.identity_check.baseline_has_registered, knownAuthorEntries: known, matchedEntries: matched }) };

@@ -47,9 +47,9 @@ describe("external add", () => {
     expect(env.transport.calls.map((c) => c.request.path)).toEqual(["/openapi/v1/media_user_info"]); // 没有列表请求
     expect((await env.tasks()).map((x) => x.requestedAction)).toEqual(["resolve_account"]); // 没有 fetch_content_list 子任务
     expect((await t.db.select().from(externalAccounts))).toHaveLength(1);
-    // 之后周期批次只给它生成 fetch_profile，且出现在目标集
+    // 之后周期批次只给它生成 fetch_profile，且出现在目标集（导入批次收尾会为它补建头像 / 背景的 download_media，那是媒资任务，不是采集任务）
     await env.scheduler.tick(SLOT);
-    expect((await env.tasks()).filter((x) => x.accountId === asg!.accountId && x.requestedAction !== "resolve_account").map((x) => x.requestedAction)).toEqual(["fetch_profile"]);
+    expect((await env.tasks()).filter((x) => x.accountId === asg!.accountId && x.requestedAction !== "resolve_account" && x.requestedAction !== "download_media").map((x) => x.requestedAction)).toEqual(["fetch_profile"]);
     // 同一专员同平台名额不受影响：外部账号不占名额
     const own = await env.addAccount("douyin", env.org.staffA, { identifier: "OWN-UID" });
     expect(own.accountId).not.toBe(asg!.accountId);

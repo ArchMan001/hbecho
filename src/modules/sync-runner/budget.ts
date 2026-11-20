@@ -59,7 +59,7 @@ export const BUDGET_REASONS = ["call_budget", "points_budget", "poll_budget", "y
 export const isBudgetReason = (reason: string): boolean => BUDGET_REASONS.some((r) => reason === `policy:${r}`);
 
 /**
- * 最近 365 天的累计点数（年度硬护栏，刘学奎 2026-11-19：年度上限 3 万元 = 300 万点）。口径同 spentForBatch：
+ * 最近 365 天的累计点数（年度硬护栏，刘学奎 2026-11-20：年度上限 5 万元 = 500 万点，原 2026-11-19 为 3 万元）。口径同 spentForBatch：
  * 没有被封口的调用里，succeeded / ambiguous / reconciled_succeeded 或尚未有结果的算点；轮询不计。按 prepared_at 取窗口（有索引）。
  */
 export async function spentInWindow(db: Db, since: Date, exclude?: Pick<PolicyContext, "syncTaskId" | "attemptNo" | "callSequence">): Promise<number> {
